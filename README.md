@@ -27,11 +27,12 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
 - **Heritage:**
   Based on the Plan 9 and Inferno OS compilers developed by Ken Thompson and others.
 - **Go-era improvements:**
-  Enhanced and extended by contributors from the Go language community to support
-  modern development needs.
+  Enhanced and extended by contributors from the Go language community for
+  multi-platform support.
 - **Open and extensible:**
   Designed to be easy to understand, modify, and integrate into new projects
-  thanks to the use of *Literate programming*.
+  thanks to its reasonable size and the use of *Literate programming* 
+  explaining in depth the code.
 
 ---
 
@@ -46,3 +47,6 @@ configure
 make
 make install
 ```
+
+You can also play with the `$GOOS` and `$GOARCH` environment variables
+for cross compiling.
