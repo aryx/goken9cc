@@ -51,8 +51,10 @@ install: $(LIB)
 y1.tab.c: y.tab.c	# make yystate global, yytname mutable
 	cat y.tab.c | sed '/ int yystate;/d; s/int yychar;/int yychar, yystate;/; s/static const char \*const yytname/const char *yytname/' >y1.tab.c
 
+#TODO: remove yerrxxx.h bugfix hack
 yerr.h: bisonerrors go.errors y.tab.h	# y.tab.h rule generates y.output too
 	awk -f bisonerrors y.output go.errors >yerr.h
+	cp yerrxxx.h yerr.h
 
 subr.$O: yerr.h
 

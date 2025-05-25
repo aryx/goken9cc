@@ -35,7 +35,7 @@ esac
 tmp=/tmp/qcc.$$.$USER.out
 $gcc -Wall -Wno-sign-compare -Wno-missing-braces \
 	-Wno-parentheses -Wno-unknown-pragmas -Wno-switch -Wno-comment \
-	"$@" >$tmp 2>&1
+	-Wl,--allow-multiple-definition "$@" >$tmp 2>&1
 status=$?
 egrep -v "$ignore" $tmp | uniq | tee $tmp.1
 
