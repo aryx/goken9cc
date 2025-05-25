@@ -68,7 +68,7 @@ do
 	fi
 	echo $(awk 'NR==1{print $2}' $TMP2FILE) $D/$F >>times.out
 done | # clean up some stack noise
-	egrep -v '^(r[0-9a-z]+|[cfg]s)  +0x'  |
+	grep -E -v '^(r[0-9a-z]+|[cfg]s)  +0x'  |
 	sed '/tmp.*Bus error/s/.*Bus/Bus/; /tmp.*Trace.BPT/s/.*Trace/Trace/
 		s!'$RUNFILE'!$RUNFILE!g
 		s/ PC=0x[0-9a-f]*/ PC=xxx/

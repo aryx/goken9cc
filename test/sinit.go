@@ -1,4 +1,4 @@
-// $G -S $D/$F.go | egrep initdone >/dev/null && echo FAIL || true
+// $G -S $D/$F.go | grep -E initdone >/dev/null && echo FAIL || true
 
 // Copyright 2010 The Go Authors.  All rights reserved.
 // Use of this source code is governed by a BSD-style

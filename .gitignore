@@ -7,6 +7,9 @@
 *.o
 *.[568]
 
+6.out
+_testmain.go
+
 # ----------------------------------------------------------------------------
 # Specific files
 # ----------------------------------------------------------------------------
@@ -54,5 +57,13 @@
 /src/pkg/runtime/mkversion
 /src/pkg/runtime/runtime.acid.amd64
 /src/pkg/runtime/version.go
+
+# during make test
+src/pkg/debug/gosym/_test/
+src/pkg/exp/ogle/ogle
+src/pkg/template/_test/
+test/pass.out
+test/run.out
+test/times.out
 
 # ----------------------------------------------------------------------------
