@@ -1,0 +1,284 @@
+# -*- org -*-
+
+* History
+
+** 2014: fork kencc from https://code.google.com/p/ken-cc/
+(Now at https://bitbucket.org/plan9-from-bell-labs/9-cc/ but worse version)
+
+This past fork is still available at https://github.com/aryx/fork-kencc
+It was actually forked itself at https://github.com/michaelengel/kencc-cross
+to bring back old architectures and also add new one like RISC V.
+
+I used this fork of kencc to compile plan9 for my Principia Softwarica
+project. The goal was just to target and cross compile Plan9 code from
+different platforms (Linux, Windows, macOS) to have a fast iterative
+development loop. This kencc was portable but produced object files
+and binaries that can only work on Plan9 (limited ELF, no Mach-O, no
+PE and definitely no syscall/libc for interacting with the different
+OSes).
+
+** 2024: idea of goken9cc targeting also Linux, macOS, and Windows thx to Go project
+
+Principia and Plan9 are great but it is better if people can easily
+run and test the mk/rc/cc/... on their own platform and if we produce
+something not just for education (Principia Softwarica) but possibly
+useful for other things.
+
+There is inside the Go compiler hidden a fantastic cross platform C toolchain!
+The Go authors, who were for many the original Plan9 authors, including
+Ken Thompson who is the original author of kencc, extended the kencc compiler
+toolchain to target also Linux (ELF), macOS (Mach-O), and even windows (PE)!
+They did it for Go, but we can reuse their work for C. We just need to extract
+this hidden toolchain from the Go source in its own project.
+
+Moreover, for Principia it was annoying to have kencc on the side,
+not using literate programming, and then a separate toolchain under Principia
+(the one from plan9). It would be good to have the two merged (and LPized),
+the one kencc to rule them all (goken9cc)
+
+** 2025: choosing the fork point
+
+*** goals for the code at the fork point
+
+- portable and modern: can *build* without too many modifications on
+  current (2025) Linux, macOS, and Windows (bonus = Plan9) platforms.
+- mature enough to support *targeting* Linux, macOS, and Windows (bonus = Plan9)
+- multi arch with 386, amd64, and arm (bonus = arm64, riscv, wasm)
+- not too big; especially the pkg/runtime/ (Go equivalent of libc) should be small
+- limit the number of Go specifics as we actually don't care about the Go parts
+  (e.g., we want nm/ar written in C, not Go)
+- not too distant from kencc and plan9 code orga (6a/ 6c/ cc/ libmach/ etc.)
+- use some makefiles or mkfiles (no cmd/dist)
+- cool additions compared to kencc in addition to multi-OS like DWARF support
+
+*** I originally started with go1.2.2.src.tgz
+
+It was the earliest packaged dowloadable version from go.dev/dl
+but it was not really working on macOS, nor windows, and some stuff was
+complicated like the use of cmd/dist instead of Makefiles which augmented
+the distance to original kencc for not much benefit.
+
+I started to study the history of the Go project and the important commits (see
+my notes further below on the commit history) to find a good past fork point.
+
+*** forkpoint candidates pro and cons
+
+apr 2010: just after GOOS=windows so in theory has Linux (arm, x86*), Windows (386), macOS (x86*)
+ pro:
+  - old so smaller, 148k with codemap -test_loc and special .codemapignore
+    (basically counting just [568][alc]/, cc/, pkg/{runtime,syscall}, lib{9,mach,bio})
+  - still makefiles
+  - seems to build on every platform and on Linux even run almost all the tests and bench
+    (had to remove some net/ tests but most of the tests are working)
+  - seems to compile partially on windows! can build individually lib9
+    8c etc.
+ cons:
+  - hello and gofmt get "killed" error on macOS
+    UPDATE: TODO? need old macos like my old apple mini ?
+  - can't build go programs on windows cos missing runtime/windows/amd64
+    but can build 6a/6c/6l/6g! BUT can try with GOARCH=386
+  - can build also 8a/... but 8g has an error when running on pkg/runtime/
+     (or when running on hello.go)
+    "internal compiler betypeinit failed"
+
+oct 2010: just before first foray in plan9 support in 8l and pkg/runtime :) so nice coincidence
+ that actually good fork point for other reasons too (after dwarf, machO, PE)
+  pro:
+    - still small: 154k
+    - support for dwarf in 6l for macOS, PE, linux (works on linux at least)
+      and it's working for sure on Linux with gdb hello super nice Go code listing
+    - still work pretty well on Linux, can run most tests (except net and some os again)
+    - UPDATE: can produce macos binaries that work on old macOS (my apple mini)
+      (but maybe also work in apr 2010)
+    - start of plan9 support so nice :) (even though less needed) clin d'oeil
+  cons:
+    - before windows amd64 (but anyway does not really work and can in theory
+      use GOARCH=386 and produce 32 bit binaries for windows)
+    - compilation error on windows about time_spec and mkdir and more stuff
+      (weird was working better in apr 2010)
+      UPDATE: was able to fix it, so at least reached same level than apr 2010
+
+dec 2011: before runtime/<arch> refactor, not long before march 2012 and Go 1.0
+ pro:
+   - still makefiles
+   - in theory windows amd64 support
+   - close go Go 1.0 which must be the sign of maturity
+ cons:
+   - 196k for codemap test_loc; far bigger runtime
+   - more errors on Linux. DWARF unsupported version 0 weird error
+   - still crash on macos but this time program just run forever
+     UPDATE: TODO: maybe work on apple mini?
+   - compile even less on windows :(
+
+go 1.2.2: first released package available on go.dev/dl (and before golinker3 work)
+ pro:
+    - before golinker3 work where they start to rewrite some of the toolchain
+      in Go
+ cons:
+    - 269k, far bigger runtime and syscall (some autogenerated, and
+      support more platforms such as netbsd that we could delete, but still)
+    - use cmd/dist, cmd/go, no more Makefiles so less visibility
+      and more work to switch back to a goken9cc project structure
+    - can run macos binaries, but weird runtime error
+      UPDATE: TODO: work on apple mini?
+    - does it work on windows?
+
+go 1.5:
+ pro:
+    - probably work on macos and windows
+ cons:
+    - lots of the toolchain like linker and assembler rewritten in Go so
+      we would have to reverse those changes
+      
+*** => choice Oct 2010 at 99a10eff16b79cfb8ccf36e586532a40b17a203c
+
+pro:
+ - compile on Linux, macOS, Windows (partially at least 6a/6c/6l/6g)
+ - run on Linux (with tests too!), old macOS, TODO windows 386
+ - nice clin d'oeil to Plan9 as the forkpoint is the commit starting to add
+   support for Plan9 in pkg/runtime and 8l
+cons:
+ - no windows and no current macos and no plan9
+   (but at least can run some binaries on old macos and path towards plan9)
+   could be fixed later for current macos? for plan9 less pb because working
+   toolsuite with plan9 libc and plan9 syscalls
+ - no arm64 (useful for modern macbooks), no riscv, no wasm (but arm)
+   but anyway the contribs for those archs were Go-only
+   => could be backported later by other people and transpiled back to C :)
+
+** May 25 2025 Perform the actual fork
+
+The goal is to use git-filter-repo (can be installed on most Linux distrib)
+to keep the history of the file before the forkpoint and get rid of
+all subsequent commits to save disk space (thx to 'git gc').
+
+Commands:
+git clone git@github.com:golang/go.git goken9cc
+git checkout 99a10eff16b79cfb8ccf36e586532a40b17a203c
+git branch -D master
+git for-each-ref --format '%(refname)' refs/remotes/ | xargs -n 1 git update-ref -d
+git for-each-ref --format '%(refname)' refs/tags/ | xargs -n 1 git update-ref -d
+git filter-repo --force --partial --refs 99a10eff16b79cfb8ccf36e586532a40b17a203c
+=> output:
+Parsed 6547 commits
+New history written in 0.52 seconds...
+HEAD is now at 99a10eff16 8l, runtime: initial support for Plan 9
+Completely finished after 0.59 seconds.
+
+git gc --prune=now --aggressive
+git checkout -b master
+git remote set-url origin git@github.com:aryx/goken9cc.git
+git push -u origin master
+
+du -s -m gokencc is now 220M vs the 467M of the cloned go repo
+
+* Important commits in Go history from https://github.com:golang/go
+
+In the following the = + - ~ are giving an informal score to the commit.
+ '=' means indifferent contrib because mostly a Go improvement
+ '+' cool contrib to the original kencc
+ '-' negative contrib; we would have to undo the change for goken9cc
+ '~' maybe good, maybe bad, not sure
+    
+Sep 2007 start of Go project (Design phase)
+
+= 18c5b488a3b2e218c0e0cf2a7d4820d9da93a554: Go (and its spec) started! (Mar 2008)
+= cb87526ce3531557ccf69969de4c8018956b10b5: c/go.y and v0 (Mar 2008)
+
++ 0cafb9ea3d3d34627e8f492ccafa6ba9b633a213: add compiler source like 6c/ and reorg and move to gc/ (Jun 2008)
++ 69b74c3953eac1a28febb893d1e8e383ffbe5209: import lib9/ and libbio/ (Jun 2008)
+
++ 4dee747fb949b44262af5b7b3161e64fa720578a: add 8a/8c/8l from inferno (Jan 2009)
++ db3a21d7c68bad988b5238ef48ae491c782fb105: add 5a/5c/5l from inferno (Mar 2009)
+
+++ 7d443bb67acad4313ad38f297890620ce8cf7d1d: make 8l generate Mach-O and Linux ELF (Mar 2009)
+
+= d90e7cbac65c5792ce312ee82fbe03a5dfc98c6f: move src/lib to src/pkg (June 2009)
+
++ 00274a13cb76fc826f65978f3ab6fa1f90e46dab: rename libmach_amd64 to libmach (Aug 2009)
+
+= 0b7878a96ef3b4c8866401d5a94bc74caaeed370: first step towards cgo tool (Sep 2009)
+
+https://opensource.googleblog.com/2009/11/hey-ho-lets-go.html first announced by Google of Go
+ (just Linux and macOS)
+
+++ 977e19d69fdca51a4a36f41124410a0240fe8206: 8l support for PE (Dec 2009)
+++ 6bfe5f55f4dc110ca43a202a6a5eb70ee477916b: ported runtime to windows via mingw (Jan 2010)
+
++ c0aac20e20b72a5f1bf455a9a1587023f64bbd4b: added runtime/tiny/ (Feb 2010)
+
++ e00795859b947d5e0319a20c04ed3ffd7a745ab5: first step towards syscall and mingw (Mar 2010)
+= f81d471940243bf2ca0e18dd8c12c489532d9dbe: rename GOOS=mingw to GOOS=windows (Apr 2010)
++ 74a23646bcfc11262fd43737c7fcee0b9783e943: fix small bug on 8l for windows (Apr 2010)
+
++ aafe474ec9af1e0e8677df3eac3ef2c92fb946e9 remove use of ~/bin and move to GOROOT/bin (Aug 2010)
+
+++ ca9098ee942e0697260ff56dbb0e0f0ec7f71aa5: Dwarf output for 6l (Aug 2010)
++ b433552ebc20ed8669dac61c7a46f438c1bf3627: Dwarf in Elf (Aug 2010)
++ 728003e340ab6d20d49f8f67f1b36722d5de2d65: Dwarf in Macho (Sep 2010)
++ eb572e017448157aaedab367a17d0faceec81187: DWARF frame info (Sep 2010)
+
++ 99a10eff16b79cfb8ccf36e586532a40b17a203c: 8l, runtime initial support for plan9 (Oct 2010)
+---------------------------- FORK POINT -------------------------------------
+= 9cc8e9ef48d17bd7e8bb2c1c41406f51366a7925: fix build (isplan9 bug) by previous PR (Oct 2010)
+
+- 68b4255a9644a838898bfc6567bae97585c2e871: runtime: ,s/[a-zA-Z0-9_]+/runtime·&/g, almost (Nov 2010)
+
++ 1cc4a5cd94bd6c8fb5712defb344d81dd995f063: support syscalls for plan9 (Apr 2011)
+
+++ f83609f642fc995a48de3ed8742c12ee4779d3a4: windows/amd64 port (June 2011)
+
+- b74136984dc04d3f0025f3eaf55c0ecdf3c38857: start of go command (Sep 2011)
+- 2ad8a9c507ede9621bb1cd1f8d02f6cdac7a9e88: go build, go install, go run (Dec 2011)
+- 20090df70fa018b1ac0fe15434c0dbd44151bb93: go test (Dec 2011)
+
+- 851f30136d79c9bb752ab56d3991bb3180a5aa5b: reorg a bit pkg/runtime/ and remove the <arch> subdir (Dec 2011) IMHO worst but closer to current code! so easier to take
+ recent code and apply to old code?
+
+- cc777490fbe5f0c6575f4e84dea31b7d745d747e: add include/plan9/ (Jan 2012)
+
+-- 829053686478c980b122bb7b255354f8c64ef0bd: start use cmd/dist (Feb 2012) IMHO worst
+-- fec7fa8b9deb5f0c08c546ad2ba121d78e104163: remove makefiles and switch to cmd/dist (Feb 2012) IMHO worst
+
+Mar 2012, Go 1.0!
+
+May 2013, Go 1.1
+
+Dec 2013, Go 1.2
+
+~ 7d507dc6e608e800bc26a5850259bbdb05abdf65: liblink (Dec 2013)
+~ f7aaa553daf41f006bbc2c96d062e661be0c3501: 5a/6a/8a use liblink (Dec 2013)
+~ 76a8c873cf06cfc42e3c306ac3f18e62795253d3: 5c/6c/8c use liblink (Dec 2013)  
+~ f606c1be805e939e1aebcb9d3e15adf4eb5f7016: 5g/6g/8g use liblink (Dec 2013)
+   https://go.googlesource.com/proposal/+/master/design/go13linker.md
+
+- a9f6db58cea016957391f3ca9d36247177895e96: cmd/ld change about layout (Dec 2013)
+- 870e821ded81043a65ff9abef871b29514efc1d7: cmd/cc cmd/gc change to liblink changes (Dec 2013)
+
+-- 500547f28baf67923d77fb4d88c3744b335d4ad0: nm in Go (Dec 2013)
+
+-- 146897b031c00021fe78c0a9d76861cf5e27c5ec: initial cmd/link (Jan 2014)
+-- 8efb5e7d638684bcfc5e1aed1b352886b48f421b: addr2line in Go (Feb 2014)
+
+-- 1d718164840ded483c8a016166a951aad51c1df0: delete cmd/prof and libmach (Apr 2014)
+
+Jun 2014, Go 1.3
+
+= 117b1d468527a2da8cf7686026d6ea23f23b0549: cmd/9l ... power64 (Aug 2014)
+
+-- 3af0d791bed25e6cb4689fed9cc8379554971cb8: assemblers and Go compilers rewritten from C to Go and C code deleted (Feb 2015)
+
+~ f00c19add5b5bd2126af689563ad24013e12faa9: start support arm64 cmd/7g, cmd/7l, cmd/go: copy 9g/9l to 7g/7l, and build as tools arm64 start, but written in Go (Mar 2015)
+
+-- 4a42fae2cd775e332b5fc05a17d936e425c68b08: remove 5c/6c/8c and cc (Nov 2014)
+
++ 26bbe7ac9b78db96023427e9dced8afeea3195af: arm64 in cmd/internal/obj but in Go (Mar 2015)
+= 272921b5d8327aa3e444d5ba7d2bf989b5d81e0b: add GOARCH=arm64
++ 846ee0465bcb97d0c036e2366aa92b962d050aef: runtime support for linux/arm64 (Mar 2015)
+++ 4a71b91d294189e8ad7de8c10079be6baff3ede4: support darwin/arm64 (Apr 2015)
+
+++ 7ef890db91c1741b36c67a695a91c0a667485ae0: start support assembler for riscv (Sep 2019)
+
+   ??: android (??)
+   ??: iOS, tvOS, etc. (??)
+++ ??: wasm (??)

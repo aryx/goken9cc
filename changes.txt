@@ -1,0 +1,18 @@
+# -*- org -*-
+
+* Alpha (Q2 2025) (fork of Go at October 2010)
+# see also pad.txt history section
+
+* Template 0.X (Qx 2025) (major-contrib)
+
+** test infra
+
+** dev infra
+
+** build infra
+
+** internals
+
+** os
+
+** arch
