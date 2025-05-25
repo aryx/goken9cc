@@ -30,18 +30,6 @@ the original Plan 9 tools.
 
 ---
 
-## Background
-
-The **goken9cc** project continues the tradition of the Plan 9 and
-Inferno toolchains, which emphasize clean design and simplicity. The
-original tools by Ken Thompson revolutionized compiler design by
-focusing on modularity and correctness. This project builds on that
-foundation and brings it into the modern era, leveraging contributions
-from the Go community to support today’s diverse development
-environments.
-
----
-
 ## Getting Started
 
 ### Building from source
