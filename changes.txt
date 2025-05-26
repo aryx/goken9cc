@@ -1,7 +1,11 @@
 # -*- org -*-
 
-* Alpha (Q2 2025) (fork of Go at October 2010)
+* Alpha (Q2 2025) (Dockerfile/Nix/GHA, fork of Go at October 2010)
 # see also pad.txt history section
+
+** test infra
+- add Dockerfile and docker.yml GHA (Github Action) CI checks
+- add shell.nix and nix.yml GHA for macOS and Linux CI checks
 
 * Template 0.X (Qx 2025) (major-contrib)
 
