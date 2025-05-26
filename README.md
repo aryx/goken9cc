@@ -43,7 +43,7 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
 ```bash
 git clone https://github.com/aryx/goken9cc.git
 cd goken9cc
-configure
+./configure
 make
 make install
 ```
