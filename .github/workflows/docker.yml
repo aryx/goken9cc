@@ -18,3 +18,5 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       # alt: make build-docker
       - run: docker build -t goken9cc .
+      # alt: could be a different (parallel) job
+      - run: docker build -f Dockerfile.alpine -t goken9cc-alpine .

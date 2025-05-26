@@ -1,27 +1,22 @@
-# Build and test goken9cc on Ubuntu Linux.
+# Build and test goken9cc on Ubuntu Linux (x86_64 and glibc)
 
 FROM ubuntu:22.04
-#alt: alpine:3.21
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
-RUN apt-get install -y gcc libc6-dev make ed bison
-
+RUN apt-get install -y gcc libc6-dev bison make ed
 # for some tests to pass that requires /etc/services or timezones
 RUN apt-get install -y netbase tzdata
 
-WORKDIR /src
-
 # Now let's build from source
+WORKDIR /src
 COPY . .
 
-# so we can disable some tests that don't work inside Docker
-# like syslog
-ENV IN_DOCKER=true
-
 #TODO: switch to just configure; make; make install
+# so we can disable some tests that don't work inside Docker like syslog
+ENV IN_DOCKER=true
 RUN cd src; ./all.bash
 
+#TODO: switch to just make test
 ENV PATH="$PATH:/src/bin"
-#TODO: RUN make test
 RUN make hellogotest

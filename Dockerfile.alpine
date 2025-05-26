@@ -1,0 +1,17 @@
+# Build and test goken9cc on Alpine Linux.
+
+FROM alpine:3.21
+RUN apk add binutils gcc libc-dev bison make bash ed
+WORKDIR /src
+COPY . .
+ENV IN_DOCKER=true
+#TODO: switch to all.bash (and later to configure; make; make install)
+RUN cd src; ./make.bash
+ENV PATH="$PATH:/src/bin"
+
+#TODO: can't run hello (or use all.bash above)
+# "No such file or directory"
+#TODO: RUN make hellogotest
+RUN 6g hello.go
+RUN 6l -o hello hello.6
+#TODO: RUN ./hello
