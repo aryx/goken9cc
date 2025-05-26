@@ -1,0 +1,30 @@
+/DELETED
+/gitlog.txt
+
+/bin
+/doc
+/lib
+/misc
+
+/src/cmd/[568]g/
+/src/cmd/gc/
+/src/cmd/go*/
+/src/cmd/hgpatch/
+
+/src/libcgo/
+/src/cmd/cgo/
+
+# TODO: !src/pkg/runtime does not work when do /src/pkg/ :(
+/src/pkg/[a-q]*
+/src/pkg/r*
+/src/pkg/s*
+!/src/pkg/runtime
+!/src/pkg/syscall
+/src/pkg/[t-z]*
+
+/test
+
+# later
+/api
+/src/cmd/fix/
+/src/cmd/yacc/
