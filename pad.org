@@ -286,9 +286,12 @@ Jun 2014, Go 1.3
 = 272921b5d8327aa3e444d5ba7d2bf989b5d81e0b: add GOARCH=arm64
 + 846ee0465bcb97d0c036e2366aa92b962d050aef: runtime support for linux/arm64 (Mar 2015)
 ++ 4a71b91d294189e8ad7de8c10079be6baff3ede4: support darwin/arm64 (Apr 2015)
+++ 35ea62468bf7e3a79011c3ad713e847daa9a45a2: support for runtime/wasm (Mar 2018)
+++ 3b137dd2df19c261a007b8a620a2182cd679d700: add compile/.../wasm (Mar 2018)
 
 ++ 7ef890db91c1741b36c67a695a91c0a667485ae0: start support assembler for riscv (Sep 2019)
 
+   ??: switch to SSA
    ??: android (??)
    ??: iOS, tvOS, etc. (??)
-++ ??: wasm (??)
+
