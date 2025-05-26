@@ -2,20 +2,21 @@
 
 * History
 
-** 2014: fork kencc from https://code.google.com/p/ken-cc/
+** 2014: my first fork of kencc from https://code.google.com/p/ken-cc/
 (Now at https://bitbucket.org/plan9-from-bell-labs/9-cc/ but worse version)
 
 This past fork is still available at https://github.com/aryx/fork-kencc
 It was actually forked itself at https://github.com/michaelengel/kencc-cross
 to bring back old architectures and also add new one like RISC V.
 
-I used this fork of kencc to compile plan9 for my Principia Softwarica
-project. The goal was just to target and cross compile Plan9 code from
-different platforms (Linux, Windows, macOS) to have a fast iterative
-development loop. This kencc was portable but produced object files
-and binaries that can only work on Plan9 (limited ELF, no Mach-O, no
-PE and definitely no syscall/libc for interacting with the different
-OSes).
+I used this fork of kencc to cross compile plan9 for my Principia
+Softwarica project. The goal was just to target and cross compile
+Plan9 code from different platforms (Linux, Windows, macOS) to have a
+fast iterative development loop (Plan9 is great for principia goal, but
+Linux is better for actual development). This kencc was portable but
+produced object files and binaries that can only work on Plan9
+(limited ELF, no Mach-O, no PE and definitely no syscall/libc for
+interacting with the different OSes).
 
 ** 2024: idea of goken9cc targeting also Linux, macOS, and Windows thx to Go project
 
@@ -145,6 +146,15 @@ cons:
  - no arm64 (useful for modern macbooks), no riscv, no wasm (but arm)
    but anyway the contribs for those archs were Go-only
    => could be backported later by other people and transpiled back to C :)
+
+*** choosing the right fork name
+I originally called my first fork fork-kencc, but for this final fork
+a better name was needed that also convey its heritage: Kencc, Go, Plan9.
+I used chatGPT a bit but came up with goken9cc ultimately (kenccgo was first pick).
+One nice unintented effect of this choice is that because go is still first,
+we can reuse GOOS and GOARCH and it still makes sense :) Also the project
+can be abbreviated "goken" which sounds nice (and later I can even
+for xix do a "gopad" :) ).
 
 ** May 25 2025 Perform the actual fork
 
