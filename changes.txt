@@ -1,11 +1,44 @@
 # -*- org -*-
 
-* Alpha (Q2 2025) (Dockerfile/Nix/GHA, fork of Go at October 2010)
+* Alpha (Q2 2025) (Dockerfile/Nix/GHA)
 # see also pad.txt history section
 
+** internals
+- start to move things around and remove the Google specifics: src/cmd/hgpatch,
+  lib/corereview
+- start move around Go specific files in DELETED/
+
 ** test infra
-- add Dockerfile and docker.yml GHA (Github Action) CI checks
-- add shell.nix and nix.yml GHA for macOS and Linux CI checks
+- add Dockerfile and docker.yml GHA (Github Action) CI checks,
+  and Dockerfile.alpine (just build, no run)
+- add shell.nix and nix.yml GHA for Linux CI checks (TODO: macOS)
+
+* Goken9cc Pre-history
+
+** Go pre 1.0: 2008-2010
+# see DELETED/doc/devel/release.html for a compact list of changes
+# see also 'git log' for a very long list of changes.
+
+*** Go->goken9cc:
+fork Go at the October 2010 time to start goken9cc (in May 2025).
+
+*** linker
+
+*** assembler
+
+*** C compilers
+
+*** runtime
+
+*** Inferno and plan9port->Go:
+Import [568][acl] and libbio/ from Inferno-os/utils around june 2008
+Import lib9/ from plan9port around june 2008
+
+** Inferno-os: ??
+
+** Plan 9: ??
+
+** Unix: ??
 
 * Template 0.X (Qx 2025) (major-contrib)
 

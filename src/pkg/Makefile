@@ -136,7 +136,6 @@ DIRS=\
 	../cmd/gofmt\
 	../cmd/goinstall\
 	../cmd/goyacc\
-	../cmd/hgpatch\
 
 NOTEST=\
 	debug/proc\
@@ -162,7 +161,6 @@ NOTEST=\
 	../cmd/gofmt\
 	../cmd/goinstall\
 	../cmd/goyacc\
-	../cmd/hgpatch\
 
 NOBENCH=\
 	container/vector\

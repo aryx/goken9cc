@@ -58,7 +58,6 @@ _testmain.go
 /src/cmd/goinstall/goinstall
 /src/cmd/gopack/gopack
 /src/cmd/goyacc/goyacc
-/src/cmd/hgpatch/hgpatch
 
 /src/libcgo/libcgo.so
 
