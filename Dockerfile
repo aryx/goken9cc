@@ -22,6 +22,6 @@ ENV IN_DOCKER=true
 #TODO: switch to just configure; make; make install
 RUN cd src; ./all.bash
 
-#TODO:
-#ENV PATH="$PATH:/src/pkg/tool/linux_amd64"
-#RUN make test
+ENV PATH="$PATH:/src/bin"
+#TODO: RUN make test
+RUN make hellogotest

@@ -14,11 +14,25 @@ clean:
 
 .PHONY: test
 test:
-	cd src; ./run.bash
+	echo TODO
 
+hellotest:
+	echo TODO
 
 build-docker:
 	docker build -t "goken9cc" .
+
+###############################################################################
+# Go tests
+###############################################################################
+
+gotest:
+	cd src; ./run.bash
+
+hellogotest:
+	6g hello.go
+	6l -o hello hello.6
+	./hello
 
 ###############################################################################
 # Developer targets
