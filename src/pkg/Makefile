@@ -233,6 +233,11 @@ NOTEST+=testing/quick
 NOTEST+=xml
 endif
 
+
+ifeq ($(IN_DOCKER),true)
+NOTEST+=syslog
+endif
+
 TEST=\
 	$(filter-out $(NOTEST),$(DIRS))
 

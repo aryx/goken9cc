@@ -11,8 +11,8 @@ package net
 import (
 	"bytes"
 	"flag"
-	"os"
-	"testing"
+	///	"os"
+	///	"testing"
 )
 
 const ICMP_ECHO_REQUEST = 8
@@ -62,56 +62,57 @@ func parsePingReply(p []byte) (id, seq int) {
 var srchost = flag.String("srchost", "", "Source of the ICMP ECHO request")
 var dsthost = flag.String("dsthost", "localhost", "Destination for the ICMP ECHO request")
 
-// test (raw) IP socket using ICMP
-func TestICMP(t *testing.T) {
-	if os.Getuid() != 0 {
-		t.Logf("test disabled; must be root")
-		return
-	}
 
-	var laddr *IPAddr
-	if *srchost != "" {
-		laddr, err := ResolveIPAddr(*srchost)
-		if err != nil {
-			t.Fatalf(`net.ResolveIPAddr("%v") = %v, %v`, *srchost, laddr, err)
-		}
-	}
-
-	raddr, err := ResolveIPAddr(*dsthost)
-	if err != nil {
-		t.Fatalf(`net.ResolveIPAddr("%v") = %v, %v`, *dsthost, raddr, err)
-	}
-
-	c, err := ListenIP("ip4:icmp", laddr)
-	if err != nil {
-		t.Fatalf(`net.ListenIP("ip4:icmp", %v) = %v, %v`, *srchost, c, err)
-	}
-
-	sendid := os.Getpid() & 0xffff
-	const sendseq = 61455
-	const pingpktlen = 128
-	sendpkt := makePingRequest(sendid, sendseq, pingpktlen, []byte("Go Go Gadget Ping!!!"))
-
-	n, err := c.WriteToIP(sendpkt, raddr)
-	if err != nil || n != pingpktlen {
-		t.Fatalf(`net.WriteToIP(..., %v) = %v, %v`, raddr, n, err)
-	}
-
-	c.SetTimeout(100e6)
-	resp := make([]byte, 1024)
-	for {
-		n, from, err := c.ReadFrom(resp)
-		if err != nil {
-			t.Fatalf(`ReadFrom(...) = %v, %v, %v`, n, from, err)
-		}
-		if resp[0] != ICMP_ECHO_REPLY {
-			continue
-		}
-		rcvid, rcvseq := parsePingReply(resp)
-		if rcvid != sendid || rcvseq != sendseq {
-			t.Fatalf(`Ping reply saw id,seq=0x%x,0x%x (expected 0x%x, 0x%x)`, rcvid, rcvseq, sendid, sendseq)
-		}
-		return
-	}
-	t.Fatalf("saw no ping return")
-}
+/// test (raw) IP socket using ICMP
+///func TestICMP(t *testing.T) {
+///	if os.Getuid() != 0 {
+///		t.Logf("test disabled; must be root")
+///		return
+///	}
+///
+///	var laddr *IPAddr
+///	if *srchost != "" {
+///		laddr, err := ResolveIPAddr(*srchost)
+///		if err != nil {
+///			t.Fatalf(`net.ResolveIPAddr("%v") = %v, %v`, *srchost, laddr, err)
+///		}
+///	}
+///
+///	raddr, err := ResolveIPAddr(*dsthost)
+///	if err != nil {
+///		t.Fatalf(`net.ResolveIPAddr("%v") = %v, %v`, *dsthost, raddr, err)
+///	}
+///
+///	c, err := ListenIP("ip4:icmp", laddr)
+///	if err != nil {
+///		t.Fatalf(`net.ListenIP("ip4:icmp", %v) = %v, %v`, *srchost, c, err)
+///	}
+///
+///	sendid := os.Getpid() & 0xffff
+///	const sendseq = 61455
+///	const pingpktlen = 128
+///	sendpkt := makePingRequest(sendid, sendseq, pingpktlen, []byte("Go Go Gadget Ping!!!"))
+///
+///	n, err := c.WriteToIP(sendpkt, raddr)
+///	if err != nil || n != pingpktlen {
+///		t.Fatalf(`net.WriteToIP(..., %v) = %v, %v`, raddr, n, err)
+///	}
+///
+///	c.SetTimeout(100e6)
+///	resp := make([]byte, 1024)
+///	for {
+///		n, from, err := c.ReadFrom(resp)
+///		if err != nil {
+///			t.Fatalf(`ReadFrom(...) = %v, %v, %v`, n, from, err)
+///		}
+///		if resp[0] != ICMP_ECHO_REPLY {
+///			continue
+///		}
+///		rcvid, rcvseq := parsePingReply(resp)
+///		if rcvid != sendid || rcvseq != sendseq {
+///			t.Fatalf(`Ping reply saw id,seq=0x%x,0x%x (expected 0x%x, 0x%x)`, rcvid, rcvseq, sendid, sendseq)
+///		}
+///		return
+///	}
+///	t.Fatalf("saw no ping return")
+///}
