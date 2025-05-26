@@ -1,0 +1,37 @@
+# Build goken9cc via Nix on Linux (and MacOS??)
+# See also shell.nix at the root of the project.
+
+name: nix
+
+on:
+  workflow_dispatch: null
+  pull_request_target: {}
+  push:
+    branches: [ master ]
+
+jobs:
+  job:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          #- macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Cache Nix
+        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Build Nix shell
+        run: nix-shell --pure
+      - name: Build Kenccgo using Nix
+        run: |
+          #coupling: Dockerfile
+          nix-shell --run '
+            cd src
+            ./all.bash
+            cd ..
+            export PATH=$PATH:`pwd`/pkg/tool/linux_amd64
+            make hellogotest
+          '
