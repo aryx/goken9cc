@@ -68,14 +68,6 @@ fi
 time gomake smoketest
 ) || exit $?
 
-(xcd cmd/ebnflint
-if $rebuild; then
-	gomake clean;
-	time gomake
-fi
-time gomake test
-) || exit $?
-
 #TOFIX
 #[ "$GOARCH" == arm ] ||
 #(xcd ../misc/cgo/stdio

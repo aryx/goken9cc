@@ -131,7 +131,6 @@ DIRS=\
 	xml\
 	../libcgo\
 	../cmd/cgo\
-	../cmd/ebnflint\
 	../cmd/godoc\
 	../cmd/gofmt\
 	../cmd/goinstall\
@@ -156,7 +155,6 @@ NOTEST=\
 	try\
 	../libcgo\
 	../cmd/cgo\
-	../cmd/ebnflint\
 	../cmd/godoc\
 	../cmd/gofmt\
 	../cmd/goinstall\

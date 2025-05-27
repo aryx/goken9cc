@@ -45,7 +45,6 @@ _testmain.go
 /src/cmd/6g/6g
 /src/cmd/cgo/cgo
 /src/cmd/cov/6cov
-/src/cmd/ebnflint/ebnflint
 /src/cmd/gc/builtin.c
 /src/cmd/gc/opnames.h
 /src/cmd/gc/y.output

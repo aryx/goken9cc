@@ -14,7 +14,6 @@
 /src/cmd/[568]g/
 /src/cmd/gc/
 /src/cmd/go*/
-/src/cmd/ebnflint/
 
 /src/libcgo/
 /src/cmd/cgo/
