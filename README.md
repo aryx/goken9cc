@@ -30,9 +30,10 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
   Enhanced and extended by contributors from the Go language community for
   multi-platform support.
 - **Open and extensible:**
-  Designed to be easy to understand, modify, and integrate into new projects
-  thanks to its reasonable size and the use of *Literate programming* 
-  explaining in depth its code.
+  Designed to be easy to understand, modify, and integrate into new projects,
+  thanks to its reasonable size and the use of *Literate programming*, which
+  explains the code in depth. It takes more than just a license to make code
+  truly open.
 
 ---
 
