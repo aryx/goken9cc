@@ -90,7 +90,7 @@ gomake clean
 time gomake ogle
 ) || exit $?
 
-(xcd ../tests/go/progs
+(xcd ../tests/go
 if [[ $(uname | tr A-Z a-z | sed 's/mingw/windows/') != *windows* ]]; then
 	time ./run
 fi
