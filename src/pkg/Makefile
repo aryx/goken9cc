@@ -129,12 +129,15 @@ DIRS=\
 	utf8\
 	websocket\
 	xml\
-	../libcgo\
-	../cmd/cgo\
 	../cmd/godoc\
 	../cmd/gofmt\
 	../cmd/goinstall\
 	../cmd/goyacc\
+
+#pad: those compiles only on Linux
+ifeq ($(GOOS),linux)
+DIRS+= ../libcgo ../cmd/cgo
+endif
 
 NOTEST=\
 	debug/proc\

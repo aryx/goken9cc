@@ -31,11 +31,22 @@ case "$(uname -m -p)-$GOHOSTARCH" in
 	gcc="$gcc -m64"
 esac
 
+case "$GOHOSTOS" in
+    darwin)
+	# this is actually clang, not gcc
+	GCCLDFLAGS=
+	;;
+    *)
+       #TODO: ugly, should instead fix those multiple defs and fix use of EXTERN
+       GCCDFLAGS=-Wl,--allow-multiple-definition
+        ;;
+esac
+
 # Run gcc, save error status, redisplay output without noise, exit with gcc status.
 tmp=/tmp/qcc.$$.$USER.out
 $gcc -Wall -Wno-sign-compare -Wno-missing-braces \
 	-Wno-parentheses -Wno-unknown-pragmas -Wno-switch -Wno-comment \
-	-Wl,--allow-multiple-definition "$@" >$tmp 2>&1
+	$GCCDFLAGS "$@" >$tmp 2>&1
 status=$?
 egrep -v "$ignore" $tmp | uniq | tee $tmp.1
 
