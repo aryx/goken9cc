@@ -1,3 +1,7 @@
+# -*- sh -*-
+
+/X11GO/REST
+
 /DELETED
 /gitlog.txt
 
@@ -6,29 +10,24 @@
 # generated automatically by mkrunetype.c from UnicodeData-5.0.0.txt
 /src/lib9/utf/runetypebody-5.0.0.c
 
-/bin
-/doc
-/lib
-/misc
+# really big files
+/test/fixedbugs/bug257.go
 
-/src/cmd/[568]g/
-/src/cmd/gc/
-/src/cmd/go*/
-
-/src/libcgo/
-/src/cmd/cgo/
-
-# TODO: !src/pkg/runtime does not work when do /src/pkg/ :(
-/src/pkg/[a-q]*
-/src/pkg/r*
-/src/pkg/s*
-!/src/pkg/runtime
-!/src/pkg/syscall
-/src/pkg/[t-z]*
-
-/test
-
-# later
-/api
-/src/cmd/fix/
-/src/cmd/yacc/
+# If you want to focus on the C parts that matter for goken9cc
+#/src/cmd/[568]g/
+#/src/cmd/gc/
+#/src/cmd/go*/
+#/src/libcgo/
+#/src/cmd/cgo/
+## TODO: !src/pkg/runtime does not work when do /src/pkg/ :(
+#/src/pkg/[a-q]*
+#/src/pkg/r*
+#/src/pkg/s*
+#!/src/pkg/runtime
+#!/src/pkg/syscall
+#/src/pkg/[t-z]*
+#/test
+## appears later
+#/api
+#/src/cmd/fix/
+#/src/cmd/yacc/
