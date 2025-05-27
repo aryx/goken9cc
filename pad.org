@@ -239,6 +239,7 @@ https://opensource.googleblog.com/2009/11/hey-ho-lets-go.html first announced by
 ++ f83609f642fc995a48de3ed8742c12ee4779d3a4: windows/amd64 port (June 2011)
 
 - b74136984dc04d3f0025f3eaf55c0ecdf3c38857: start of go command (Sep 2011)
+- dbb591d8da7e1958c40bc5ed631590029b94f764: delete exp/gui and exp/gui/x11 (Nov 2011)
 - 2ad8a9c507ede9621bb1cd1f8d02f6cdac7a9e88: go build, go install, go run (Dec 2011)
 - 20090df70fa018b1ac0fe15434c0dbd44151bb93: go test (Dec 2011)
 

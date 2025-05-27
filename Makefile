@@ -11,6 +11,7 @@ all:
 
 clean:
 	cd src; ./clean.bash
+	cd tests; make clean
 
 .PHONY: test
 test:
@@ -21,6 +22,8 @@ hellotest:
 
 build-docker:
 	docker build -t "goken9cc" .
+build-alpine:
+	docker build -f Dockerfile.alpine -t "goken9cc" .
 
 ###############################################################################
 # Go tests
@@ -30,9 +33,7 @@ gotest:
 	cd src; ./run.bash
 
 hellogotest:
-	6g hello.go
-	6l -o hello hello.6
-	./hello
+	cd tests; make; ./hello_go
 
 ###############################################################################
 # Developer targets
