@@ -32,7 +32,7 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
 - **Open and extensible:**
   Designed to be easy to understand, modify, and integrate into new projects
   thanks to its reasonable size and the use of *Literate programming* 
-  explaining in depth the code.
+  explaining in depth its code.
 
 ---
 
@@ -55,11 +55,11 @@ for cross compiling.
 
 ## History
 
-This is a fork of the assemblers, linkers, and C compilers toolchain
+This is a fork of the assemblers, linkers, and C compilers
 as well as supporting libraries (e.g., lib9, libmach, pkg/runtime)
-found in the Go source around October 2010 at this precise commit:
+in the Go repository in October 2010 at this precise commit:
 https://github.com/golang/go/commit/99a10eff16b79cfb8ccf36e586532a40b17a203c
-(see pad.txt for explanation of why I forked at this precise commit).
+(see pad.txt for an explanation of why I forked at this precise commit).
 
 The Go compiler code was actually itself a fork of the "kencc" toolchain in
 inferno-os at https://github.com/inferno-os/inferno-os (in the utils/ subdirectory)
