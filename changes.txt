@@ -5,7 +5,8 @@
 
 ** internals
 - remove the Google (and obsolete) specifics: src/cmd/hgpatch and lib/corereview
-- start move around Go specific files in DELETED/
+- start move around Go specific files in DELETED/ (go editor modes, go shell hooks,
+  cgo, nacl, go docs, cmd/ebnflint) 
 
 ** test infra
 - add Dockerfile and docker.yml GHA (Github Action) CI checks,
@@ -55,7 +56,7 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 
 ** Plan 9: 1995?
 everything:
-- cmd/[05678qtv][alc]/ cc/
+- cmd/[05678qtv][alc]/ cc/ and libmach/
 - libc/, libio/
 - cmd/{mk,rc, acid, ...}
 

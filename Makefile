@@ -32,8 +32,10 @@ build-alpine:
 gotest:
 	cd src; ./run.bash
 
+#TODO: hello_web but more complicated to test and hello_draw
+#TODO: use cmp.out to ensure the output is right
 hellogotest:
-	cd tests; make; ./hello_go
+	cd tests; make; ./hello_go; ./hello_unicode; ./hello_goroutine
 
 ###############################################################################
 # Developer targets
