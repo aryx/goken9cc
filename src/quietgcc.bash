@@ -31,6 +31,19 @@ case "$(uname -m -p)-$GOHOSTARCH" in
 	gcc="$gcc -m64"
 esac
 
+GCCWNO="-Wno-sign-compare -Wno-missing-braces -Wno-parentheses -Wno-unknown-pragmas -Wno-switch -Wno-comment"
+
+case "$GOHOSTOS" in
+    linux)
+	#TODO: fix the warnings instead of adding more -Wno!
+	GCCWNOEXTRA="-Wno-cpp -Wno-use-after-free -Wno-sizeof-array-div -Wno-unused-but-set-variable -Wno-sizeof-pointer-memaccess -Wno-sizeof-pointer-memaccess -Wno-unused-but-set-variable -Wno-maybe-uninitialized -Wno-aggressive-loop-optimizations -Wno-array-bounds -Wno-discarded-qualifiers -Wno-stringop-truncation"
+	;;
+    darwin)
+	;;
+    *)
+	;;
+esac
+
 case "$GOHOSTOS" in
     darwin)
 	# this is actually clang, not gcc
@@ -44,9 +57,7 @@ esac
 
 # Run gcc, save error status, redisplay output without noise, exit with gcc status.
 tmp=/tmp/qcc.$$.$USER.out
-$gcc -Wall -Wno-sign-compare -Wno-missing-braces \
-	-Wno-parentheses -Wno-unknown-pragmas -Wno-switch -Wno-comment \
-	$GCCDFLAGS "$@" >$tmp 2>&1
+$gcc -Wall $GCCWNO $GCCWNOEXTRA $GCCDFLAGS "$@" >$tmp 2>&1
 status=$?
 grep -E -v "$ignore" $tmp | uniq | tee $tmp.1
 
