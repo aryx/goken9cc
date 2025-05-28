@@ -83,7 +83,7 @@ func test6() {
 }
 
 func test7() {
-	if syscall.ARCH == "arm" || syscall.OS == "nacl" {
+	if syscall.ARCH == "arm" {
 		// ARM doesn't have integer divide trap yet
 		return
 	}

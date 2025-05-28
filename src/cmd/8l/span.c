@@ -903,22 +903,6 @@ subreg(Prog *p, int from, int to)
 		print("%P\n", p);
 }
 
-// nacl RET:
-//	POPL BX
-//	ANDL BX, $~31
-//	JMP BX
-uchar naclret[] = { 0x5b, 0x83, 0xe3, ~31, 0xff, 0xe3 };
-
-// nacl JMP BX:
-//	ANDL BX, $~31
-//	JMP BX
-uchar nacljmpbx[] = { 0x83, 0xe3, ~31, 0xff, 0xe3 };
-
-// nacl CALL BX:
-//	ANDL BX, $~31
-//	CALL BX
-uchar naclcallbx[] = { 0x83, 0xe3, ~31, 0xff, 0xd3 };
-
 void
 doasm(Prog *p)
 {
@@ -987,12 +971,6 @@ found:
 		break;
 
 	case Zlit:
-		if(HEADTYPE == 8 && p->as == ARET) {
-			// native client return.
-			for(z=0; z<sizeof(naclret); z++)
-				*andptr++ = naclret[z];
-			break;
-		}
 		for(; op = o->op[z]; z++)
 			*andptr++ = op;
 		break;

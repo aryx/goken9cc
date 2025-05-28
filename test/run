@@ -21,11 +21,6 @@ Xarm)
 	exit 1
 esac
 
-case X"$GOOS" in
-Xnacl)
-	export E=${GORUN:-$GOROOT/misc/nacl/naclrun}
-esac
-
 export G=${A}g
 export L=${A}l
 export GOTRACEBACK=0

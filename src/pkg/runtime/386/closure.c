@@ -15,9 +15,6 @@ void
 	int32 i, n;
 	int32 pcrel;
 
-	if(goos != nil && strcmp((uint8*)goos, (uint8*)"nacl") == 0)
-		throw("no closures in native client yet");
-
 	if(siz < 0 || siz%4 != 0)
 		throw("bad closure size");
 

@@ -133,9 +133,6 @@ main(int argc, char *argv[])
 		if(strcmp(goos, "darwin") == 0)
 			HEADTYPE = 6;
 		else
-		if(strcmp(goos, "nacl") == 0)
-			HEADTYPE = 8;
-		else
 		if(strcmp(goos, "freebsd") == 0)
 			HEADTYPE = 9;
 		else
@@ -247,21 +244,6 @@ main(int argc, char *argv[])
 			INITDAT = 0;
 		if(INITRND == -1)
 			INITRND = 4096;
-		break;
-	case 8:	/* native client elf32 executable */
-		elfinit();
-		HEADR = 4096;
-		if(INITTEXT == -1)
-			INITTEXT = 0x20000;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 65536;
-		
-		// 512 kB of address space for closures.
-		// (Doesn't take any space in the binary file.)
-		// Closures are 64 bytes each, so this is 8,192 closures.
-		textpad = 512*1024;
 		break;
 	case 10: /* PE executable */
 		peinit();

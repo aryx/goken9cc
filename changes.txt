@@ -7,7 +7,7 @@
 - remove the Google (and obsolete) specifics: src/cmd/hgpatch and lib/corereview
 - start move around Go specific files in DELETED/ (go editor modes, go shell hooks,
   cgo, go docs, cmd/ebnflint)
-- remove support for nacl (google native client dead technology)
+- remove support for nacl (google native client old technology superseded by wasm)
 
 ** test infra
 - add Dockerfile and docker.yml GHA (Github Action) CI checks,
