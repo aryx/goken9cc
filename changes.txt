@@ -6,7 +6,8 @@
 ** internals
 - remove the Google (and obsolete) specifics: src/cmd/hgpatch and lib/corereview
 - start move around Go specific files in DELETED/ (go editor modes, go shell hooks,
-  cgo, nacl, go docs, cmd/ebnflint) 
+  cgo, go docs, cmd/ebnflint)
+- remove support for nacl (google native client dead technology)
 
 ** test infra
 - add Dockerfile and docker.yml GHA (Github Action) CI checks,
@@ -16,6 +17,7 @@
 ** build
 - adapt quietgcc to modern Linux (2025) with recent gcc
 - adapt quietgcc to modern macOS (2025) with recent clang
+- adapt quietgcc to modern Windows (2025) with recent mingw-gcc
 
 * Goken9cc Pre-history
 
@@ -39,26 +41,29 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 *** C compilers
 
 *** runtime
-+ macOS
-+ Linux
-+ Windows
++ Linux (x86, amd64)
++ macOS (amd64)
++ Windows (x86) (amd64 support is post Go 1.0)
 + FreeBSD
-+ Android
++ Android (arm)
 
 *** Inferno and plan9port->Go:
 - Import [568][acl] and libbio/ from Inferno-os/utils around june 2008
 - Import lib9/ from plan9port around june 2008
 
  
-** Inferno-os: 2000?
+** Inferno-os: 1995-1997
 - make portable the plan9 compiler (with help from plan9port) with lib9/
-  that can be built from Linux, macOS, Windows, FreeBSD, ... 
+  that can be built ("hosted") from Linux, macOS, Windows, FreeBSD, ...
 
-** Plan 9: 1995?
-everything:
+** Plan 9: 1985-2002
+Most of the code in goken9cc comes from Plan 9 4th edition:
 - cmd/[05678qtv][alc]/ cc/ and libmach/
+  a multiarch assembler, linker, C compiler toolchain
 - libc/, libio/
+  a new minimalist C library (far smaller than glibc or musl)
 - cmd/{mk,rc, acid, ...}
+  simplified/redesigned versions of Unix tools
 
 ** Unix (6th edition at least): 1976
 the origin:

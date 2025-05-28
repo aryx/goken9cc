@@ -2,14 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-ifeq ($(GOOS),nacl)
-
-# Nothing for NaCl
-all clean install:
-	@true
-
-else ifeq ($(GOARCH),arm)
-
+ifeq ($(GOOS),arm)
 # Nothing for ARM - usually cross compiling anyway
 all clean install:
 	@true
@@ -32,7 +25,6 @@ HOST_CFLAGS_amd64=-m64
 LDFLAGS_darwin=-dynamiclib -Wl,-undefined,dynamic_lookup /usr/lib/libpthread.dylib
 LDFLAGS_freebsd=-shared -lm -pthread
 LDFLAGS_linux=-shared -lm -lpthread
-LDFLAGS_nacl=-shared -lm -lpthread
 LDFLAGS_windows=-shared -lm -mthreads
 
 %.o: %.c
