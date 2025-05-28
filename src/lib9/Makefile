@@ -116,5 +116,5 @@ GOROOT_FINAL?=$(GOROOT)
 	$(HOST_CC) -c $(HOST_CFLAGS) $<
 
 goos.$O: goos.c
-	$(HOST_CC) -c $(HOST_CFLAGS) -DGOOS='"$(GOOS)"' -DGOARCH='"$(GOARCH)"' -DGOROOT='"$(GOROOT_FINAL)"' -DGOVERSION='"'"$$(../version.bash)"'"' $<
+	$(HOST_CC) -c $(HOST_CFLAGS) -DGOOS='"$(GOOS)"' -DGOARCH='"$(GOARCH)"' -DGOROOT='"$(GOROOT_FINAL)"' -DGOVERSION='"'"$$(cat ../../VERSION)"'"' $<
 
