@@ -156,8 +156,6 @@ NOTEST=\
 	syscall\
 	testing/iotest\
 	try\
-	../libcgo\
-	../cmd/cgo\
 	../cmd/godoc\
 	../cmd/gofmt\
 	../cmd/goinstall\
@@ -279,5 +277,3 @@ deps:
 	./deps.bash
 
 -include Make.deps
-
-../cmd/cgo.install: ../libcgo.install

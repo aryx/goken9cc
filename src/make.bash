@@ -61,10 +61,6 @@ bash "$GOROOT"/src/clean.bash
 # pkg builds the Go programs in cmd.
 for i in lib9 libbio libmach cmd pkg
 do
-	case "$i-$GOOS-$GOARCH" in
-	libcgo-nacl-* | cmd/*-nacl-* | libcgo-linux-arm)
-		;;
-	*)
 		# The ( ) here are to preserve the current directory
 		# for the next round despite the cd $i below.
 		# set -e does not apply to ( ) so we must explicitly
@@ -83,7 +79,6 @@ do
 				gomake install
 			esac
 		)  || exit 1
-	esac
 done
 
 # Print post-install messages.
