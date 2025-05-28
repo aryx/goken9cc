@@ -4,16 +4,22 @@
 # see also pad.txt history section
 
 ** internals
-- start to move things around and remove the Google specifics: src/cmd/hgpatch,
-  lib/corereview
+- remove the Google (and obsolete) specifics: src/cmd/hgpatch and lib/corereview
 - start move around Go specific files in DELETED/
 
 ** test infra
 - add Dockerfile and docker.yml GHA (Github Action) CI checks,
-  and Dockerfile.alpine (just build, no run)
+  and Dockerfile.alpine (just build, no run; does not run unfortunately)
 - add shell.nix and nix.yml GHA for Linux CI checks (TODO: macOS)
 
+** build
+- adapt quietgcc to modern Linux (2025) with recent gcc
+- adapt quietgcc to modern macOS (2025) with recent clang
+
 * Goken9cc Pre-history
+
+** Richard Miller: 2020
+- cmd/z[alc]/ for RISC-V
 
 ** Go pre 1.0: 2008-2010
 # see DELETED/doc/devel/release.html for a compact list of changes
@@ -23,22 +29,40 @@
 fork Go at the October 2010 time to start goken9cc (in May 2025).
 
 *** linker
++ Mach-O
++ PE
++ DWARF
 
 *** assembler
 
 *** C compilers
 
 *** runtime
++ macOS
++ Linux
++ Windows
++ FreeBSD
++ Android
 
 *** Inferno and plan9port->Go:
-Import [568][acl] and libbio/ from Inferno-os/utils around june 2008
-Import lib9/ from plan9port around june 2008
+- Import [568][acl] and libbio/ from Inferno-os/utils around june 2008
+- Import lib9/ from plan9port around june 2008
 
-** Inferno-os: ??
+ 
+** Inferno-os: 2000?
+- make portable the plan9 compiler (with help from plan9port) with lib9/
+  that can be built from Linux, macOS, Windows, FreeBSD, ... 
 
-** Plan 9: ??
+** Plan 9: 1995?
+everything:
+- cmd/[05678qtv][alc]/ cc/
+- libc/, libio/
+- cmd/{mk,rc, acid, ...}
 
-** Unix: ??
+** Unix (6th edition at least): 1976
+the origin:
+- lex
+- yacc
 
 * Template 0.X (Qx 2025) (major-contrib)
 
