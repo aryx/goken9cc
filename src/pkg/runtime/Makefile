@@ -51,7 +51,6 @@ OFILES_arm=\
 
 OFILES=\
 	asm.$O\
-	cgocall.$O\
 	chan.$O\
 	closure.$O\
 	float.$O\
@@ -90,7 +89,6 @@ OFILES=\
 	$(OFILES_$(GOOS))\
 
 HFILES=\
-	cgocall.h\
 	runtime.h\
 	hashmap.h\
 	malloc.h\

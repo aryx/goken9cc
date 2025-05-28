@@ -442,7 +442,6 @@ void	breakpoint(void);
 void	gosched(void);
 void	goexit(void);
 void	runcgo(void (*fn)(void*), void*);
-void	runcgocallback(G*, void*, void (*fn)());
 void	·entersyscall(void);
 void	·exitsyscall(void);
 void	startcgocallback(G*);

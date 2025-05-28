@@ -362,36 +362,6 @@ TEXT runcgo(SB),7,$32
 	MOVQ	8(SP), SP
 	RET
 
-// runcgocallback(G *g1, void* sp, void (*fn)(void))
-// Switch to g1 and sp, call fn, switch back.  fn's arguments are on
-// the new stack.
-TEXT runcgocallback(SB),7,$48
-	MOVQ	g1+0(FP), DX
-	MOVQ	sp+8(FP), AX
-	MOVQ	fp+16(FP), BX
-
-	// We are running on m's scheduler stack.  Save current SP
-	// into m->sched.sp so that a recursive call to runcgo doesn't
-	// clobber our stack, and also so that we can restore
-	// the SP when the call finishes.  Reusing m->sched.sp
-	// for this purpose depends on the fact that there is only
-	// one possible gosave of m->sched.
-	get_tls(CX)
-	MOVQ	DX, g(CX)
-	MOVQ	m(CX), CX
-	MOVQ	SP, (m_sched+gobuf_sp)(CX)
-
-	// Set new SP, call fn
-	MOVQ	AX, SP
-	CALL	BX
-
-	// Restore old g and SP, return
-	get_tls(CX)
-	MOVQ	m(CX), DX
-	MOVQ	m_g0(DX), BX
-	MOVQ	BX, g(CX)
-	MOVQ	(m_sched+gobuf_sp)(DX), SP
-	RET
 
 // check that SP is in range [g->stackbase, g->stackguard)
 TEXT stackcheck(SB), 7, $0
