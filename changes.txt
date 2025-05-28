@@ -51,6 +51,8 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 - Import [568][acl] and libbio/ from Inferno-os/utils around june 2008
 - Import lib9/ from plan9port around june 2008
 
+** Plan9port: 2001?-2007?
+- lib9/ to make portable the plan9 compiler
  
 ** Inferno-os: 1995-1997
 - make portable the plan9 compiler (with help from plan9port) with lib9/

@@ -30,7 +30,7 @@ for dir in $dirs; do (
 	deps=$(
 		sed -n '/^import.*"/p; /^import[ \t]*(/,/^)/p' $sources /dev/null |
 		cut -d '"' -f2 |
-		egrep "$dirpat" |
+		grep -E "$dirpat" |
 		grep -v "^$dir\$" |
 		sed 's/$/.install/' |
 		sed 's;^C\.install;../cmd/cgo.install;' |

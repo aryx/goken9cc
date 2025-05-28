@@ -14,7 +14,7 @@
 # commnt, this script will report an error.  Likewise if the compiler
 # does not generate an error for a line which has a comment, or if the
 # error message does not match the <regexp>.  The <regexp> syntax
-# is Perl but its best to stick to egrep.
+# is Perl but its best to stick to grep.
 
 use POSIX;
 
