@@ -58,7 +58,7 @@ fi
 )
 bash "$GOROOT"/src/clean.bash
 
-# pkg builds libcgo and the Go programs in cmd.
+# pkg builds the Go programs in cmd.
 for i in lib9 libbio libmach cmd pkg
 do
 	case "$i-$GOOS-$GOARCH" in

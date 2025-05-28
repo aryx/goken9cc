@@ -134,10 +134,10 @@ DIRS=\
 	../cmd/goinstall\
 	../cmd/goyacc\
 
-#pad: those compiles only on Linux
-ifeq ($(GOOS),linux)
-DIRS+= ../libcgo ../cmd/cgo
-endif
+#pad: we used to also compile ../libcgo ../cmd/cgo but
+# they compiled only on Linux and anyway are not useful
+# in goken context. In recent Go there was even a CGO_ENABLED=0
+# to give the possibility to disable CGO so let's move it to DELETED/
 
 NOTEST=\
 	debug/proc\
