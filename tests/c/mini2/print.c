@@ -198,7 +198,7 @@ void
 ·printpc(void *p)
 {
 	prints("PC=");
-	//TODO: ·printhex((uint64)·getcallerpc(p));
+	·printhex((uint64)·getcallerpc(p));
 }
 
 void

@@ -44,7 +44,9 @@ extern bool	isNaN(float64 f);
 
 // print.c
 extern void printf(int8 *s, ...);
+//void ·printpc(void *p);
 
 // linux.s
 extern void write(int32 fd, char* buf, int32 n);
 extern void exit(int);
+void*	·getcallerpc(void*);

@@ -56,3 +56,39 @@ TEXT	gettime(SB), 7, $32
 	MOVQ	usec+8(FP), DI
 	MOVL	BX, (DI)
 	RET
+
+TEXT	·getcallerpc+0(SB),7,$0
+	MOVQ	x+0(FP),AX		// addr of first arg
+	MOVQ	-8(AX),AX		// get calling pc
+	RET
+
+TEXT	·setcallerpc+0(SB),7,$0
+	MOVQ	x+0(FP),AX		// addr of first arg
+	MOVQ	x+8(FP), BX
+	MOVQ	BX, -8(AX)		// set calling pc
+	RET
+
+TEXT getcallersp(SB),7,$0
+	MOVQ	sp+0(FP), AX
+	RET
+
+
+
+// bool cas(int32 *val, int32 old, int32 new)
+// Atomically:
+//	if(*val == old){
+//		*val = new;
+//		return 1;
+//	} else
+//		return 0;
+TEXT cas(SB), 7, $0
+	MOVQ	8(SP), BX
+	MOVL	16(SP), AX
+	MOVL	20(SP), CX
+	LOCK
+	CMPXCHGL	CX, 0(BX)
+	JZ 3(PC)
+	MOVL	$0, AX
+	RET
+	MOVL	$1, AX
+	RET
