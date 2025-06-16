@@ -8,7 +8,6 @@
 
 all:
 	cd src; ./make.bash
-
 clean:
 	cd src; ./clean.bash
 	cd tests; make clean
