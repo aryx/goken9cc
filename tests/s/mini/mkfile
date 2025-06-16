@@ -6,4 +6,4 @@ clean:V:
 
 %.exe: %.s
    6a -c $prereq
-   6l -o $target -E _start $stem.6
+   6l -X -o $target -E _start $stem.6

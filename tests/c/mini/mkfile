@@ -1,12 +1,8 @@
 
 all:V: helloc.exe
-
 clean:V:
 	rm -f *.6 *.exe *.a
 
-#TODO: weird, does not seem to work to move the morestack stuff from
-# write.6 to morestack.6
-# 6a -c morestack.s
 helloc.exe: helloc.c
    6c -c $prereq
    6a -c xwrite.s
