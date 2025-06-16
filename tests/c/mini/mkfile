@@ -1,5 +1,5 @@
 
-all:V: hello_linux_amd64.exe
+all:V: helloc.exe
 
 clean:V:
 	rm -f *.6 *.exe *.a
@@ -7,10 +7,10 @@ clean:V:
 #TODO: weird, does not seem to work to move the morestack stuff from
 # write.6 to morestack.6
 # 6a -c morestack.s
-%.exe: %.c
+helloc.exe: helloc.c
    6c -c $prereq
-   6a -c write.s
-   6a -c exit.s
-   gopack grc libmini.a write.6 exit.6
+   6a -c xwrite.s
+   6a -c xexit.s
+   gopack grc libmini.a xwrite.6 xexit.6
    # -X to require NOSPLIT for all linked code, especially in $stem.6
-   6l -X -L. -o $target -E main $stem.6
+   6l -X -L. -o $target -E main helloc.6

@@ -377,7 +377,7 @@ dostkoff(void)
 	int a, pcsize;
 	uint32 moreconst1, moreconst2, i;
 
-	for(i=0; i<nelem(morename); i++) {
+	for(i=0; i<nelem(morename) && !debug['X']; i++) {
 		symmorestack[i] = lookup(morename[i], 0);
 		if(symmorestack[i]->type != STEXT)
 			diag("morestack trampoline not defined - %s", morename[i]);
