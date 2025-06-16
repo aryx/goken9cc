@@ -398,7 +398,7 @@ dostkoff(void)
 		if((p->from.scale & NOSPLIT) && autoffset >= StackSmall)
 			diag("nosplit func likely to overflow stack");
 
-		if(!(p->from.scale & NOSPLIT)) {
+		if(!(p->from.scale & NOSPLIT) && !debug['X']) {
 			p = appendp(p);	// load g into CX
 			p->as = AMOVQ;
 			if(HEADTYPE == 7 || HEADTYPE == 9)	// ELF uses FS
