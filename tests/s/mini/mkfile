@@ -1,0 +1,9 @@
+
+all:V: hello_linux_amd64.exe
+
+clean:V:
+	rm -f *.6 *.exe
+
+%.exe: %.s
+   6a -c $prereq
+   6l -o $target -E _start $stem.6
