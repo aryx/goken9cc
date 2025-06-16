@@ -379,6 +379,7 @@ dostkoff(void)
 	Sym *symmorestack;
 
 	pmorestack = P;
+	if (!debug['X']) {
 	symmorestack = lookup("runtime.morestack", 0);
 
 	if(symmorestack->type != STEXT)
@@ -387,6 +388,7 @@ dostkoff(void)
 		pmorestack = symmorestack->text;
 		symmorestack->text->from.scale |= NOSPLIT;
 	}
+        }
 
 	for(cursym = textp; cursym != nil; cursym = cursym->next) {
 		p = cursym->text;
@@ -398,7 +400,7 @@ dostkoff(void)
 		q = P;
 		q1 = P;
 		if(pmorestack != P)
-		if(!(p->from.scale & NOSPLIT)) {
+		if(!(p->from.scale & NOSPLIT)  && !debug['X']) {
 			p = appendp(p);	// load g into CX
 			switch(HEADTYPE) {
 			case 10:	// Windows

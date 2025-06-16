@@ -1,9 +1,13 @@
 
-all:V: hello_linux_amd64.exe
+all:V: hello_linux_amd64.exe hello_linux_386.exe
 
 clean:V:
-	rm -f *.6 *.exe
+	rm -f *.6 *.8 *.exe
 
-%.exe: %.s
+hello_linux_amd64.exe: hello_linux_amd64.s
    6a -c $prereq
-   6l -X -o $target -E _start $stem.6
+   6l -X -o $target -E _start hello_linux_amd64.6
+
+hello_linux_386.exe: hello_linux_386.s
+   8a -c $prereq
+   8l -X -o $target -E _start hello_linux_386.8
