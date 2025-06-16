@@ -7,6 +7,7 @@ clean:V:
 # can use -v for verbose mode to help debug
 helloprintf.exe: helloprintf.c
    6c -c misc.c
+   6c -c rune.c
    6c -c print.c
    6c -c float.c
    6c -c helloprintf.c
