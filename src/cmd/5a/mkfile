@@ -1,0 +1,22 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=5a
+LDLIBS=-lbio -l9 -lm
+
+OFILES=\
+	y.tab.$O\
+	lex.$O\
+	../5l/enam.$O\
+
+HFILES=\
+	a.h\
+	y.tab.h\
+	../5l/5.out.h\
+
+YFILES=a.y
+
+<$TOP/mkfiles/mkone
+
+lex.$O:	../cc/macbody ../cc/lexbody
