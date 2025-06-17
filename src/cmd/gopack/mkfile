@@ -2,11 +2,11 @@ TOP=../../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-TARG=nm
+TARG=ar
 # need -lmach too here
 LDLIBS=-lmach -lbio -l9 -lm
 
 OFILES=\
-	nm.$O\
+	ar.$O\
 
 <$TOP/mkfiles/mkone
