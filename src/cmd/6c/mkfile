@@ -1,0 +1,31 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=6c
+LDLIBS=-lbio -l9 -lm
+
+HFILES=\
+	gc.h\
+	../6l/6.out.h\
+	../cc/cc.h\
+
+OFILES=\
+	cgen.$O\
+	list.$O\
+	sgen.$O\
+	swt.$O\
+	txt.$O\
+	../cc/pgen.$O\
+	../cc/pswt.$O\
+	div.$O\
+	mul.$O\
+	reg.$O\
+	peep.$O\
+	machcap.$O\
+	../6l/enam.$O\
+
+LIB=\
+	../cc/cc.a\
+
+<$TOP/mkfiles/mkone
