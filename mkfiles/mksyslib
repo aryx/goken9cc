@@ -1,0 +1,40 @@
+# -*- sh -*-
+
+LIB=$ROOT/$objtype/lib/$LIBNAME
+
+all:V:  $LIB
+
+$LIB:   $OFILES
+        ar rsc $LIBNAME $prereq
+	cp $LIBNAME $LIB
+
+%.$O:   $HFILES                 # don't combine with following %.$O rules
+
+# this will work also for OFILES in subdir as fmt/chartod.o
+%.$O:   %.c
+        $CC $CFLAGS $stem.c -o $target
+%.$O:   %.s
+        $AS $AFLAGS $stem.s -o $target
+
+
+install:V: $LIB
+uninstall:V:
+        rm -f $LIB
+
+installall:V:
+        for(objtype in $CPUS) 
+           mk install
+%.all:V:
+        for(objtype in $CPUS) 
+           mk $stem
+
+clean:V:
+        rm -f *.[$OS] [$OS].out $CLEANFILES *.$O $OFILES $LIBNAME
+nuke:V:
+        rm -f *.[$OS] [$OS].out $CLEANFILES *.$O $OFILES $LIBNAME $LIB
+
+%.clean:V:
+        rm -f $stem.[$OS] [$OS].$stem $stem.acid $stem
+
+%.acid: %.$O $HFILES
+        $CC $CFLAGS -a $stem.c >$target

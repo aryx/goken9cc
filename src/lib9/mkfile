@@ -1,0 +1,115 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LIBNAME=lib9.a
+
+NUM=\
+	fmt/charstod.$O\
+	fmt/pow10.$O\
+
+# Could add fmt/errfmt, but we want to pick it up from ./errstr.c instead.
+# pad: adjusted fmtlock2.c instead of fmt/fmtlock.c because ??
+FMTOFILES=\
+	fmt/dofmt.$O\
+	fmt/fltfmt.$O\
+	fmt/fmt.$O\
+	fmt/fmtfd.$O\
+	fmt/fmtfdflush.$O\
+	fmt/fmtlocale.$O\
+	fmtlock2.$O\
+	fmt/fmtnull.$O\
+	fmt/fmtprint.$O\
+	fmt/fmtquote.$O\
+	fmt/fmtrune.$O\
+	fmt/fmtstr.$O\
+	fmt/fmtvprint.$O\
+	fmt/fprint.$O\
+	fmt/nan64.$O\
+	fmt/print.$O\
+	fmt/seprint.$O\
+	fmt/smprint.$O\
+	fmt/snprint.$O\
+	fmt/sprint.$O\
+	fmt/strtod.$O\
+	fmt/vfprint.$O\
+	fmt/vseprint.$O\
+	fmt/vsmprint.$O\
+	fmt/vsnprint.$O\
+	$NUM\
+
+UTFOFILES=\
+	utf/rune.$O\
+	utf/utfecpy.$O\
+	utf/utflen.$O\
+	utf/utfnlen.$O\
+	utf/utfrrune.$O\
+	utf/utfrune.$O\
+	utf/utfutf.$O\
+	utf/runetype.$O\
+
+LIB9OFILES=\
+	_p9dir.$O\
+	_exits.$O\
+	argv0.$O\
+	atoi.$O\
+	cleanname.$O\
+	create.$O\
+	dirfstat.$O\
+	dirfwstat.$O\
+	dirstat.$O\
+	dirwstat.$O\
+	dup.$O\
+	errstr.$O\
+	exec.$O\
+	execl.$O\
+	exitcode.$O\
+	exits.$O\
+	getenv.$O\
+	getfields.$O\
+	getwd.$O\
+	goos.$O\
+	main.$O\
+	nan.$O\
+	nulldir.$O\
+	open.$O\
+	readn.$O\
+	seek.$O\
+	strecpy.$O\
+	sysfatal.$O\
+	time.$O\
+	tokenize.$O\
+        \
+	await.$O\
+	getuser.$O\
+	jmp.$O\
+	notify.$O\
+	rfork.$O\
+
+#ifeq ($(GOOS),windows)
+#LIB9OFILES+=\
+#	win32.$O\
+#else
+#LIB9OFILES+=\
+#	await.$O\
+#	getuser.$O\
+#	jmp.$O\
+#	notify.$O\
+#	rfork.$O\
+#endif
+
+OFILES=\
+	$LIB9OFILES\
+	$FMTOFILES\
+	$UTFOFILES\
+
+HFILES=\
+	$TOP/include/u.h\
+	$TOP/include/libc.h\
+
+<$TOP/mkfiles/mksyslib
+
+goos.$O: goos.c
+	$CC $CFLAGS '-DGOOS="$GOOS"' '-DGOARCH="$GOARCH"' '-DGOROOT="$ROOT"' '-DGOVERSION="goken"' $prereq
+
+

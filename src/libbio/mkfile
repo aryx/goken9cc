@@ -1,0 +1,27 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LIBNAME=libbio.a
+
+OFILES=\
+	bbuffered.$O\
+	bfildes.$O\
+	bflush.$O\
+	bgetc.$O\
+	bgetrune.$O\
+	bgetd.$O\
+	binit.$O\
+	boffset.$O\
+	bprint.$O\
+	bputc.$O\
+	bputrune.$O\
+	brdline.$O\
+	brdstr.$O\
+	bread.$O\
+	bseek.$O\
+	bwrite.$O\
+
+HFILES=$TOP/bio.h
+
+<$TOP/mkfiles/mksyslib

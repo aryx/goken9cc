@@ -1,0 +1,11 @@
+<$TOP/mkfiles/mkfile.proto
+
+#CC=6c
+#LD=6l
+#O=6
+#AS=6a
+
+CC=quietgcc -c
+LD=quietgcc
+O=o
+AS=quietgcc

@@ -1,0 +1,37 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LIBNAME=libmach.a
+
+OFILES=\
+	executable.$O\
+	fakeobj.$O\
+	map.$O\
+	obj.$O\
+	swap.$O\
+	sym.$O\
+	access.$O\
+	machdata.$O\
+	setmach.$O\
+	5.$O\
+	6.$O\
+	8.$O\
+	5db.$O\
+	8db.$O\
+	5obj.$O\
+	6obj.$O\
+	8obj.$O\
+        $GOOS.$O\
+
+#ifneq ($(GOOS),windows)
+#OFILES+=\
+#	$(shell uname | tr A-Z a-z).$O\
+#else
+#OFILES+=\
+#	windows.$O\
+#endif
+
+HFILES=$TOP/mach.h elf.h macho.h obj.h
+
+<$TOP/mkfiles/mksyslib

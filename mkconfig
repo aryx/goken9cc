@@ -1,0 +1,13 @@
+#alt: could be set by env.sh
+objtype=amd64
+
+# in mkfiles/$objtype/mkfile
+#O=o
+# in mkfiles/mkfile.proto included from mkfiles/$objtype/mkfile
+#CPUS=arm amd64 386
+#OS=568
+
+GOOS=linux
+GOARCH=amd64
+GOHOSTOS=linux
+GOHOSTARCH=amd64

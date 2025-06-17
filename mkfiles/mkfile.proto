@@ -1,0 +1,28 @@
+# -*- sh -*-
+
+ROOT=$TOP/ROOT
+
+#
+# common mkfile parameters shared by all architectures
+#
+
+OS=568
+CPUS=arm amd64 386
+
+#in principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype -I$TOP/include/ALL
+#note: the -DPLAN9PORT is used only for src/lib9/fmt/
+CFLAGS=-I$TOP/include -DPLAN9PORT -O2 -fno-inline -ggdb
+#LDFLAGS=-L$ROOT/$objtype/lib
+
+LEX=lex
+YACC=yacc
+
+# recursive mk will have these set from the parent
+# this is never what we want.  clear them
+#pad: if you remove those settings, you will get an error 
+# in windows/plumb: "don't know how to make '/386/include/u.h^A...."
+
+TARG=
+OFILES=
+HFILES=
+YFILES=
