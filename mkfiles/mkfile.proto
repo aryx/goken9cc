@@ -11,8 +11,9 @@ CPUS=arm amd64 386
 
 #in principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype -I$TOP/include/ALL
 #note: the -DPLAN9PORT is used only for src/lib9/fmt/
-CFLAGS=-I$TOP/include -DPLAN9PORT -O2 -fno-inline -ggdb
-#LDFLAGS=-L$ROOT/$objtype/lib
+#TODO: quietgcc and linux specific so move somewhere else
+CFLAGS=-I$TOP/include -I. -DPLAN9PORT -O2 -fno-inline -ggdb
+LDFLAGS=-L$ROOT/$objtype/lib
 
 LEX=lex
 YACC=yacc

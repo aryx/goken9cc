@@ -1,0 +1,62 @@
+# -*- sh -*-
+
+BIN=$ROOT/$objtype/bin
+YFLAGS=-d
+
+all:V:	$O.out
+
+$O.out:	$OFILES $LIB
+	$LD $LDFLAGS -o $target $prereq $LDLIBS
+
+
+%.$O:	$HFILES		# don't combine with following %.$O rules
+
+%.$O:	%.c
+	$CC $CFLAGS $stem.c -o $target
+%.$O:	%.s
+	$AS $AFLAGS $stem.s -o $target
+
+
+y.tab.h y.tab.c:	$YFILES
+	$YACC $YFLAGS $prereq
+lex.yy.c:	$LFILES
+	$LEX $LFLAGS $prereq
+
+
+install:V:	$BIN/$TARG
+uninstall:V:
+	rm -f $BIN/$TARG
+
+$BIN/$TARG:	$O.out
+	cp $prereq $target
+
+installall:V:
+	for(objtype in $CPUS)
+		mk install
+allall:V:
+	for(objtype in $CPUS)
+		mk all
+
+clean:V:
+	rm -f *.[$OS] [$OS].out y.tab.? lex.yy.c y.debug y.output $TARG $CLEANFILES $OFILES *.$O $O.out
+nuke:V:
+	rm -f *.[$OS] [$OS].out y.tab.? lex.yy.c y.debug y.output *.acid $TARG
+
+
+
+safeinstall:V: $O.out
+	test -e $BIN/$TARG && mv $BIN/$TARG $BIN/_$TARG
+	cp $prereq $BIN/$TARG
+safeinstallall:V:
+	for (objtype in $CPUS)
+		mk safeinstall
+
+
+%.acid: %.$O $HFILES
+	$CC $CFLAGS -a $stem.c >$target
+
+#pad: generate warnings with mk-rc.byte
+#%.man:	$MAN/$stem
+#	cp $stem.man $MAN/$stem
+
+man:V:	$TARG.man
