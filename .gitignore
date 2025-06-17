@@ -74,9 +74,11 @@ _testmain.go
 /src/pkg/os/signal/unix.go
 
 /src/pkg/runtime/amd64/asm.h
+/src/pkg/runtime/386/asm.h
 /src/pkg/runtime/goc2c
 /src/pkg/runtime/mkversion
 /src/pkg/runtime/runtime.acid.amd64
+/src/pkg/runtime/runtime.acid.386
 /src/pkg/runtime/version.go
 
 # during make test
