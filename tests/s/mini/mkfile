@@ -1,5 +1,5 @@
 
-all:V: hello_linux_amd64.exe hello_linux_386.exe
+all:V: hello_linux_amd64.exe hello_linux_386.exe hello_macos_amd64.exe
 
 clean:V:
 	rm -f *.6 *.8 *.exe
@@ -7,6 +7,10 @@ clean:V:
 hello_linux_amd64.exe: hello_linux_amd64.s
    6a -c $prereq
    6l -X -o $target -E _start hello_linux_amd64.6
+
+hello_macos_amd64.exe: hello_macos_amd64.s
+   6a -c $prereq
+   6l -X -o $target -E _start hello_macos_amd64.6
 
 hello_linux_386.exe: hello_linux_386.s
    8a -c $prereq
