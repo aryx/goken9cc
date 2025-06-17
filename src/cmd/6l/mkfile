@@ -1,0 +1,38 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=6l
+LDLIBS=-lbio -l9 -lm
+
+# no ../ld/pe.$O this time compared to 8l
+OFILES=\
+	asm.$O\
+	../ld/data.$O\
+	../ld/dwarf.$O\
+	../ld/elf.$O\
+	enam.$O\
+	../ld/go.$O\
+	../ld/lib.$O\
+	list.$O\
+	../ld/macho.$O\
+	obj.$O\
+	optab.$O\
+	pass.$O\
+	prof.$O\
+	span.$O\
+	symtab.$O\
+
+HFILES=\
+	l.h\
+	../6l/6.out.h\
+	../ld/lib.h\
+	../ld/elf.h\
+	../ld/macho.h\
+	../ld/dwarf.h\
+
+<$TOP/mkfiles/mkone
+
+CLEANFILES=enam.c
+enam.c: 6.out.h
+	sh mkenam
