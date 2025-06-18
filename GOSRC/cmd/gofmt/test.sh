@@ -47,7 +47,7 @@ apply1() {
 	# the following directories are skipped because they contain test
 	# cases for syntax errors and thus won't parse in the first place:
 	case `dirname "$F"` in
-	$GOROOT/test/syntax ) return ;;
+	$GOROOT/GOTEST/syntax ) return ;;
 	esac
 	#echo $1 $2
 	"$1" "$2"; count "$F"
