@@ -6,6 +6,7 @@ include ../../Make.inc
 O:=$(HOST_O)
 
 TARG=8l
+HOST_CFLAGS+=-I../ld
 
 OFILES=\
 	asm.$O\
@@ -42,5 +43,5 @@ enam.c: 8.out.h
 CLEANFILES+=enam.c
 
 
-%.$O: ../ld/%.c
-	$(HOST_CC) $(HOST_CFLAGS) -c -I. ../ld/$*.c
+#%.$O: ../ld/%.c
+#	$(HOST_CC) $(HOST_CFLAGS) -c -I. ../ld/$*.c
