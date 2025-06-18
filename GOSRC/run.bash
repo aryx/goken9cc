@@ -27,7 +27,7 @@ fi
 xcd() {
 	echo
 	echo --- cd $1
-	builtin cd "$GOROOT"/src/$1
+	builtin cd "$GOROOT"/GOSRC/$1
 }
 
 maketest() {

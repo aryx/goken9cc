@@ -15,7 +15,7 @@ COPY . .
 #TODO: switch to just configure; make; make install
 # so we can disable some tests that don't work inside Docker like syslog
 ENV IN_DOCKER=true
-RUN cd src; ./all.bash
+RUN cd GOSRC; ./all.bash
 
 #TODO: switch to just make test
 ENV PATH="$PATH:/src/bin"

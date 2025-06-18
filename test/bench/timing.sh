@@ -5,7 +5,7 @@
 
 set -e
 
-eval $(gomake --no-print-directory -f ../../src/Make.inc go-env)
+eval $(gomake --no-print-directory -f ../../GOSRC/Make.inc go-env)
 PATH=.:$PATH
 
 mode=run
