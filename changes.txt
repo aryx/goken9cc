@@ -4,10 +4,11 @@
 # see also pad.txt history section
 
 ** internals
-- reorg code with Go related toolchain in GOSRC/ and the C toolchain in src/
-- remove the Google (and obsolete) specifics: src/cmd/hgpatch and lib/corereview
-- start move around Go specific files in DELETED/ (go editor modes, go shell hooks,
+- reorg code with Go related toolchain in GOSRC/ and the C toolchain in src/,
+  same for test/ renamed GOTEST/
+- start move around Go specific files in GOMISC/ (go editor modes, go shell hooks,
   cgo, go docs, cmd/ebnflint)
+- remove the Google (and obsolete) specifics: src/cmd/hgpatch and lib/corereview
 - remove support for nacl (google native client old technology superseded by wasm)
 
 ** test infra
