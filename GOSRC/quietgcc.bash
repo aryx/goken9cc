@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-# The master for this file is $GOROOT/src/quietgcc.bash
+# The master for this file is $GOROOT/GOSRC/quietgcc.bash
 # Changes made to $GOBIN/quietgcc will be overridden.
 
 # Gcc output that we don't care to see.

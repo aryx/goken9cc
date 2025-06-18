@@ -15,5 +15,5 @@ test: $(TARG)
 	./test.sh
 
 smoketest: $(TARG)
-	./test.sh "$(GOROOT)"/src/pkg/go/parser/parser.go
+	./test.sh "$(GOROOT)"/GOSRC/pkg/go/parser/parser.go
 

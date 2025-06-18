@@ -5,7 +5,7 @@
 
 set -e
 if [ ! -f env.bash ]; then
-	echo 'make.bash must be run from $GOROOT/src' 1>&2
+	echo 'make.bash must be run from $GOROOT/GOSRC' 1>&2
 	exit 1
 fi
 . ./env.bash
@@ -25,7 +25,7 @@ unset CDPATH	# in case user has it set
 rm -f "$GOBIN"/quietgcc
 CC=${CC:-gcc}
 export CC
-sed -e "s|@CC@|$CC|" < "$GOROOT"/src/quietgcc.bash > "$GOBIN"/quietgcc
+sed -e "s|@CC@|$CC|" < "$GOROOT"/GOSRC/quietgcc.bash > "$GOBIN"/quietgcc
 chmod +x "$GOBIN"/quietgcc
 
 rm -f "$GOBIN"/gomake
@@ -53,10 +53,10 @@ if [ -d /selinux -a -f /selinux/booleans/allow_execstack ] ; then
 fi
 
 (
-	cd "$GOROOT"/src/pkg;
+	cd "$GOROOT"/GOSRC/pkg;
 	bash deps.bash	# do this here so clean.bash will work in the pkg directory
 )
-bash "$GOROOT"/src/clean.bash
+bash "$GOROOT"/GOSRC/clean.bash
 
 # pkg builds the Go programs in cmd.
 for i in lib9 libbio libmach cmd pkg
@@ -67,7 +67,7 @@ do
 		# test the exit status.
 		(
 			echo; echo; echo %%%% making $i %%%%; echo
-			cd "$GOROOT"/src/$i
+			cd "$GOROOT"/GOSRC/$i
 			case $i in
 			cmd)
 				bash make.bash

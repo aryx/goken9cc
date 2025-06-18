@@ -16,7 +16,7 @@ export LC_ALL=C
 export LC_CTYPE=C
 
 export GOROOT=${GOROOT:-"@@GOROOT@@"}
-eval $(gomake -j1 --no-print-directory -f "$GOROOT"/src/Make.inc go-env)
+eval $(gomake -j1 --no-print-directory -f "$GOROOT"/GOSRC/Make.inc go-env)
 if [ -z "$O" ]; then
 	echo 'missing $O - maybe no Make.$GOARCH?' 1>&2
 	exit 2
@@ -75,10 +75,10 @@ case $# in
 		-*help|-*'?'|'?')
 			fail "$usage"
 		esac
-		if test -d "$GOROOT/src/pkg/$1"
+		if test -d "$GOROOT/GOSRC/pkg/$1"
 		then
 			pkg=$(basename $1)
-			dir=$GOROOT/src/pkg/$1
+			dir=$GOROOT/GOSRC/pkg/$1
 			importdir=$1
 			shift
 			case "$pkg" in
