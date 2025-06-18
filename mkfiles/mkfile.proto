@@ -13,11 +13,9 @@ OS=568
 CPUS=arm amd64 386
 
 #principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype -I$TOP/include/ALL
-#alt: the -DPLAN9PORT is used only for src/lib9/fmt/ so we could set and use
-# a CFLAGS_EXTRA instead and set it only in src/lib9/mkfile
 #TODO: quietgcc and linux specific so move somewhere else
 GCCFLAGS=-O2 -fno-inline -ggdb
-CFLAGS=-I$TOP/include -I. -DPLAN9PORT $GCCFLAGS
+CFLAGS=-I$TOP/include -I. $GCCFLAGS
 LDFLAGS=-L$ROOT/$objtype/lib
 
 LEX=lex

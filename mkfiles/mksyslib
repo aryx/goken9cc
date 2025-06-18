@@ -13,7 +13,7 @@ $LIB:   $OFILES
 
 # this will work also for OFILES in subdir as fmt/chartod.o thx to '-o $target'
 %.$O:   %.c
-        $CC $CFLAGS $stem.c -o $target
+        $CC $CFLAGS $CFLAGS_EXTRA $stem.c -o $target
 %.$O:   %.s
         $AS $AFLAGS $stem.s -o $target
 

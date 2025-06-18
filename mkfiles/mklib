@@ -8,7 +8,7 @@ $LIB:	$OFILES
 
 %.$O:	$HFILES		# don't combine with following %.$O rules
 %.$O:	%.c
-	$CC $CFLAGS $stem.c -o $target
+	$CC $CFLAGS $CFLAGS_EXTRA $stem.c -o $target
 %.$O:	%.s
 	$AS $AFLAGS $stem.s -o $target
 

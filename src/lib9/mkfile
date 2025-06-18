@@ -4,6 +4,9 @@ TOP=../..
 
 LIBNAME=lib9.a
 
+# note that the -DPLAN9PORT is used only for fmt/
+CFLAGS_EXTRA=-DPLAN9PORT
+
 NUM=\
 	fmt/charstod.$O\
 	fmt/pow10.$O\

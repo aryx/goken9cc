@@ -4,21 +4,22 @@ TOP=../../..
 
 TARG=8l
 LDLIBS=-lbio -l9 -lm
+CFLAGS_EXTRA=-I../ld
 
 OFILES=\
 	asm.$O\
-	../ld/data.$O\
-	../ld/dwarf.$O\
-	../ld/elf.$O\
+	data.$O\
+	dwarf.$O\
+	elf.$O\
 	enam.$O\
-	../ld/go.$O\
-	../ld/lib.$O\
+	go.$O\
+	lib.$O\
 	list.$O\
-	../ld/macho.$O\
+	macho.$O\
 	obj.$O\
 	optab.$O\
 	pass.$O\
-	../ld/pe.$O\
+	pe.$O\
 	prof.$O\
 	span.$O\
 	symtab.$O\

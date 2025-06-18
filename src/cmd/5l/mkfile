@@ -4,15 +4,16 @@ TOP=../../..
 
 TARG=5l
 LDLIBS=-lbio -l9 -lm
+CFLAGS_EXTRA=-I../ld
 
-# no ../ld/macho.$O, no ../ld/pe.$O compared to 8l
+# no macho.$O, no pe.$O compared to 8l
 # and addition of thumb.$O and softfloat.$O and noop.$O
 OFILES=\
 	asm.$O\
-	../ld/data.$O\
-	../ld/elf.$O\
+	data.$O\
+	elf.$O\
 	enam.$O\
-	../ld/lib.$O\
+	lib.$O\
 	list.$O\
 	noop.$O\
 	obj.$O\
@@ -23,7 +24,7 @@ OFILES=\
 	softfloat.$O\
 	span.$O\
 	symtab.$O\
-	../ld/go.$O\
+	go.$O\
 
 HFILES=\
 	l.h\
