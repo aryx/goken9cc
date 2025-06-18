@@ -87,7 +87,7 @@ _testmain.go
 
 # during make test
 src/pkg/debug/gosym/_test/
-src/pkg/exp/ogle/ogle
+GOSRC/pkg/exp/ogle/ogle
 src/pkg/template/_test/
 
 GOTEST/pass.out
