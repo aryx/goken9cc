@@ -111,5 +111,3 @@ HFILES=\
 
 goos.$O: goos.c
 	$CC $CFLAGS '-DGOOS="$GOOS"' '-DGOARCH="$GOARCH"' '-DGOROOT="$ROOT"' '-DGOVERSION="goken"' $prereq
-
-

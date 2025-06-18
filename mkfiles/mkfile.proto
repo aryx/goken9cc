@@ -1,5 +1,8 @@
 # -*- sh -*-
 
+#LATER? for now we install libs and bins under ROOT/ to separate
+# them from GO stuff but at some point we may want ROOT=$TOP and install in
+# $TOP/bin and $TOP/lib? but will need $TOP/bin/amd64/ at least?
 ROOT=$TOP/ROOT
 
 #
@@ -9,23 +12,21 @@ ROOT=$TOP/ROOT
 OS=568
 CPUS=arm amd64 386
 
-#in principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype -I$TOP/include/ALL
-#note: the -DPLAN9PORT is used only for src/lib9/fmt/
+#principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype -I$TOP/include/ALL
+#alt: the -DPLAN9PORT is used only for src/lib9/fmt/ so we could set and use
+# a CFLAGS_EXTRA instead and set it only in src/lib9/mkfile
 #TODO: quietgcc and linux specific so move somewhere else
-CFLAGS=-I$TOP/include -I. -DPLAN9PORT -O2 -fno-inline -ggdb
+GCCFLAGS=-O2 -fno-inline -ggdb
+CFLAGS=-I$TOP/include -I. -DPLAN9PORT $GCCFLAGS
 LDFLAGS=-L$ROOT/$objtype/lib
 
 LEX=lex
-#alt: bison but not always super compatible
-# apparently on my Linux /bin/yacc is actually bison in disguise but
-# compatible.
+#alt: bison but not always super compatible. apparently on my Linux /bin/yacc
+# is actually bison in disguise but compatible :)
 YACC=yacc
 
 # recursive mk will have these set from the parent
 # this is never what we want.  clear them
-#pad: if you remove those settings, you will get an error 
-# in windows/plumb: "don't know how to make '/386/include/u.h^A...."
-
 TARG=
 OFILES=
 HFILES=

@@ -4,18 +4,18 @@ LIB=$ROOT/$objtype/lib/$LIBNAME
 
 all:V:  $LIB
 
+#TODO: principia: 'ar vu' under plan9, rsc is GNU binutils specific
 $LIB:   $OFILES
         ar rsc $LIBNAME $prereq
 	cp $LIBNAME $LIB
 
 %.$O:   $HFILES                 # don't combine with following %.$O rules
 
-# this will work also for OFILES in subdir as fmt/chartod.o
+# this will work also for OFILES in subdir as fmt/chartod.o thx to '-o $target'
 %.$O:   %.c
         $CC $CFLAGS $stem.c -o $target
 %.$O:   %.s
         $AS $AFLAGS $stem.s -o $target
-
 
 install:V: $LIB
 uninstall:V:

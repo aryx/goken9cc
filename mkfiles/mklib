@@ -1,8 +1,8 @@
 # -*- sh -*-
 
-YFLAGS=-d
-
 all:V:	$LIB
+
+#TODO: principia: 'ar vu' under plan9, rsc is GNU binutils specific
 $LIB:	$OFILES
 	ar rsc $LIB $prereq
 
@@ -12,11 +12,14 @@ $LIB:	$OFILES
 %.$O:	%.s
 	$AS $AFLAGS $stem.s -o $target
 
+# to generate also y.tab.h with the token definitions
+YFLAGS=-d
 y.tab.h y.tab.c:	$YFILES
 	$YACC $YFLAGS $prereq
 lex.yy.c:	$LFILES
 	$LEX $LFLAGS $prereq
 
+# as opposed to mksyslib, we do not install the lib under ROOT/<arch>/lib
 install:VQ: $LIB
 uninstall:VQ:
 	echo nothing to uninstall

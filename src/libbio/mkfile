@@ -22,6 +22,6 @@ OFILES=\
 	bseek.$O\
 	bwrite.$O\
 
-HFILES=$TOP/bio.h
+HFILES=$TOP/include/bio.h
 
 <$TOP/mkfiles/mksyslib
