@@ -1,5 +1,5 @@
 
-all:V: hello_linux_amd64.exe hello_linux_386.exe hello_macos_amd64.exe
+all:V: hello_linux_amd64.exe hello_linux_386.exe hello_macos_amd64.exe hello_plan9_386.exe
 
 test:V: all
       ./hello_linux_amd64.exe
@@ -19,3 +19,8 @@ hello_macos_amd64.exe: hello_macos_amd64.s
 hello_linux_386.exe: hello_linux_386.s
    8a -c $prereq
    8l -X -o $target -E _start hello_linux_386.8
+
+# -H 2 this time and -E _main
+hello_plan9_386.exe: hello_plan9_386.s
+   8a -c $prereq
+   8l -X -o $target -H 2 -E _main hello_plan9_386.8
