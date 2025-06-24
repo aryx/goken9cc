@@ -8,12 +8,14 @@
 
 all:
 	mk
+install:
+	mk install
 clean:
 	mk clean
 
 .PHONY: test
 test:
-	echo TODO
+	cd tests/s/mini; mk; ./hello_linux_amd64.exe; ./hello_linux_386.exe
 
 hellotest:
 	echo TODO

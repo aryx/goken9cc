@@ -2,7 +2,7 @@ TOP=../../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-TARG=ar
+TARG=iar
 # need -lmach too here
 LDLIBS=-lmach -lbio -l9 -lm
 

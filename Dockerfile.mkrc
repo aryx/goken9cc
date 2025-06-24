@@ -21,6 +21,9 @@ COPY . .
 RUN apt-get install -y 9base
 ENV MKSHELL="/usr/bin/rc"
 RUN make # which will call mk
+RUN make install
 
 # Run tests
+ENV GOOS="linux"
+ENV PATH="/src/ROOT/amd64/bin:${PATH}"
 RUN make test
