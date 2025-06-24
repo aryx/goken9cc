@@ -128,13 +128,16 @@ noops(void)
 		Bprint(&bso, "%5.2f noops\n", cputime());
 	Bflush(&bso);
 
-	symmorestack = lookup("runtime.morestack", 0);
-	if(symmorestack->type != STEXT) {
-		diag("runtime·morestack not defined");
-		errorexit();
+	if (!debug['X']) {
+	  symmorestack = lookup("runtime.morestack", 0);
+	  if(symmorestack->type != STEXT) {
+	    diag("runtime·morestack not defined");
+	    errorexit();
+	  } else {
+	    pmorestack = symmorestack->text;
+	    pmorestack->reg |= NOSPLIT;
+	  }
 	}
-	pmorestack = symmorestack->text;
-	pmorestack->reg |= NOSPLIT;
 
 	q = P;
 	for(cursym = textp; cursym != nil; cursym = cursym->next) {
@@ -271,7 +274,7 @@ noops(void)
 					break;
 				}
 	
-				if(p->reg & NOSPLIT) {
+				if((p->reg & NOSPLIT) || debug['X']) {
 					q1 = prg();
 					q1->as = AMOVW;
 					q1->scond |= C_WBIT;

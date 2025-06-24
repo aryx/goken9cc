@@ -380,14 +380,14 @@ dostkoff(void)
 
 	pmorestack = P;
 	if (!debug['X']) {
-	symmorestack = lookup("runtime.morestack", 0);
+	  symmorestack = lookup("runtime.morestack", 0);
 
-	if(symmorestack->type != STEXT)
+	  if(symmorestack->type != STEXT)
 		diag("runtime.morestack not defined");
-	else {
+	  else {
 		pmorestack = symmorestack->text;
 		symmorestack->text->from.scale |= NOSPLIT;
-	}
+	  }
         }
 
 	for(cursym = textp; cursym != nil; cursym = cursym->next) {
