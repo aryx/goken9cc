@@ -112,5 +112,6 @@ HFILES=\
 
 <$TOP/mkfiles/mksyslib
 
+#bugfix: do not use $preqeq below because then HFILES are also passed
 goos.$O: goos.c
-	$CC $CFLAGS '-DGOOS="$GOOS"' '-DGOARCH="$GOARCH"' '-DGOROOT="$ROOT"' '-DGOVERSION="goken"' $prereq
+	$CC $CFLAGS $CFLAGS_EXTRA '-DGOOS="$GOOS"' '-DGOARCH="$GOARCH"' '-DGOROOT="$ROOT"' '-DGOVERSION="goken"' goos.c

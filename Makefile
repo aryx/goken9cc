@@ -22,7 +22,9 @@ hellotest:
 build-docker:
 	docker build -t "goken9cc" .
 build-alpine:
-	docker build -f Dockerfile.alpine -t "goken9cc" .
+	docker build -f Dockerfile.alpine -t "goken9cc-alpine" .
+build-mkrc:
+	docker build -f Dockerfile.mkrc -t "goken9cc-mkrc" .
 
 ###############################################################################
 # Go tests

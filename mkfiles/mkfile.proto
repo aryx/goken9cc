@@ -13,7 +13,7 @@ OS=568
 CPUS=arm amd64 386
 
 #principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype -I$TOP/include/ALL
-#TODO: quietgcc and linux specific so move somewhere else
+#TODO: gcc and linux specific so move somewhere else
 GCCFLAGS=-O2 -fno-inline -ggdb
 CFLAGS=-I$TOP/include -I. $GCCFLAGS
 LDFLAGS=-L$ROOT/$objtype/lib

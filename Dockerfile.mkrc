@@ -1,0 +1,17 @@
+# Build and test goken9cc on Ubuntu using mk/rc
+
+#TODO: only one with valid mk that can support MKSHELL env var
+FROM padator/kencc
+
+# Setup a basic C dev environment
+RUN apt-get update # needed otherwise can't find any package
+RUN apt-get install -y gcc libc6-dev bison make ed
+
+# Now let's build from source
+WORKDIR /src
+COPY . .
+
+# for rc TODO: remove once rc in kencc is working
+RUN apt-get install -y 9base
+ENV MKSHELL="/usr/bin/rc"
+RUN mk

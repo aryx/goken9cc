@@ -13,12 +13,8 @@ first copy the one from 9-cc and then commit diff with 9-cc-david-colimbier
 so keep this history
 need increase lib9? need add libregexp?
 
-*** WAITING add Dockerfile.mkfile or something and call it also from docker.yml
-hmm but need mk and rc! time to introduce mk and rc in goken?
-like kencc did?
 *** RELAX integrate libregexp? needed by sed and grep anyway?
 good test for lib9?
-
 
 *** LATER: integrate arm64, mips, and riscv from kencc-latest, just build them! (can't run yet)
 
@@ -59,8 +55,6 @@ whether we can produce linux, windows, and macos binaries!
 see also DELETED/misc/arm/ and the use of adb and maybe android emulator
 
 **** try also the tiny/arm ? but no write :)
-
-*** ----------------------------------------------------------------
 
 *** make goken compile on Windows 386
 
@@ -112,8 +106,6 @@ start use jsonnet?
 start multi GOOS and GOARCH in CI? in Docker can try all combinations?
 
 *** less: .gitignore inspired from DELETED/.hgignore
-
-*** -----------------------------------------------------
 
 *** still? switch from bison to yacc? so can work on plan9!
 anyway I get bad errors about yerr.h that we could fix by switching to regular yacc!

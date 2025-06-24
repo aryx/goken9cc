@@ -1,1 +1,2 @@
-export PATH=$PATH:`pwd`/ROOT/amd64/bin
+export PATH=`pwd`/ROOT/amd64/bin:$PATH
+export MKSHELL=`which rc`

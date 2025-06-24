@@ -1,5 +1,5 @@
 # Build goken via docker.
-# See also Dockerfile at the root of the project.
+# See also the Dockerfiles at the root of the project.
 
 name: docker
 
@@ -20,3 +20,5 @@ jobs:
       - run: docker build -t goken9cc .
       # alt: could be a different (parallel) job
       - run: docker build -f Dockerfile.alpine -t goken9cc-alpine .
+      # alt: could be a different (parallel) job
+      - run: docker build -f Dockerfile.mkrc -t goken9cc-mkrc .
