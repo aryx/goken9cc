@@ -3,6 +3,11 @@
 #TODO: only one with valid mk that can support MKSHELL env var
 FROM padator/kencc
 
+# we just need mk from kencc
+RUN mv /usr/local/bin/mk /usr/bin/
+#LATER: we could also test using kencc to compile goken!
+RUN rm -f /usr/local/bin/*
+
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
 RUN apt-get install -y gcc libc6-dev bison make ed
@@ -11,7 +16,11 @@ RUN apt-get install -y gcc libc6-dev bison make ed
 WORKDIR /src
 COPY . .
 
+#LATER: have a configure; make; make test; make install
 # for rc TODO: remove once rc in kencc is working
 RUN apt-get install -y 9base
 ENV MKSHELL="/usr/bin/rc"
-RUN mk
+RUN make # which will call mk
+
+# Run tests
+RUN make test

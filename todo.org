@@ -1,6 +1,11 @@
 
 * Last
 
+** Last1
+
+*** goken/mkfiles/386/mkfile
+and try compile goken with -m32
+
 ** Last0
 
 *** integrate mk and rcsh from other kencc? (and re-lpize or extend from plan9)

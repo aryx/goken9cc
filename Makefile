@@ -7,10 +7,9 @@
 ###############################################################################
 
 all:
-	cd src; ./make.bash
+	mk
 clean:
-	cd src; ./clean.bash
-	cd tests; make clean
+	mk clean
 
 .PHONY: test
 test:

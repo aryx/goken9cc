@@ -4,17 +4,15 @@ FROM ubuntu:22.04
 
 RUN apt-get update
 RUN apt-get install -y gcc libc6-dev bison make ed
+
 # for some tests to pass that requires /etc/services or timezones
 RUN apt-get install -y netbase tzdata
 
 WORKDIR /src
 COPY . .
 
-#TODO: switch to just configure; make; make install
 # so we can disable some tests that don't work inside Docker like syslog
 ENV IN_DOCKER=true
 RUN cd GOSRC; ./all.bash
-
-#TODO: switch to just make test
 ENV PATH="$PATH:/src/bin"
 RUN make hellogotest
