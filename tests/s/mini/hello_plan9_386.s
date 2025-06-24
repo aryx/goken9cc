@@ -1,5 +1,5 @@
 // same than principia/ROOT/tests/s/hello_386.s
-// but for goken need to use 8l -H ???
+// but for goken need to use 8l -X -H2
 
 TEXT	_main(SB), $20
 
