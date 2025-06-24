@@ -1,14 +1,12 @@
-# Build and test goken9cc on Ubuntu Linux (x86_64 and glibc)
+# Build and test goken9cc and GOSRC/ on Ubuntu Linux (x86_64 and glibc)
 
 FROM ubuntu:22.04
 
-# Setup a basic C dev environment
-RUN apt-get update # needed otherwise can't find any package
+RUN apt-get update
 RUN apt-get install -y gcc libc6-dev bison make ed
 # for some tests to pass that requires /etc/services or timezones
 RUN apt-get install -y netbase tzdata
 
-# Now let's build from source
 WORKDIR /src
 COPY . .
 

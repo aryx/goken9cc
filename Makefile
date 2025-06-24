@@ -19,8 +19,10 @@ test:
 hellotest:
 	echo TODO
 
-build-docker:
-	docker build -t "goken9cc" .
+build-docker: build-mkrc
+
+build-gosrc:
+	docker build -f Dockerfile.gosrc -t "goken9cc-gosrc" .
 build-alpine:
 	docker build -f Dockerfile.alpine -t "goken9cc-alpine" .
 build-mkrc:

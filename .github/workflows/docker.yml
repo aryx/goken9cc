@@ -16,9 +16,8 @@ jobs:
       - uses: actions/checkout@v4
       # optional if don't need multi-arch build
       - uses: docker/setup-buildx-action@v3
-      # alt: make build-docker
-      - run: docker build -t goken9cc .
+      # alt: make build-gosrc
+      - run: docker build -f Dockerfile.gosrc -t goken9cc-gosrc .
       # alt: could be a different (parallel) job
       - run: docker build -f Dockerfile.alpine -t goken9cc-alpine .
-      # alt: could be a different (parallel) job
       - run: docker build -f Dockerfile.mkrc -t goken9cc-mkrc .
