@@ -12,9 +12,11 @@
 - remove support for nacl (google native client old technology superseded by wasm)
 
 ** test infra
-- add Dockerfile and docker.yml GHA (Github Action) CI checks,
+- add Dockerfile.gosrc and docker.yml GHA (Github Action) CI checks,
   and Dockerfile.alpine (just build, no run; does not run unfortunately)
+  and Dockerfile.mksrc (just C toolchain)
 - add shell.nix and nix.yml GHA for Linux CI checks (TODO: macOS)
+- add basic 'make test' and new tests/s/ and tests/c/
 
 ** build
 - add mkfiles to better match kencc and plan9 build system
