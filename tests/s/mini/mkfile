@@ -1,6 +1,10 @@
 
 all:V: hello_linux_amd64.exe hello_linux_386.exe hello_macos_amd64.exe
 
+test:V: all
+      ./hello_linux_amd64.exe
+      ./hello_linux_386.exe
+
 clean:V:
 	rm -f *.6 *.8 *.exe
 

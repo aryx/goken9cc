@@ -1,0 +1,6 @@
+TOP=..
+<$TOP/mkconfig
+
+DIRS=s/mini c
+
+<$TOP/mkfiles/mkdirs

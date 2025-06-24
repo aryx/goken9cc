@@ -15,7 +15,7 @@ clean:
 
 .PHONY: test
 test:
-	cd tests/s/mini; mk; ./hello_linux_amd64.exe; ./hello_linux_386.exe
+	mk test
 
 hellotest:
 	echo TODO

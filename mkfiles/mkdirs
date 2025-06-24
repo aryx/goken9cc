@@ -11,7 +11,7 @@ all:VQ:
             mk $MKFLAGS $target
         }
 
-install uninstall clean nuke:QV:
+install uninstall clean nuke test:QV:
         for (i in $DIRS) @{
             echo $i
             cd $i

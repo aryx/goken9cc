@@ -11,3 +11,6 @@ DIRS=\
   src/cmd/5l src/cmd/5a src/cmd/5c \
 
 <$TOP/mkfiles/mkdirs
+
+test:
+	cd tests; mk test

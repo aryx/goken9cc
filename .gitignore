@@ -12,12 +12,13 @@
 # gcc and goken libs
 *.a
 
-6.out
-o.out
+[568o].out
 _testmain.go
 
 # pad's test files
 *.exe
+
+/ROOT/*/bin/
 
 # ----------------------------------------------------------------------------
 # Specific files
