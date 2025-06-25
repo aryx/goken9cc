@@ -1,12 +1,18 @@
 
-* Last
+* Components
 
-** Last1
+** C compilers: 5c/6c/8c
 
-*** goken/mkfiles/386/mkfile
-and try compile goken with -m32
+*** make it work on principia code!
 
-** Last0
+** assemblers: 5a/6a/8a
+
+** linkers: 6l/6l/8l
+
+*** LATER factorize ld.a lib?
+hmm but l.h change each time so can do it?
+
+** mk/rc
 
 *** integrate mk and rcsh from other kencc? (and re-lpize or extend from plan9)
 # I need mk and rc now to build goken so might as well adding them
@@ -18,19 +24,18 @@ first copy the one from 9-cc and then commit diff with 9-cc-david-colimbier
 so keep this history
 need increase lib9? need add libregexp?
 
-*** RELAX integrate libregexp? needed by sed and grep anyway?
-good test for lib9?
+** libs
 
-*** LATER: integrate arm64, mips, and riscv from kencc-latest, just build them! (can't run yet)
+*** RELAX integrate libregexp? good test for lib9?
+needed by mk.
+needed also by sed and grep which I might add to goken9cc
+
+** Arch
+
+*** LATER: integrate arm64, and riscv from kencc-latest, just build them! (can't run yet)
 
 use Diff to try to unify all those kencc
 diff.rc va &> /tmp/diffva
-
-**** add va, vc, vl,  mips
-how to test?
-
-small diffs across kencc/inferno/plan9
-latest is plan9 version with biggest change in vl
 
 **** add 7a, 7c, 7l,  arm64
 how to test? on macbook pro? hello_macos_arm64.s ?
@@ -47,19 +52,55 @@ add riscv (zc) try it on xv6-riscv!!!!! that would be awesome
 
 **** still? integrate also 5coff ? and coff code?
 
-**** still? make special diff script that run diffs on important stuff
-[568][alc] cc ld nm prof  pkg/runtime/  lib9/ libmach/ libbio/ include/ pack??
+*** riscv 
 
-see if more contribs to pe.c, etc. later? worth it?
+riscv and plan9!
+https://riscv.org/news/2020/10/a-plan-9-c-compiler-for-rv32gc-and-rv64gc/
+also xv6-riscv?
 
-in the end we don't care whether 6g/8g/... go stuff work.
-We just care that it's a good test case for the C toolchain and
-whether we can produce linux, windows, and macos binaries!
+** Debugger
+
+*** LATER make acid debugger work on it?
+port acid to Linux/macOS/windows? can it run there?
+
+** GO stuff
 
 *** FUN try run with qemu on bare hardware, try runtime/tiny target with qemu on x86
 see also DELETED/misc/arm/ and the use of adb and maybe android emulator
 
 **** try also the tiny/arm ? but no write :)
+
+*** still? rerun the mkdefs, mksyscall, ... to generate the updated zxxx?
+alt: take them from latest go repo and hope it's backward compatible?
+
+* Infra
+
+** Test infra
+
+*** LATER add basic regression tests to goken9cc
+and keep all the go stuff which is a great testcase for 6c itself :)
+
+*** LATER: try to compile plan9 with goken9cc!!!
+
+*** More workflows! build_amd64_linux.yaml, build_amd64_windows
+and test_xxx too ? alla semgrep workflows
+start use jsonnet?
+
+start multi GOOS and GOARCH in CI? in Docker can try all combinations?
+
+** Build infra
+
+*** need to add mk/rc as anyway we need it to build goken when using mkfiles
+
+*** add build-mkrc.sh, like in xix (and also like in inferno?)
+makemk.sh
+see also mk.sh in kencc
+
+so no need to have bootstrapped mk for all platforms in xxx/.../bin/mk
+I started a bit with the mk.sh scripts in lib9/, libbio/ and mk/
+
+*** RELAX goken/mkfiles/386/mkfile
+and try to compile goken with -m32
 
 *** make goken compile on Windows 386
 
@@ -99,30 +140,24 @@ GOOS=darwin GOARCH=amd64
 emulate x86_64 ?
 need sign it first?
 
-*** still? WEIRD goken: fix make at toplevel, why can't find make from make.bash??
-
-*** still? rerun the mkdefs, mksyscall, ... to generate the updated zxxx?
-alt: take them from latest go repo and hope it's backward compatible?
-
-*** More workflows! build_amd64_linux.yaml, build_amd64_windows
-and test_xxx too ? alla semgrep workflows
-start use jsonnet?
-
-start multi GOOS and GOARCH in CI? in Docker can try all combinations?
-
-*** less: .gitignore inspired from DELETED/.hgignore
-
 *** still? switch from bison to yacc? so can work on plan9!
 anyway I get bad errors about yerr.h that we could fix by switching to regular yacc!
 update: seems to work already; I use yacc in my mkfile
 
+*** LATER: try to compile goken9cc on plan9!!!!!
+need VM then ... and need to find a way to transfer data from one to the other
+
+*** still? support native windows (in Nt/) like in the original kencc?
+needed?
+
+** Bench infra
+
 *** LATER add C tests and C bench for goken9cc
 take the one from Leroy for compcert?
 
-*** LATER add basic regression tests to goken9cc
-and keep all the go stuff which is a great testcase for 6c itself :)
+** Dev infra
 
-*** LATER read doc/asm.html in latest go and reference it from Assembler.nw
+*** less: .gitignore inspired from DELETED/.hgignore
 
 *** LATER betterfix the hack I put (e.g., -Wl,--allow-multiple-definition)
 
@@ -134,13 +169,20 @@ and restore the syntax/ from the testsuite and other few tests
 **** LATER: fix the many warnings reported by gcc and clang instead of using quietgcc
 and abusing -Wno
 
-*** LATER: try to compile plan9 with goken9cc!!!
+** Internals
 
-*** LATER: try to compile goken9cc on plan9!!!!!
-need VM then ... and need to find a way to transfer data from one to the other
+*** update from plan9?
 
-*** LATER make acid debugger work on it?
-port acid to Linux/macOS/windows? can it run there?
+*** update from inferno-os?
+looks like it contains the latest portable sources
+kencc and 9-cc seems not uptodate
 
-*** LATER factorize ld.a lib?
-hmm but l.h change each time so can do it?
+but at the same time, I don't think it has 5a/5c/... synced
+with the latest plan9 versions 
+(which I did sync to get a working raspberry pi build of plan9)
+
+* Docs
+
+** Misc
+
+*** LATER read doc/asm.html in latest go and reference it from Assembler.nw
