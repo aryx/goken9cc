@@ -10,7 +10,7 @@ OFILES=\
 	lex.$O\
 
 HFILES=\
-	../vc/v.out.h\
+	../vl/v.out.h\
 	y.tab.h\
 	a.h\
 
