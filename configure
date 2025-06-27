@@ -1,0 +1,30 @@
+#!/bin/sh
+#alt: #! /usr/bin/env bash
+set -eu # to debug this script add '-x'
+
+###############################################################################
+# Prelude
+###############################################################################
+# The goal of this script is to automate the configuration and installation
+# of packages that are needed to then compile and install goken itself.
+#
+# The goal is also to use a single command that can work on all platforms:
+#  - Linux (Alpine for Docker, Ubuntu for Github Actions, Nix/Arch/...)
+#  - macOS (HomeBrew, Nix)
+#  - Windows (Cygwin, WSL, Nix?)
+# and that setup everything (e.g., gcc/clang, mk/rc).
+#
+# This is reminescent of the classic "configure; make; make install"
+# trifecta of building and installing GNU packages, but adapted to the
+# new world of software development with powerful package managers and
+# software written using multiple programming languages.
+#
+# This script assumes that gcc (and binutils) as well as
+# a few other utilities (e.g., make, bash) have already been installed.
+
+echo 'TODO: check for mk, and rc'
+
+echo 'Everything looks fine. You can now run: '
+echo
+echo '   $ make'
+echo '   $ make install'

@@ -15,10 +15,10 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
   It can *build* on Linux, macOS, and Windows (TODO and Plan 9) using gcc or clang
   (TODO or a boostrapped version of itself)
 - **Multi-OS support:** 
-  Build C programs that can *run* on Linux, macOS, Windows, and Plan 9
+  Build C programs that can *run* on Linux, macOS (only old macOS for now), TODO Windows, and Plan 9
 - **Multi-architecture support:**
   Build C programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), and arm
-  architectures (TODO arm64, RISC V, and Wasm)
+  architectures (TODO mips, arm64, RISC V, and Wasm)
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
   (e.g., you can build from a Linux 386 machine a binary for amd64 macOS)
@@ -31,7 +31,7 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
   multi-platform support.
 - **Open and extensible:**
   Designed to be easy to understand, modify, and integrate into new projects,
-  thanks to its reasonable size and the use of *Literate programming*, which
+  thanks to its reasonable size and TODO the use of *Literate programming*, which
   explains the code in depth. It takes more than just a license to make code
   truly open.
 
