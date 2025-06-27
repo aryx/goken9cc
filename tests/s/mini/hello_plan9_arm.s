@@ -1,7 +1,9 @@
 // same than principia/ROOT/tests/s/hello_arm.s
-// but for goken need to use 5l -H2
+// but with goken we need to use 5l -H2 to force plan9 output
 
 TEXT _main(SB), $20
+	//TODO: port xdefine("setR12",...) from layout.c in principia to goken
+	//MOVW	$setR12(SB), R12
         /* prepare the system call PWRITE(1,&hello,12, 00) */
         MOVW $1, R1
         MOVW R1, 4(R13)
@@ -16,10 +18,13 @@ TEXT _main(SB), $20
         /* system call */
         SWI $0
         BL exit(SB)
+        RET /* not reached */
+loop:
+        B loop
 
 TEXT exit(SB), $4
-        /* prepare the system call EXITS("hello world") */
-        MOVW $hello(SB), R1
+        /* prepare the system call EXITS(0) */
+        MOVW $0, R1
         MOVW R1, 4(R13)
         MOVW $3 /*EXITS*/, R0
         /* system call */

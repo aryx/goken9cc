@@ -7,7 +7,7 @@
 *.o
 
 # kencc object files
-*.[568]
+*.[568v]
 
 # gcc and goken libs
 *.a

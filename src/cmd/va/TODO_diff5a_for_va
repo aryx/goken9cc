@@ -1,0 +1,209 @@
+# -*- diff -*-
+
+# The original content of this file was mostly the result of
+#     diff x9cc/5a/ goken/5a
+# It was then edited when the changed done in kengo to 5a has been "ported"
+# also to va.
+ 
++#undef	getc
++#undef	ungetc
++#undef	BUFSIZ
++
++#define	getc	ccgetc
++#define	ungetc	ccungetc
++
+
+ typedef	struct	Io	Io;
+@@ -29,7 +66,7 @@ struct	Sym
+ {
+ 	Sym*	link;
+ 	char*	macro;
+-	long	value;
++	int32	value;
+ 	ushort	type;
+ 	char	*name;
+ 	char	sym;
+@@ -61,7 +98,7 @@ EXTERN	struct
+ struct	Gen
+ {
+ 	Sym*	sym;
+-	long	offset;
++	int32	offset;
+ 	short	type;
+ 	short	reg;
+ 	short	name;
+@@ -73,8 +110,8 @@ struct	Hist
+ {
+ 	Hist*	link;
+ 	char*	name;
+-	long	line;
+-	long	offset;
++	int32	line;
++	int32	offset;
+ };
+ #define	H	((Hist*)0)
+ 
+@@ -90,26 +127,27 @@ enum
+ 
+ EXTERN	char	debug[256];
+ EXTERN	Sym*	hash[NHASH];
+-EXTERN	char*	Dlist[30];
++EXTERN	char**	Dlist;
+ EXTERN	int	nDlist;
+ EXTERN	Hist*	ehist;
+ EXTERN	int	newflag;
+ EXTERN	Hist*	hist;
+ EXTERN	char*	hunk;
+ EXTERN	Io*	ionext;
+ EXTERN	Io*	iostack;
+-EXTERN	long	lineno;
++EXTERN	int32	lineno;
+ EXTERN	int	nerrors;
+-EXTERN	long	nhunk;
++EXTERN	int32	nhunk;
+ EXTERN	int	ninclude;
+ EXTERN	char*	outfile;
+ EXTERN	int	pass;
+ EXTERN	char*	pathname;
+-EXTERN	long	pc;
++EXTERN	int32	pc;
+ EXTERN	int	peekc;
++EXTERN	int32	stmtline;
+ EXTERN	int	sym;
+ EXTERN	int	thechar;
+ EXTERN	char*	thestring;
+-EXTERN	long	thunk;
++EXTERN	int32	thunk;
+ EXTERN	Biobuf	obuf;
+ 
+diff -u -p -b -B -r -x .semantic.cache -x .depend -x CVS -x .hg -x .svn -x .git -x _darcs /home/pad/x9cc/5a/a.y /home/pad/goken/src/cmd/5a/a.y
+--- /home/pad/x9cc/5a/a.y	2024-04-14 13:22:05.703834695 +0200
++++ /home/pad/goken/src/cmd/5a/a.y	2025-06-19 16:02:55.139261617 +0200
+@@ -1,10 +1,12 @@
++
+ %{
++#include <stdio.h>	/* if we don't, bison will, and a.h re-#defines getc */
+ #include "a.h"
+ %}
+ %union
+ {
+ 	Sym	*sym;
+-	long	lval;
++	int32	lval;
+ 	double	dval;
+ 	char	sval[8];
+ 	Gen	gen;
+@@ -32,7 +63,11 @@
+ %type	<gen>	imm ximm name oreg ireg nireg ioreg imsr
+ %%
+ prog:
+-|	prog line
++|	prog
++	{
++		stmtline = lineno;
++	}
++	line
+ 
+ line:
+ 	LLAB ':'
+Only in /home/pad/goken/src/cmd/5a/: doc.go
+diff -u -p -b -B -r -x .semantic.cache -x .depend -x CVS -x .hg -x .svn -x .git -x _darcs /home/pad/x9cc/5a/lex.c /home/pad/goken/src/cmd/5a/lex.c
+--- /home/pad/x9cc/5a/lex.c	2024-04-14 13:22:05.703834695 +0200
++++ /home/pad/goken/src/cmd/5a/lex.c	2025-06-19 16:02:55.139261617 +0200
+@@ -1,11 +1,11 @@
+ #define	EXTERN
+ #include "a.h"
+ #include "y.tab.h"
+ #include <ctype.h>
+ 
+ void
+ main(int argc, char *argv[])
+ {
+ 	char *p;
+-	int nout, nproc, status, i, c;
++	int nout, nproc, i, c;
+ 
+@@ -28,7 +73,11 @@ main(int argc, char *argv[])
+ 
+ 	case 'D':
+ 		p = ARGF();
+-		if(p)
++		if(p) {
++			if (nDlist%8 == 0) 
++				Dlist = allocn(Dlist, nDlist*sizeof(char *), 
++					8*sizeof(char *));
+ 			Dlist[nDlist++] = p;
++		}
+ 		break;
+ 		}
+@@ -96,9 +142,10 @@ main(int argc, char *argv[])
+ int
+ assemble(char *file)
+ {
+-	char ofile[100], incfile[20], *p;
++	char *ofile, incfile[20], *p;
+ 	int i, of;
+ 
++	ofile = alloc(strlen(file)+3); // +3 for .x\0 (x=thechar)
+ 	strcpy(ofile, file);
+ 		include[0] = ofile;
+ 		*p++ = 0;
+@@ -130,3 +177,3 @@ assemble(char *file)
+ 		}
+ 	}
+ 		errorexit();
+@@ -139,6 +186,9 @@ assemble(char *file)
+ 
+ 	pass = 1;
+ 	pinit(file);
++
++	Bprint(&obuf, "%s\n", thestring);
++
+ 	for(i=0; i<nDlist; i++)
+ 		dodefine(Dlist[i]);
+ 	yyparse();
+@@ -147,6 +197,8 @@ assemble(char *file)
+ 		return nerrors;
+ 	}
+ 
++	Bprint(&obuf, "\n!\n");
++
+ 	pass = 2;
+ 	outhist();
+ 	pinit(file);
+@@ -311,6 +363,9 @@ struct
+ 	"MOVWD",	LTYPE3, AMOVWD,
+ 	"MOVWF",		LTYPE3, AMOVWF,
+ 
++	"LDREX",		LTYPE3, ALDREX,
++	"STREX",		LTYPE9, ASTREX,
++
+ /*
+ 	"ABSF",		LTYPEI, AABSF,
+ 	"ABSD",		LTYPEI, AABSD,
+@@ -417,2 +472,2 @@ cinit(void)
+ 	}
+ 
+@@ -465,7 +520,7 @@ zname(char *n, int t, int s)
+ void
+ zaddr(Gen *a, int s)
+ {
+-	long l;
++	int32 l;
+ 	int i;
+ 	char *n;
+ 	Ieee e;
+@@ -603,9 +658,9 @@ jackpot:
+ 	Bputc(&obuf, a);
+ 	Bputc(&obuf, scond);
+ 	Bputc(&obuf, reg);
+-	Bputc(&obuf, lineno);
+-	Bputc(&obuf, lineno>>8);
+-	Bputc(&obuf, lineno>>16);
+-	Bputc(&obuf, lineno>>24);
++	Bputc(&obuf, stmtline);
++	Bputc(&obuf, stmtline>>8);
++	Bputc(&obuf, stmtline>>16);
++	Bputc(&obuf, stmtline>>24);
+ 	zaddr(g1, sf);
+ 	zaddr(g2, st);
