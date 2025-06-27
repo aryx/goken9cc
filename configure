@@ -21,9 +21,19 @@ set -eu # to debug this script add '-x'
 #
 # This script assumes that gcc (and binutils) as well as
 # a few other utilities (e.g., make, bash) have already been installed.
+#
+# TODO: 
+#  - check for mk/rc
+#  - check for gcc/clang
+#  - detect arch and generate appropriate mkconfig
+#    (imitate what x9cc/configure does)
 
-echo 'TODO: check for mk, and rc'
+###############################################################################
+# Entry point
+###############################################################################
 
+echo 'TODO: check for mk, and rc (and many other things)'
+echo
 echo 'Everything looks fine. You can now run: '
 echo
 echo '   $ make'
