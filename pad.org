@@ -25,7 +25,8 @@ run and test the mk/rc/cc/... on their own platform and if we produce
 something not just for education (Principia Softwarica) but possibly
 useful for other things.
 
-There is inside the Go compiler hidden a fantastic cross platform C toolchain!
+There is inside the Go compiler, hidden, a fantastic cross platform C toolchain!
+The Go repo https://github.com:golang/go.git contains a hidden gem!
 The Go authors, who were for many the original Plan9 authors, including
 Ken Thompson who is the original author of kencc, extended the kencc compiler
 toolchain to target also Linux (ELF), macOS (Mach-O), and even windows (PE)!
@@ -34,10 +35,10 @@ this hidden toolchain from the Go source in its own project.
 
 Moreover, for Principia it was annoying to have kencc on the side,
 not using literate programming, and then a separate toolchain under Principia
-(the one from plan9). It would be good to have the two merged (and LPized),
-the one kencc to rule them all (goken9cc)
+(the one from plan9, which actually got buggy). It would be good to have the
+two merged (and LPized), the one kencc to rule them all (goken9cc).
 
-** 2025: choosing the fork point
+** 2025: choosing the golang fork point
 
 *** goals for the code at the fork point
 
@@ -64,7 +65,8 @@ my notes further below on the commit history) to find a good past fork point.
 
 *** forkpoint candidates pro and cons
 
-apr 2010: just after GOOS=windows so in theory has Linux (arm, x86*), Windows (386), macOS (x86*)
+apr 2010: just after GOOS=windows so in theory has Linux (arm, x86*), Windows (386), 
+and macOS (x86*).
  pro:
   - old so smaller, 148k with codemap -test_loc and special .codemapignore
     (basically counting just [568][alc]/, cc/, pkg/{runtime,syscall}, lib{9,mach,bio})
@@ -295,4 +297,3 @@ Jun 2014, Go 1.3
    ??: switch to SSA
    ??: android (??)
    ??: iOS, tvOS, etc. (??)
-

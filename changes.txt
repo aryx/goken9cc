@@ -1,10 +1,10 @@
 # -*- org -*-
 
-* Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vc/vl)
-# see also pad.txt history section
+* Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc)
+# see also pad.org history section
 
 ** toolchain
-- add mips toolchain va/ TODO vc/vl from https://bitbucket.org/plan9-from-bell-labs/9-cc.git
+- add mips toolchain va/vl/ TODO vc from https://bitbucket.org/plan9-from-bell-labs/9-cc.git
   and adapt it to goken
 
 ** internals
