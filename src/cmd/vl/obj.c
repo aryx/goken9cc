@@ -27,6 +27,17 @@ static	int	maxlibdir = 0;
 
 int little;
 
+
+int
+fileexists(char *s)
+{
+	uchar dirbuf[400];
+
+	/* it's fine if stat result doesn't fit in dirbuf, since even then the file exists */
+	return stat(s, dirbuf, sizeof(dirbuf)) >= 0;
+}
+
+
 void
 usage(void)
 {
@@ -179,13 +190,13 @@ main(int argc, char *argv[])
 			INITRND = 0;
 		break;
 	case 5:	/* sgi unix elf executable */
-		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
-		if(INITTEXT == -1)
-			INITTEXT = 0x00400000L+HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0x10000000;
-		if(INITRND == -1)
-			INITRND = 0;
+		//HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+		//if(INITTEXT == -1)
+		//	INITTEXT = 0x00400000L+HEADR;
+		//if(INITDAT == -1)
+		//	INITDAT = 0x10000000;
+		//if(INITRND == -1)
+		//	INITRND = 0;
 		break;
 	case 6:	/* headerless */
 		HEADR = 0;
@@ -1147,7 +1158,7 @@ gethunk(void)
 		if(thunk >= 25L*NHUNK)
 			nh = 25L*NHUNK;
 	}
-	h = mysbrk(nh);
+	h = sbrk(nh);
 	if(h == (char*)-1) {
 		diag("out of memory");
 		errorexit();

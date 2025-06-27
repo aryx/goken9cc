@@ -29,6 +29,8 @@ hello_plan9_arm.exe: hello_plan9_arm.s
    5a -c $prereq
    5l -X -o $target -H 2 -E _main hello_plan9_arm.5
 
+# actually no need -X; va/vc/vl are new and were not "go-ized"
+# actually -X would print the assembly on stdout in vl ...
 hello_plan9_mips.exe: hello_plan9_mips.s
    va -c $prereq
-   #vl -X -o $target -H 2 -E _main hello_plan9_mips.v
+   vl -o $target -H 2 -E _main hello_plan9_mips.v

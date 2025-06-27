@@ -441,7 +441,7 @@ asmb(void)
 		lput(0x80L);			/* flags */
 		break;
 	case 5:
-		elf32(MIPS, little? ELFDATA2LSB: ELFDATA2MSB, 0, nil);
+		//elf32(MIPS, little? ELFDATA2LSB: ELFDATA2MSB, 0, nil);
 		break;
 	case 6:
 		break;
