@@ -38,11 +38,38 @@ typedef int32		intptr;
 #define	float			XXfloat / / /
 #define	double			XXdouble / / /
 
+typedef	uint8			bool;
+typedef	uint8			byte;
+
+enum
+{
+	true	= 1,
+	false	= 0,
+};
+
+/*
+ * defined macros
+ *    you need super-goru privilege
+ *    to add this list.
+ */
+#define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
+#define	nil		((void*)0)
+
+
+/*
+ * common functions and data
+ */
+int32	strcmp(byte*, byte*);
+int32	findnull(byte*);
+int32	findnullw(uint16*);
+void	dump(byte*, int32);
+int32	runetochar(byte*, int32);
+int32	charntorune(int32*, uint8*, int32);
+
 /*
  * defined types
  */
-typedef	uint8			bool;
-typedef	uint8			byte;
+
 typedef	struct	Alg		Alg;
 typedef	struct	Func		Func;
 typedef	struct	G		G;
@@ -104,11 +131,6 @@ enum
 	Gmoribund,
 	Gdead,
 	Grecovery,
-};
-enum
-{
-	true	= 1,
-	false	= 0,
 };
 
 /*
@@ -297,13 +319,6 @@ enum {
 };
 #endif
 
-/*
- * defined macros
- *    you need super-goru privilege
- *    to add this list.
- */
-#define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
-#define	nil		((void*)0)
 
 /*
  * known to compiler
@@ -364,16 +379,6 @@ extern	int32	gcwaiting;		// gc is waiting to run
 int8*	goos;
 
 /*
- * common functions and data
- */
-int32	strcmp(byte*, byte*);
-int32	findnull(byte*);
-int32	findnullw(uint16*);
-void	dump(byte*, int32);
-int32	runetochar(byte*, int32);
-int32	charntorune(int32*, uint8*, int32);
-
-/*
  * very low level c-called
  */
 void	gogo(Gobuf*, uintptr);
@@ -381,17 +386,20 @@ void	gogocall(Gobuf*, void(*)(void));
 uintptr	gosave(Gobuf*);
 void	·lessstack(void);
 void	goargs(void);
+
 void	FLUSH(void*);
 void*	getu(void);
 void	throw(int8*);
 void	panicstring(int8*);
 uint32	rnd(uint32, uint32);
+
 void	prints(int8*);
 void	printf(int8*, ...);
 byte*	mchr(byte*, byte, byte*);
 void	mcpy(byte*, byte*, uint32);
 int32	mcmp(byte*, byte*, uint32);
 void	memmove(void*, void*, uint32);
+
 void*	mal(uintptr);
 uint32	cmpstring(String, String);
 String	catstring(String, String);
@@ -404,15 +412,20 @@ void	initsig(int32);
 int32	gotraceback(void);
 void	traceback(uint8 *pc, uint8 *sp, uint8 *lr, G* gp);
 void	tracebackothers(G*);
+
 int32	open(byte*, int32, ...);
 int32	write(int32, void*, int32);
+
 bool	cas(uint32*, uint32, uint32);
 bool	casp(void**, void*, void*);
+
 uint32	xadd(uint32 volatile*, int32);
 void	jmpdefer(byte*, void*);
 void	exit1(int32);
 void	ready(G*);
+
 byte*	getenv(int8*);
+
 int32	atoi(byte*);
 void	newosproc(M *m, G *g, void *stk, void (*fn)(void));
 void	signalstack(byte*, int32);
@@ -438,12 +451,15 @@ void	runpanic(Panic*);
 void*	getcallersp(void*);
 
 void	exit(int32);
+
 void	breakpoint(void);
 void	gosched(void);
 void	goexit(void);
 void	runcgo(void (*fn)(void*), void*);
+
 void	·entersyscall(void);
 void	·exitsyscall(void);
+
 void	startcgocallback(G*);
 void	endcgocallback(G*);
 G*	newproc1(byte*, byte*, int32, int32);
