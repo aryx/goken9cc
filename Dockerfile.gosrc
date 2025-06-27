@@ -13,6 +13,9 @@ COPY . .
 
 # so we can disable some tests that don't work inside Docker like syslog
 ENV IN_DOCKER=true
+# all.bash setup, build, and run many tests! (call make.bash and run.bash)
 RUN cd GOSRC; ./all.bash
+
+# some small extra tests from pad in tests/
 ENV PATH="$PATH:/src/bin"
 RUN make hellogotest

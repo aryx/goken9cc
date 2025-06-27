@@ -16,10 +16,12 @@ RUN apt-get install -y gcc libc6-dev bison make ed
 WORKDIR /src
 COPY . .
 
-#LATER: have a configure; make; make test; make install
-# for rc TODO: remove once rc in kencc is working
+# install 9base for its rc 
+# TODO: remove once rc in kencc is working or add mk/rc in goken itself
 RUN apt-get install -y 9base
 ENV MKSHELL="/usr/bin/rc"
+
+#LATER: have a configure; make; make test; make install
 RUN make # which will call mk
 RUN make install
 
