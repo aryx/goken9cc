@@ -15,6 +15,7 @@ if [ "$GOBIN" = "$GOROOT/bin" ]; then
 	mkdir -p "$GOROOT/bin"
 fi
 mkdir -p "$GOROOT/pkg"
+mkdir -p "$GOROOT/lib"
 
 GOROOT_FINAL=${GOROOT_FINAL:-$GOROOT}
 
