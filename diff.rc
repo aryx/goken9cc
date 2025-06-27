@@ -1,0 +1,45 @@
+#!/opt/plan9/bin/rc
+
+# Script to compare the source code in the different kencc-derived
+# repositories, to ultimately try to unify them in one repo (goken).
+# ex of use: cd ~/; ./goken/diff.rc va &> /tmp/diffva
+
+cmd=$1
+# let's focus just on the C and assembly code; let's skip diff on mkfile
+flags=(-u -p -b -B -r -x mkfile)
+
+# missing: 
+# - x9base: no compiler toolchain
+# - plan9port: no compiler toolchain
+# - x9cc: no riscv (ia/ic/il), no 5i, no vi
+
+dirs1=(x9cc x9colombier xinferno xmykencc xkencc-riscv) # xinferno-old
+dirs2=(xmyplan9old xplan9) 
+dirs3=(x9base xplan9port)
+dirs4=(xgoold xgoken)
+dirs5=(xmyplan9) # x9front
+
+# big comparisons
+base=x9cc
+#base=xinferno # for vi/5i ia/ic/il as x9cc does not have them
+#base=xmyplan9old
+dirs=($dirs1 $dirs2 $dirs3 $dirs4 $dirs5)
+
+# goken comparisons
+#base=xgoken
+#dirs=(xgoken xinferno xplan9 x9front)
+
+# kencc comparisons
+#base=x9cc
+#dirs=(x9cc x9colombier xinferno xmykencc) # xkencc-riscv
+
+#base=xmykencc
+#dirs=(x9colombier)
+
+echo '# -*- diff -*-'
+echo REPORT for $cmd with base $base
+
+for (dir in $dirs) {
+  echo '###########################' $dir '############################'
+  diff $flags $base/$cmd $dir/$cmd
+}
