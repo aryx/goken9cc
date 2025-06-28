@@ -21,10 +21,30 @@ typedef int32		intptr;
 #endif
 
 /*
+ * get rid of C types
+ * the / / / forces a syntax error immediately,
+ * which will show "last name: XXunsigned".
+ */
+#define	unsigned		XXunsigned / / /
+#define	signed			XXsigned / / /
+#define	char			XXchar / / /
+#define	short			XXshort / / /
+#define	int			XXint / / /
+#define	long			XXlong / / /
+#define	float			XXfloat / / /
+#define	double			XXdouble / / /
+
+/*
  * defined types
  */
 typedef	uint8			bool;
 typedef	uint8			byte;
+
+enum
+{
+	true	= 1,
+	false	= 0,
+};
 
 /*
  * defined macros
@@ -33,6 +53,7 @@ typedef	uint8			byte;
  */
 #define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
 #define	nil		((void*)0)
+
 
 // extern decls
 extern void	panic(int32);
@@ -45,6 +66,24 @@ extern bool	isNaN(float64 f);
 // print.c
 extern void printf(int8 *s, ...);
 //void ·printpc(void *p);
+
+//TODO? needed? for ?
+//#pragma	varargck	argpos	printf	1
+//
+//#pragma	varargck	type	"d"	int32
+//#pragma	varargck	type	"d"	uint32
+//#pragma	varargck	type	"D"	int64
+//#pragma	varargck	type	"D"	uint64
+//#pragma	varargck	type	"x"	int32
+//#pragma	varargck	type	"x"	uint32
+//#pragma	varargck	type	"X"	int64
+//#pragma	varargck	type	"X"	uint64
+//#pragma	varargck	type	"p"	void*
+//#pragma	varargck	type	"p"	uintptr
+//#pragma	varargck	type	"s"	int8*
+//#pragma	varargck	type	"s"	uint8*
+//#pragma	varargck	type	"S"	String
+
 
 // linux.s
 extern void write(int32 fd, char* buf, int32 n);
