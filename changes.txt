@@ -1,11 +1,15 @@
 # -*- org -*-
 
-* Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc)
+* Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc, arm64 7a/7c/7l, riscv ia/ic/il)
 # see also pad.org history section
 
 ** toolchain
-- add mips toolchain va/vl/ TODO vc from https://bitbucket.org/plan9-from-bell-labs/9-cc.git
-  and adapt it to goken
+- add mips toolchain va/vl/vc from https://bitbucket.org/plan9-from-bell-labs/9-cc.git
+  and adapt it to goken; tested va/vl with vi from principia on hello_mips.s
+- add arm64 toolchain 7a/7l/7c from https://github.com/inferno-os/inferno-os
+  (not tested though)
+- add riscv toolchain ia/il/ic from https://github.com/inferno-os/inferno-os
+  (not tested though)
 
 ** internals
 - reorg code with Go related toolchain in GOSRC/ and the C toolchain in src/,
