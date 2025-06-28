@@ -54,6 +54,7 @@ prints(int8 *s)
 	write(fd, s, findnull((byte*)s));
 }
 
+//?? for NOSPLIT | DUPOK | NOPROF?
 #pragma textflag 7
 void
 printf(int8 *s, ...)
