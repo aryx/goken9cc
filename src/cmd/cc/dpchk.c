@@ -469,9 +469,9 @@ pragtextflag(void)
 {
 	Sym *s;
 
-	textflag = 0;
+	textflag = 0; // ?? what is the point if set to 7 after??
 	s = getsym();
-	textflag = 7;
+	textflag = 7; // ?? means NOSPLIT | ... ?
 	if(s)
 		textflag = atoi(s->name+1);
 	while(getnsc() != '\n')

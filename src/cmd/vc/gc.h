@@ -1,5 +1,5 @@
 #include	"../cc/cc.h"
-#include	"../vc/v.out.h"
+#include	"../vl/v.out.h"
 
 /*
  * vc/mips
@@ -141,6 +141,10 @@ EXTERN	Prog*	firstp;
 EXTERN	Prog*	lastp;
 EXTERN	long	maxargsafe;
 EXTERN	int	mnstring;
+
+//kengo: new
+EXTERN	int	retok;
+
 EXTERN	Multab	multab[20];
 EXTERN	int	hintabsize;
 EXTERN	Node*	nodrat;
@@ -256,18 +260,18 @@ void	gpseudo(int, Sym*, Node*);
 /*
  * swt.c
  */
-int	swcmp(void*, void*);
+int	swcmp(const void*, const void*);
 void	doswit(Node*);
 void	swit1(C1*, int, long, Node*);
 void	swit2(C1*, int, long, Node*, Node*);
 void	casf(void);
 void	bitload(Node*, Node*, Node*, Node*, Node*);
 void	bitstore(Node*, Node*, Node*, Node*, Node*);
-long	outstring(char*, long);
+int32	outstring(char*, int32);
 int	mulcon(Node*, Node*);
 Multab*	mulcon0(long);
 void	nullwarn(Node*, Node*);
-void	gextern(Sym*, Node*, long, long);
+void	gextern(Sym*, Node*, int32, int32);
 void	outcode(void);
 void	ieeedtod(Ieee*, double);
 
@@ -286,7 +290,7 @@ int	Bconv(Fmt*);
  * reg.c
  */
 Reg*	rega(void);
-int	rcmp(void*, void*);
+int	rcmp(const void*, const void*);
 void	regopt(Prog*);
 void	addmove(Reg*, int, int, int);
 Bits	mkvar(Adr*, int);

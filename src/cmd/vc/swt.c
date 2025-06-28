@@ -119,8 +119,8 @@ bitstore(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 	regfree(n3);
 }
 
-long
-outstring(char *s, long n)
+int32
+outstring(char *s, int32 n)
 {
 	long r;
 
@@ -234,7 +234,7 @@ loop:
 }
 
 void
-gextern(Sym *s, Node *a, long o, long w)
+gextern(Sym *s, Node *a, int32 o, int32 w)
 {
 
 	if(a->op == OCONST && typev[a->type->etype]) {
@@ -508,8 +508,8 @@ zaddr(char *bp, Adr *a, int s)
 	return bp;
 }
 
-long
-align(long i, Type *t, int op)
+int32
+align(int32 i, Type *t, int op)
 {
 	long o;
 	Type *v;
@@ -570,16 +570,16 @@ align(long i, Type *t, int op)
 		o = align(o, t, Ael2);
 		break;
 	}
-	o = round(o, w);
+	o = xround(o, w);
 	if(debug['A'])
 		print("align %s %ld %T = %ld\n", bnames[op], i, t, o);
 	return o;
 }
 
-long
-maxround(long max, long v)
+int32
+maxround(int32 max, int32 v)
 {
-	v = round(v, SZ_LONG);
+	v = xround(v, SZ_LONG);
 	if(v > max)
 		return v;
 	return max;

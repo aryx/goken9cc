@@ -1337,7 +1337,8 @@ gpseudo(int a, Sym *s, Node *n)
 	p->from.type = D_OREG;
 	p->from.sym = s;
 	if(a == ATEXT)
-		p->reg = (profileflg ? 0 : NOPROF);
+		//kengo: was before: p->reg = (profileflg ? 0 : NOPROF);
+	        p->reg = textflag;
 	p->from.name = D_EXTERN;
 	if(s->class == CSTATIC)
 		p->from.name = D_STATIC;
@@ -1369,7 +1370,7 @@ sval(long v)
 	return 0;
 }
 
-long
+int32
 exreg(Type *t)
 {
 	long o;
@@ -1415,7 +1416,7 @@ schar	ewidth[NTYPE] =
 	SZ_INT,		/* [TENUM] */
 };
 
-long	ncast[NTYPE] =
+int32	ncast[NTYPE] =
 {
 	0,				/* [TXXX] */
 	BCHAR|BUCHAR,			/* [TCHAR] */
