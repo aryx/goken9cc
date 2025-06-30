@@ -27,9 +27,9 @@ typedef int32		intptr;
  */
 #define	unsigned		XXunsigned / / /
 #define	signed			XXsigned / / /
-#define	char			XXchar / / /
+//#define	char			XXchar / / /
 #define	short			XXshort / / /
-#define	int			XXint / / /
+//#define	int			XXint / / /
 #define	long			XXlong / / /
 #define	float			XXfloat / / /
 #define	double			XXdouble / / /
@@ -64,7 +64,7 @@ extern bool	isInf(float64 f, int32 sign);
 extern bool	isNaN(float64 f);
 
 // print.c
-extern void printf(int8 *s, ...);
+extern void printf(char *s, ...);
 //void ·printpc(void *p);
 
 //TODO? needed? for ?
