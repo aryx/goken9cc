@@ -17,7 +17,7 @@ dirs1=(x9cc x9colombier xinferno xmykencc xkencc-riscv) # xinferno-old
 dirs2=(xmyplan9old xplan9) 
 dirs3=(x9base xplan9port)
 dirs4=(xgoold xgoken)
-dirs5=(xmyplan9) # x9front
+dirs5=() # xmyplan9  x9front
 
 # big comparisons
 base=x9cc

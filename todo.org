@@ -1,6 +1,19 @@
 
 * Components
 
+** ARM toolchain : 5a/5c/5l
+
+*** make it work on principia code!
+
+*** test infra! run hello_plan9_arm.exe on raspeberry pi2 via qemu?
+need port principia to raspeberry pi2 first then!
+
+*** LATER factorize ld.a lib? imitate what I've done in principia?
+hmm but l.h change each time so can do it?
+
+*** LATER: merge with principia and fix regression in principia!
+easier when will have test infra via qemu-system-arm
+
 ** C compilers: 5c/6c/8c
 
 *** make it work on principia code!
@@ -9,20 +22,7 @@
 
 ** linkers: 6l/6l/8l
 
-*** LATER factorize ld.a lib?
-hmm but l.h change each time so can do it?
-
 ** mk/rc
-
-*** integrate mk and rcsh from other kencc? (and re-lpize or extend from plan9)
-# I need mk and rc now to build goken so might as well adding them
-# and easier then to publish Shell.nw and Builder.nw in parallel with Rc.nw
-# Mk.nw and distribute easy way to test
-# and also having a working mk/rc pair has been problematic in the past
-
-first copy the one from 9-cc and then commit diff with 9-cc-david-colimbier
-so keep this history
-need increase lib9? need add libregexp?
 
 ** libs
 
