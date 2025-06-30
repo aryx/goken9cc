@@ -1,10 +1,8 @@
-<../../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
-#XXX
-<$ROOT/mkfiles/mkhost-$SYSHOST		# variables appropriate for host system
-<$ROOT/mkfiles/mkfile-$SYSTARG-$OBJTYPE	# variables used to build target object type
-
-LIB=libregexp.a
+LIBNAME=libregexp.a
 
 OFILES=\
 	regcomp.$O\
@@ -15,7 +13,6 @@ OFILES=\
 	rregexec.$O\
 	rregsub.$O\
 
-HFILES=	$ROOT/include/regexp.h\
-	regcomp.h\
+HFILES=	$TOP/include/regexp.h regcomp.h
 
-<$ROOT/mkfiles/mksyslib-$SHELLTYPE
+<$TOP/mkfiles/mksyslib

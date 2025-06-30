@@ -1,4 +1,4 @@
-#pragma	src	"/usr/inferno/libregexp"
+#pragma	src	"/src/libregexp"
 #pragma	lib	"libregexp.a"
 
 typedef struct Resub		Resub;
