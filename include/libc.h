@@ -358,8 +358,8 @@ extern int pwrite(int fd, void *buf, int n, int off);
 #define	execl	        p9execl
 #define	seek		p9seek
 #define sleep		p9sleep
-//#define wait		p9wait
-//#define waitpid	p9waitpid
+#define wait		p9wait
+#define waitpid	        p9waitpid
 #define rfork		p9rfork
 #define create		p9create
 #undef open
