@@ -56,6 +56,48 @@ extern "C" {
 #define offsetof(s, m)	(ulong)(&(((s*)0)->m))
 #endif
 
+
+// --------------------------------------------
+// pad's stuff (also in principia/include/ALL/libc.h)
+// --------------------------------------------
+// Those types are needed to compile src/cmd/mk which
+// comes from pad's principia which use a few extra C types
+// (I like types).
+typedef	uint8			bool;
+typedef	uint8			byte;
+enum _bool
+{
+	true	= 1,
+	false	= 0,
+};
+
+#define STDIN 0
+#define STDOUT 1
+#define STDERR 2
+typedef int fdt; // file descriptor type
+
+#define OK_0 0
+#define OK_1 1
+#define ERROR_0 0
+#define ERROR_1 1
+#define ERROR_NEG1 (-1)
+typedef int error0; // 0 is the error value
+typedef int error1; // 1 is the error value
+typedef int errorneg1; // -1 is the error value
+typedef int errorn; // 1 or more means error
+
+// in principia/include/ALL/syscall.h
+enum Seek_cursor {
+    SEEK__START = 0,
+    SEEK__CUR = 1,
+    SEEK__END = 2,
+};
+
+// --------------------------------------------
+// end pad's stuff
+// --------------------------------------------
+
+
 extern	char*	strecpy(char*, char*, char*);
 extern  int tokenize(char*, char**, int);
 
@@ -313,11 +355,11 @@ extern int pwrite(int fd, void *buf, int n, int off);
 #define alarm		p9alarm
 #define	dup		p9dup
 #define	exec		p9exec
-#define	execl	p9execl
+#define	execl	        p9execl
 #define	seek		p9seek
 #define sleep		p9sleep
-#define wait		p9wait
-#define waitpid		p9waitpid
+//#define wait		p9wait
+//#define waitpid	p9waitpid
 #define rfork		p9rfork
 #define create		p9create
 #undef open
@@ -330,7 +372,7 @@ extern	Dir*	dirfstat(int);
 extern	int	dirwstat(char*, Dir*);
 extern	int	dirfwstat(int, Dir*);
 extern	void	nulldir(Dir*);
-extern	long	dirreadall(int, Dir**);
+extern	long	dirreadall(int, Dir**); // ?? defined where?
 extern	void	rerrstr(char*, uint);
 extern	char*	sysname(void);
 extern	void	werrstr(char*, ...);
