@@ -15,6 +15,9 @@
 [568o].out
 _testmain.go
 
+# pad's syncweb
+.md5sum_*
+
 # pad's test files
 *.exe
 
