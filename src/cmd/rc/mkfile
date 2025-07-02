@@ -1,0 +1,53 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+#CONFIGPAD: TARG=rc2
+TARG=rc
+
+OFILES=\
+	code.$O\
+	exec.$O\
+	getflags.$O\
+	glob.$O\
+	here.$O\
+	io.$O\
+	lex.$O\
+	pcmd.$O\
+	pfnc.$O\
+	simple.$O\
+	trap.$O\
+	tree.$O\
+	var.$O\
+	processes.$O\
+     globals.$O\
+     utils.$O\
+     error.$O\
+     words.$O\
+     executils.$O\
+     status.$O\
+     builtins.$O\
+     input.$O\
+     path.$O\
+     env.$O\
+     fmt.$O\
+     main.$O\
+   y.tab.$O 
+
+HFILES=rc.h\
+	y.tab.h\
+	io.h\
+	exec.h\
+	fns.h\
+	getflags.h\
+
+YFILES=syn.y
+
+<$TOP/mkfiles/mkone
+
+regress: $O.out
+	cd test
+	mk
+
+unregress:V:
+	for(test in test/*.test) rc $test >$test.out
