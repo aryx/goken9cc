@@ -1,16 +1,10 @@
 # Build and test goken9cc on Ubuntu using mk/rc
 
-#TODO: only one with valid mk that can support MKSHELL env var
-FROM padator/kencc
-
-# we just need mk from kencc
-RUN mv /usr/local/bin/mk /usr/bin/
-#LATER: we could also test using kencc to compile goken!
-RUN rm -f /usr/local/bin/*
+FROM ubuntu:22.04
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
-RUN apt-get install -y gcc libc6-dev bison make ed
+RUN apt-get install -y gcc libc6-dev bison ed
 
 # Now let's build from source
 WORKDIR /src
@@ -21,11 +15,18 @@ COPY . .
 RUN apt-get install -y 9base
 ENV MKSHELL="/usr/bin/rc"
 
+RUN ./build-mk.sh
+RUN cp src/cmd/mk/o.out /usr/bin/mk
+
 #LATER: have a configure; make; make test; make install
-RUN make # which will call mk
-RUN make install
+RUN mk
+RUN mk install
 
 # Run tests
+# so we can run also hello_linux_386.exe
+RUN dpkg --add-architecture i386
+RUN apt-get update # needed otherwise can't find any package
+RUN apt-get install -y libc6:i386
 ENV GOOS="linux"
 ENV PATH="/src/ROOT/amd64/bin:${PATH}"
-RUN make test
+RUN mk test
