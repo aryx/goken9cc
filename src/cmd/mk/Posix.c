@@ -15,8 +15,13 @@ int     IWS = '\1'; /* inter-word separator in env - not used in plan 9 */
 
 //char  *shell =        "/bin/sh";
 //char  *shellname =    "sh";
-char    *shell =        "/opt/plan9/bin/rc";
-char    *shellname =    "rc";
+
+Shell rc = {
+  .shellname = "rc",
+  .shell = "/bin/rc",
+};
+
+Shell* shell = &rc;
 
 extern char **environ;
 
@@ -134,10 +139,10 @@ execsh(char *args, char *cmd, Bufblock *buf, Envy *e)
    if (e)
     exportenv(e);
    if(shflags)
-    execl(shell, shellname, shflags, args, nil);
+    execl(shell->shell, shell->shellname, shflags, args, nil);
    else
-    execl(shell, shellname, args, nil);
-   perror(shell);
+    execl(shell->shell, shell->shellname, args, nil);
+   perror(shell->shell);
    _exits("exec");
   }
   close(out[1]);
@@ -199,10 +204,10 @@ pipecmd(char *cmd, Envy *e, int *fd)
   if(e)
    exportenv(e);
   if(shflags)
-   execl(shell, shellname, shflags, "-c", cmd, nil);
+   execl(shell->shell, shell->shellname, shflags, "-c", cmd, nil);
   else
-   execl(shell, shellname, "-c", cmd, nil);
-  perror(shell);
+   execl(shell->shell, shell->shellname, "-c", cmd, nil);
+  perror(shell->shell);
   _exits("exec");
  }
  if(fd){
