@@ -1,4 +1,7 @@
 /*s: mk/Posix.c */
+
+// to avoid conflict for wait(), waitpid() signatures
+#define NOPLAN9DEFINES
 #include        "mk.h"
 
 #include        <dirent.h>
@@ -274,7 +277,7 @@ chgtime(char *name)
   u.modtime = time(0);
   return utime(name, &u);
  }
- return close(create(name, OWRITE, 0666));
+ return close(p9create(name, OWRITE, 0666));
 }
 
 void
