@@ -136,7 +136,8 @@ extern	void	p9notejmp(void*, p9jmp_buf, int);
 extern	void	perror(const char*);
 extern	int	postnote(int, int, char *);
 extern	double	p9pow10(int);
-extern	char*	searchpath(char*);
+//PAD: why was in libc.h?? it's part of rc actually
+//extern	char*	searchpath(char*);
 #define p9setjmp(b)	sigsetjmp((void*)(b), 1)
 
 extern	void	sysfatal(char*, ...);
