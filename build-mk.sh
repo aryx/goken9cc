@@ -153,4 +153,34 @@ gcc $LDFLAGS -o o.out globals.o utils.o dumpers.o archive.o bufblock.o env.o fil
 cp o.out $TOP/ROOT/amd64/bin/mk
 
 cd $TOP/src/cmd/rc
-
+yacc -d syn.y
+gcc $CFLAGS -DUnix -c code.c
+gcc $CFLAGS -DUnix -c exec.c
+gcc $CFLAGS -DUnix -c getflags.c
+gcc $CFLAGS -DUnix -c glob.c
+gcc $CFLAGS -DUnix -c here.c
+gcc $CFLAGS -DUnix -c io.c
+gcc $CFLAGS -DUnix -c lex.c
+gcc $CFLAGS -DUnix -c pcmd.c
+gcc $CFLAGS -DUnix -c pfnc.c
+gcc $CFLAGS -DUnix -c simple.c
+gcc $CFLAGS -DUnix -c trap.c
+gcc $CFLAGS -DUnix -c tree.c
+gcc $CFLAGS -DUnix -c var.c
+gcc $CFLAGS -DUnix -c processes.c
+gcc $CFLAGS -DUnix -c globals.c
+gcc $CFLAGS -DUnix -c utils.c
+gcc $CFLAGS -DUnix -c error.c
+gcc $CFLAGS -DUnix -c words.c
+gcc $CFLAGS -DUnix -c executils.c
+gcc $CFLAGS -DUnix -c status.c
+gcc $CFLAGS -DUnix -c builtins.c
+gcc $CFLAGS -DUnix -c input.c
+gcc $CFLAGS -DUnix -c path.c
+gcc $CFLAGS -DUnix -c env.c
+gcc $CFLAGS -DUnix -c fmt.c
+gcc $CFLAGS -DUnix -c main.c
+gcc $CFLAGS -DUnix -c y.tab.c
+gcc $CFLAGS -DUnix -c unix.c
+gcc $LDFLAGS -o o.out code.o exec.o getflags.o glob.o here.o io.o lex.o pcmd.o pfnc.o simple.o trap.o tree.o var.o processes.o globals.o utils.o error.o words.o executils.o status.o builtins.o input.o path.o env.o fmt.o main.o y.tab.o unix.o -l9 -lm
+cp o.out $TOP/ROOT/amd64/bin/rc
