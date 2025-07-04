@@ -11,14 +11,12 @@
 #include "getflags.h"
 #include <errno.h>
 
-//char *Rcmain = "/usr/lib/rcmain";
-char *Rcmain = "/opt/plan9/etc/rcmain";
+char *Rcmain = "/usr/lib/rcmain";
 char *Fdprefix = "/dev/fd/";
 
 // defined in trap.c
 extern int trap[NSIG];
 
-//
 //void execfinit(void);
 //
 //struct builtin Builtin[] = {
@@ -39,47 +37,54 @@ extern int trap[NSIG];
 
 #define	SEP	'\1'
 
+// set in Vinit()
 char **environp;
 
 word*
-enval(s)
-register char *s;
+enval(char *s)
 {
- char *t, c;
- word *v;
- for(t = s;*t && *t!=SEP;t++);
- c=*t;
- *t='\0';
- v = newword(s, c=='\0'?(word *)0:enval(t+1));
- *t = c;
- return v;
+  char *t, c;
+  word *v;
+  for(t = s; *t && *t!=SEP; t++);
+  c=*t;
+  *t='\0';
+  v = newword(s, c=='\0'?(word *)0:enval(t+1));
+  *t = c;
+  return v;
 }
 
 void
 Vinit(void)
 {
- extern char **environ;
- char *s;
- char **env = environ;
- environp = env;
- for(;*env;env++){
-  for(s=*env;*s && *s!='(' && *s!='=';s++);
-  switch(*s){
-  case '\0':
-   pfmt(err, "environment %q?\n", *env);
-   break;
-  case '=':
-   *s='\0';
-   setvar(*env, enval(s+1));
-   *s='=';
-   break;
-  case '(':	/* ignore functions for now */
-   break;
+  // see Unix environ(7) man page
+  extern char **environ;
+  char *s;
+  char **env = environ;
+  word* wd;
+  environp = env;
+  for(; *env; env++){
+    for(s=*env; *s && *s!='(' && *s!='='; s++);
+    switch(*s){
+    case '\0':
+      pfmt(err, "environment %q?\n", *env);
+      break;
+    case '=':
+      *s='\0';
+      wd = enval(s+1);
+      setvar(*env, wd);
+      //TODO: should generalize this in main.c so it also applies for Plan9
+      if(strcmp(*env, "RCMAIN") == 0) {
+	Rcmain = strdup(wd->word);
+      }
+      *s='=';
+      break;
+    case '(':	/* ignore functions for now */
+      break;
+    }
   }
- }
 }
 
-
+//TODO: should be set in execfinit
 char **envp;
 
 void
@@ -432,16 +437,6 @@ Trapinit(void)
 //{
 //	return unlink(name);
 //}
-//Write(fd, buf, cnt)
-//char *buf;
-//{
-//	return write(fd, buf, cnt);
-//}
-//Read(fd, buf, cnt)
-//char *buf;
-//{
-//	return read(fd, buf, cnt);
-//}
 //Seek(fd, cnt, whence)
 //long cnt;
 //{
@@ -493,13 +488,7 @@ Noerror()
 Isatty(fd){
  return isatty(fd);
 }
-//
-//void
-//Abort()
-//{
-//	abort();
-//}
-//
+
 //void
 //execumask(void)		/* wrong -- should fork before writing */
 //{
@@ -602,6 +591,5 @@ needsrcquote(int c)
 //	return 0;
 //
 //}
-
 
 /*e: rc/unix.c */
