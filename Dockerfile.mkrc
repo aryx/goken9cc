@@ -15,7 +15,7 @@ COPY . .
 RUN apt-get install -y 9base
 ENV MKSHELL="/usr/bin/rc"
 
-RUN ./build-mk.sh
+RUN ./scripts/build-mk.sh
 RUN cp src/cmd/mk/o.out /usr/bin/mk
 
 #LATER: have a configure; make; make test; make install
