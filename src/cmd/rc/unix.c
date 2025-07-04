@@ -85,32 +85,32 @@ Vinit(void)
 }
 
 //TODO: should be set in execfinit
-char **envp;
+char **envp = nil;
 
 void
 Xrdfn(void)
 {
- char *s;
- int len;
- for(;*envp;envp++){
-  for(s=*envp;*s && *s!='(' && *s!='=';s++);
-  switch(*s){
-  case '\0':
-   pfmt(err, "environment %q?\n", *envp);
-   break;
-  case '=':	/* ignore variables */
-   break;
-  case '(':		/* Bourne again */
-   s=*envp+3;
-   envp++;
-   len = strlen(s);
-   s[len]='\n';
-   execcmds(opencore(s, len+1));
-   s[len]='\0';
-   return;
+  char *s;
+  int len;
+  for(;*envp;envp++){
+    for(s=*envp;*s && *s!='(' && *s!='=';s++);
+    switch(*s){
+    case '\0':
+      pfmt(err, "environment %q?\n", *envp);
+      break;
+    case '=':	/* ignore variables */
+      break;
+    case '(':		/* Bourne again */
+      s=*envp+3;
+      envp++;
+      len = strlen(s);
+      s[len]='\n';
+      execcmds(opencore(s, len+1));
+      s[len]='\0';
+      return;
+    }
   }
- }
- Xreturn();
+  Xreturn();
 }
 //
 //union code rdfns[4];
