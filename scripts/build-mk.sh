@@ -11,6 +11,11 @@ set -e
 # for showing the executed commands (verbose)
 set -x
 
+if [ ! -f configure ]; then
+	echo 'this script must be run from the project root'
+	exit 1
+fi
+
 TOP=`pwd`
 #coupling: mkfiles/mkfile.proto and mkfiles/amd64/mkfile
 CFLAGS="-Wno-cpp --std=gnu89 -c -I$TOP/include -I. -O0 -fno-inline -ggdb"
