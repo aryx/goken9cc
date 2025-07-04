@@ -5,6 +5,8 @@
  *	By convention, exported routines herein have names beginning with an
  *	upper case letter.
  */
+// to avoid conflict for wait(), waitpid() signatures
+#define NOPLAN9DEFINES
 #include "rc.h"
 #include "io.h"
 #include "exec.h"
@@ -198,76 +200,83 @@ Xrdfn(void)
 //	qsort((void *)env, nvar, sizeof ep[0], cmpenv);
 //	return env;	
 //}
-//char *sigmsg[] = {
-///*  0 normal  */ 0,
-///*  1 SIGHUP  */ "Hangup",
-///*  2 SIGINT  */ 0,
-///*  3 SIGQUIT */ "Quit",
-///*  4 SIGILL  */ "Illegal instruction",
-///*  5 SIGTRAP */ "Trace/BPT trap",
-///*  6 SIGIOT  */ "abort",
-///*  7 SIGEMT  */ "EMT trap",
-///*  8 SIGFPE  */ "Floating exception",
-///*  9 SIGKILL */ "Killed",
-///* 10 SIGBUS  */ "Bus error",
-///* 11 SIGSEGV */ "Memory fault",
-///* 12 SIGSYS  */ "Bad system call",
-///* 13 SIGPIPE */ 0,
-///* 14 SIGALRM */ "Alarm call",
-///* 15 SIGTERM */ "Terminated",
-///* 16 unused  */ "signal 16",
-///* 17 SIGSTOP */ "Process stopped",
-///* 18 unused  */ "signal 18",
-///* 19 SIGCONT */ "Process continued",
-///* 20 SIGCHLD */ "Child death",
-//};
-//
-//void
-//Waitfor(int pid, int persist)
-//{
-//	int wpid, sig;
-//	struct thread *p;
-//	int wstat;
-//	char wstatstr[12];
-//
-//	for(;;){
-//		errno = 0;
-//		wpid = wait(&wstat);
-//		if(errno==EINTR && persist)
-//			continue;
-//		if(wpid==-1)
-//			break;
-//		sig = wstat&0177;
-//		if(sig==0177){
-//			pfmt(err, "trace: ");
-//			sig = (wstat>>8)&0177;
-//		}
-//		if(sig>(sizeof sigmsg/sizeof sigmsg[0]) || sigmsg[sig]){
-//			if(pid!=wpid)
-//				pfmt(err, "%d: ", wpid);
-//			if(sig<=(sizeof sigmsg/sizeof sigmsg[0]))
-//				pfmt(err, "%s", sigmsg[sig]);
-//			else if(sig==0177) pfmt(err, "stopped by ptrace");
-//			else pfmt(err, "signal %d", sig);
-//			if(wstat&0200)pfmt(err, " -- core dumped");
-//			pfmt(err, "\n");
-//		}
-//		wstat = sig?sig+1000:(wstat>>8)&0xFF;
-//		if(wpid==pid){
-//			inttoascii(wstatstr, wstat);
-//			setstatus(wstatstr);
-//			break;
-//		}
-//		else{
-//			for(p = runq->ret;p;p = p->ret)
-//				if(p->pid==wpid){
-//					p->pid=-1;
-//					inttoascii(p->status, wstat);
-//					break;
-//				}
-//		}
-//	}
-//}
+
+char *sigmsg[] = {
+/*  0 normal  */ 0,
+/*  1 SIGHUP  */ "Hangup",
+/*  2 SIGINT  */ 0,
+/*  3 SIGQUIT */ "Quit",
+/*  4 SIGILL  */ "Illegal instruction",
+/*  5 SIGTRAP */ "Trace/BPT trap",
+/*  6 SIGIOT  */ "abort",
+/*  7 SIGEMT  */ "EMT trap",
+/*  8 SIGFPE  */ "Floating exception",
+/*  9 SIGKILL */ "Killed",
+/* 10 SIGBUS  */ "Bus error",
+/* 11 SIGSEGV */ "Memory fault",
+/* 12 SIGSYS  */ "Bad system call",
+/* 13 SIGPIPE */ 0,
+/* 14 SIGALRM */ "Alarm call",
+/* 15 SIGTERM */ "Terminated",
+/* 16 unused  */ "signal 16",
+/* 17 SIGSTOP */ "Process stopped",
+/* 18 unused  */ "signal 18",
+/* 19 SIGCONT */ "Process continued",
+/* 20 SIGCHLD */ "Child death",
+};
+
+//pad: Note that plan9 Waitfor(), that was in processes.c (now in plan9.c), was
+// compiling correctly also under Unix and I originally used it and rc
+// was partially working. However, when called from mk (via MKSHELL), I had
+// weird bugs like the status was containing weird strings and so
+// failing mk even if the command was run correctly.
+// Anyway, simpler to uncomment and use the Waitfor() below.
+void
+Waitfor(int pid, bool persist)
+{
+	int wpid, sig;
+	thread *p;
+	int wstat;
+	char wstatstr[12];
+
+	for(;;){
+		errno = 0;
+		wpid = wait(&wstat);
+		if(errno==EINTR && persist)
+			continue;
+		if(wpid==-1)
+			break;
+		sig = wstat&0177;
+		if(sig==0177){
+			pfmt(err, "trace: ");
+			sig = (wstat>>8)&0177;
+		}
+		if(sig>(sizeof sigmsg/sizeof sigmsg[0]) || sigmsg[sig]){
+			if(pid!=wpid)
+				pfmt(err, "%d: ", wpid);
+			if(sig<=(sizeof sigmsg/sizeof sigmsg[0]))
+				pfmt(err, "%s", sigmsg[sig]);
+			else if(sig==0177) pfmt(err, "stopped by ptrace");
+			else pfmt(err, "signal %d", sig);
+			if(wstat&0200)pfmt(err, " -- core dumped");
+			pfmt(err, "\n");
+		}
+		wstat = sig?sig+1000:(wstat>>8)&0xFF;
+		if(wpid==pid){
+			inttoascii(wstatstr, wstat);
+			setstatus(wstatstr);
+			break;
+		}
+		else{
+			for(p = runq->ret;p;p = p->ret)
+				if(p->pid==wpid){
+					p->pid=-1;
+					inttoascii(p->status, wstat);
+					break;
+				}
+		}
+	}
+}
 //
 //char **
 //mkargv(a)
@@ -462,11 +471,12 @@ Trapinit(void)
  * Wrong:  should go through components of a|b|c and return the maximum.
  */
 void
-Exit(char *stat)
+Exit(char *stat, char* loc)
 {
   int n = 0;
-  //if(flag['s']) {
-  fprint(STDERR, "Exit:%s\n", stat);
+  USED(loc);
+  //if(flag['s'])
+  //  fprint(STDERR, "Exit from %s: %s\n", loc, stat);
 
   while(*stat){
     if(*stat!='|'){

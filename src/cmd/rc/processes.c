@@ -135,7 +135,7 @@ Execute(word *args, word *path)
 
 /*s: function [[Waitfor]] */
 int
-Waitfor(int pid, int)
+XWaitfor(int pid, bool _persist)
 {
     thread *p;
     Waitmsg *w;
@@ -282,7 +282,7 @@ Xbackq(void)
         pushredir(ROPEN, pfd[PWR], 1);
         return;
     default: // parent
-        exits("TODO");
+        Exit("TODO", __LOC__);
         //addwaitpid(pid);
         //close(pfd[PWR]);
         //f = openfd(pfd[PRD]);
@@ -307,7 +307,7 @@ Xbackq(void)
         //    v = newword(s_to_c(word), v);
         //s_free(word);
         //closeio(f);
-        //Waitfor(pid, 0);
+        //Waitfor(pid, false);
         ///* v points to reversed arglist -- reverse it onto argv */
         //while(v){
         //    nextv = v->next;
@@ -382,7 +382,7 @@ Xsubshell(void)
         break;
     default: // parent
         addwaitpid(pid);
-        Waitfor(pid, 1);
+        Waitfor(pid, true);
         runq->pc = runq->code[runq->pc].i;
         break;
     }
@@ -410,7 +410,7 @@ execforkexec(void)
         strcpy(buf, "can't exec: ");
         n = strlen(buf);
         errstr(buf+n, ERRMAX-n);
-        Exit(buf);
+        Exit(buf, __LOC__);
     }
     // parent
     addwaitpid(pid);

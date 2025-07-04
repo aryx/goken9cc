@@ -146,7 +146,8 @@ execsh(char *args, char *cmd, Bufblock *buf, Envy *e)
       if (e)
 	exportenv(e);
       if(shflags)
-	execl(shell->shell, shell->shellname, shflags, "-r", "-s", "-x", "-v", args, nil);
+	// to debug mk/rc you can add "-r", "-s", "-x", "-v" after shflags below
+	execl(shell->shell, shell->shellname, shflags, args, nil);
       else
 	execl(shell->shell, shell->shellname, args, nil);
       perror(shell->shell);

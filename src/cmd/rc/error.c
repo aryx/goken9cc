@@ -38,7 +38,7 @@ Abort(void)
 {
     pfmt(err, "aborting\n");
     flush(err);
-    Exit("aborting");
+    Exit("aborting", __LOC__);
 }
 /*e: function [[Abort]] */
 

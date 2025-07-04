@@ -56,6 +56,11 @@ regress: $O.out
 unregress:V:
 	for(test in test/*.test) rc $test >$test.out
 
+# Test if you can call mk from mk; the PATH should be set correctly
+# and propagated to rc (which must do the right finit that set path from PATH).
+recmk:
+	mk clean
+
 # ------------------------------------------------------------------------------
 VIEWS=$HFILES ${OFILES:%.o=%.c}
 sync:VI:

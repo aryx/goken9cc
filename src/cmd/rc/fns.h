@@ -45,7 +45,7 @@ void	Updenv(void);
 void	Vinit(void);
 
 // processes.c
-int	Waitfor(int, int);
+int	Waitfor(int, bool);
 void	Execute(word*,  word*);
 
 // code.c
@@ -88,6 +88,6 @@ void	inttoascii(char*, long);
 // error.c
 void	panic(char*, int);
 void	yyerror(char*);
-void	Exit(char*);
+void	Exit(char*, char*);
 
 /*e: rc/fns.h */

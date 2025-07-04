@@ -25,6 +25,12 @@
 
 #else
 #include "unix.h"
+
+// magic incantation for cpp (found by chatGPT)
+#define STR2(x) #x
+#define STR(x) STR2(x)
+#define __LOC__ __FILE__ ":" STR(__LINE__)
+
 #endif
 
 //#ifndef YYPREFIX

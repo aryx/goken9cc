@@ -157,7 +157,7 @@ Xexit(void)
             return;
         }
     }
-    Exit(getstatus());
+    Exit(getstatus(), __LOC__);
 }
 /*e: function [[Xexit]] */
 
@@ -710,7 +710,7 @@ Xpipewait(void)
     else{
         strncpy(status, getstatus(), NSTATUS);
         status[NSTATUS]='\0';
-        Waitfor(runq->pid, 1);
+        Waitfor(runq->pid, true);
         runq->pid=-1;
         setstatus(concstatus(getstatus(), status));
     }

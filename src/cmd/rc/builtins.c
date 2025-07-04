@@ -449,10 +449,10 @@ execwait(void)
         Xerror1("Usage: wait [pid]");
         return;
     case 2:
-        Waitfor(atoi(runq->argv->words->next->word), 0);
+        Waitfor(atoi(runq->argv->words->next->word), false);
         break;
     case 1:
-        Waitfor(-1, 0);
+        Waitfor(-1, false);
         break;
     }
     poplist();
@@ -522,21 +522,21 @@ extern fdt envdir;
 void
 execfinit(void)
 {
-    static bool first = true;
-    if(first){
-        rdfns[0].i = 1;
-        rdfns[1].f = Xrdfn;
-        rdfns[2].f = Xjump;
-        rdfns[3].i = 1;
-        first = false;
-    }
-    Xpopm(); // pop_list()
-    envdir = open("/env", 0);
-    if(envdir<0){
-        pfmt(err, "rc: can't open /env: %r\n");
-        return;
-    }
-    start(rdfns, 1, runq->local);
+    //static bool first = true;
+    //if(first){
+    //    rdfns[0].i = 1;
+    //    rdfns[1].f = Xrdfn;
+    //    rdfns[2].f = Xjump;
+    //    rdfns[3].i = 1;
+    //    first = false;
+    //}
+    //Xpopm(); // pop_list()
+    //envdir = open("/env", 0);
+    //if(envdir<0){
+    //    pfmt(err, "rc: can't open /env: %r\n");
+    //    return;
+    //}
+    //start(rdfns, 1, runq->local);
 }
 /*e: function [[execfinit]] */
 

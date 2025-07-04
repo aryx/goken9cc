@@ -10,13 +10,14 @@ RUN apt-get install -y gcc libc6-dev bison ed
 WORKDIR /src
 COPY . .
 
-# install 9base for its rc 
-# TODO: remove once rc in kencc is working or add mk/rc in goken itself
-RUN apt-get install -y 9base
-ENV MKSHELL="/usr/bin/rc"
 
 RUN ./scripts/build-mk.sh
-RUN cp src/cmd/mk/o.out /usr/bin/mk
+RUN ./scripts/promote-mk.sh
+# coupling: env.sh
+ENV PATH="/src/bin:${PATH}"
+ENV MKSHELL="/src/bin/rc"
+ENV RCMAIN="/src/etc/rcmain.unix"
+
 
 #LATER: have a configure; make; make test; make install
 RUN mk

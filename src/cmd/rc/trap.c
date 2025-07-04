@@ -37,7 +37,7 @@ dotrap(void)
         --trap[i];
         --ntrap;
         if(getpid()!=mypid) 
-            Exit(getstatus());
+            Exit(getstatus(), __LOC__);
         trapreq = vlook(signame[i]);
         if(trapreq->fn){
             start(trapreq->fn, trapreq->pc, (struct Var *)nil);
@@ -57,7 +57,7 @@ dotrap(void)
                 Xreturn();
         }
         else 
-            Exit(getstatus());
+            Exit(getstatus(), __LOC__);
     }
 }
 /*e: function [[dotrap]] */
