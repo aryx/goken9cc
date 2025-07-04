@@ -17,8 +17,8 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
 - **Multi-OS support:** 
   Build C programs that can *run* on Linux, macOS (only old macOS for now), TODO Windows, and Plan 9
 - **Multi-architecture support:**
-  Build C programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), and arm
-  architectures (TODO mips, arm64, RISC V, and Wasm)
+  Build C programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
+  and mips architectures (TODO arm64, RISC V, and Wasm)
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
   (e.g., you can build from a Linux 386 machine a binary for amd64 macOS)
@@ -31,7 +31,7 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
   multi-platform support.
 - **Open and extensible:**
   Designed to be easy to understand, modify, and integrate into new projects,
-  thanks to its reasonable size and TODO the use of *Literate programming*, which
+  thanks to its reasonable size and the use of *Literate programming*, which
   explains the code in depth. It takes more than just a license to make code
   truly open.
 
@@ -60,7 +60,7 @@ This is a fork of the assemblers, linkers, and C compilers
 as well as supporting libraries (e.g., lib9, libmach, pkg/runtime)
 in the Go repository in October 2010 at this precise commit:
 https://github.com/golang/go/commit/99a10eff16b79cfb8ccf36e586532a40b17a203c
-(see pad.txt for an explanation of why I forked at this precise commit).
+(see pad.org for an explanation of why I forked at this precise commit).
 
 The Go compiler code was actually itself a fork of the "kencc" toolchain in
 inferno-os at https://github.com/inferno-os/inferno-os (in the utils/ subdirectory)
