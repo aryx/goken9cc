@@ -35,7 +35,7 @@ void	pushredir(int, int, int);
 char *getstatus(void);
 void	setstatus(char*);
 char* concstatus(char *s, char *t);
-int	truestatus(void);
+bool	truestatus(void);
 
 // path.c
 word*	searchpath(char*);
@@ -57,7 +57,7 @@ void	cleanhere(char*);
 // trap.c
 void	dotrap(void);
 void	Trapinit(void);
-int	Eintr(void);
+bool	Eintr(void);
 void	Noerror(void);
 
 // here.c
@@ -67,7 +67,7 @@ tree *heredoc(tree*);
 // glob.c
 void	deglob(void*);
 void	globlist(void);
-int	match(void*, void*, int);
+bool	match(void*, void*, int);
 
 // utils.c
 #define	new(type)	((type *)emalloc(sizeof(type)))

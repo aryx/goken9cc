@@ -2,9 +2,12 @@ TOP=../../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-#CONFIGPAD: TARG=rc2
 TARG=rc
+LDLIBS=-l9 -lm
 
+CFLAGS_EXTRA=-DUnix
+
+# unix.$O this time, not plan9.$O
 OFILES=\
 	code.$O\
 	exec.$O\
@@ -32,14 +35,15 @@ OFILES=\
      env.$O\
      fmt.$O\
      main.$O\
-   y.tab.$O 
+   y.tab.$O \
+   unix.$O
 
 HFILES=rc.h\
-	y.tab.h\
 	io.h\
 	exec.h\
 	fns.h\
 	getflags.h\
+	y.tab.h
 
 YFILES=syn.y
 
@@ -51,3 +55,11 @@ regress: $O.out
 
 unregress:V:
 	for(test in test/*.test) rc $test >$test.out
+
+# ------------------------------------------------------------------------------
+VIEWS=$HFILES ${OFILES:%.o=%.c}
+sync:VI:
+	for (i in $VIEWS) {
+	   if (~ $i y.tab.[ch]) echo skipping $i
+	   if not  syncweb -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/shells/Shell.nw $TOP/principia/shells/Shell_extra.nw  $i
+        }

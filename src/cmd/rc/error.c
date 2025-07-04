@@ -30,16 +30,7 @@ panic(char *s, int n)
 }
 /*e: function [[panic]] */
 
-// was in plan9.c
-/*s: function [[Exit]] */
-void
-Exit(char *stat)
-{
-    Updenv();
-    setstatus(stat);
-    exits(truestatus() ? "" : getstatus());
-}
-/*e: function [[Exit]] */
+// Exit is back in plan9.c
 
 /*s: function [[Abort]] */
 void

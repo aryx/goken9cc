@@ -23,7 +23,7 @@ dochdir(char *word)
     /*s: [[dochdir()]] adjust [[/dev/wdir]] if run under [[rio]] */
     if(flag['i']!=nil){
         if(wdirfd==-2)  /* try only once */
-            wdirfd = open("/dev/wdir", OWRITE|OCEXEC);
+            wdirfd = open("/dev/wdir", OWRITE); // TODO: |OCEXEC but plan9 specific?
         if(wdirfd>=0) {
             //fcntl(wdirfd, F_SETFD, FD_CLOEXEC);
             write(wdirfd, word, strlen(word));
@@ -480,8 +480,8 @@ execnewpgrp(void)
         case 'N':
             arg|=RFCNAMEG;
             break;
-        case 'm':
-            arg|=RFNOMNT;  break;
+        //case 'm':
+        //    arg|=RFNOMNT;  break;
         case 'e':
             arg|=RFENVG;   break;
         case 'E':

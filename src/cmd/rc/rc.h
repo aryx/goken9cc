@@ -1,13 +1,46 @@
 /*s: rc/rc.h */
+/*
+ * Assume plan 9 by default; if Unix is defined, assume unix.
+ * Please don't litter the code with ifdefs.  The five below should be enough.
+ */
+#ifndef Unix
+/* plan 9 */
 #include <u.h>
 #include <libc.h>
 
-// was in plan9.c
-/*s: enum [[MiscPlan9]] */
-enum {
-    Maxenvname = 256,	/* undocumented limit */
-};
-/*e: enum [[MiscPlan9]] */
+// could be in trap.c
+/*s: constant [[NSIG]] */
+#define	NSIG	32
+/*e: constant [[NSIG]] */
+/*s: constant [[SIGINT]] */
+#define	SIGINT	2
+/*e: constant [[SIGINT]] */
+/*s: constant [[SIGQUIT]] */
+#define	SIGQUIT	3
+/*e: constant [[SIGQUIT]] */
+
+//#define fcntl(fd, op, arg) /* unix compatibility */
+//#define F_SETFD  
+//#define FD_CLOEXEC 
+
+#else
+#include "unix.h"
+#endif
+
+//#ifndef YYPREFIX
+//#ifndef PAREN
+//#include "x.tab.h"
+//pad: better like that, otherwise get some "redefined FOR macro" error
+//#endif
+//#endif
+
+//#ifndef Unix
+//#pragma incomplete word
+//#pragma incomplete io
+//#endif
+
+
+// MiscPlan9 is back in plan9.c
 
 #ifndef ERRMAX
 /*s: constant [[ERRMAX]] */

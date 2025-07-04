@@ -18,8 +18,6 @@ LDFLAGS="-L$TOP/ROOT/amd64/lib"
 #coupling: mkconfig
 GOOS=linux
 GOARCH=amd64
-GOHOSTOS=linux
-GOHOSTARCH=amd64
 
 cd $TOP/src/lib9
 gcc $CFLAGS -DPLAN9PORT _p9dir.c -o _p9dir.o
@@ -153,3 +151,6 @@ gcc $CFLAGS -c word.c
 gcc $CFLAGS -c Posix.c
 gcc $LDFLAGS -o o.out globals.o utils.o dumpers.o archive.o bufblock.o env.o file.o graph.o lex.o main.o match.o mk.o parse.o rc.o recipe.o rule.o run.o shprint.o symtab.o var.o varsub.o word.o Posix.o -lregexp -lbio -l9 -lm
 cp o.out $TOP/ROOT/amd64/bin/mk
+
+cd $TOP/src/cmd/rc
+

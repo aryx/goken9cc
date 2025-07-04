@@ -819,40 +819,5 @@ Xglob(void)
 fdt envdir;
 /*e: global [[envdir]] */
 
-/*s: function [[Xrdfn]] */
-void
-Xrdfn(void)
-{
-    int f, len;
-    Dir *e;
-    char envname[Maxenvname];
-    static Dir *ent, *allocent;
-    static int nent;
-
-    for(;;){
-        if(nent == 0){
-            free(allocent);
-            nent = dirread(envdir, &allocent);
-            ent = allocent;
-        }
-        if(nent <= 0)
-            break;
-        while(nent){
-            e = ent++;
-            nent--;
-            len = e->length;
-            if(len && strncmp(e->name, "fn#", 3)==0){
-                snprint(envname, sizeof envname, "/env/%s", e->name);
-                if((f = open(envname, 0))>=0){
-                    execcmds(openfd(f));
-                    return;
-                }
-            }
-        }
-    }
-    close(envdir);
-    Xreturn();
-}
-/*e: function [[Xrdfn]] */
-
+// Xrdfn is back in plan9.c
 /*e: rc/exec.c */

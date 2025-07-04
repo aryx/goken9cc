@@ -6,13 +6,10 @@
 #include "getflags.h"
 #include "io.h"
 /*e: includes */
-#include <string.h>
+//#include <string.h>
 
-// was in plan9.c
-/*s: global [[Fdprefix]] */
-char *Fdprefix = "/fd/";
-/*e: global [[Fdprefix]] */
-
+// Fdprefix back in plan9.c
+extern char *Fdprefix;
 
 /*s: global [[waitpids]] */
 // growing_array<pid> (but really a list)
@@ -265,7 +262,7 @@ Xbackq(void)
     var *ifs = vlook("ifs");
     word *v, *nextv;
     Rune r;
-    String *word;
+    //String *word;
 
     stop = ifs->val? ifs->val->word: "";
     if(pipe(pfd)<0){
@@ -285,40 +282,41 @@ Xbackq(void)
         pushredir(ROPEN, pfd[PWR], 1);
         return;
     default: // parent
-        addwaitpid(pid);
-        close(pfd[PWR]);
-        f = openfd(pfd[PRD]);
-        word = s_new();
-        v = nil;
-        /* rutf requires at least UTFmax+1 bytes in utf */
-        while((n = rutf(f, utf, &r)) != EOF){
-            utf[n] = '\0';
-            if(utfutf(stop, utf) == nil)
-                s_nappend(word, utf, n);
-            else
-                /*
-                 * utf/r is an ifs rune (e.g., \t, \n), thus
-                 * ends the current word, if any.
-                 */
-                if(s_len(word) > 0){
-                    v = newword(s_to_c(word), v);
-                    s_reset(word);
-                }
-        }
-        if(s_len(word) > 0)
-            v = newword(s_to_c(word), v);
-        s_free(word);
-        closeio(f);
-        Waitfor(pid, 0);
-        /* v points to reversed arglist -- reverse it onto argv */
-        while(v){
-            nextv = v->next;
-            v->next = runq->argv->words;
-            runq->argv->words = v;
-            v = nextv;
-        }
-        runq->pc = runq->code[runq->pc].i;
-        return;
+        exits("TODO");
+        //addwaitpid(pid);
+        //close(pfd[PWR]);
+        //f = openfd(pfd[PRD]);
+        //word = s_new();
+        //v = nil;
+        ///* rutf requires at least UTFmax+1 bytes in utf */
+        //while((n = rutf(f, utf, &r)) != EOF){
+        //    utf[n] = '\0';
+        //    if(utfutf(stop, utf) == nil)
+        //        s_nappend(word, utf, n);
+        //    else
+        //        /*
+        //         * utf/r is an ifs rune (e.g., \t, \n), thus
+        //         * ends the current word, if any.
+        //         */
+        //        if(s_len(word) > 0){
+        //            v = newword(s_to_c(word), v);
+        //            s_reset(word);
+        //        }
+        //}
+        //if(s_len(word) > 0)
+        //    v = newword(s_to_c(word), v);
+        //s_free(word);
+        //closeio(f);
+        //Waitfor(pid, 0);
+        ///* v points to reversed arglist -- reverse it onto argv */
+        //while(v){
+        //    nextv = v->next;
+        //    v->next = runq->argv->words;
+        //    runq->argv->words = v;
+        //    v = nextv;
+        //}
+        //runq->pc = runq->code[runq->pc].i;
+        //return;
     }
 }
 /*e: function [[Xbackq]] */

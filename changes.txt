@@ -1,5 +1,11 @@
 # -*- org -*-
 
+* Beta (Q3 2025) (mk/rc)
+
+** build
+- add mk and rc source code from principia softwarica so self-contained repo with
+  build-mk.sh to "boostrap" mk/rc
+
 * Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc, arm64 7a/7c/7l, riscv ia/ic/il)
 # see also pad.org history section
 
