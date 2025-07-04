@@ -334,20 +334,20 @@ Updenv(void)
 #define	NDIR	14		/* should get this from param.h */
 
 Globsize(p)
-register char *p;
+     register char *p;
 {
- int isglob = 0, globlen = NDIR+1;
- for(;*p;p++){
-  if(*p==GLOB){
-   p++;
-   if(*p!=GLOB)
-    isglob++;
-   globlen+=*p=='*'?NDIR:1;
+  int isglob = 0, globlen = NDIR+1;
+  for(;*p;p++){
+    if(*p==GLOB){
+      p++;
+      if(*p!=GLOB)
+	isglob++;
+      globlen+=*p=='*'?NDIR:1;
+    }
+    else
+      globlen++;
   }
-  else
-   globlen++;
- }
- return isglob?globlen:0;
+  return isglob?globlen:0;
 }
 
 #include <sys/types.h>
@@ -358,78 +358,78 @@ register char *p;
 DIR *dirlist[NDIRLIST];
 
 Opendir(name)
-char *name;
+     char *name;
 {
- DIR **dp;
- for(dp = dirlist;dp!=&dirlist[NDIRLIST];dp++)
-  if(*dp==0){
-   *dp = opendir(name);
-   return *dp?dp-dirlist:-1;
-  }
- return -1;
+  DIR **dp;
+  for(dp = dirlist;dp!=&dirlist[NDIRLIST];dp++)
+    if(*dp==0){
+      *dp = opendir(name);
+      return *dp?dp-dirlist:-1;
+    }
+  return -1;
 }
 
 int
 Readdir(int f, char *p, int onlydirs)
 {
- struct dirent *dp = readdir(dirlist[f]);
+  struct dirent *dp = readdir(dirlist[f]);
 
- if(dp==0)
-  return 0;
- strcpy(p, dp->d_name);
- return 1;
+  if(dp==0)
+    return 0;
+  strcpy(p, dp->d_name);
+  return 1;
 }
 
 void
 Closedir(int f)
 {
- closedir(dirlist[f]);
- dirlist[f] = 0;
+  closedir(dirlist[f]);
+  dirlist[f] = 0;
 }
 
 char *signame[] = {
- "sigexit",	"sighup",	"sigint",	"sigquit",
- "sigill",	"sigtrap",	"sigiot",	"sigemt",
- "sigfpe",	"sigkill",	"sigbus",	"sigsegv",
- "sigsys",	"sigpipe",	"sigalrm",	"sigterm",
- "sig16",	"sigstop",	"sigtstp",	"sigcont",
- "sigchld",	"sigttin",	"sigttou",	"sigtint",
- "sigxcpu",	"sigxfsz",	"sig26",	"sig27",
- "sig28",	"sig29",	"sig30",	"sig31",
- 0,
+  "sigexit",	"sighup",	"sigint",	"sigquit",
+  "sigill",	"sigtrap",	"sigiot",	"sigemt",
+  "sigfpe",	"sigkill",	"sigbus",	"sigsegv",
+  "sigsys",	"sigpipe",	"sigalrm",	"sigterm",
+  "sig16",	"sigstop",	"sigtstp",	"sigcont",
+  "sigchld",	"sigttin",	"sigttou",	"sigtint",
+  "sigxcpu",	"sigxfsz",	"sig26",	"sig27",
+  "sig28",	"sig29",	"sig30",	"sig31",
+  0,
 };
 
 void
 gettrap(int sig)
 {
- signal(sig, gettrap);
- trap[sig]++;
- ntrap++;
- if(ntrap>=NSIG){
-  pfmt(err, "rc: Too many traps (trap %d), dumping core\n", sig);
-  signal(SIGABRT, (void (*)())0);
-  kill(getpid(), SIGABRT);
- }
+  signal(sig, gettrap);
+  trap[sig]++;
+  ntrap++;
+  if(ntrap>=NSIG){
+    pfmt(err, "rc: Too many traps (trap %d), dumping core\n", sig);
+    signal(SIGABRT, (void (*)())0);
+    kill(getpid(), SIGABRT);
+  }
 }
 
 void
 Trapinit(void)
 {
- int i;
- void (*sig)();
+  int i;
+  void (*sig)();
 
- if(1 || flag['d']){	/* wrong!!! */
-  sig = signal(SIGINT, gettrap);
-  if(sig==SIG_IGN)
-   signal(SIGINT, SIG_IGN);
- }
- else{
-  for(i = 1;i<=NSIG;i++) if(i!=SIGCHLD){
-   sig = signal(i, gettrap);
-   if(sig==SIG_IGN)
-    signal(i, SIG_IGN);
+  if(1 || flag['d']){	/* wrong!!! */
+    sig = signal(SIGINT, gettrap);
+    if(sig==SIG_IGN)
+      signal(SIGINT, SIG_IGN);
   }
- }
+  else{
+    for(i = 1;i<=NSIG;i++) if(i!=SIGCHLD){
+	sig = signal(i, gettrap);
+	if(sig==SIG_IGN)
+	  signal(i, SIG_IGN);
+      }
+  }
 }
 //
 //Unlink(name)
@@ -464,29 +464,31 @@ Trapinit(void)
 void
 Exit(char *stat)
 {
- int n = 0;
+  int n = 0;
+  //if(flag['s']) {
+  fprint(STDERR, "Exit:%s\n", stat);
 
- while(*stat){
-  if(*stat!='|'){
-   if(*stat<'0' || '9'<*stat)
-    exit(1);
-   else n = n*10+*stat-'0';
+  while(*stat){
+    if(*stat!='|'){
+      if(*stat<'0' || '9'<*stat)
+	exit(1);
+      else n = n*10+*stat-'0';
+    }
+    stat++;
   }
-  stat++;
- }
- exit(n);
+  exit(n);
 }
 Eintr(){
- return errno==EINTR;
+  return errno==EINTR;
 }
 
 void
 Noerror()
 {
- errno = 0;
+  errno = 0;
 }
 Isatty(fd){
- return isatty(fd);
+  return isatty(fd);
 }
 
 //void
@@ -526,7 +528,7 @@ Isatty(fd){
 void*
 Malloc(unsigned long n)
 {
- return (void *)malloc(n);
+  return (void *)malloc(n);
 }
 //
 //void
@@ -538,11 +540,11 @@ Malloc(unsigned long n)
 int
 needsrcquote(int c)
 {
- if(c <= ' ')
-  return 1;
- if(strchr("`^#*[]=|\\?${}()'<>&;", c))
-  return 1;
- return 0;
+  if(c <= ' ')
+    return 1;
+  if(strchr("`^#*[]=|\\?${}()'<>&;", c))
+    return 1;
+  return 0;
 }
 //
 //int
