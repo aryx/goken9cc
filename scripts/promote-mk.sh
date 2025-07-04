@@ -10,6 +10,7 @@ if [ ! -f configure ]; then
 	echo 'this script must be run from the project root'
 	exit 1
 fi
+set -x
 
 cp ROOT/amd64/bin/mk bin/
 cp ROOT/amd64/bin/rc bin/
