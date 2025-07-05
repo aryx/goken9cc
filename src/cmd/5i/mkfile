@@ -1,0 +1,23 @@
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=5i
+
+OFILES=	globals.$O\
+        utils.$O\
+        5i.$O\
+	run.$O\
+	mem.$O\
+	syscall.$O\
+	stats.$O\
+	icache.$O\
+	symbols.$O\
+	cmd.$O\
+	bpt.$O\
+
+HFILES=arm.h\
+
+<$TOP/mkfiles/mkone
+
+acid:
+	$CC -a run.c > acid.def
