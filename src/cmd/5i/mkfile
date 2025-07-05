@@ -1,19 +1,22 @@
-TOP=../..
+TOP=../../..
+<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=5i
+LDLIBS=-lmach -lbio -l9 -lm
 
+# not syscall.$O here but syscall_posix.$O
 OFILES=	globals.$O\
         utils.$O\
         5i.$O\
 	run.$O\
 	mem.$O\
-	syscall.$O\
 	stats.$O\
 	icache.$O\
 	symbols.$O\
 	cmd.$O\
 	bpt.$O\
+	syscall_posix.$O\
 
 HFILES=arm.h\
 

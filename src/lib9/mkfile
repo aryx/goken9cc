@@ -88,6 +88,9 @@ LIB9OFILES=\
 	jmp.$O\
 	notify.$O\
 	rfork.$O\
+        \
+        lnrand.$O\
+        lrand.$O\
 
 #ifeq ($(GOOS),windows)
 #LIB9OFILES+=\

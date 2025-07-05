@@ -346,7 +346,7 @@ void		tlbsum(void);
 void*		emalloc(ulong);
 void*		erealloc(void*, ulong, ulong);
 
-void		fatal(int, char*, ...);
+void		fatal(bool, char*, ...);
 void		itrace(char*, ...);
 
 // from libc.h
@@ -375,8 +375,8 @@ extern	bool	trace;
 extern	bool	sysdbg;
 extern	bool	calltree;
 extern	Breakpoint*	bplist;
-extern	int		atbpt;
-extern	int		membpt;
+extern	bool		atbpt;
+extern	bool		membpt;
 
 extern	jmp_buf	errjmp;
 

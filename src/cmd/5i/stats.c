@@ -8,6 +8,13 @@
 #include "arm.h"
 /*e: basic includes */
 
+// was in libc.h in plan9
+//extern  void    prof(void (*fn)(void*), void *arg, int entries, int what);
+void    prof(void (*fn)(void*), void *arg, int entries, int what) {
+  //XXX:TODO
+}
+
+
 /*s: function [[Percent]] */
 #define Percent(num, max)	((max)?((num)*100)/(max):0)
 /*e: function [[Percent]] */
@@ -162,7 +169,7 @@ Prof	aprof[5000];
 
 /*s: function [[profcmp]] */
 int
-profcmp(void *va, void *vb)
+profcmp(const void *va, const void *vb)
 {
     Prof *a, *b;
 

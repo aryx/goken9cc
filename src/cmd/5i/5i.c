@@ -8,7 +8,7 @@
 #include "arm.h"
 /*e: basic includes */
 
-#include <tos.h>
+#include "tos.h"
 
 /*s: global [[file]] */
 char*	file = "5.out";
