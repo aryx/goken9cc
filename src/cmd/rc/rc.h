@@ -20,8 +20,8 @@
 /*e: constant [[SIGQUIT]] */
 
 //#define fcntl(fd, op, arg) /* unix compatibility */
-//#define F_SETFD  
-//#define FD_CLOEXEC 
+//#define F_SETFD
+//#define FD_CLOEXEC
 
 #else
 #include "unix.h"
