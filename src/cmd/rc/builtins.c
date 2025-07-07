@@ -480,6 +480,7 @@ execnewpgrp(void)
         case 'N':
             arg|=RFCNAMEG;
             break;
+        //pad: commented for goken
         //case 'm':
         //    arg|=RFNOMNT;  break;
         case 'e':
@@ -522,6 +523,8 @@ extern fdt envdir;
 void
 execfinit(void)
 {
+    //TODO: commented for goken for now because Linux does not have a /env
+    // probably need to move to Plan9.c
     //static bool first = true;
     //if(first){
     //    rdfns[0].i = 1;

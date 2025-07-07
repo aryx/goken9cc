@@ -8,7 +8,7 @@
 /*e: includes */
 //#include <string.h>
 
-// Fdprefix back in plan9.c
+// Fdprefix, delwaitpid(), havewaitpid() Waitfor() are back in plan9.c
 extern char *Fdprefix;
 
 /*s: global [[waitpids]] */
@@ -18,7 +18,6 @@ int *waitpids;
 /*s: global [[nwaitpids]] */
 int nwaitpids;
 /*e: global [[nwaitpids]] */
-
 /*s: function [[addwaitpid]] */
 void
 addwaitpid(int pid)
@@ -31,20 +30,6 @@ addwaitpid(int pid)
     waitpids[nwaitpids++] = pid;
 }
 /*e: function [[addwaitpid]] */
-
-/*s: function [[delwaitpid]] */
-void
-delwaitpid(int pid)
-{
-    int r, w;
-    
-    for(r=w=0; r<nwaitpids; r++)
-        if(waitpids[r] != pid)
-            waitpids[w++] = waitpids[r];
-    nwaitpids = w;
-}
-/*e: function [[delwaitpid]] */
-
 /*s: function [[clearwaitpids]] */
 void
 clearwaitpids(void)
@@ -52,19 +37,6 @@ clearwaitpids(void)
     nwaitpids = 0;
 }
 /*e: function [[clearwaitpids]] */
-
-/*s: function [[havewaitpid]] */
-bool
-havewaitpid(int pid)
-{
-    int i;
-
-    for(i=0; i<nwaitpids; i++)
-        if(waitpids[i] == pid)
-            return true;
-    return false;
-}
-/*e: function [[havewaitpid]] */
 
 
 /*s: function [[mkargv]] */
@@ -131,45 +103,6 @@ Execute(word *args, word *path)
     efree((char *)argv);
 }
 /*e: function [[Execute]] */
-
-
-/*s: function [[Waitfor]] */
-int
-XWaitfor(int pid, bool _persist)
-{
-    thread *p;
-    Waitmsg *w;
-    char errbuf[ERRMAX];
-
-    if(pid >= 0 && !havewaitpid(pid))
-        return 0;
-
-    // wait()!! until we found it
-    while((w = wait()) != nil){
-        delwaitpid(w->pid);
-
-        if(w->pid==pid){
-            setstatus(w->msg);
-            free(w);
-            return 0;
-        }
-        /*s: [[Waitfor()]] in while loop, if wait returns another pid */
-        // else
-        for(p = runq->ret;p;p = p->ret)
-            if(p->pid==w->pid){
-                p->pid=-1;
-                strcpy(p->status, w->msg);
-            }
-        free(w);
-        /*e: [[Waitfor()]] in while loop, if wait returns another pid */
-    }
-
-    errstr(errbuf, sizeof errbuf);
-    if(strcmp(errbuf, "interrupted")==0) 
-        return -1;
-    return 0;
-}
-/*e: function [[Waitfor]] */
 
 // was in havefork.c
 
@@ -283,6 +216,8 @@ Xbackq(void)
         return;
     default: // parent
         Exit("TODO", __LOC__);
+        //pad: commented because use the string.h s_xxx library
+        // that I didn't want to port to goken
         //addwaitpid(pid);
         //close(pfd[PWR]);
         //f = openfd(pfd[PRD]);

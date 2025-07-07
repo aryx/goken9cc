@@ -19,9 +19,13 @@
 #define	SIGQUIT	3
 /*e: constant [[SIGQUIT]] */
 
+//???
 //#define fcntl(fd, op, arg) /* unix compatibility */
 //#define F_SETFD
 //#define FD_CLOEXEC
+
+//TODO:
+#define __LOC__ "NO__LOC__INFO"
 
 #else
 #include "unix.h"
