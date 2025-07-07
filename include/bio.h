@@ -1,5 +1,6 @@
 #ifndef _BIO_H_
 #define _BIO_H_ 1
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -10,8 +11,6 @@ AUTOLIB(bio)
 
 #include <fcntl.h>	/* for O_RDONLY, O_WRONLY */
 
-typedef	struct	Biobuf	Biobuf;
-
 enum
 {
 	Bsize		= 8*1024,
@@ -19,7 +18,10 @@ enum
 	Bmagic		= 0x314159,
 	Beof		= -1,
 	Bbad		= -2,
+};
 
+enum
+{
 	Binactive	= 0,		/* states */
 	Bractive,
 	Bwactive,
@@ -28,6 +30,7 @@ enum
 	Bend
 };
 
+typedef	struct	Biobuf	Biobuf;
 struct	Biobuf
 {
 	int	icount;		/* neg num of bytes at eob */
@@ -60,29 +63,35 @@ struct	Biobuf
 #define	BFILDES(bp)\
 	(bp)->fid
 
+Biobuf*	Bopen(char*, int);
+
+int	Binit(Biobuf*, int, int);
+int	Binits(Biobuf*, int, int, unsigned char*, int);
+
+long	Bread(Biobuf*, void*, long);
+long	Bwrite(Biobuf*, void*, long);
+vlong	Bseek(Biobuf*, vlong, int);
+
 int	Bbuffered(Biobuf*);
 Biobuf*	Bfdopen(int, int);
 int	Bfildes(Biobuf*);
 int	Bflush(Biobuf*);
+
 int	Bgetc(Biobuf*);
 int	Bgetd(Biobuf*, double*);
 long	Bgetrune(Biobuf*);
-int	Binit(Biobuf*, int, int);
-int	Binits(Biobuf*, int, int, unsigned char*, int);
-int	Blinelen(Biobuf*);
-vlong	Boffset(Biobuf*);
-Biobuf*	Bopen(char*, int);
-int	Bprint(Biobuf*, char*, ...);
-int	Bputc(Biobuf*, int);
-int	Bputrune(Biobuf*, long);
-void*	Brdline(Biobuf*, int);
-char*	Brdstr(Biobuf*, int, int);
-long	Bread(Biobuf*, void*, long);
-vlong	Bseek(Biobuf*, vlong, int);
-int	Bterm(Biobuf*);
 int	Bungetc(Biobuf*);
 int	Bungetrune(Biobuf*);
-long	Bwrite(Biobuf*, void*, long);
+int	Bputc(Biobuf*, int);
+int	Bputrune(Biobuf*, long);
+
+int	Blinelen(Biobuf*);
+vlong	Boffset(Biobuf*);
+void*	Brdline(Biobuf*, int);
+char*	Brdstr(Biobuf*, int, int);
+int	Bterm(Biobuf*);
+
+int	Bprint(Biobuf*, char*, ...);
 int	Bvprint(Biobuf*, char*, va_list);
 
 #if defined(__cplusplus)

@@ -1,8 +1,3 @@
-#ifndef _FMT_H_
-#define _FMT_H_ 1
-#if defined(__cplusplus)
-extern "C" {
-#endif
 /*
  * The authors of this software are Rob Pike and Ken Thompson.
  *              Copyright (c) 2002 by Lucent Technologies.
@@ -16,6 +11,14 @@ extern "C" {
  * REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
+
+#ifndef _FMT_H_
+#define _FMT_H_ 1
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 
 #include <stdarg.h>
 #include <utf.h>
@@ -68,12 +71,29 @@ enum{
 	FmtFlag		= FmtLDouble << 1
 };
 
+/* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/fmt/?*.c | grep -v static |grep -v __ */
+
+// classic one
+int		print(char *fmt, ...);
+int		fprint(int fd, char *fmt, ...);
+int		sprint(char *buf, char *fmt, ...);
+
 extern	int	(*fmtdoquote)(int);
 
-/* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/fmt/?*.c | grep -v static |grep -v __ */
+
+char*		seprint(char *buf, char *e, char *fmt, ...);
+char*		smprint(char *fmt, ...);
+int		snprint(char *buf, int len, char *fmt, ...);
+int		vfprint(int fd, char *fmt, va_list args);
+char*		vseprint(char *buf, char *e, char *fmt, va_list args);
+char*		vsmprint(char *fmt, va_list args);
+int		vsnprint(char *buf, int len, char *fmt, va_list args);
+
 int		dofmt(Fmt *f, char *fmt);
 int		dorfmt(Fmt *f, const Rune *fmt);
+
 double		fmtcharstod(int(*f)(void*), void *vp);
+
 int		fmtfdflush(Fmt *f);
 int		fmtfdinit(Fmt *f, int fd, char *buf, int size);
 int		fmtinstall(int c, int (*f)(Fmt*));
@@ -87,11 +107,11 @@ char*		fmtstrflush(Fmt *f);
 int		fmtstrinit(Fmt *f);
 double		fmtstrtod(const char *as, char **aas);
 int		fmtvprint(Fmt *f, char *fmt, va_list args);
-int		fprint(int fd, char *fmt, ...);
-int		print(char *fmt, ...);
+
 void		quotefmtinstall(void);
 int		quoterunestrfmt(Fmt *f);
 int		quotestrfmt(Fmt *f);
+
 Rune*		runefmtstrflush(Fmt *f);
 int		runefmtstrinit(Fmt *f);
 Rune*		runeseprint(Rune *buf, Rune *e, char *fmt, ...);
@@ -101,14 +121,6 @@ int		runesprint(Rune *buf, char *fmt, ...);
 Rune*		runevseprint(Rune *buf, Rune *e, char *fmt, va_list args);
 Rune*		runevsmprint(char *fmt, va_list args);
 int		runevsnprint(Rune *buf, int len, char *fmt, va_list args);
-char*		seprint(char *buf, char *e, char *fmt, ...);
-char*		smprint(char *fmt, ...);
-int		snprint(char *buf, int len, char *fmt, ...);
-int		sprint(char *buf, char *fmt, ...);
-int		vfprint(int fd, char *fmt, va_list args);
-char*		vseprint(char *buf, char *e, char *fmt, va_list args);
-char*		vsmprint(char *fmt, va_list args);
-int		vsnprint(char *buf, int len, char *fmt, va_list args);
 
 #if defined(__cplusplus)
 }

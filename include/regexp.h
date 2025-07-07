@@ -56,6 +56,7 @@ struct Reprog{
 	Reinst	firstinst[5];	/* .text */
 };
 
+// API, ex of use??
 extern Reprog	*regcomp(char*);
 extern Reprog	*regcomplit(char*);
 extern Reprog	*regcompnl(char*);
