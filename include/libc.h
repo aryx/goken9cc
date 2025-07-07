@@ -103,9 +103,23 @@ typedef int errorneg1; // -1 is the error value
 typedef int errorn; // 1 or more means error
 
 //******************************************************************************
+// Bytes
+//******************************************************************************
+
+// memset(), memcpy(), memcmp(), memchr() in string.h
+// memmove(), memccpy()  in string.h
+
+//******************************************************************************
 // Strings
 //******************************************************************************
+
+// strcpy(), strcmp(), strchr(), strrchr() in string.h
+// strlen(), strcat(), strdup(), strstr() in string.h
+
+// tolower(), toupper() ???
+
 extern	char* strecpy(char*, char*, char*);
+// strncat(), strncpy(), strncmp() ??
 
 //******************************************************************************
 // Conversions
@@ -120,10 +134,14 @@ extern	double	fmtcharstod(int(*)(void*), void*);
 // Parsing
 //******************************************************************************
 extern  int tokenize(char*, char**, int);
+// strtok() ?
 
 //******************************************************************************
 // Math
 //******************************************************************************
+
+// abs() defined in stdlib.h
+
 extern  int isInf(double, int);
 extern	double	frexp(double, int*);
 extern	double	p9pow10(int);
@@ -131,14 +149,19 @@ extern	double	p9pow10(int);
 //******************************************************************************
 // File
 //******************************************************************************
+
+// enum Open_flag, open parameter
 #define	OREAD	0	/* open for read */
 #define	OWRITE	1	/* write */
 #define	ORDWR	2	/* read and write */
 #define	OEXEC	3	/* execute, == read but check execute permission */
+
+// advanced stuff (no O_APPEND, O_CREATE, O_NONBLOCK as in Unix though)
 #define	OTRUNC	16	/* or'ed in (except for exec), truncate file first */
 #define	ORCLOSE	64	/* or'ed in, remove on close */
 #define	ODIRECT	128	/* or'ed in, direct access */
 #define	OEXCL	0x1000	/* or'ed in, exclusive use (create only) */
+
 #define	OAPPEND	0x4000	/* or'ed in, append only */
 
 extern	int	p9open(char*, int);
@@ -150,28 +173,32 @@ extern	vlong	p9seek(int, vlong, int);
 
 extern	int	p9dup(int, int);
 
+// missing pread(), pwrite() for now and preadv/pwritev, readv/writev
+
 //******************************************************************************
 // Directory
 //******************************************************************************
 #define	STATMAX	65535U	/* max length of machine-independent stat structure */
 #define	DIRMAX	(sizeof(Dir)+STATMAX)	/* max length of Dir structure */
 
+// enum Access_flag
 #define	AEXIST	0	/* accessible: exists */
 #define	AEXEC	1	/* execute access */
 #define	AWRITE	2	/* write access */
 #define	AREAD	4	/* read access */
 
 /* bits in Qid.type */
+#define QTFILE		0x00		/* type bits for plain file */
 #define QTDIR		0x80		/* type bit for directories */
+// advanced stuff
 #define QTAPPEND	0x40		/* type bit for append only files */
 #define QTEXCL		0x20		/* type bit for exclusive use files */
 #define QTMOUNT		0x10		/* type bit for mounted channel */
 #define QTAUTH		0x08		/* type bit for authentication file */
 #define QTTMP		0x04		/* type bit for non-backed-up file */
 #define QTSYMLINK	0x02		/* type bit for symbolic link */
-#define QTFILE		0x00		/* type bits for plain file */
 
-// ??
+// Qid as in uniQue id
 typedef
 struct Qid
 {
@@ -182,11 +209,16 @@ struct Qid
 
 /* bits in Dir.mode */
 #define DMDIR		0x80000000	/* mode bit for directories */
+#define DMREAD		0x4		/* mode bit for read permission */
+#define DMWRITE		0x2		/* mode bit for write permission */
+#define DMEXEC		0x1		/* mode bit for execute permission */
+// advanced stuff
 #define DMAPPEND	0x40000000	/* mode bit for append only files */
 #define DMEXCL		0x20000000	/* mode bit for exclusive use files */
 #define DMMOUNT		0x10000000	/* mode bit for mounted channel */
 #define DMAUTH		0x08000000	/* mode bit for authentication file */
 #define DMTMP		0x04000000	/* mode bit for non-backed-up file */
+// unix extensions
 #define DMSYMLINK	0x02000000	/* mode bit for symbolic link (Unix, 9P2000.u) */
 #define DMDEVICE	0x00800000	/* mode bit for device file (Unix, 9P2000.u) */
 #define DMNAMEDPIPE	0x00200000	/* mode bit for named pipe (Unix, 9P2000.u) */
@@ -194,9 +226,6 @@ struct Qid
 #define DMSETUID	0x00080000	/* mode bit for setuid (Unix, 9P2000.u) */
 #define DMSETGID	0x00040000	/* mode bit for setgid (Unix, 9P2000.u) */
 
-#define DMREAD		0x4		/* mode bit for read permission */
-#define DMWRITE		0x2		/* mode bit for write permission */
-#define DMEXEC		0x1		/* mode bit for execute permission */
 
 typedef
 struct Dir {
@@ -225,13 +254,15 @@ extern	int	p9create(char*, int, ulong);
 // remove() also in stdio.h
 extern	int	remove(const char*);
 
+// missing fstat(), stat(), fwstat(), wstat() compared to plan9 libc
+// missinc access()
+
 extern	Dir*	dirstat(char*);
 extern	Dir*	dirfstat(int);
 extern	int	dirwstat(char*, Dir*);
 extern	int	dirfwstat(int, Dir*);
 
 extern	void	nulldir(Dir*);
-
 extern	long	dirreadall(int, Dir**); // ?? defined where?
 
 //******************************************************************************
@@ -249,13 +280,18 @@ extern	char*	unsharp(char*);
 //******************************************************************************
 // Namespaces
 //******************************************************************************
-#define	MORDER	0x0003	/* mask for bits defining order of mounting */
+// enum Namespace_flag, mount/bind parameter
 #define	MREPL	0x0000	/* mount replaces object */
 #define	MBEFORE	0x0001	/* mount goes before others in union directory */
 #define	MAFTER	0x0002	/* mount goes after others in union directory */
+
 #define	MCREATE	0x0004	/* permit creation in mounted directory */
 #define	MCACHE	0x0010	/* cache some data */
+
 #define	MMASK	0x0017	/* all bits on */
+
+// bitset<Namespace_flag>
+#define	MORDER	0x0003	/* mask for bits defining order of mounting */
 
 #ifdef RFMEM	/* FreeBSD, OpenBSD */
 #undef RFFDG
@@ -271,6 +307,7 @@ extern	char*	unsharp(char*);
 #undef RFCNAMEG
 #endif
 
+// Rfork_flags
 enum
 {
 	RFNAMEG		= (1<<0),
@@ -286,6 +323,8 @@ enum
 /*	RFREND		= (1<<13), */
 /*	RFNOMNT		= (1<<14) */
 };
+
+// missing bind(), mount(), unmount() compared to plan9 libc
 
 //******************************************************************************
 // Tmp files
@@ -303,8 +342,8 @@ extern	void	_exits(char*);
 extern	char*	p9getenv(char*);
 extern	int	p9putenv(char*, char*);
 
-// ??
-extern	char*	getuser(void);
+
+// missing getpid(), getppid() compared to plan9 libc
 
 extern	char*	p9getwd(char*, int);
 extern	int	p9chdir(char*);
@@ -312,6 +351,7 @@ extern	int	p9chdir(char*);
 extern	int	p9exec(char*, char*[]);
 extern	int	p9execl(char*, ...);
 
+// fork() in unistd.h
 extern	int	p9rfork(int);
 
 extern	int	await(char*, int);
@@ -332,16 +372,44 @@ extern	Waitmsg*	waitnohang(void);
 extern	int	p9waitpid(void);
 
 //******************************************************************************
+// Memory
+//******************************************************************************
+
+// no sbrk() compared to plan9 libc
+// malloc() and free() in stdlib.h
+// mallocz ?? 
+
+//******************************************************************************
 // Time
 //******************************************************************************
+
+
+// time() defined in time.h but not included in u.h
+
 extern  double  p9cputime(void);
+// nsec() ? 
+
+// gmtime(), localtime() ??
 
 extern	long	p9alarm(ulong);
 extern	int	p9sleep(long);
 
 //******************************************************************************
+// Random
+//******************************************************************************
+// rand(), srand(), frand(), nrand(), truerand() ??
+// lrand(), lnrand(), ntruerand() ??
+
+//******************************************************************************
 // Concurrency
 //******************************************************************************
+
+// ainc(), adec() ??
+// cas32(), casp(), casl() ??
+
+// Lock? _tas(), lock(), unlock(), canlock() ?
+// QLock? RWLock?
+
 extern	void	p9longjmp(p9jmp_buf, int);
 extern	void	p9notejmp(void*, p9jmp_buf, int);
 #define p9setjmp(b)	sigsetjmp((void*)(b), 1)
@@ -349,9 +417,14 @@ extern	void	p9notejmp(void*, p9jmp_buf, int);
 //******************************************************************************
 // IPC
 //******************************************************************************
+
+// pipe() in unistd.h
+
 /* Segattch */
 #define	SG_RONLY	0040	/* read only */
 #define	SG_CEXEC	0100	/* detach on exec */
+
+// no segattach(), segbrk(), segdetach(), setflush(), segfree()
 
 #define	NCONT	0	/* continue after note */
 #define	NDFaLT	1	/* terminate after note */
@@ -366,7 +439,25 @@ extern	int	notedisable(char*);
 extern	int	notifyon(char*);
 extern	int	notifyoff(char*);
 
+// Rendez type?
 extern	ulong	rendezvous(ulong, ulong);
+// rsleep()? rwakeup()?
+
+// no semacquire(), semrelease(), tsemacquire()
+
+//******************************************************************************
+// Network
+//******************************************************************************
+// accept(), announce(), dial(), listen() ??
+
+//******************************************************************************
+// Security
+//******************************************************************************
+
+// no fauth(), no fversion()
+
+// ??
+extern	char*	getuser(void);
 
 //******************************************************************************
 // GOXXX special vars
@@ -386,6 +477,7 @@ extern	char*	getgoversion(void);
 extern	void	perror(const char*);
 
 extern	int	errstr(char*, uint);
+
 extern	void	rerrstr(char*, uint);
 extern	void	werrstr(char*, ...);
 
@@ -405,11 +497,19 @@ enum
 	PNGROUP		= 2
 };
 
+//??
 extern	int	getfields(char*, char**, int, int, char*);
+
+//??
 extern	int	gettokens(char *, char **, int, char *);
 
+//??
 extern	char*	sysname(void);
+
+//??
 extern	char*	getns(void);
+
+//??
 extern	char*	get9root(void);
 
 #ifndef NOPLAN9DEFINES
