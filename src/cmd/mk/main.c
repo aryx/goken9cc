@@ -259,9 +259,9 @@ main(int argc, char **argv)
     //pad-ext: MKSHELL environment var to specify the path to rc
     //LATER: allow also to change the shell from rc to sh (or something else)
     sym = symlook("MKSHELL", S_VAR, 0);
-    if(sym != NULL) {
+    if(sym != nil) {
       w = (Word*) sym->u.value;
-      if(w != NULL && w->s != NULL) {
+      if(w != nil && w->s != nil) {
         shell->shell = w->s;
       }
     }
