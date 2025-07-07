@@ -131,7 +131,7 @@ extern	char*	getuser(void);
 extern	char*	p9getwd(char*, int);
 extern	void	p9longjmp(p9jmp_buf, int);
 extern	char*	mktemp(char*);
-extern	int		opentemp(char*);
+extern	int	opentemp(char*);
 extern	void	p9notejmp(void*, p9jmp_buf, int);
 extern	void	perror(const char*);
 extern	int	postnote(int, int, char *);

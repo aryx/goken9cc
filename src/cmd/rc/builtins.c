@@ -560,6 +560,7 @@ builtin builtins[] = {
     "shift"  ,      execshift,
     "finit"  ,      execfinit,
     "flag"   ,      execflag,
+    //TODO: unix-specific	"umask",	execumask,
     0
 };
 /*e: global [[builtins]] */
