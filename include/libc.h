@@ -29,16 +29,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/*
- * Lib9 is miscellany from the Plan 9 C library that doesn't
- * fit into libutf or into libfmt, but is still missing from traditional
- * Unix C libraries.
- */
 #ifndef _LIBC_H_
 #define _LIBC_H_ 1
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+//******************************************************************************
+// Prelude
+//******************************************************************************
+/*
+ * Lib9 is miscellany from the Plan 9 C library that doesn't
+ * fit into libutf or into libfmt, but is still missing from traditional
+ * Unix C libraries.
+ */
 
 #include <utf.h>
 #include <fmt.h>
@@ -46,6 +50,10 @@ extern "C" {
 /*
  * Begin trimmed down usual libc.h
  */
+
+//******************************************************************************
+// Macros
+//******************************************************************************
 
 #ifndef nil
 #define	nil	((void*)0)
@@ -57,19 +65,21 @@ extern "C" {
 #endif
 
 
-// --------------------------------------------
-// pad's stuff (also in principia/include/ALL/libc.h)
-// --------------------------------------------
+//******************************************************************************
+// Pad's stuff (also in principia/include/ALL/libc.h)
+//******************************************************************************
+
 // Those types are needed to compile src/cmd/mk which
 // comes from pad's principia which use a few extra C types
 // (I like types).
 typedef	uint8			bool;
-typedef	uint8			byte;
 enum _bool
 {
 	true	= 1,
 	false	= 0,
 };
+
+typedef	uint8			byte;
 
 #define STDIN 0
 #define STDOUT 1
@@ -98,13 +108,14 @@ enum Seek_cursor {
 // --------------------------------------------
 
 
-extern	char*	strecpy(char*, char*, char*);
+extern	char* strecpy(char*, char*, char*);
 extern  int tokenize(char*, char**, int);
 
 extern  double  p9cputime(void);
 #ifndef NOPLAN9DEFINES
 #define cputime     p9cputime
 #endif
+
 /*
  * one-of-a-kind
  */
@@ -136,9 +147,9 @@ extern	void	p9notejmp(void*, p9jmp_buf, int);
 extern	void	perror(const char*);
 extern	int	postnote(int, int, char *);
 extern	double	p9pow10(int);
+#define p9setjmp(b)	sigsetjmp((void*)(b), 1)
 //PAD: why was in libc.h?? it's part of rc actually
 //extern	char*	searchpath(char*);
-#define p9setjmp(b)	sigsetjmp((void*)(b), 1)
 
 extern	void	sysfatal(char*, ...);
 
@@ -352,6 +363,9 @@ extern int pwrite(int fd, void *buf, int n, int off);
 #define O_BINARY 0
 #endif
 
+//TODO:
+// read(), write(), seek, dup(), remove()
+
 #ifndef NOPLAN9DEFINES
 #define alarm		p9alarm
 #define	dup		p9dup
@@ -386,6 +400,10 @@ extern	char*	unsharp(char*);
 #define main	p9main
 #endif
 
+//******************************************************************************
+// SET/USED marking
+//******************************************************************************
+
 /* compiler directives on plan 9 */
 #define	SET(x)	((x)=0)
 #define	USED(x)	if(x){}else{}
@@ -396,7 +414,9 @@ extern	char*	unsharp(char*);
 #	endif
 #endif
 
-/* command line */
+//******************************************************************************
+// CLI macros
+//******************************************************************************
 extern char	*argv0;
 extern void __fixargv0(void);
 #define	ARGBEGIN	for((argv0?0:(argv0=(__fixargv0(),*argv))),argv++,argc--;\
@@ -418,6 +438,10 @@ extern void __fixargv0(void);
 				(*_argt? _argt: argv[1]? (argc--, *++argv): ((x), abort(), (char*)0)))
 
 #define	ARGC()		_argc
+
+//******************************************************************************
+// Postlude
+//******************************************************************************
 
 #if defined(__cplusplus)
 }
