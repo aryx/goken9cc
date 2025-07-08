@@ -1,1 +1,1 @@
-../GOSRC/Make.inc
+../GO/Make.inc

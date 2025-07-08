@@ -5,7 +5,7 @@
 
 set -e
 
-eval $(gomake -f ../../GOSRC/Make.inc go-env)
+eval $(gomake -f ../../GO/Make.inc go-env)
 
 if [ -z "$O" ]; then
 	echo 'missing $O - maybe no Make.$GOARCH?' 1>&2

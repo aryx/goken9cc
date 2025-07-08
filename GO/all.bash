@@ -5,7 +5,7 @@
 
 set -e
 if [ ! -f make.bash ]; then
-	echo 'all.bash must be run from $GOROOT/GOSRC' 1>&2
+	echo 'all.bash must be run from $GOROOT/GO' 1>&2
 	exit 1
 fi
 . ./make.bash

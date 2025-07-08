@@ -53,7 +53,7 @@ type makedata struct {
 }
 
 var makefileTemplate = template.MustParse(`
-include $(GOROOT)/GOSRC/Make.inc
+include $(GOROOT)/GO/Make.inc
 
 TARG={pkg}
 GOFILES=\
@@ -61,6 +61,6 @@ GOFILES=\
 	{@}\
 {.end}
 
-include $(GOROOT)/GOSRC/Make.pkg
+include $(GOROOT)/GO/Make.pkg
 `,
 	nil)

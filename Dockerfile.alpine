@@ -6,7 +6,7 @@ WORKDIR /src
 COPY . .
 ENV IN_DOCKER=true
 #TODO: switch to all.bash (and later to configure; make; make install)
-RUN cd GOSRC; ./make.bash
+RUN cd GO/; ./make.bash
 ENV PATH="$PATH:/src/bin"
 
 #TODO: can't run hello (or use all.bash above)

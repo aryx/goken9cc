@@ -6,7 +6,7 @@
 set -e
 
 if [ ! -f env.bash ]; then
-	echo 'clean.bash must be run from $GOROOT/GOSRC' 1>&2
+	echo 'clean.bash must be run from $GOROOT/GO' 1>&2
 	exit 1
 fi
 . ./env.bash
@@ -21,7 +21,7 @@ fi
 rm -f "$GOROOT"/lib/*.a
 for i in lib9 libbio libmach cmd pkg ../GOTEST/bench ../GOTEST/garbage
 do(
-	cd "$GOROOT"/GOSRC/$i || exit 1
+	cd "$GOROOT"/GO/$i || exit 1
 	if test -f clean.bash; then
 		bash clean.bash
 	else

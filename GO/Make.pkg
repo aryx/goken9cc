@@ -7,7 +7,7 @@ all: package
 package: _obj/$(TARG).a
 testpackage: _test/$(TARG).a
 
-include $(QUOTED_GOROOT)/GOSRC/Make.common
+include $(QUOTED_GOROOT)/GO/Make.common
 
 # The quietgcc wrapper is for our own source code
 # while building the libraries, not arbitrary source code

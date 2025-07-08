@@ -9,7 +9,7 @@ endif
 
 all: $(TARG)
 
-include $(QUOTED_GOROOT)/GOSRC/Make.common
+include $(QUOTED_GOROOT)/GO/Make.common
 
 PREREQ+=$(patsubst %,%.make,$(DEPS))
 

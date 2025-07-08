@@ -1,4 +1,4 @@
-# Build and test goken9cc and GOSRC/ on Ubuntu Linux (x86_64 and glibc)
+# Build and test goken9cc and GO/ on Ubuntu Linux (x86_64 and glibc)
 
 FROM ubuntu:22.04
 
@@ -14,7 +14,7 @@ COPY . .
 # so we can disable some tests that don't work inside Docker like syslog
 ENV IN_DOCKER=true
 # all.bash setup, build, and run many tests! (call make.bash and run.bash)
-RUN cd GOSRC; ./all.bash
+RUN cd GO; ./all.bash
 
 # some small extra tests from pad in tests/
 ENV PATH="$PATH:/src/bin"
