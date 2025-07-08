@@ -25,26 +25,21 @@ THE SOFTWARE.
 
 #ifndef _U_H_
 #define _U_H_ 1
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 #define __BSD_VISIBLE 1 /* FreeBSD 5.x */
-#if defined(__sun__)
-#	define __EXTENSIONS__ 1 /* SunOS */
-#	if defined(__SunOS5_6__) || defined(__SunOS5_7__) || defined(__SunOS5_8__)
-		/* NOT USING #define __MAKECONTEXT_V2_SOURCE 1 / * SunOS */
-#	else
-#		define __MAKECONTEXT_V2_SOURCE 1
-#	endif
-#endif
 #define _BSD_SOURCE 1
 #define _NETBSD_SOURCE 1	/* NetBSD */
 #define _SVID_SOURCE 1
+
 #if !defined(__APPLE__) && !defined(__OpenBSD__)
 #	define _XOPEN_SOURCE 1000
 #	define _XOPEN_SOURCE_EXTENDED 1
 #endif
+
 #if defined(__FreeBSD__)
 #	include <sys/cdefs.h>
 	/* for strtoll */
@@ -53,6 +48,7 @@ extern "C" {
 #	undef __LONG_LONG_SUPPORTED
 #	define __LONG_LONG_SUPPORTED
 #endif
+
 #define _LARGEFILE64_SOURCE 1
 #define _FILE_OFFSET_BITS 64
 
@@ -81,6 +77,7 @@ extern "C" {
 #ifdef __MINGW32__
 typedef jmp_buf sigjmp_buf;
 #endif
+
 typedef long p9jmp_buf[sizeof(sigjmp_buf)/sizeof(long)];
 
 #if defined(__linux__)
@@ -94,14 +91,6 @@ typedef long p9jmp_buf[sizeof(sigjmp_buf)/sizeof(long)];
 #		undef _NEEDUINT
 #		undef _NEEDULONG
 #	endif
-#elif defined(__sun__)
-#	include <sys/types.h>
-#	include <pthread.h>
-#	define PLAN9PORT_USING_PTHREADS 1
-#	undef _NEEDUSHORT
-#	undef _NEEDUINT
-#	undef _NEEDULONG
-#	define nil 0	/* no cast to void* */
 #elif defined(__FreeBSD__)
 #	include <sys/types.h>
 #	include <osreldate.h>
@@ -164,6 +153,7 @@ typedef signed char schar;
 #ifdef _NEEDULONG
 	typedef unsigned long ulong;
 #endif
+
 typedef unsigned long long uvlong;
 typedef long long vlong;
 
@@ -186,7 +176,6 @@ typedef s32int int32;
 typedef u32int uint32;
 typedef s64int int64;
 typedef u64int uint64;
-
 
 #undef _NEEDUCHAR
 #undef _NEEDUSHORT
@@ -224,4 +213,5 @@ typedef u64int uint64;
 #if defined(__cplusplus)
 }
 #endif
+
 #endif
