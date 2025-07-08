@@ -5,8 +5,11 @@ import (
     "os"
     "time"
     "image"
+    "exp/draw"
     "exp/draw/x11"
 )
+
+// See also https://go.dev/blog/image-draw
 
 func main() {
     win, err := x11.NewWindow()
@@ -15,50 +18,44 @@ func main() {
 	    os.Exit(1)
     }
     img := win.Screen()
-    color := image.RGBAColor{255, 255, 255, 255}
-    _ = color
+
+    white := image.RGBAColor{255, 255, 255, 255}
+    green := image.RGBAColor{0, 255, 0, 255}
+    greenimg := image.NewColorImage(green)
+
+    //src := image.NewRGBA(1, 1)
+    //src.Set(0,0, green)
+
     for i, j := 0, 0; i < 100 && j < 100; i, j = i + 1, j + 1 {
-        img.Set(i, j, color)
+        img.Set(i, j, white)
     }
+
+    draw.Draw(img, image.Rect(300, 300, 200, 200), greenimg, image.Pt(0, 0))
     
     win.FlushImage()
+
+    c := win.EventChan()
+    for ev := range c {
+      switch e := ev.(type) {
+       case draw.KeyEvent:
+        // handle key event
+        fmt.Printf("Key pressed: %v\n", e.Key)
+	if e.Key == 'q' {
+            return
+        }
+       case draw.MouseEvent:
+        // handle mouse event (if applicable)
+        fmt.Printf("Mouse moved: %v, %v\n", e.Loc.X, e.Loc.Y)
+	drawCircle(img, e.Loc, 20, green)
+        win.FlushImage()
+       default:
+        fmt.Printf("Unknown event type: %T\n", e)
+    }
+}
+    
     time.Sleep(2 * 1e9)
     win.Close()
     os.Exit(0)
-}
-
-
-/*
-
-    const width, height = 400, 400
-
-    screen, err := x11.NewWindow(image.Rect(0, 0, width, height))
-    if err != nil {
-        println("cannot open X11 window:", err.String())
-        os.Exit(1)
-    }
-
-    white := image.RGBAColor{255, 255, 255, 255}
-    blue := image.RGBAColor{0, 0, 255, 255}
-
-    for {
-        mouse := x11.Mouse()
-        pos := image.Pt(mouse.X, mouse.Y)
-
-        clear(screen, white)
-        drawCircle(screen, pos, 20, blue)
-
-        // x11.NewWindow auto-flushes (or had implicit redraw)
-    }
-}
-
-func clear(dst image.Image, col image.Color) {
-    bounds := dst.Bounds()
-    for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-        for x := bounds.Min.X; x < bounds.Max.X; x++ {
-            dst.(draw.Image).Set(x, y, col)
-        }
-    }
 }
 
 func drawCircle(dst image.Image, center image.Point, radius int, col image.Color) {
@@ -72,4 +69,3 @@ func drawCircle(dst image.Image, center image.Point, radius int, col image.Color
         }
     }
 }
-*/
