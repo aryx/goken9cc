@@ -248,7 +248,7 @@ install: install.dirs
 
 test:	test.dirs
 
-bench:	bench.dirs ../../GOTEST/garbage.bench
+bench:	bench.dirs ../../GO/test/garbage.bench
 
 nuke: nuke.dirs
 	rm -rf "$(GOROOT)"/pkg/*

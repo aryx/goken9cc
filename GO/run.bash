@@ -80,13 +80,13 @@ fi
 ) || exit $?
 
 [ "$GOARCH" == arm ] ||
-(xcd ../GOTEST/bench
+(xcd ../GO/test/bench
 if [[ $(uname | tr A-Z a-z | sed 's/mingw/windows/') != *windows* ]]; then
 	./timing.sh -test
 fi
 ) || exit $?
 
-(xcd ../GOTEST
+(xcd ../GO/test
 if [[ $(uname | tr A-Z a-z | sed 's/mingw/windows/') != *windows* ]]; then
 	./run
 fi

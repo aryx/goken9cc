@@ -19,7 +19,7 @@ if [ "$1" != "--nopkg" ]; then
 	rm -rf "$GOROOT"/pkg/${GOOS}_$GOARCH
 fi
 rm -f "$GOROOT"/lib/*.a
-for i in lib9 libbio libmach cmd pkg ../GOTEST/bench ../GOTEST/garbage
+for i in lib9 libbio libmach cmd pkg test/bench test/garbage
 do(
 	cd "$GOROOT"/GO/$i || exit 1
 	if test -f clean.bash; then

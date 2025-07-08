@@ -13,7 +13,7 @@ set -e
 gomake
 6g main.go && 6l main.6
 (
-for i in $(grep -E -l '// \$G (\$D/)?\$F\.go \&\& \$L \$F\.\$A && \./\$A\.out' "$GOROOT"/GOTEST/*.go "$GOROOT"/GOTEST/*/*.go)
+for i in $(grep -E -l '// \$G (\$D/)?\$F\.go \&\& \$L \$F\.\$A && \./\$A\.out' "$GOROOT"/GO/test/*.go "$GOROOT"/GO/test/*/*.go)
 do
 	if grep '^import' $i >/dev/null 2>&1
 	then

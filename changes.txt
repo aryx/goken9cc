@@ -14,7 +14,7 @@
   build-mk.sh to "boostrap" mk/rc
 
 ** internals
-- reorg code with all Go related stuff under GO/
+- reorg code with all Go related stuff under GO/ (GOSRC/, GOMISC/, GOTEST/)
 
 * Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc, arm64 7a/7c/7l, riscv ia/ic/il)
 # see also pad.org history section

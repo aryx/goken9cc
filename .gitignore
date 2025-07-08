@@ -88,8 +88,8 @@ src/pkg/debug/gosym/_test/
 GO/pkg/exp/ogle/ogle
 src/pkg/template/_test/
 
-GOTEST/pass.out
-GOTEST/run.out
-GOTEST/times.out
+GO/test/pass.out
+GO/test/run.out
+GO/test/times.out
 
 # ----------------------------------------------------------------------------
