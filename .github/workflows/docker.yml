@@ -17,7 +17,7 @@ jobs:
       # optional if don't need multi-arch build
       - uses: docker/setup-buildx-action@v3
       # alt: make build-gosrc
-      - run: docker build -f Dockerfile.gosrc -t goken9cc-gosrc .
+      - run: docker build -f Dockerfile.golang -t goken9cc-gosrc .
       # alt: could be a different (parallel) job
       - run: docker build -f Dockerfile.alpine -t goken9cc-alpine .
-      - run: docker build -f Dockerfile.mkrc -t goken9cc-mkrc .
+      - run: docker build -f Dockerfile -t goken9cc-mkrc .

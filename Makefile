@@ -23,11 +23,11 @@ hellotest:
 build-docker: build-mkrc
 
 build-gosrc:
-	docker build -f Dockerfile.gosrc -t "goken9cc-gosrc" .
+	docker build -f Dockerfile.golang -t "goken9cc-gosrc" .
 build-alpine:
 	docker build -f Dockerfile.alpine -t "goken9cc-alpine" .
 build-mkrc:
-	docker build -f Dockerfile.mkrc -t "goken9cc-mkrc" .
+	docker build -f Dockerfile -t "goken9cc-mkrc" .
 
 ###############################################################################
 # Go tests
