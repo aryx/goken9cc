@@ -1,10 +1,9 @@
 
-#TODO: hello_draw compile but does not run correctly
-PROGS=hello_go hello_unicode hello_goroutine hello_web hello_draw
+PROGS=hello_go.exe hello_unicode.exe hello_goroutine.exe hello_web hello_draw.exe
 
 all: $(PROGS)
 
-%: %.6
+%.exe: %.6
 	6l -o $@ $^
 
 %.6: %.go
