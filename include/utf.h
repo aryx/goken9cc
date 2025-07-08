@@ -1,1 +1,1 @@
-../GOSRC/lib9/utf/utf.h
+../src/lib9/utf/utf.h
