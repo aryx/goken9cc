@@ -26,10 +26,6 @@ easier when will have test infra via qemu-system-arm
 
 ** libs
 
-*** RELAX integrate libregexp? good test for lib9?
-needed by mk.
-needed also by sed and grep which I might add to goken9cc
-
 ** Arch
 
 *** LATER: integrate arm64, and riscv from kencc-latest, just build them! (can't run yet)
@@ -89,15 +85,6 @@ start use jsonnet?
 start multi GOOS and GOARCH in CI? in Docker can try all combinations?
 
 ** Build infra
-
-*** need to add mk/rc as anyway we need it to build goken when using mkfiles
-
-*** add build-mkrc.sh, like in xix (and also like in inferno?)
-makemk.sh
-see also mk.sh in kencc
-
-so no need to have bootstrapped mk for all platforms in xxx/.../bin/mk
-I started a bit with the mk.sh scripts in lib9/, libbio/ and mk/
 
 *** RELAX goken/mkfiles/386/mkfile
 and try to compile goken with -m32

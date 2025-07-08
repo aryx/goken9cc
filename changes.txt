@@ -1,5 +1,12 @@
 # -*- org -*-
 
+* TODO
+- add 5i
+- add vi
+- add lex/yacc
+- adapt to goken 7a/7l/7c
+- adapt to goken ia/il/ic
+
 * Beta (Q3 2025) (mk/rc)
 
 ** build
