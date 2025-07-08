@@ -1,10 +1,6 @@
 #ifndef _BIO_H_
 #define _BIO_H_ 1
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #ifdef AUTOLIB
 AUTOLIB(bio)
 #endif
@@ -94,7 +90,4 @@ int	Bterm(Biobuf*);
 int	Bprint(Biobuf*, char*, ...);
 int	Bvprint(Biobuf*, char*, va_list);
 
-#if defined(__cplusplus)
-}
-#endif
 #endif

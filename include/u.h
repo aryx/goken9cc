@@ -22,13 +22,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
 #ifndef _U_H_
 #define _U_H_ 1
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
 
 #define __BSD_VISIBLE 1 /* FreeBSD 5.x */
 #define _BSD_SOURCE 1
@@ -208,10 +203,6 @@ typedef u64int uint64;
 #		undef AUTOFRAMEWORK
 #		define AUTOFRAMEWORK(x) static int __p9l_autoframework_ ## x __attribute__ ((unused));
 #	endif
-#endif
-
-#if defined(__cplusplus)
-}
 #endif
 
 #endif

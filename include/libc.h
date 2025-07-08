@@ -28,12 +28,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-
 #ifndef _LIBC_H_
 #define _LIBC_H_ 1
-#if defined(__cplusplus)
-extern "C" {
-#endif
 
 //******************************************************************************
 // Prelude
@@ -626,7 +622,4 @@ extern void __fixargv0(void);
 // Postlude
 //******************************************************************************
 
-#if defined(__cplusplus)
-}
-#endif
 #endif	/* _LIB9_H_ */

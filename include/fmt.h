@@ -11,14 +11,8 @@
  * REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
-
 #ifndef _FMT_H_
 #define _FMT_H_ 1
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 
 #include <stdarg.h>
 #include <utf.h>
@@ -122,7 +116,4 @@ Rune*		runevseprint(Rune *buf, Rune *e, char *fmt, va_list args);
 Rune*		runevsmprint(char *fmt, va_list args);
 int		runevsnprint(Rune *buf, int len, char *fmt, va_list args);
 
-#if defined(__cplusplus)
-}
-#endif
 #endif

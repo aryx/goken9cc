@@ -12,7 +12,6 @@
  * REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
-
 #ifndef _UTFH_
 #define _UTFH_ 1
 
@@ -28,10 +27,6 @@ enum
   Runeerror	= 0xFFFD,	/* decoding error in UTF */
   Runemax	= 0x10FFFF,	/* maximum rune value */
 };
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
 
 /*
  * rune routines
@@ -240,9 +235,5 @@ int isspacerune(Rune r);
 // (The comments in this file were copied from the manpage files rune.3,
 // isalpharune.3, and runestrcat.3. Some formatting changes were also made
 // to conform to Google style. /JRM 11/11/05)
-
-#ifdef	__cplusplus
-}
-#endif
 
 #endif
