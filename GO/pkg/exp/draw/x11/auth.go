@@ -5,6 +5,7 @@
 package x11
 
 import (
+	"fmt"
 	"bufio"
 	"io"
 	"os"
@@ -85,7 +86,9 @@ func readAuth(displayStr string) (name, data string, err os.Error) {
 		if err != nil {
 			return
 		}
-		if family == familyLocal && addr == hostname && disp == displayStr {
+		//pad: I commented the extra cond otherwise this never returns.
+		fmt.Printf("Auth: family = %d, addr = %s, disp = %s, name0 = %s, data0 = %s\n", family, addr, disp, name0, data0)
+		if family == familyLocal && addr == hostname { // && disp == displayStr {
 			return name0, data0, nil
 		}
 	}

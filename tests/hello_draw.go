@@ -14,9 +14,9 @@ func main() {
 	    fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	    os.Exit(1)
     }
+    img := win.Screen()
     color := image.RGBAColor{255, 255, 255, 255}
     _ = color
-    img := win.Screen()
     for i, j := 0, 0; i < 100 && j < 100; i, j = i + 1, j + 1 {
         img.Set(i, j, color)
     }
@@ -29,15 +29,7 @@ func main() {
 
 
 /*
-package main
 
-import (
-    "exp/draw/x11"
-    "image"
-    "os"
-)
-
-func main() {
     const width, height = 400, 400
 
     screen, err := x11.NewWindow(image.Rect(0, 0, width, height))

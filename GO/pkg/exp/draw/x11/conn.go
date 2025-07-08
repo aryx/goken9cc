@@ -304,7 +304,7 @@ func authenticate(w *bufio.Writer, displayStr string) os.Error {
 	}
 	// Assume that the authentication protocol is "MIT-MAGIC-COOKIE-1".
 	if len(key) != 18 || len(value) != 16 {
-		return os.NewError("unsupported Xauth")
+		return os.NewError("unsupported Xauth. Key = " + key + " value = " + value)
 	}
 	// 0x006c means little-endian. 0x000b, 0x0000 means X major version 11, minor version 0.
 	// 0x0012 and 0x0010 means the auth key and value have lenths 18 and 16.
