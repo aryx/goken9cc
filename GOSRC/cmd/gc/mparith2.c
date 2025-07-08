@@ -622,8 +622,9 @@ mpdivmodfixfix(Mpint *q, Mpint *r, Mpint *n, Mpint *d)
 	q->neg = ns^ds;
 }
 
+//pad: rename to iszero_ because iszero is defined in c23
 static int
-iszero(Mpint *a)
+iszero_(Mpint *a)
 {
 	long *a1;
 	int i;
@@ -654,7 +655,7 @@ mpdivfract(Mpint *a, Mpint *b)
 		for(j=0; j<Mpscale; j++) {
 			x <<= 1;
 			if(mpcmp(&d, &n) <= 0) {
-				if(!iszero(&d))
+				if(!iszero_(&d))
 					x |= 1;
 				mpsubfixfix(&n, &d);
 			}

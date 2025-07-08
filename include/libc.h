@@ -71,12 +71,17 @@ extern "C" {
 // Those types are needed to compile src/cmd/mk which
 // comes from pad's principia which use a few extra C types
 // (I like types).
+#if __STDC_VERSION__ < 202311L  // before C23
+#ifndef __bool_true_false_are_defined
 typedef	uint8			bool;
 enum _bool
 {
 	true	= 1,
 	false	= 0,
 };
+#define __bool_true_false_are_defined 1
+#endif
+#endif
 
 typedef	uint8			byte;
 
