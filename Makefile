@@ -36,10 +36,10 @@ build-mkrc:
 gotest:
 	cd src; ./run.bash
 
-#TODO: hello_web but more complicated to test and hello_draw
-#TODO: use cmp.out to ensure the output is right
+#TODO: hello_web.exe but more complicated to test and hello_draw.exe too
+#TODO: we should use cmp.out to ensure the output is correct
 hellogotest:
-	cd tests; make; ./hello_go; ./hello_unicode; ./hello_goroutine
+	cd tests; make; ./hello_go.exe; ./hello_unicode.exe; ./hello_goroutine.exe
 
 ###############################################################################
 # Developer targets

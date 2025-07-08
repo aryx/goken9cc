@@ -1,5 +1,5 @@
 
-PROGS=hello_go.exe hello_unicode.exe hello_goroutine.exe hello_web hello_draw.exe
+PROGS=hello_go.exe hello_unicode.exe hello_goroutine.exe hello_web.exe hello_draw.exe
 
 all: $(PROGS)
 
