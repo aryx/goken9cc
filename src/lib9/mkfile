@@ -52,6 +52,7 @@ UTFOFILES=\
 	utf/runetype.$O\
 
 #coupling: if you add a file here, you need to modify scripts/build-mk.sh too
+# as well as ./Makefile
 LIB9OFILES=\
 	_p9dir.$O\
 	_exits.$O\

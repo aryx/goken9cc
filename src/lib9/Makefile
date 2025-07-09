@@ -81,6 +81,9 @@ LIB9OFILES=\
 	sysfatal.$O\
 	time.$O\
 	tokenize.$O\
+        \
+        zoneinfo.$O\
+        ctime.$O\
 
 ifeq ($(GOOS),windows)
 LIB9OFILES+=\
