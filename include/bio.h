@@ -61,8 +61,8 @@ struct	Biobuf
 
 Biobuf*	Bopen(char*, int);
 
-int	Binit(Biobuf*, int, int);
-int	Binits(Biobuf*, int, int, unsigned char*, int);
+int	Binit(Biobuf*, fdt, int);
+int	Binits(Biobuf*, fdt, int, unsigned char*, int);
 
 long	Bread(Biobuf*, void*, long);
 long	Bwrite(Biobuf*, void*, long);

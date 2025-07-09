@@ -61,49 +61,6 @@ THE SOFTWARE.
 #endif
 
 //******************************************************************************
-// Pad's stuff (also in principia/include/ALL/libc.h)
-//******************************************************************************
-
-// Those types are needed to compile src/cmd/mk which
-// comes from pad's principia which use a few extra C types
-// (I like types).
-#if __STDC_VERSION__ < 202311L  // before C23
-#ifndef __bool_true_false_are_defined
-typedef	uint8			bool;
-enum _bool
-{
-	true	= 1,
-	false	= 0,
-};
-#define __bool_true_false_are_defined 1
-#endif
-#endif
-
-typedef	uint8			byte;
-
-#define STDIN 0
-#define STDOUT 1
-#define STDERR 2
-typedef int fdt; // file descriptor type
-
-// in principia/include/ALL/syscall.h
-enum Seek_cursor {
-    SEEK__START = 0,
-    SEEK__CUR = 1,
-    SEEK__END = 2,
-};
-
-#define OK_0 0
-#define OK_1 1
-#define ERROR_0 0
-#define ERROR_1 1
-#define ERROR_NEG1 (-1)
-typedef int error0; // 0 is the error value
-typedef int error1; // 1 is the error value
-typedef int errorneg1; // -1 is the error value
-typedef int errorn; // 1 or more means error
-
-//******************************************************************************
 // Bytes
 //******************************************************************************
 
@@ -134,6 +91,7 @@ extern	int gettokens(char *, char **, int, char *);
 //******************************************************************************
 // Conversions
 //******************************************************************************
+
 extern	int	p9atoi(char*);
 extern	long	p9atol(char*);
 extern	vlong	p9atoll(char*);
@@ -191,6 +149,8 @@ extern	int	p9dup(fdt, fdt);
 #define	AEXEC	1	/* execute access */
 #define	AWRITE	2	/* write access */
 #define	AREAD	4	/* read access */
+
+// access() in unistd.h
 
 /* bits in Qid.type */
 #define QTFILE		0x00		/* type bits for plain file */
@@ -260,15 +220,14 @@ extern	int	p9create(char*, int, ulong);
 extern	int	remove(const char*);
 
 // missing fstat(), stat(), fwstat(), wstat() compared to plan9 libc
-// missinc access()
 
 extern	Dir*	dirstat(char*);
-extern	Dir*	dirfstat(int);
+extern	Dir*	dirfstat(fdt);
 extern	int	dirwstat(char*, Dir*);
-extern	int	dirfwstat(int, Dir*);
+extern	int	dirfwstat(fdt, Dir*);
 
 extern	void	nulldir(Dir*);
-extern	long	dirreadall(int, Dir**); // ?? defined where?
+extern	long	dirreadall(fdt, Dir**); // ?? defined where? TODO: toport! needed by ls.c
 
 //******************************************************************************
 // Path
@@ -285,6 +244,7 @@ extern	char*	unsharp(char*);
 //******************************************************************************
 // Namespaces
 //******************************************************************************
+
 // enum Namespace_flag, mount/bind parameter
 #define	MREPL	0x0000	/* mount replaces object */
 #define	MBEFORE	0x0001	/* mount goes before others in union directory */
@@ -334,15 +294,17 @@ enum
 //******************************************************************************
 // Tmp files
 //******************************************************************************
+
 extern	char*	mktemp(char*);
 extern	int	opentemp(char*);
 
 //******************************************************************************
 // Process
 //******************************************************************************
-extern	int	exitcode(char*);
+
 extern	void	exits(char*);
 extern	void	_exits(char*);
+extern	int	exitcode(char*);
 
 extern	char*	p9getenv(char*);
 extern	int	p9putenv(char*, char*);
@@ -366,7 +328,7 @@ extern	int	awaitnohang(char*, int);
 typedef
 struct Waitmsg
 {
-	int pid;	/* of loved one */
+	pidt pid;	/* of loved one */
 	ulong time[3];	/* of loved one & descendants */
 	char	*msg;
 } Waitmsg;
@@ -374,7 +336,7 @@ struct Waitmsg
 extern	Waitmsg*	p9wait(void);
 extern	Waitmsg*	p9waitfor(int);
 extern	Waitmsg*	waitnohang(void);
-extern	int	p9waitpid(void);
+extern	int	        p9waitpid(void);
 
 //******************************************************************************
 // Memory
@@ -402,6 +364,7 @@ extern	int	p9sleep(long);
 //******************************************************************************
 // Random
 //******************************************************************************
+
 // rand(), srand(), frand(), nrand(), truerand() ??
 // lrand(), lnrand(), ntruerand() ??
 
@@ -431,6 +394,7 @@ extern	void	p9notejmp(void*, p9jmp_buf, int);
 
 // no segattach(), segbrk(), segdetach(), setflush(), segfree()
 
+// Signals/Notes
 #define	NCONT	0	/* continue after note */
 #define	NDFaLT	1	/* terminate after note */
 #define	NSAVE	2	/* clear note but hold state */
@@ -443,6 +407,8 @@ extern	int	noteenable(char*);
 extern	int	notedisable(char*);
 extern	int	notifyon(char*);
 extern	int	notifyoff(char*);
+
+//TODO? atnotify()?
 
 // Rendez type?
 extern	ulong	rendezvous(ulong, ulong);
@@ -477,6 +443,7 @@ extern	char*	getgoversion(void);
 //******************************************************************************
 // Error management
 //******************************************************************************
+
 #define	ERRMAX	128	/* max length of error string */
 
 extern	void	perror(const char*);
@@ -486,7 +453,9 @@ extern	int	errstr(char*, uint);
 extern	void	rerrstr(char*, uint);
 extern	void	werrstr(char*, ...);
 
+// will internally call exits()
 extern	void	sysfatal(char*, ...);
+// in stdlib.h
 extern	void	abort(void);
 
 //******************************************************************************
@@ -569,11 +538,13 @@ extern int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 extern int fork(void);
 extern int pread(int fd, void *buf, int n, int off);
 extern int pwrite(int fd, void *buf, int n, int off);
+
 #define execv(prog, argv) execv(prog, (const char* const*)(argv))
 #define execvp(prog, argv) execvp(prog, (const char**)(argv))
 #define lseek(fd, n, base) _lseeki64(fd, n, base)
 #define mkdir(path, perm) mkdir(path)
 #define pipe(fd) _pipe(fd, 512, O_BINARY)
+
 #else
 #define O_BINARY 0
 #endif

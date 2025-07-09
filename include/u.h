@@ -25,6 +25,14 @@ THE SOFTWARE.
 #ifndef _U_H_
 #define _U_H_ 1
 
+//******************************************************************************
+// Prelude
+//******************************************************************************
+
+//******************************************************************************
+// Defines
+//******************************************************************************
+
 #define __BSD_VISIBLE 1 /* FreeBSD 5.x */
 #define _BSD_SOURCE 1
 #define _NETBSD_SOURCE 1	/* NetBSD */
@@ -47,6 +55,10 @@ THE SOFTWARE.
 #define _LARGEFILE64_SOURCE 1
 #define _FILE_OFFSET_BITS 64
 
+//******************************************************************************
+// Standard includes (=~ libc.h)
+//******************************************************************************
+
 #include <inttypes.h>
 
 #include <unistd.h>
@@ -61,9 +73,10 @@ THE SOFTWARE.
 #include <ctype.h>	/* for tolower */
 #include <signal.h>
 
-/*
- * OS-specific crap
- */
+//******************************************************************************
+// OS-specific crap
+//******************************************************************************
+
 #define _NEEDUCHAR 1
 #define _NEEDUSHORT 1
 #define _NEEDUINT 1
@@ -134,6 +147,10 @@ typedef long p9jmp_buf[sizeof(sigjmp_buf)/sizeof(long)];
 #define O_DIRECT 0
 #endif
 
+//******************************************************************************
+// uxxx
+//******************************************************************************
+
 typedef signed char schar;
 
 #ifdef _NEEDUCHAR
@@ -177,9 +194,59 @@ typedef u64int uint64;
 #undef _NEEDUINT
 #undef _NEEDULONG
 
+//******************************************************************************
+// Pad's stuff (also in principia/include/ALL/libc.h)
+//******************************************************************************
+
+// Those types are needed to compile src/cmd/mk which
+// comes from pad's principia which use a few extra C types
+// (I like types).
+#if __STDC_VERSION__ < 202311L  // before C23
+#ifndef __bool_true_false_are_defined
+typedef	uint8			bool;
+enum _bool
+{
+	true	= 1,
+	false	= 0,
+};
+#define __bool_true_false_are_defined 1
+#endif
+#endif
+
+typedef	uint8			byte;
+
+#define STDIN 0
+#define STDOUT 1
+#define STDERR 2
+typedef int fdt; // file descriptor type
+
+// in principia/include/ALL/syscall.h
+enum Seek_cursor {
+    SEEK__START = 0,
+    SEEK__CUR = 1,
+    SEEK__END = 2,
+};
+
+typedef int pidt; // pid type
+
+#define OK_0 0
+#define OK_1 1
+#define ERROR_0 0
+#define ERROR_1 1
+#define ERROR_NEG1 (-1)
+typedef int error0; // 0 is the error value
+typedef int error1; // 1 is the error value
+typedef int errorneg1; // -1 is the error value
+typedef int errorn; // 1 or more means error
+
+
 #ifndef SIGBUS
 #define SIGBUS SIGSEGV /* close enough */
 #endif
+
+//******************************************************************************
+// AUTOLIB
+//******************************************************************************
 
 /*
  * Funny-named symbols to tip off 9l to autolink.
@@ -204,5 +271,9 @@ typedef u64int uint64;
 #		define AUTOFRAMEWORK(x) static int __p9l_autoframework_ ## x __attribute__ ((unused));
 #	endif
 #endif
+
+//******************************************************************************
+// Postlude
+//******************************************************************************
 
 #endif

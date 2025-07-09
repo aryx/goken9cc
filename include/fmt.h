@@ -17,6 +17,31 @@
 #include <stdarg.h>
 #include <utf.h>
 
+// classic one
+int		print(char *fmt, ...);
+int		fprint(int fd, char *fmt, ...);
+int		sprint(char *buf, char *fmt, ...);
+
+char*		seprint(char *buf, char *e, char *fmt, ...);
+char*		smprint(char *fmt, ...);
+int		snprint(char *buf, int len, char *fmt, ...);
+int		vfprint(int fd, char *fmt, va_list args);
+
+// flexible one
+char*		vseprint(char *buf, char *e, char *fmt, va_list args);
+char*		vsmprint(char *fmt, va_list args);
+int		vsnprint(char *buf, int len, char *fmt, va_list args);
+
+// rune
+Rune*		runeseprint(Rune *buf, Rune *e, char *fmt, ...);
+Rune*		runesmprint(char *fmt, ...);
+int		runesnprint(Rune *buf, int len, char *fmt, ...);
+int		runesprint(Rune *buf, char *fmt, ...);
+Rune*		runevseprint(Rune *buf, Rune *e, char *fmt, va_list args);
+Rune*		runevsmprint(char *fmt, va_list args);
+int		runevsnprint(Rune *buf, int len, char *fmt, va_list args);
+
+
 typedef struct Fmt	Fmt;
 struct Fmt{
 	unsigned char	runes;		/* output buffer is runes or chars? */
@@ -65,23 +90,9 @@ enum{
 	FmtFlag		= FmtLDouble << 1
 };
 
-/* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/fmt/?*.c | grep -v static |grep -v __ */
-
-// classic one
-int		print(char *fmt, ...);
-int		fprint(int fd, char *fmt, ...);
-int		sprint(char *buf, char *fmt, ...);
-
 extern	int	(*fmtdoquote)(int);
 
-
-char*		seprint(char *buf, char *e, char *fmt, ...);
-char*		smprint(char *fmt, ...);
-int		snprint(char *buf, int len, char *fmt, ...);
-int		vfprint(int fd, char *fmt, va_list args);
-char*		vseprint(char *buf, char *e, char *fmt, va_list args);
-char*		vsmprint(char *fmt, va_list args);
-int		vsnprint(char *buf, int len, char *fmt, va_list args);
+/* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/fmt/?*.c | grep -v static |grep -v __ */
 
 int		dofmt(Fmt *f, char *fmt);
 int		dorfmt(Fmt *f, const Rune *fmt);
@@ -108,12 +119,5 @@ int		quotestrfmt(Fmt *f);
 
 Rune*		runefmtstrflush(Fmt *f);
 int		runefmtstrinit(Fmt *f);
-Rune*		runeseprint(Rune *buf, Rune *e, char *fmt, ...);
-Rune*		runesmprint(char *fmt, ...);
-int		runesnprint(Rune *buf, int len, char *fmt, ...);
-int		runesprint(Rune *buf, char *fmt, ...);
-Rune*		runevseprint(Rune *buf, Rune *e, char *fmt, va_list args);
-Rune*		runevsmprint(char *fmt, va_list args);
-int		runevsnprint(Rune *buf, int len, char *fmt, va_list args);
 
 #endif
