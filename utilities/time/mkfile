@@ -1,0 +1,11 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-l9 -lm
+
+#TODO: cal
+TARG=date
+
+<$TOP/mkfiles/mkmany
+

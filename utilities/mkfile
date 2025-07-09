@@ -1,10 +1,9 @@
 TOP=..
 <$TOP/mkconfig
 
-DIRS=files
+DIRS=byte files misc pipe time 
 
 <$TOP/mkfiles/mkdirs
-
 
 # ------------------------------------------------------------------------------
 
@@ -14,10 +13,8 @@ SRC_VIEWS=\
   files/rm.c files/cp.c files/mv.c \
   files/chmod.c files/chgrp.c \
   files/mtime.c \
-
-TODO_VIEWS=\
-  byte/xd.c byte/dd.c byte/split.c \
   pipe/mc.c pipe/p.c pipe/sort.c pipe/tail.c pipe/tee.c pipe/uniq.c pipe/xargs.c \
+  byte/xd.c byte/dd.c byte/split.c \
   time/date.c time/cal.c \
   misc/basename.c misc/du.c misc/file.c misc/iconv.c \
   misc/strings.c misc/unicode.c misc/wc.c
