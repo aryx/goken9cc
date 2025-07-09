@@ -64,20 +64,48 @@ THE SOFTWARE.
 // Bytes
 //******************************************************************************
 
-// memset(), memcpy(), memcmp(), memchr() in string.h
-// memmove(), memccpy()  in string.h
+/*
+ * mem routines (provided by system <string.h>)
+ *
+extern	void*	memccpy(void*, void*, int, ulong);
+extern	void*	memset(void*, int, ulong);
+extern	int	memcmp(void*, void*, ulong);
+extern	void*	memcpy(void*, void*, ulong);
+extern	void*	memmove(void*, void*, ulong);
+extern	void*	memchr(void*, int, ulong);
+ */
 
 //******************************************************************************
 // Strings
 //******************************************************************************
 
-// strcpy(), strcmp(), strchr(), strrchr() in string.h
-// strlen(), strcat(), strdup(), strstr() in string.h
+/*
+ * string routines (provided by system <string.h>)
+ *
+extern	char*	strcat(char*, char*);
+extern	char*	strchr(char*, int);
+extern	int	strcmp(char*, char*);
+extern	char*	strcpy(char*, char*);
+ */
 
-// tolower(), toupper() ???
+/* extern	int	tolower(int); <ctype.h> */
+/* extern	int	toupper(int); <ctype.h> */
 
 extern	char* strecpy(char*, char*, char*);
-// strncat(), strncpy(), strncmp() ??
+
+/*
+extern	char*	strncat(char*, char*, long);
+extern	char*	strncpy(char*, char*, long);
+extern	int	strncmp(char*, char*, long);
+extern	long	strlen(char*);
+extern	char*	strstr(char*, char*);
+
+extern	char*	strpbrk(char*, char*);
+extern	char*	strrchr(char*, int);
+extern	char*	strtok(char*, char*);
+extern	long	strspn(char*, char*);
+extern	long	strcspn(char*, char*);
+ */
 
 // break a string into fields
 extern  int tokenize(char*, char**, int);
@@ -92,7 +120,18 @@ extern	int gettokens(char *, char **, int, char *);
 // Conversions
 //******************************************************************************
 
-// strtoul() in stdlib.h
+/*
+ * <stdlib.h>
+extern	double	atof(char*); <stdlib.h>
+ */
+
+/*
+ * <stdlib.h>
+extern	long	strtol(char*, char**, int);
+extern	ulong	strtoul(char*, char**, int);
+extern	vlong	strtoll(char*, char**, int);
+extern	uvlong	strtoull(char*, char**, int);
+ */
 
 // ?? a = ?
 extern	int	p9atoi(char*);
@@ -107,6 +146,38 @@ extern	double	fmtcharstod(int(*)(void*), void*);
 //******************************************************************************
 
 // abs() defined in stdlib.h
+
+/*
+ * provided by math.h
+ *
+extern	double	pow(double, double);
+extern	double	atan2(double, double);
+extern	double	fabs(double);
+extern	double	atan(double);
+extern	double	log(double);
+extern	double	log10(double);
+extern	double	exp(double);
+extern	double	floor(double);
+extern	double	ceil(double);
+extern	double	hypot(double, double);
+extern	double	sin(double);
+extern	double	cos(double);
+extern	double	tan(double);
+extern	double	asin(double);
+extern	double	acos(double);
+extern	double	sinh(double);
+extern	double	cosh(double);
+extern	double	tanh(double);
+extern	double	sqrt(double);
+extern	double	fmod(double, double);
+#define	HUGE	3.4028234e38
+#define	PIO2	1.570796326794896619231e0
+#define	PI	(PIO2+PIO2)
+ */
+
+/* extern	long	labs(long); <math.h> */
+/* extern	double	ldexp(double, int); <math.h> */
+/* extern	double	modf(double, double*); <math.h> */
 
 extern  int isInf(double, int);
 extern	double	frexp(double, int*);
@@ -160,6 +231,7 @@ extern	int	remove(const char*);
 #define	AREAD	4	/* read access */
 
 // access() in unistd.h
+/* extern	int	access(char*, int); */
 
 /* bits in Qid.type */
 #define QTFILE		0x00		/* type bits for plain file */
@@ -319,6 +391,8 @@ extern	int	p9putenv(char*, char*);
 
 
 // missing getpid(), getppid() compared to plan9 libc
+/* extern	int	getpid(void); <unistd.h> */
+/* extern	int	getppid(void); */
 
 extern	char*	p9getwd(char*, int);
 extern	int	p9chdir(char*);
@@ -352,23 +426,55 @@ extern	int	        p9waitpid(void);
 //******************************************************************************
 
 // no sbrk() compared to plan9 libc
-// malloc() and free() in stdlib.h
+/* extern	int	brk(void*); <unistd.h> */
+/* extern	void*	sbrk(ulong); <unistd.h> */
+
+/*
+ * malloc (provied by system <stdlib.h>)
+ *
+extern	void*	malloc(ulong);
+ */
 // mallocz ?? 
 
 //******************************************************************************
 // Time
 //******************************************************************************
 
+/*
+ * Time-of-day
+ */
+typedef
+struct Tm
+{
+	int	sec;
+	int	min;
+	int	hour;
+	int	mday;
+	int	mon;
+	int	year;
+	int	wday;
+	int	yday;
+	char	zone[4];
+	int	tzoff;
+} Tm;
+
+extern	Tm*	p9gmtime(long);
+extern	Tm*	p9localtime(long);
+extern	char*	p9asctime(Tm*);
+extern	char*	p9ctime(long);
+
+extern	long	p9times(long*);
+extern	long	p9tm2sec(Tm*);
+extern	vlong	p9nsec(void);
+
 // time() defined in time.h (but not included in u.h)
 
 extern  double  p9cputime(void);
-// nsec() ? 
-
-// gmtime(), localtime() ??
 
 extern	long	p9alarm(ulong);
 //TODO: defined? needed by tail.c
 extern	int	p9sleep(long);
+
 
 //******************************************************************************
 // Random
@@ -455,6 +561,16 @@ extern	char*	getgoversion(void);
 // Error management
 //******************************************************************************
 
+/*
+ * error string for %r
+ * supplied on per os basis, not part of fmt library
+ *
+ * (provided by lib9, but declared in fmt.h)
+ *
+extern	int	errfmt(Fmt *f);
+ */
+
+
 #define	ERRMAX	128	/* max length of error string */
 
 extern	void	perror(const char*);
@@ -530,6 +646,15 @@ extern	char*	get9root(void);
 
 #define sleep		p9sleep
 #define alarm		p9alarm
+
+#define	gmtime		p9gmtime
+#define	localtime	p9localtime
+#define	asctime		p9asctime
+#define	ctime		p9ctime
+#define	cputime		p9cputime
+#define	times		p9times
+#define	tm2sec		p9tm2sec
+#define	nsec		p9nsec
 
 // not declared in this file
 #define main	p9main
