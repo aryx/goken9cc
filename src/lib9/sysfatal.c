@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include <u.h>
 #include <libc.h>
 
+// used? seems dead. Maybe just a hook (should be declared in libc.h though)
 void (*_sysfatal)(char*, ...);
 
 void
@@ -41,7 +42,7 @@ sysfatal(char *fmt, ...)
 	va_end(arg);
 
 	__fixargv0();
-	fprint(2, "%s: %s\n", argv0 ? argv0 : "<prog>", buf);
+	fprint(STDERR, "%s: %s\n", argv0 ? argv0 : "<prog>", buf);
 	exits("fatal");
 }
 
