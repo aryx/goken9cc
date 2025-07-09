@@ -4,4 +4,7 @@ TOP=../..
 
 LDLIBS=-lbio -l9 -lm
 
-<$TOP/mkfiles/mkmanyauto
+#TODO: could use mkmany but need sed to be in PATH in Dockerfile?
+TARG=dd split xd
+
+<$TOP/mkfiles/mkmany
