@@ -12,6 +12,7 @@ DIRS=\
   src/cmd/5l src/cmd/5a src/cmd/5c \
   src/cmd/va src/cmd/vl src/cmd/vc \
   src/cmd/prof src/cmd/cov \
+  utilities
 
 <$TOP/mkfiles/mkdirs
 
