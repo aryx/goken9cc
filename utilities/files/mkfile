@@ -1,0 +1,11 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-l9 -lm
+
+#TODO: ls (missing fcall.h) rm (missing dirreadall)
+TARG=cat touch mkdir cp mv chmod chgrp mtime
+
+<$TOP/mkfiles/mkmany
+#<$TOP/mkfiles/mkmanyauto

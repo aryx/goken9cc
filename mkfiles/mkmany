@@ -1,0 +1,88 @@
+# -*- sh -*-
+
+PROGS=${TARG:%=$O.%}
+MANFILES=${TARG:%=%.man}
+
+BIN=$ROOT/$objtype/bin
+BINS=${TARG:%=$BIN/%}
+
+all:V: $PROGS
+
+
+$O.%:	%.$O $OFILES $LIB
+	$LD $LDFLAGS -o $target $prereq $LDLIBS
+
+%.$O:	$HFILES		# don't combine with following %.$O rules
+%.$O:	%.c
+	$CC $CFLAGS $CFLAGS_EXTRA $stem.c
+
+#%.$O:	%.s
+#	$AS $AFLAGS $stem.s
+
+
+#YFLAGS=-d
+#y.tab.h y.tab.c:	$YFILES
+#	$YACC $YFLAGS $prereq
+#lex.yy.c:	$LFILES
+#	$LEX $LFLAGS $prereq
+
+
+install:QV:
+	for (i in $TARG)
+		mk $MKFLAGS $i.install
+
+%.install:V:	$BIN/%
+
+$BIN/%:	$O.%
+	cp $O.$stem $BIN/$stem
+
+installall:V:
+	for(objtype in $CPUS)
+		mk $MKFLAGS install
+
+%.installall:V:
+	for (objtype in $CPUS)
+		mk $stem.install
+
+
+safeinstall:V:
+	for(i in $TARG)
+		mk $MKFLAGS $i.safeinstall
+
+%.safeinstall:V:
+	mk $O.$stem
+	test -e $BIN/$stem && mv $BIN/$stem $BIN/_$stem
+	mk $stem.install
+
+%.safeinstallall:V:
+	for(objtype in $CPUS)
+		mk $MKFLAGS $stem.safeinstall
+
+
+safeinstallall:V:
+	for (objtype in $CPUS)
+		mk safeinstall
+
+uninstall:V:
+	rm -f $BINS
+
+
+# [$OS].??* avoids file names like 9.h
+clean:V:
+	rm -f *.[$OS] *.a[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].??* *.$O $TARG $PROGS $CLEANFILES
+
+nuke:V:
+	rm -f *.[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].??* *.acid $TARG
+
+
+%.clean:V:
+	rm -f $stem.[$OS] [$OS].$stem $stem.acid $stem
+
+%.acid: %.$O $HFILES
+	$CC $CFLAGS -a $stem.c >$target
+
+#TODO generate warnings with mk in ocaml
+#%.man:	$MAN/$stem
+#	cp $stem.man $MAN/$stem
+#
+#man:V:	$MANFILES
