@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include <u.h>
 #define NOPLAN9DEFINES
 #include <libc.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -176,4 +177,3 @@ _p9dir(struct stat *lst, struct stat *st, char *name, Dir *d, char **str, char *
 
 	return sz;
 }
-

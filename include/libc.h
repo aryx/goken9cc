@@ -135,7 +135,7 @@ extern	vlong	p9seek(fdt, vlong, int);
 
 extern	int	p9dup(fdt, fdt);
 
-// missing pread(), pwrite() for now and preadv/pwritev, readv/writev
+// missing pread(), pwrite() for now and preadv/pwritev, readv/writev from plan9
 
 //******************************************************************************
 // Directory
@@ -302,8 +302,11 @@ extern	int	opentemp(char*);
 // Process
 //******************************************************************************
 
+// exit() in stdlib.h (not in plan9!)
 extern	void	exits(char*);
+// ?? (also in plan9)
 extern	void	_exits(char*);
+// always return 1; discard its argument (not in plan9!)
 extern	int	exitcode(char*);
 
 extern	char*	p9getenv(char*);
@@ -401,8 +404,10 @@ extern	void	p9notejmp(void*, p9jmp_buf, int);
 #define	NRSTR	3	/* restore saved state */
 
 extern	int	postnote(int, int, char *);
+
 extern	int	noted(int);
 extern	int	notify(void(*)(void*, char*));
+
 extern	int	noteenable(char*);
 extern	int	notedisable(char*);
 extern	int	notifyon(char*);
@@ -455,7 +460,7 @@ extern	void	werrstr(char*, ...);
 
 // will internally call exits()
 extern	void	sysfatal(char*, ...);
-// in stdlib.h
+// also in stdlib.h
 extern	void	abort(void);
 
 //******************************************************************************
