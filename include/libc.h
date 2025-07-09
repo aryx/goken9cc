@@ -92,10 +92,14 @@ extern	int gettokens(char *, char **, int, char *);
 // Conversions
 //******************************************************************************
 
+// strtoul() in stdlib.h
+
+// ?? a = ?
 extern	int	p9atoi(char*);
 extern	long	p9atol(char*);
 extern	vlong	p9atoll(char*);
 
+// ?
 extern	double	fmtcharstod(int(*)(void*), void*);
 
 //******************************************************************************
@@ -140,6 +144,11 @@ extern	int	p9dup(fdt, fdt);
 //******************************************************************************
 // Directory
 //******************************************************************************
+
+extern	int	p9create(char*, int, ulong);
+// remove() also in stdio.h
+extern	int	remove(const char*);
+
 
 #define	STATMAX	65535U	/* max length of machine-independent stat structure */
 #define	DIRMAX	(sizeof(Dir)+STATMAX)	/* max length of Dir structure */
@@ -214,10 +223,6 @@ struct Dir {
 	uint	muidnum;	/* numeric muid */
 	char	*ext;		/* extended info */
 } Dir;
-
-extern	int	p9create(char*, int, ulong);
-// remove() also in stdio.h
-extern	int	remove(const char*);
 
 // missing fstat(), stat(), fwstat(), wstat() compared to plan9 libc
 
@@ -339,6 +344,7 @@ struct Waitmsg
 extern	Waitmsg*	p9wait(void);
 extern	Waitmsg*	p9waitfor(int);
 extern	Waitmsg*	waitnohang(void);
+
 extern	int	        p9waitpid(void);
 
 //******************************************************************************
@@ -353,8 +359,7 @@ extern	int	        p9waitpid(void);
 // Time
 //******************************************************************************
 
-
-// time() defined in time.h but not included in u.h
+// time() defined in time.h (but not included in u.h)
 
 extern  double  p9cputime(void);
 // nsec() ? 
@@ -362,6 +367,7 @@ extern  double  p9cputime(void);
 // gmtime(), localtime() ??
 
 extern	long	p9alarm(ulong);
+//TODO: defined? needed by tail.c
 extern	int	p9sleep(long);
 
 //******************************************************************************
@@ -458,7 +464,7 @@ extern	int	errstr(char*, uint);
 extern	void	rerrstr(char*, uint);
 extern	void	werrstr(char*, ...);
 
-// will internally call exits()
+// will internally call exits(). TODO? declare hook _sysfatal() here?
 extern	void	sysfatal(char*, ...);
 // also in stdlib.h
 extern	void	abort(void);
@@ -571,7 +577,8 @@ extern int pwrite(int fd, void *buf, int n, int off);
 //******************************************************************************
 // CLI macros
 //******************************************************************************
-// use??
+
+// used by sysfatal(); set by ARGBEGIN or manually
 extern char	*argv0;
 
 // ugly hack for macOS I think
