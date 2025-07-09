@@ -1274,7 +1274,9 @@ longt(Armember *bp)
 	Bprint(&bout, "%3ld/%1ld", strtol(bp->hdr.uid, 0, 0), strtol(bp->hdr.gid, 0, 0));
 	Bprint(&bout, "%7ld", bp->size);
 	date = bp->date;
-	cp = ctime(&date);
+    //pad: this was ctime(&date) but now ctime is in lib9
+    // with the plan9 sig so it's ctime(date) now
+	cp = ctime(date);
 	Bprint(&bout, " %-12.12s %-4.4s ", cp+4, cp+24);
 }
 

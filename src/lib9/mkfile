@@ -51,6 +51,7 @@ UTFOFILES=\
 	utf/utfutf.$O\
 	utf/runetype.$O\
 
+#coupling: if you add a file here, you need to modify scripts/build-mk.sh too
 LIB9OFILES=\
 	_p9dir.$O\
 	_exits.$O\
@@ -91,6 +92,9 @@ LIB9OFILES=\
         \
         lnrand.$O\
         lrand.$O\
+        \
+        zoneinfo.$O\
+        ctime.$O\
 
 #ifeq ($(GOOS),windows)
 #LIB9OFILES+=\

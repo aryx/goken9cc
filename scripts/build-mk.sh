@@ -24,6 +24,9 @@ LDFLAGS="-L$TOP/ROOT/amd64/lib"
 GOOS=linux
 GOARCH=amd64
 
+#LESS: actually if it's just to compile mk and rc we don't need all of lib9
+# so we could reduce the list below, but then we need to delete lib9.a
+# when compiling the rest of goken
 cd $TOP/src/lib9
 gcc $CFLAGS -DPLAN9PORT _p9dir.c -o _p9dir.o
 gcc $CFLAGS -DPLAN9PORT _exits.c -o _exits.o
@@ -60,6 +63,8 @@ gcc $CFLAGS -DPLAN9PORT getuser.c -o getuser.o
 gcc $CFLAGS -DPLAN9PORT jmp.c -o jmp.o
 gcc $CFLAGS -DPLAN9PORT notify.c -o notify.o
 gcc $CFLAGS -DPLAN9PORT rfork.c -o rfork.o
+gcc $CFLAGS -DPLAN9PORT ctime.c -o ctime.o
+gcc $CFLAGS -DPLAN9PORT zoneinfo.c -o zoneinfo.o
 gcc $CFLAGS -DPLAN9PORT fmt/dofmt.c -o fmt/dofmt.o
 gcc $CFLAGS -DPLAN9PORT fmt/fltfmt.c -o fmt/fltfmt.o
 gcc $CFLAGS -DPLAN9PORT fmt/fmt.c -o fmt/fmt.o
@@ -95,7 +100,7 @@ gcc $CFLAGS -DPLAN9PORT utf/utfrrune.c -o utf/utfrrune.o
 gcc $CFLAGS -DPLAN9PORT utf/utfrune.c -o utf/utfrune.o
 gcc $CFLAGS -DPLAN9PORT utf/utfutf.c -o utf/utfutf.o
 gcc $CFLAGS -DPLAN9PORT utf/runetype.c -o utf/runetype.o
-ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o create.o dirfstat.o dirfwstat.o dirstat.o dirwstat.o dup.o errstr.o exec.o execl.o exitcode.o exits.o getenv.o getfields.o getwd.o goos.o main.o nan.o nulldir.o open.o readn.o seek.o strecpy.o sysfatal.o time.o tokenize.o await.o getuser.o jmp.o notify.o rfork.o fmt/dofmt.o fmt/fltfmt.o fmt/fmt.o fmt/fmtfd.o fmt/fmtfdflush.o fmt/fmtlocale.o fmtlock2.o fmt/fmtnull.o fmt/fmtprint.o fmt/fmtquote.o fmt/fmtrune.o fmt/fmtstr.o fmt/fmtvprint.o fmt/fprint.o fmt/nan64.o fmt/print.o fmt/seprint.o fmt/smprint.o fmt/snprint.o fmt/sprint.o fmt/strtod.o fmt/vfprint.o fmt/vseprint.o fmt/vsmprint.o fmt/vsnprint.o fmt/charstod.o fmt/pow10.o utf/rune.o utf/utfecpy.o utf/utflen.o utf/utfnlen.o utf/utfrrune.o utf/utfrune.o utf/utfutf.o utf/runetype.o
+ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o create.o dirfstat.o dirfwstat.o dirstat.o dirwstat.o dup.o errstr.o exec.o execl.o exitcode.o exits.o getenv.o getfields.o getwd.o goos.o main.o nan.o nulldir.o open.o readn.o seek.o strecpy.o sysfatal.o time.o tokenize.o await.o getuser.o jmp.o notify.o rfork.o ctime.o zoneinfo.o fmt/dofmt.o fmt/fltfmt.o fmt/fmt.o fmt/fmtfd.o fmt/fmtfdflush.o fmt/fmtlocale.o fmtlock2.o fmt/fmtnull.o fmt/fmtprint.o fmt/fmtquote.o fmt/fmtrune.o fmt/fmtstr.o fmt/fmtvprint.o fmt/fprint.o fmt/nan64.o fmt/print.o fmt/seprint.o fmt/smprint.o fmt/snprint.o fmt/sprint.o fmt/strtod.o fmt/vfprint.o fmt/vseprint.o fmt/vsmprint.o fmt/vsnprint.o fmt/charstod.o fmt/pow10.o utf/rune.o utf/utfecpy.o utf/utflen.o utf/utfnlen.o utf/utfrrune.o utf/utfrune.o utf/utfutf.o utf/runetype.o
 cp lib9.a $TOP/ROOT/amd64/lib/lib9.a
 
 
