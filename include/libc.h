@@ -122,6 +122,15 @@ typedef int errorn; // 1 or more means error
 extern	char* strecpy(char*, char*, char*);
 // strncat(), strncpy(), strncmp() ??
 
+// break a string into fields
+extern  int tokenize(char*, char**, int);
+//??
+extern	int getfields(char*, char**, int, int, char*);
+//??
+extern	int gettokens(char *, char **, int, char *);
+
+// strtok() ?
+
 //******************************************************************************
 // Conversions
 //******************************************************************************
@@ -130,12 +139,6 @@ extern	long	p9atol(char*);
 extern	vlong	p9atoll(char*);
 
 extern	double	fmtcharstod(int(*)(void*), void*);
-
-//******************************************************************************
-// Parsing
-//******************************************************************************
-extern  int tokenize(char*, char**, int);
-// strtok() ?
 
 //******************************************************************************
 // Math
@@ -165,20 +168,21 @@ extern	double	p9pow10(int);
 
 #define	OAPPEND	0x4000	/* or'ed in, append only */
 
-extern	int	p9open(char*, int);
-extern	int	close(int);
+extern	fdt	p9open(char*, int);
+extern	int	close(fdt);
 
 // read(), write() in unistd.h
-extern	long	readn(int, void*, long);
-extern	vlong	p9seek(int, vlong, int);
+extern	long	readn(fdt, void*, long);
+extern	vlong	p9seek(fdt, vlong, int);
 
-extern	int	p9dup(int, int);
+extern	int	p9dup(fdt, fdt);
 
 // missing pread(), pwrite() for now and preadv/pwritev, readv/writev
 
 //******************************************************************************
 // Directory
 //******************************************************************************
+
 #define	STATMAX	65535U	/* max length of machine-independent stat structure */
 #define	DIRMAX	(sizeof(Dir)+STATMAX)	/* max length of Dir structure */
 
@@ -498,11 +502,6 @@ enum
 	PNGROUP		= 2
 };
 
-//??
-extern	int	getfields(char*, char**, int, int, char*);
-
-//??
-extern	int	gettokens(char *, char **, int, char *);
 
 //??
 extern	char*	sysname(void);
@@ -596,8 +595,12 @@ extern int pwrite(int fd, void *buf, int n, int off);
 //******************************************************************************
 // CLI macros
 //******************************************************************************
+// use??
 extern char	*argv0;
+
+// ugly hack for macOS I think
 extern void __fixargv0(void);
+
 #define	ARGBEGIN	for((argv0?0:(argv0=(__fixargv0(),*argv))),argv++,argc--;\
 			    argv[0] && argv[0][0]=='-' && argv[0][1];\
 			    argc--, argv++) {\
@@ -610,9 +613,12 @@ extern void __fixargv0(void);
 				_argc = 0;\
 				while(*_args && (_args += chartorune(&_argc, _args)))\
 				switch(_argc)
+
 #define	ARGEND		SET(_argt);USED(_argt);USED(_argc);USED(_args);}USED(argv);USED(argc);
+
 #define	ARGF()		(_argt=_args, _args="",\
 				(*_argt? _argt: argv[1]? (argc--, *++argv): 0))
+
 #define	EARGF(x)	(_argt=_args, _args="",\
 				(*_argt? _argt: argv[1]? (argc--, *++argv): ((x), abort(), (char*)0)))
 

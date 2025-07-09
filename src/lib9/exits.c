@@ -28,7 +28,7 @@ THE SOFTWARE.
 void
 exits(char *s)
 {
-	if(s == 0 || *s == 0)
+	if(s == nil || *s == '\0')
 		exit(0);
 	exit(exitcode(s));
 }
