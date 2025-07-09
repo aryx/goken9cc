@@ -14,6 +14,7 @@
 
 [568o].out
 _testmain.go
+o.*
 
 # yacc files
 y.tab.[ch]

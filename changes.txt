@@ -1,13 +1,12 @@
 # -*- org -*-
 
 * TODO
-- add 5i
-- add vi
-- add lex/yacc
+- add 5i/vi (machines or emulators)
+- add lex/yacc (generators)
 - adapt to goken 7a/7l/7c
 - adapt to goken ia/il/ic
 
-* Beta (Q3 2025) (mk/rc)
+* Beta (Q3 2025) (mk/rc, utilities)
 
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
