@@ -124,7 +124,7 @@ gcc $CFLAGS -c bwrite.c
 ar rsc libbio.a bbuffered.o bfildes.o bflush.o bgetc.o bgetrune.o bgetd.o binit.o boffset.o bprint.o bputc.o bputrune.o brdline.o brdstr.o bread.o bseek.o bwrite.o
 cp libbio.a $TOP/ROOT/amd64/lib/libbio.a
 
-cd $TOP/src/libregexp
+cd $TOP/lib_strings/libregexp
 gcc $CFLAGS -c regcomp.c
 gcc $CFLAGS -c regerror.c
 gcc $CFLAGS -c regexec.c
