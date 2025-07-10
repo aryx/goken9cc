@@ -554,7 +554,7 @@ extern	void	p9notejmp(void*, p9jmp_buf, int);
 
 // Signals/Notes
 #define	NCONT	0	/* continue after note */
-#define	NDFaLT	1	/* terminate after note */
+#define	NDFLT	1	/* terminate after note */
 #define	NSAVE	2	/* clear note but hold state */
 #define	NRSTR	3	/* restore saved state */
 
