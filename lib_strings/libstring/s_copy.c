@@ -1,6 +1,6 @@
 #include <u.h>
 #include <libc.h>
-#include <string.h>
+#include "libString.h"
 
 
 /* return a String containing a copy of the passed char array */

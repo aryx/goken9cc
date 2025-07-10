@@ -2,7 +2,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <string.h>
+#include "libString.h"
 
 struct Sinstack{
 	int	depth;
@@ -89,7 +89,7 @@ out:
  * Leading whitespace and newlines are removed.
  * Lines starting with #include cause us to descend into the new file.
  * Empty lines and other lines starting with '#' are ignored.
- */ 
+ */
 extern char *
 s_rdinstack(Sinstack *sp, String *to)
 {
@@ -115,7 +115,7 @@ s_rdinstack(Sinstack *sp, String *to)
 
 			/* sanity (and looping) */
 			if(sp->depth >= nelem(sp->fp))
-				sysfatal("s_recgetline: includes too deep");
+				sysfatal("s_rdinstack: includes too deep");
 
 			/* skip white */
 			while(*p == ' ' || *p == '\t')

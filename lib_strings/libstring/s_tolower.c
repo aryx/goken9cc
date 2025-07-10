@@ -1,6 +1,7 @@
 #include <u.h>
 #include <libc.h>
-#include <string.h>
+#include <ctype.h>
+#include "libString.h"
 
 
 /* convert String to lower case */
@@ -10,5 +11,5 @@ s_tolower(String *sp)
 	char *cp;
 
 	for(cp=sp->ptr; *cp; cp++)
-		*cp = tolower(*cp);
+		*cp = tolower((uchar)*cp);
 }

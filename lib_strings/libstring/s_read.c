@@ -1,17 +1,17 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <string.h>
+#include "libString.h"
 
 enum
 {
-	Minread=	256,
+	Minread=	256
 };
 
 /* Append up to 'len' input bytes to the string 'to'.
  *
  * Returns the number of characters read.
- */ 
+ */
 extern int
 s_read(Biobuf *fp, String *to, int len)
 {

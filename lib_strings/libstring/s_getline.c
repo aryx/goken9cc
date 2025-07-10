@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <string.h>
+#include "libString.h"
 
 /* Append an input line to a String.
  *
@@ -9,7 +9,7 @@
  * Leading whitespace and newlines are removed.
  *
  * Empty lines and lines starting with '#' are ignored.
- */ 
+ */
 extern char *
 s_getline(Biobuf *fp, String *to)
 {

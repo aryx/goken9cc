@@ -1,13 +1,13 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <string.h>
+#include "libString.h"
 
 /* Append an input line to a String.
  *
  * Returns a pointer to the character string (or 0).
  * Trailing newline is left on.
- */ 
+ */
 extern char *
 s_read_line(Biobuf *fp, String *to)
 {

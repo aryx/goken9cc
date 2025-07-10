@@ -1,6 +1,6 @@
 #include <u.h>
 #include <libc.h>
-#include <string.h>
+#include "libString.h"
 
 String*
 s_reset(String *s)
