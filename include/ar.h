@@ -1,3 +1,5 @@
+// Header format of the Plan9 libraries (e.g., libc.a) produced by 'ar'
+
 // AR magic string
 #define	ARMAG	"!<arch>\n"
 // size AR magic string

@@ -379,11 +379,15 @@ extern	int	opentemp(char*);
 // Process
 //******************************************************************************
 
-// exit() in stdlib.h (not in plan9!)
+// exits() is the libc exit that performs some cleanup (and handle atexit)
+// while _exits() is the syscall that is more abrupt (both are equivalent
+// though in lib9)
 extern	void	exits(char*);
-// ?? (also in plan9)
 extern	void	_exits(char*);
+// exit() in stdlib.h (not in plan9!) and _exit() in unistd.h
+
 // always return 1; discard its argument (not in plan9!)
+//TODO: could rename _p9exitcode or even hide from libc.h
 extern	int	exitcode(char*);
 
 extern	char*	p9getenv(char*);
@@ -610,7 +614,7 @@ extern	char*	get9root(void);
 
 #ifndef NOPLAN9DEFINES
 
-#define cputime     p9cputime
+#define cputime         p9cputime
 
 #define atoi		p9atoi
 #define atol		p9atol
@@ -657,7 +661,7 @@ extern	char*	get9root(void);
 #define	nsec		p9nsec
 
 // not declared in this file
-#define main	p9main
+#define main	        p9main
 
 #endif
 
@@ -703,7 +707,7 @@ extern int pwrite(int fd, void *buf, int n, int off);
 // CLI macros
 //******************************************************************************
 
-// used by sysfatal(); set by ARGBEGIN or manually
+// used by sysfatal(); set by ARGBEGIN below or manually (see cat.c for example)
 extern char	*argv0;
 
 // ugly hack for macOS I think
