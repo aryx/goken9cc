@@ -75,7 +75,7 @@ LIB9OFILES=\
 	getwd.$O\
 	goos.$O\
 	main.$O\
-	nan.$O\
+	math/nan.$O\
 	nulldir.$O\
 	open.$O\
 	readn.$O\
@@ -91,8 +91,8 @@ LIB9OFILES=\
 	notify.$O\
 	rfork.$O\
         \
-        lnrand.$O\
-        lrand.$O\
+        math/lnrand.$O\
+        math/lrand.$O\
         \
         zoneinfo.$O\
         ctime.$O\
