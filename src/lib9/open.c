@@ -32,6 +32,8 @@ THE SOFTWARE.
 #define O_DIRECT 0
 #endif
 
+//TODO: was more complex in plan9port and was also containing the code
+// of dirread(), dirput(), dirget() and so on
 int
 p9open(char *name, int mode)
 {

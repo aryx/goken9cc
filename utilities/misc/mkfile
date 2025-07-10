@@ -2,10 +2,10 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-lbio -l9 -lm
+# -lstring needed only for du
+LDLIBS=-lstring -lbio -l9 -lm
 
-#TODO: du: need lib_string, file: has pbs, iconv needs draw.h
-# strings: rune pb, 
-TARG=basename wc unicode
+#TODO: file: has pbs, iconv needs draw.h, strings: rune pb, 
+TARG=basename wc unicode du
 
 <$TOP/mkfiles/mkmany

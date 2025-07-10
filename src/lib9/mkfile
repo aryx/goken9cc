@@ -84,7 +84,6 @@ LIB9OFILES=\
 	sysfatal.$O\
 	time.$O\
 	tokenize.$O\
-        \
 	await.$O\
 	getuser.$O\
 	jmp.$O\
@@ -93,9 +92,12 @@ LIB9OFILES=\
         \
         math/lnrand.$O\
         math/lrand.$O\
-        \
         zoneinfo.$O\
         ctime.$O\
+        mallocz.$O\
+        cistrcmp.$O\
+        lock.$O\
+        dirread.$O\
 
 #ifeq ($(GOOS),windows)
 #LIB9OFILES+=\
