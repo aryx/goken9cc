@@ -6,6 +6,6 @@ LDLIBS=-lbio -l9 -lm
 
 #TODO: du: need lib_string, file: has pbs, iconv needs draw.h
 # strings: rune pb, 
-TARG=basename unicode wc
+TARG=basename wc unicode
 
 <$TOP/mkfiles/mkmany
