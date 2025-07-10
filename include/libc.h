@@ -107,6 +107,11 @@ extern	long	strspn(char*, char*);
 extern	long	strcspn(char*, char*);
  */
 
+//extern	int	cistrcmp(char*, char*);
+//extern	int	cistrncmp(char*, char*, int);
+//extern	char*	cistrstr(char*, char*);
+
+
 // break a string into fields
 extern  int tokenize(char*, char**, int);
 //??
@@ -494,14 +499,6 @@ extern	int	p9sleep(long);
 // introduced only when I added libstring (itself needed only by du.c)
 // as kencc does not use locks
 
-typedef
-struct Lock
-{
-	int init;
-	//pthread_mutex_t mutex;
-	int held;
-} Lock;
-
 ///*
 // *  just enough information so that libc can be
 // *  properly locked without dragging in all of libthread
@@ -515,6 +512,15 @@ struct Lock
 //};
 //
 //extern	_Thread	*(*threadnow)(void);
+
+typedef
+struct Lock
+{
+	int init;
+    // pthread.h ?
+	pthread_mutex_t mutex;
+	int held;
+} Lock;
 
 extern	void lock(Lock*);
 extern	void unlock(Lock*);
