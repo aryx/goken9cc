@@ -49,7 +49,7 @@ gcc $CFLAGS -DPLAN9PORT getfields.c -o getfields.o
 gcc $CFLAGS -DPLAN9PORT getwd.c -o getwd.o
 gcc $CFLAGS -DPLAN9PORT '-DGOOS="$GOOS"' '-DGOARCH="$GOARCH"' '-DGOROOT="$ROOT"' '-DGOVERSION="goken"' goos.c
 gcc $CFLAGS -DPLAN9PORT main.c -o main.o
-gcc $CFLAGS -DPLAN9PORT nan.c -o nan.o
+gcc $CFLAGS -DPLAN9PORT math/nan.c -o math/nan.o
 gcc $CFLAGS -DPLAN9PORT nulldir.c -o nulldir.o
 gcc $CFLAGS -DPLAN9PORT open.c -o open.o
 gcc $CFLAGS -DPLAN9PORT readn.c -o readn.o
@@ -100,7 +100,7 @@ gcc $CFLAGS -DPLAN9PORT utf/utfrrune.c -o utf/utfrrune.o
 gcc $CFLAGS -DPLAN9PORT utf/utfrune.c -o utf/utfrune.o
 gcc $CFLAGS -DPLAN9PORT utf/utfutf.c -o utf/utfutf.o
 gcc $CFLAGS -DPLAN9PORT utf/runetype.c -o utf/runetype.o
-ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o create.o dirfstat.o dirfwstat.o dirstat.o dirwstat.o dup.o errstr.o exec.o execl.o exitcode.o exits.o getenv.o getfields.o getwd.o goos.o main.o nan.o nulldir.o open.o readn.o seek.o strecpy.o sysfatal.o time.o tokenize.o await.o getuser.o jmp.o notify.o rfork.o ctime.o zoneinfo.o fmt/dofmt.o fmt/fltfmt.o fmt/fmt.o fmt/fmtfd.o fmt/fmtfdflush.o fmt/fmtlocale.o fmtlock2.o fmt/fmtnull.o fmt/fmtprint.o fmt/fmtquote.o fmt/fmtrune.o fmt/fmtstr.o fmt/fmtvprint.o fmt/fprint.o fmt/nan64.o fmt/print.o fmt/seprint.o fmt/smprint.o fmt/snprint.o fmt/sprint.o fmt/strtod.o fmt/vfprint.o fmt/vseprint.o fmt/vsmprint.o fmt/vsnprint.o fmt/charstod.o fmt/pow10.o utf/rune.o utf/utfecpy.o utf/utflen.o utf/utfnlen.o utf/utfrrune.o utf/utfrune.o utf/utfutf.o utf/runetype.o
+ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o create.o dirfstat.o dirfwstat.o dirstat.o dirwstat.o dup.o errstr.o exec.o execl.o exitcode.o exits.o getenv.o getfields.o getwd.o goos.o main.o math/nan.o nulldir.o open.o readn.o seek.o strecpy.o sysfatal.o time.o tokenize.o await.o getuser.o jmp.o notify.o rfork.o ctime.o zoneinfo.o fmt/dofmt.o fmt/fltfmt.o fmt/fmt.o fmt/fmtfd.o fmt/fmtfdflush.o fmt/fmtlocale.o fmtlock2.o fmt/fmtnull.o fmt/fmtprint.o fmt/fmtquote.o fmt/fmtrune.o fmt/fmtstr.o fmt/fmtvprint.o fmt/fprint.o fmt/nan64.o fmt/print.o fmt/seprint.o fmt/smprint.o fmt/snprint.o fmt/sprint.o fmt/strtod.o fmt/vfprint.o fmt/vseprint.o fmt/vsmprint.o fmt/vsnprint.o fmt/charstod.o fmt/pow10.o utf/rune.o utf/utfecpy.o utf/utflen.o utf/utfnlen.o utf/utfrrune.o utf/utfrune.o utf/utfutf.o utf/runetype.o
 cp lib9.a $TOP/ROOT/amd64/lib/lib9.a
 
 
