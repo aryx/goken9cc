@@ -1,6 +1,6 @@
 #include <u.h>
 #include <libc.h>
-#include "libString.h"
+#include <str.h>
 
 void
 s_putc(String *s, int c)

@@ -1,6 +1,6 @@
 #include <u.h>
 #include <libc.h>
-#include "libString.h"
+#include <str.h>
 
 /* grow a String's allocation by at least `incr' bytes */
 extern String*

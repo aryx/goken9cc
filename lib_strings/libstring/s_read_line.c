@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "libString.h"
+#include <str.h>
 
 /* Append an input line to a String.
  *

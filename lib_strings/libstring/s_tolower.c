@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <ctype.h>
-#include "libString.h"
+#include <str.h>
 
 
 /* convert String to lower case */

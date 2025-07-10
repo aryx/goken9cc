@@ -4,7 +4,7 @@ TOP=.
 
 DIRS=\
   src/lib9 src/libbio src/libmach \
-  lib_strings/libregexp \
+  lib_strings/libregexp lib_strings/libstring \
   src/cmd/mk src/cmd/rc \
   src/cmd/nm src/cmd/ar \
   src/cmd/cc \

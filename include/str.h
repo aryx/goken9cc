@@ -10,7 +10,7 @@
 
 /* extensible Strings */
 typedef struct String {
-	//Lock;
+	Lock lk;
 	char	*base;	/* base of String */
 	char	*end;	/* end of allocated space+1 */
 	char	*ptr;	/* ptr into String */

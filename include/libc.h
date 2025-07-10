@@ -438,7 +438,7 @@ extern	int	        p9waitpid(void);
  *
 extern	void*	malloc(ulong);
  */
-// mallocz ?? 
+// mallocz ?? free?
 
 //******************************************************************************
 // Time
@@ -491,10 +491,43 @@ extern	int	p9sleep(long);
 // Concurrency
 //******************************************************************************
 
+// introduced only when I added libstring (itself needed only by du.c)
+// as kencc does not use locks
+
+typedef
+struct Lock
+{
+	int init;
+	//pthread_mutex_t mutex;
+	int held;
+} Lock;
+
+///*
+// *  just enough information so that libc can be
+// *  properly locked without dragging in all of libthread
+// */
+//typedef struct _Thread _Thread;
+//typedef struct _Threadlist _Threadlist;
+//struct _Threadlist
+//{
+//	_Thread	*head;
+//	_Thread	*tail;
+//};
+//
+//extern	_Thread	*(*threadnow)(void);
+
+extern	void lock(Lock*);
+extern	void unlock(Lock*);
+extern	int	 canlock(Lock*);
+
+//extern	int	(*_lock)(Lock*, int, ulong);
+//extern	void	(*_unlock)(Lock*, ulong);
+
+
 // ainc(), adec() ??
 // cas32(), casp(), casl() ??
 
-// Lock? _tas(), lock(), unlock(), canlock() ?
+// _tas()
 // QLock? RWLock?
 
 extern	void	p9longjmp(p9jmp_buf, int);
