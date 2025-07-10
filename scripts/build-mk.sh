@@ -194,3 +194,8 @@ gcc $CFLAGS -DUnix -c y.tab.c
 gcc $CFLAGS -DUnix -c unix.c
 gcc $LDFLAGS -o o.out code.o exec.o getflags.o glob.o here.o io.o lex.o pcmd.o pfnc.o simple.o trap.o tree.o var.o processes.o globals.o utils.o error.o words.o executils.o status.o builtins.o input.o path.o env.o fmt.o main.o y.tab.o unix.o -l9 -lm
 cp o.out $TOP/ROOT/amd64/bin/rc
+
+# safer to delete the generated libs as we may have forgotten objects
+# that are not needed for mk/rc but might be needed by other programs
+# (especially libc.a)
+rm -f $TOP/ROOT/amd64/lib/*.a
