@@ -119,7 +119,7 @@ GOROOT_FINAL?=$(GOROOT)
 	$(HOST_CC) -c $(HOST_CFLAGS) $<
 
 %.$O: math/%.c
-	$(HOST_CC) -c $(HOST_CFLAGS) $<
+	$(HOST_CC) -c $(HOST_CFLAGS) -I. $<
 
 goos.$O: goos.c
 	$(HOST_CC) -c $(HOST_CFLAGS) -DGOOS='"$(GOOS)"' -DGOARCH='"$(GOARCH)"' -DGOROOT='"$(GOROOT_FINAL)"' -DGOVERSION='"'"$$(cat ../../VERSION)"'"' $<
