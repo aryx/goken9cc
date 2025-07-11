@@ -198,9 +198,10 @@ typedef u64int uint64;
 // Pad's stuff (also in principia/include/ALL/libc.h)
 //******************************************************************************
 
-// Those types are needed to compile src/cmd/mk which
+// Those types are needed to compile src/cmd/{mk,rc} which
 // comes from pad's principia which use a few extra C types
-// (I like types).
+// (I like types, and I especially don't like abusing ints for everything)
+
 #if __STDC_VERSION__ < 202311L  // before C23
 #ifndef __bool_true_false_are_defined
 typedef	uint8			bool;
@@ -215,13 +216,20 @@ enum _bool
 
 typedef	uint8			byte;
 
+enum _ord {
+  ORD__EQ = 0,
+  ORD__INF = -1,
+  ORD__SUP = 1,
+};
+typedef int ord;
+
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2
 typedef int fdt; // file descriptor type
 
 // in principia/include/ALL/syscall.h
-enum Seek_cursor {
+enum _seek_cursor {
     SEEK__START = 0,
     SEEK__CUR = 1,
     SEEK__END = 2,
