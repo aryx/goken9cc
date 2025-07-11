@@ -1,0 +1,17 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=grep
+
+OFILES=globals.$O\
+	y.tab.$O\
+	main.$O\
+	comp.$O\
+	sub.$O\
+
+YFILES=grep.y
+
+HFILES=grep.h
+
+<$TOP/mkfiles/mkone
