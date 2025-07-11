@@ -13,7 +13,6 @@ bool one;
 bool two;
 bool three;
 /*e: global flags comm.c */
-
 /*s: globals comm.c */
 char    *ldr[3];
 /*x: globals comm.c */

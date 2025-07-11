@@ -15,6 +15,7 @@ Biobuf bout;
 int pglen = DEF;
 /*e: globals p.c */
 
+// forward decls
 void printfile(fdt);
 
 /*s: function [[main]](p.c) */
@@ -55,6 +56,7 @@ main(int argc, char *argv[])
     exits(nil);
 }
 /*e: function [[main]](p.c) */
+
 /*s: function [[printfile]](p.c) */
 void
 printfile(fdt f)

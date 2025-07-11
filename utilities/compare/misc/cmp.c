@@ -18,6 +18,7 @@ bool lflag = false;
 bool Lflag = false;
 /*e: global flags (cmp.c) */
 
+// forward decl
 static void usage(void);
 
 /*s: function [[seekoff]](cmp.c) */
@@ -153,6 +154,7 @@ main(int argc, char *argv[])
     exits("EOF");
 }
 /*e: function [[main]](cmp.c) */
+
 /*s: function [[usage]](cmp.c) */
 static void
 usage(void)
