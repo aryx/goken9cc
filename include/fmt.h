@@ -17,26 +17,27 @@
 #include <stdarg.h>
 #include <utf.h>
 
-// classic one
-int		print(char *fmt, ...);
+// most useful one
+int		print(char *fmt, ...); // called printf() in classic C
 int		fprint(int fd, char *fmt, ...);
 int		sprint(char *buf, char *fmt, ...);
 
 char*		seprint(char *buf, char *e, char *fmt, ...);
 char*		smprint(char *fmt, ...);
 int		snprint(char *buf, int len, char *fmt, ...);
-int		vfprint(int fd, char *fmt, va_list args);
 
-// flexible one
+// flexible one, v for va_list (for variable argument list)
+int		vfprint(int fd, char *fmt, va_list args);
 char*		vseprint(char *buf, char *e, char *fmt, va_list args);
 char*		vsmprint(char *fmt, va_list args);
 int		vsnprint(char *buf, int len, char *fmt, va_list args);
 
 // rune
+int		runesprint(Rune *buf, char *fmt, ...);
 Rune*		runeseprint(Rune *buf, Rune *e, char *fmt, ...);
 Rune*		runesmprint(char *fmt, ...);
 int		runesnprint(Rune *buf, int len, char *fmt, ...);
-int		runesprint(Rune *buf, char *fmt, ...);
+
 Rune*		runevseprint(Rune *buf, Rune *e, char *fmt, va_list args);
 Rune*		runevsmprint(char *fmt, va_list args);
 int		runevsnprint(Rune *buf, int len, char *fmt, va_list args);
@@ -97,6 +98,9 @@ extern	int	(*fmtdoquote)(int);
 int		dofmt(Fmt *f, char *fmt);
 int		dorfmt(Fmt *f, const Rune *fmt);
 
+int		fmtprint(Fmt *f, char *fmt, ...);
+int		fmtrune(Fmt *f, int r);
+
 double		fmtcharstod(int(*f)(void*), void *vp);
 
 int		fmtfdflush(Fmt *f);
@@ -104,13 +108,13 @@ int		fmtfdinit(Fmt *f, int fd, char *buf, int size);
 int		fmtinstall(int c, int (*f)(Fmt*));
 int		fmtnullinit(Fmt*);
 void		fmtlocaleinit(Fmt*, char*, char*, char*);
-int		fmtprint(Fmt *f, char *fmt, ...);
-int		fmtrune(Fmt *f, int r);
 int		fmtrunestrcpy(Fmt *f, Rune *s);
+
 int		fmtstrcpy(Fmt *f, char *s);
 char*		fmtstrflush(Fmt *f);
 int		fmtstrinit(Fmt *f);
 double		fmtstrtod(const char *as, char **aas);
+
 int		fmtvprint(Fmt *f, char *fmt, va_list args);
 
 void		quotefmtinstall(void);
