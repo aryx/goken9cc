@@ -3,9 +3,10 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 # -lstring needed only for du
-LDLIBS=-lstring -lbio -l9 -lm
+# -lregexp needed only for ed
+LDLIBS=-lregexp -lstring -lbio -l9 -lm
 
 #TODO: file: has pbs, iconv needs draw.h, strings: rune pb, 
-TARG=basename wc unicode du
+TARG=basename wc unicode du ed
 
 <$TOP/mkfiles/mkmany
