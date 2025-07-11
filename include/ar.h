@@ -1,4 +1,4 @@
-// Header format of the Plan9 libraries (e.g., libc.a) produced by 'ar'
+// Format of the header of Plan9 libraries (e.g., libc.a) produced by 'ar'
 
 // AR magic string
 #define	ARMAG	"!<arch>\n"
@@ -13,13 +13,13 @@
 
 struct	ar_hdr
 {
-	char	name[SARNAME];
-	char	date[12];
-	char	uid[6];
-	char	gid[6];
-	char	mode[8];
-	char	size[10];
-	char	fmag[2];
+	byte	name[SARNAME];
+	byte	date[12];
+	byte	uid[6];
+	byte	gid[6];
+	byte	mode[8];
+	byte	size[10];
+	byte	fmag[2];
 };
 
 // total size AR header

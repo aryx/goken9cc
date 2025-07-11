@@ -1,5 +1,4 @@
 // Buffered input/output library.
-
 #ifndef _BIO_H_
 #define _BIO_H_ 1
 
