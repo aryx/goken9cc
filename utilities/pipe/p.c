@@ -24,9 +24,12 @@ main(int argc, char *argv[])
     int n;
     fdt f;
 
+    // plan9 uses /dev/cons and Linux /dev/tty (both virtual devices)
     if((cons = Bopen("/dev/cons", OREAD)) == nil) {
-        fprint(STDERR, "p: can't open /dev/cons\n");
-        exits("missing /dev/cons");
+        if((cons = Bopen("/dev/tty", OREAD)) == nil) {
+            fprint(STDERR, "p: can't open /dev/cons or /dev/tty\n");
+            exits("missing /dev/cons or /dev/tty");
+        }
     }
     Binit(&bout, STDOUT, OWRITE);
     n = 0;
