@@ -50,6 +50,9 @@ UTFOFILES=\
 	utf/utfrune.$O\
 	utf/utfutf.$O\
 	utf/runetype.$O\
+        \
+	utf/runestrlen.$O\
+	utf/runestrchr.$O\
 
 #coupling: if you add a file here, you need to modify scripts/build-mk.sh too
 # as well as ./Makefile

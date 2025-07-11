@@ -10,8 +10,14 @@
  */
 #include    <u.h>
 #include    <libc.h>
-#include    <draw.h>
 #include    <bio.h>
+
+#ifdef Unix
+char* font;
+#else
+#include    <draw.h>
+Font *font;
+#endif
 
 #define WIDTH           80
 #define TAB 4
@@ -30,7 +36,7 @@ int nwalloc=WORD_ALLOC_QUANTA;
 int nchars=0;
 int nwords=0;
 int tabwidth=0;
-Font *font;
+
 Biobuf  bin;
 Biobuf  bout;
 
@@ -212,14 +218,6 @@ columnate(void)
 }
 
 int
-wordwidth(Rune *w, int nw)
-{
-    if(font)
-        return runestringnwidth(font, w, nw);
-    return nw;
-}
-
-int
 nexttab(int col)
 {
     if(tabwidth){
@@ -237,6 +235,25 @@ morechars(void)
     if((cbuf = realloc(cbuf, nalloc*sizeof(*cbuf))) == 0)
         error("out of memory");
     cbufp = cbuf+nchars-1;
+}
+
+#ifdef Unix
+void getwidth(void)
+{
+}
+
+int
+wordwidth(Rune *w, int nw)
+{
+    return nw;
+}
+#else
+int
+wordwidth(Rune *w, int nw)
+{
+    if(font)
+        return runestringnwidth(font, w, nw);
+    return nw;
 }
 
 /*
@@ -315,4 +332,5 @@ getwidth(void)
         tabwidth = 4*stringwidth(font, "0");
     tabflag = 1;
 }
+#endif
 /*e: pipe/mc.c */

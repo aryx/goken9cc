@@ -2,11 +2,13 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
+# for mc to remove plan9 specific draw.h and rio/acme extensions
+CFLAGS_EXTRA=-DUnix
 LDLIBS=-lbio -l9 -lm
 
-#TODO: tee: miss atnotify, tail: miss p9sleep, mc: need draw.h,
+#TODO: tee: miss atnotify, tail: miss p9sleep
 # sort: miss tobaserune
-TARG=uniq xargs p
+TARG=uniq xargs p mc
 
 <$TOP/mkfiles/mkmany
 
