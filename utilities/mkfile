@@ -20,7 +20,10 @@ SRC_VIEWS=\
   misc/basename.c misc/file.c misc/iconv.c \
   misc/strings.c misc/unicode.c \
   misc/ed.c \
-  compare/misc/cmp.c compare/misc/comm.c
+  compare/misc/cmp.c compare/misc/comm.c \
+  search/grep/main.c search/grep/grep.h search/grep/sub.c search/grep/grep.y \
+  search/grep/comp.c search/grep/globals.c
+
 
 sync:VI:
 	for (i in $SRC_VIEWS) {
