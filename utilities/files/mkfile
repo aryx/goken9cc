@@ -2,12 +2,13 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
+# for ls to remove plan9 specific fcall.h
+CFLAGS_EXTRA=-DUnix
 # -lstring needed only for du
 # -lbio needed only for wc
 LDLIBS=-lbio -lstring -l9 -lm
 
-#TODO: ls (missing fcall.h)
-TARG=cat touch mkdir cp mv rm chmod chgrp mtime wc du
+TARG=cat touch mkdir cp mv rm chmod chgrp mtime wc du ls
 
 <$TOP/mkfiles/mkmany
 #<$TOP/mkfiles/mkmanyauto

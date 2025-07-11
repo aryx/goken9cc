@@ -279,6 +279,7 @@ struct Qid
 #define DMSETGID	0x00040000	/* mode bit for setgid (Unix, 9P2000.u) */
 
 
+// DirEntry really, so could also be called FileInfo
 typedef
 struct Dir {
 	/* system-modified data */
@@ -309,8 +310,10 @@ extern	Dir*	dirfstat(fdt);
 extern	int	dirwstat(char*, Dir*);
 extern	int	dirfwstat(fdt, Dir*);
 
+// ??
 extern	void	nulldir(Dir*);
-extern	long	dirreadall(fdt, Dir**); // ?? defined where? TODO: toport! needed by ls.c
+// ??
+extern	long	dirreadall(fdt, Dir**);
 
 //******************************************************************************
 // Path
