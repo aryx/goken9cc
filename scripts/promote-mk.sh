@@ -14,3 +14,4 @@ set -x
 
 cp ROOT/amd64/bin/mk bin/
 cp ROOT/amd64/bin/rc bin/
+cp ROOT/amd64/bin/ed bin/

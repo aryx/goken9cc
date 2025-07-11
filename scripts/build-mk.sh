@@ -24,9 +24,9 @@ LDFLAGS="-L$TOP/ROOT/amd64/lib"
 GOOS=linux
 GOARCH=amd64
 
-#LESS: actually if it's just to compile mk and rc we don't need all of lib9
-# so we could reduce the list below, but then we need to delete lib9.a
-# when compiling the rest of goken
+#Note that because we just need to compile mk and rc, we don't need all of lib9
+# so we could reduce the list below. However, then we need to delete lib9.a
+# when compiling the rest of goken, which we now do (see end of this file).
 cd $TOP/src/lib9
 gcc $CFLAGS -DPLAN9PORT _p9dir.c -o _p9dir.o
 gcc $CFLAGS -DPLAN9PORT _exits.c -o _exits.o
@@ -195,7 +195,14 @@ gcc $CFLAGS -DUnix -c unix.c
 gcc $LDFLAGS -o o.out code.o exec.o getflags.o glob.o here.o io.o lex.o pcmd.o pfnc.o simple.o trap.o tree.o var.o processes.o globals.o utils.o error.o words.o executils.o status.o builtins.o input.o path.o env.o fmt.o main.o y.tab.o unix.o -l9 -lm
 cp o.out $TOP/ROOT/amd64/bin/rc
 
-# safer to delete the generated libs as we may have forgotten objects
+# We now also compile 'ed' because it is needed by mkenam and it is simpler
+# to reduce external deps.
+cd $TOP/utilities/misc/
+gcc $CFLAGS -c ed.c
+gcc $LDFLAGS -o o.out ed.o -lregexp -lbio -l9 -lm
+cp o.out $TOP/ROOT/amd64/bin/ed
+
+# Safer to delete the generated libs as we may have forgotten objects
 # that are not needed for mk/rc but might be needed by other programs
-# (especially libc.a)
+# (especially libc.a).
 rm -f $TOP/ROOT/amd64/lib/*.a

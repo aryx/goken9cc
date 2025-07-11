@@ -4,14 +4,14 @@ FROM ubuntu:22.04
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
-# TODO: get rid of ed and build it as part of build-mk.sh
-RUN apt-get install -y gcc libc6-dev bison ed
+RUN apt-get install -y --no-install-recommends gcc libc6-dev bison
 
 # Now let's build from source
 WORKDIR /src
 COPY . .
 
-# this actually builds also 'rc' which is called by 'mk'
+# This actually builds also 'rc', which is called by 'mk', and 'ed'
+# which is used by the mkenam script run during the build
 RUN ./scripts/build-mk.sh
 RUN ./scripts/promote-mk.sh
 # coupling: env.sh

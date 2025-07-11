@@ -1,7 +1,7 @@
 # Build and test goken9cc and GO/ on Ubuntu Linux (x86_64 and glibc).
 
 # Why keep the Go compiler source and Go packages in goken9cc? We only
-# care about the hidden C toolchain, but building and running the Go code
+# care about the C toolchain, but building and running the Go code
 # (under GO/) is a great test case for the C toolchain. So, you can see GO/ as a
 # set of tests for 6a/6c/6l, 5a/5c/5l, and 8a/8c/8l! Indeed, first
 # pkg/runtime/ is made of C and assembly code that is compiled by [568][ac], and
