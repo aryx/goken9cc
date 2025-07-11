@@ -22,16 +22,16 @@ static void usage(void);
 
 /*s: function [[seekoff]](cmp.c) */
 char **
-seekoff(int fd, char *name, char **argv)
+seekoff(fdt fd, char *name, char **argv)
 {
     vlong o;
 
     if(*argv){
         if (!isascii(**argv) || !isdigit(**argv))
             usage();
-        o = strtoll(*argv++, 0, 0);
-        if(seek(fd, o, 0) < 0){
-            if(!sflag) fprint(2, "cmp: %s: seek by %lld: %r\n",
+        o = strtoll(*argv++, nil, 0);
+        if(seek(fd, o, SEEK__START) < 0){
+            if(!sflag) fprint(STDERR, "cmp: %s: seek by %lld: %r\n",
                 name, o);
             exits("seek");
         }
