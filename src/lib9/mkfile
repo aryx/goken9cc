@@ -56,6 +56,7 @@ UTFOFILES=\
 
 #coupling: if you add a file here, you need to modify scripts/build-mk.sh too
 # as well as ./Makefile
+#TODO: fork.$O is not here why? 
 LIB9OFILES=\
 	_p9dir.$O\
 	_exits.$O\
