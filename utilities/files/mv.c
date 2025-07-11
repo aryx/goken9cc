@@ -4,6 +4,7 @@
 #include <libc.h>
 /*e: plan9 includes */
 
+// forward decls
 errorneg1 copy1(fdt fdf, fdt fdt, char *from, char *to);
 void      hardremove(char *);
 errorneg1 mv(char *from, char *todir, char *toelem);
@@ -57,6 +58,7 @@ main(int argc, char *argv[])
     exits(nil);
 }
 /*e: function [[main]](mv.c) */
+
 /*s: function [[mv]] */
 errorneg1
 mv(char *from, char *todir, char *toelem)
