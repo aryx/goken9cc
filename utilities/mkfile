@@ -1,7 +1,7 @@
 TOP=..
 <$TOP/mkconfig
 
-DIRS=byte files misc pipe time 
+DIRS=byte compare files misc pipe time 
 
 <$TOP/mkfiles/mkdirs
 
@@ -13,12 +13,14 @@ SRC_VIEWS=\
   files/rm.c files/cp.c files/mv.c \
   files/chmod.c files/chgrp.c \
   files/mtime.c \
+  files/wc.c files/du.c \
   pipe/mc.c pipe/p.c pipe/sort.c pipe/tail.c pipe/tee.c pipe/uniq.c pipe/xargs.c \
   byte/xd.c byte/dd.c byte/split.c \
   time/date.c time/cal.c \
-  misc/basename.c misc/du.c misc/file.c misc/iconv.c \
-  misc/strings.c misc/unicode.c misc/wc.c \
-  misc/ed.c
+  misc/basename.c misc/file.c misc/iconv.c \
+  misc/strings.c misc/unicode.c \
+  misc/ed.c \
+  compare/misc/cmp.c compare/misc/comm.c
 
 sync:VI:
 	for (i in $SRC_VIEWS) {

@@ -2,10 +2,12 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-l9 -lm
+# -lstring needed only for du
+# -lbio needed only for wc
+LDLIBS=-lbio -lstring -l9 -lm
 
 #TODO: ls (missing fcall.h)
-TARG=cat touch mkdir cp mv rm chmod chgrp mtime
+TARG=cat touch mkdir cp mv rm chmod chgrp mtime wc du
 
 <$TOP/mkfiles/mkmany
 #<$TOP/mkfiles/mkmanyauto

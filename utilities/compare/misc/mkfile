@@ -1,0 +1,8 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-lbio -l9 -lm
+TARG=cmp comm
+
+<$TOP/mkfiles/mkmany
