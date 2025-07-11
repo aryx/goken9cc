@@ -29,7 +29,7 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
-#include	<bootexec.h>
+#include	"bootexec.h"
 #include	<mach.h>
 #include	"elf.h"
 #include	"macho.h"
