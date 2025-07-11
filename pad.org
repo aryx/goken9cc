@@ -105,7 +105,7 @@ dec 2011: before runtime/<arch> refactor, not long before march 2012 and Go 1.0
  pro:
    - still makefiles
    - in theory windows amd64 support
-   - close go Go 1.0 which must be the sign of maturity
+   - close to Go 1.0 which must be the sign of maturity
  cons:
    - 196k for codemap test_loc; far bigger runtime
    - more errors on Linux. DWARF unsupported version 0 weird error

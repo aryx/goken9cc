@@ -11,12 +11,22 @@
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
   build-mk.sh to "boostrap" mk/rc
+- add also ed source code from principia softwarica so no need external 'ed' and
+  build-mk.sh now build mk, rc, and 'ed'
 
 ** internals
 - reorg code with all Go related stuff under GO/ (GOSRC/, GOMISC/, GOTEST/)
 - reorg code with assemblers/, lib_core/, to match principia-softwarica
   but keep SRC/ with symlinks to mimic old org.
 - added lib9/math/ subdir and move files there.
+
+** libs
+- added libregexp (needed by mk/rc) and libstring (needed by du) from
+  principia softwarica or plan9port
+
+** utilities
+- add source code of many utilities (cat, cp, grep, ed, diff, etc.) from
+  principia softwarica so easier to build and test for principia readers.
 
 * Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc, arm64 7a/7c/7l, riscv ia/ic/il)
 # see also pad.org history section
@@ -93,10 +103,13 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 Most of the code in goken9cc comes from Plan 9 4th edition:
 - cmd/[05678qtv][alc]/ cc/ and libmach/
   a multiarch assembler, linker, C compiler toolchain
-- libc/, libio/
+- libc/, libbio/
   a new minimalist C library (far smaller than glibc or musl)
 - cmd/{mk,rc, acid, ...}
   simplified/redesigned versions of Unix tools
+- cmd/{ed,grep,diff,cat, ...} utilities
+- libregexp/, libstring/
+  minimalist C libraries
 
 ** Unix (6th edition at least): 1976
 the origin:

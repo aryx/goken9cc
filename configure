@@ -11,7 +11,7 @@ set -eu # to debug this script add '-x'
 # The goal is also to use a single command that can work on all platforms:
 #  - Linux (Alpine for Docker, Ubuntu for Github Actions, Nix/Arch/...)
 #  - macOS (HomeBrew, Nix)
-#  - Windows (Cygwin, WSL, Nix?)
+#  - Windows (Cygwin, Mingw, WSL, Nix?)
 # and that setup everything (e.g., gcc/clang, mk/rc).
 #
 # This is reminescent of the classic "configure; make; make install"
@@ -26,6 +26,8 @@ set -eu # to debug this script add '-x'
 #  - check for gcc/clang
 #  - detect arch and generate appropriate mkconfig
 #    (imitate what x9cc/configure does)
+#  - detect if bin/ contains mk, rc, and ed
+#    and maybe run scripts/build-mk.sh and promote-mk.sh automatically
 
 ###############################################################################
 # Entry point
