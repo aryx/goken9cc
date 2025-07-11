@@ -69,7 +69,7 @@ THE SOFTWARE.
  *
 extern	void*	memccpy(void*, void*, int, ulong);
 extern	void*	memset(void*, int, ulong);
-extern	int	memcmp(void*, void*, ulong);
+extern	int	    memcmp(void*, void*, ulong);
 extern	void*	memcpy(void*, void*, ulong);
 extern	void*	memmove(void*, void*, ulong);
 extern	void*	memchr(void*, int, ulong);
@@ -84,7 +84,7 @@ extern	void*	memchr(void*, int, ulong);
  *
 extern	char*	strcat(char*, char*);
 extern	char*	strchr(char*, int);
-extern	int	strcmp(char*, char*);
+extern	int	    strcmp(char*, char*);
 extern	char*	strcpy(char*, char*);
  */
 
@@ -96,7 +96,7 @@ extern	char* strecpy(char*, char*, char*);
 /*
 extern	char*	strncat(char*, char*, long);
 extern	char*	strncpy(char*, char*, long);
-extern	int	strncmp(char*, char*, long);
+extern	int	    strncmp(char*, char*, long);
 extern	long	strlen(char*);
 extern	char*	strstr(char*, char*);
 
@@ -139,7 +139,7 @@ extern	uvlong	strtoull(char*, char**, int);
  */
 
 // ?? a = ?
-extern	int	p9atoi(char*);
+extern	int	    p9atoi(char*);
 extern	long	p9atol(char*);
 extern	vlong	p9atoll(char*);
 
@@ -175,6 +175,7 @@ extern	double	cosh(double);
 extern	double	tanh(double);
 extern	double	sqrt(double);
 extern	double	fmod(double, double);
+
 #define	HUGE	3.4028234e38
 #define	PIO2	1.570796326794896619231e0
 #define	PI	(PIO2+PIO2)
@@ -396,7 +397,7 @@ extern	void	_exits(char*);
 extern	int	exitcode(char*);
 
 extern	char*	p9getenv(char*);
-extern	int	p9putenv(char*, char*);
+extern	int	    p9putenv(char*, char*);
 
 
 // missing getpid(), getppid() compared to plan9 libc
@@ -404,7 +405,7 @@ extern	int	p9putenv(char*, char*);
 /* extern	int	getppid(void); */
 
 extern	char*	p9getwd(char*, int);
-extern	int	p9chdir(char*);
+extern	int	    p9chdir(char*);
 
 extern	int	p9exec(char*, char*[]);
 extern	int	p9execl(char*, ...);
@@ -467,8 +468,8 @@ struct Tm
 	int	tzoff;
 } Tm;
 
-extern	Tm*	p9gmtime(long);
-extern	Tm*	p9localtime(long);
+extern	Tm*	    p9gmtime(long);
+extern	Tm*	    p9localtime(long);
 extern	char*	p9asctime(Tm*);
 extern	char*	p9ctime(long);
 
@@ -613,12 +614,11 @@ extern	char*	getgoversion(void);
 extern	int	errfmt(Fmt *f);
  */
 
-
 #define	ERRMAX	128	/* max length of error string */
 
 extern	void	perror(const char*);
 
-extern	int	errstr(char*, uint);
+extern	int	    errstr(char*, uint);
 
 extern	void	rerrstr(char*, uint);
 extern	void	werrstr(char*, ...);
@@ -653,7 +653,7 @@ extern	char*	get9root(void);
 
 #ifndef NOPLAN9DEFINES
 
-#define cputime         p9cputime
+#define cputime     p9cputime
 
 #define atoi		p9atoi
 #define atol		p9atol
@@ -678,13 +678,13 @@ extern	char*	get9root(void);
 #define open		p9open
 #define create		p9create
 #define	seek		p9seek
-#define	dup		p9dup
+#define	dup		    p9dup
 
 #define	exec		p9exec
-#define	execl	        p9execl
+#define	execl	    p9execl
 #define rfork		p9rfork
 #define wait		p9wait
-#define waitpid	        p9waitpid
+#define waitpid	    p9waitpid
 #define	waitfor		p9waitfor
 
 #define sleep		p9sleep
@@ -700,7 +700,7 @@ extern	char*	get9root(void);
 #define	nsec		p9nsec
 
 // not declared in this file
-#define main	        p9main
+#define main	    p9main
 
 #endif
 
