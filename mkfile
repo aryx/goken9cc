@@ -5,7 +5,7 @@ TOP=.
 DIRS=\
   src/lib9 src/libbio src/libmach \
   lib_strings/libregexp lib_strings/libstring \
-  src/cmd/mk src/cmd/rc \
+  mk rc \
   src/cmd/nm src/cmd/ar \
   src/cmd/cc \
   src/cmd/6l src/cmd/6a src/cmd/6c \

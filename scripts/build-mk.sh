@@ -135,7 +135,7 @@ gcc $CFLAGS -c rregsub.c
 ar rsc libregexp.a regcomp.o regerror.o regexec.o regsub.o regaux.o rregexec.o rregsub.o
 cp libregexp.a $TOP/ROOT/amd64/lib/libregexp.a
 
-cd $TOP/src/cmd/mk
+cd $TOP/mk
 gcc $CFLAGS -c globals.c
 gcc $CFLAGS -c utils.c
 gcc $CFLAGS -c dumpers.c
@@ -162,7 +162,7 @@ gcc $CFLAGS -c Posix.c
 gcc $LDFLAGS -o o.out globals.o utils.o dumpers.o archive.o bufblock.o env.o file.o graph.o lex.o main.o match.o mk.o parse.o rc.o recipe.o rule.o run.o shprint.o symtab.o var.o varsub.o word.o Posix.o -lregexp -lbio -l9 -lm
 cp o.out $TOP/ROOT/amd64/bin/mk
 
-cd $TOP/src/cmd/rc
+cd $TOP/rc
 yacc -d syn.y
 gcc $CFLAGS -DUnix -c code.c
 gcc $CFLAGS -DUnix -c exec.c
