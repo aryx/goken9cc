@@ -132,7 +132,7 @@ rd(Biobuf *file, char *buf)
     return -1;
 }
 /*e: function [[rd]](comm.c) */
-
+/*s: function [[wr]](comm.c) */
 void
 wr(char *str, int n)
 {
@@ -154,16 +154,17 @@ wr(char *str, int n)
     }
     print("%s%s\n", ldr[n-1],str);
 }
-
+/*e: function [[wr]](comm.c) */
+/*s: function [[copy]](comm.c) */
 void
 copy(Biobuf *ibuf, char *lbuf, int n)
 {
     do
         wr(lbuf,n);
     while(rd(ibuf,lbuf) >= 0);
-    exits(0);
+    exits(nil);
 }
-
+/*e: function [[copy]](comm.c) */
 /*s: function [[compare]](comm.c) */
 int
 compare(char *a, char *b)

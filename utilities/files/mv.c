@@ -205,7 +205,7 @@ split(char *name, char **pdir, char **pelem)
         *s = '\0';
         *pelem = s+1;
         *pdir = name;
-    }else if(strcmp(name, "..") == 0){
+    }else if(strcmp(name, "..") == ORD__EQ){
         *pdir = "..";
         *pelem = ".";
     }else{
@@ -221,7 +221,7 @@ samefile(char *a, char *b)
     Dir *da, *db;
     bool ret;
 
-    if(strcmp(a, b) == 0)
+    if(strcmp(a, b) == ORD__EQ)
         return true;
     da = dirstat(a);
     db = dirstat(b);

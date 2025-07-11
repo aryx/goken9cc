@@ -84,7 +84,7 @@ bool
 intignore(void *a, char *msg)
 {
     USED(a);
-    if(strcmp(msg, "interrupt") == 0)
+    if(strcmp(msg, "interrupt") == ORD__EQ)
         return true;
     return false;
 }

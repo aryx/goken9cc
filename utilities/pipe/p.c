@@ -24,7 +24,7 @@ main(int argc, char *argv[])
     int n;
     fdt f;
 
-    if((cons = Bopen("/dev/cons", OREAD)) == 0) {
+    if((cons = Bopen("/dev/cons", OREAD)) == nil) {
         fprint(STDERR, "p: can't open /dev/cons\n");
         exits("missing /dev/cons");
     }
