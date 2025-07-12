@@ -28,7 +28,6 @@ int peekc;
 /*x: globals grep */
 bool literal;
 /*x: globals grep */
-char    *filename;
 Re**    follow;
 int matched;
 long    maxfollow;
