@@ -22,7 +22,8 @@ SRC_VIEWS=\
   misc/ed.c \
   compare/misc/cmp.c compare/misc/comm.c \
   search/grep/main.c search/grep/grep.h search/grep/sub.c search/grep/grep.y \
-  search/grep/comp.c search/grep/globals.c
+  search/grep/comp.c search/grep/globals.c \
+  archive/tar/tar.c
 
 
 sync:VI:
