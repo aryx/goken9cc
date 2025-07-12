@@ -1,7 +1,7 @@
 TOP=..
 <$TOP/mkconfig
 
-DIRS=byte compare files misc pipe time 
+DIRS=byte compare files misc pipe time archive
 
 <$TOP/mkfiles/mkdirs
 

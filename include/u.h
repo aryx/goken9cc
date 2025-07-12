@@ -223,6 +223,7 @@ enum _ord {
 };
 typedef int ord;
 
+// alt: use enum, but fdt actually can be other than just 0, 1, 2 so macros better
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2

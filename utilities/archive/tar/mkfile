@@ -2,4 +2,7 @@ TOP=../../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-<$TOP/mkfiles/mkmanyauto
+LDLIBS=-lstring -l9 -lm
+TARG=tar
+
+<$TOP/mkfiles/mkmany

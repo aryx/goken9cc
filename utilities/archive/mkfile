@@ -1,0 +1,6 @@
+TOP=../..
+<$TOP/mkconfig
+
+DIRS=tar
+
+<$TOP/mkfiles/mkdirs
