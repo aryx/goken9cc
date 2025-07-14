@@ -1,6 +1,8 @@
 /*s: archive/gzip/gzip.c */
+/*s: plan9 includes */
 #include <u.h>
 #include <libc.h>
+/*e: plan9 includes */
 #include <bio.h>
 #include <flate.h>
 #include "gzip.h"
