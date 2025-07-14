@@ -1,0 +1,10 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-lflate -lbio -l9 -lm
+
+TARG=gzip gunzip
+
+<$TOP/mkfiles/mkmany
+#<$TOP/mkfiles/mkmanyauto

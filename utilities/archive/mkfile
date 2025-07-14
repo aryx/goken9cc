@@ -1,6 +1,6 @@
 TOP=../..
 <$TOP/mkconfig
 
-DIRS=tar
+DIRS=tar gzip
 
 <$TOP/mkfiles/mkdirs

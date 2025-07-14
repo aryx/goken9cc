@@ -14,16 +14,17 @@ SRC_VIEWS=\
   files/chmod.c files/chgrp.c \
   files/mtime.c \
   files/wc.c files/du.c \
-  pipe/mc.c pipe/p.c pipe/sort.c pipe/tail.c pipe/tee.c pipe/uniq.c pipe/xargs.c \
+  pipe/p.c pipe/mc.c pipe/sort.c pipe/uniq.c pipe/tail.c pipe/tee.c pipe/xargs.c \
   byte/xd.c byte/dd.c byte/split.c \
   time/date.c time/cal.c \
-  misc/basename.c misc/file.c misc/iconv.c \
-  misc/strings.c misc/unicode.c \
+  misc/basename.c misc/file.c misc/iconv.c misc/strings.c misc/unicode.c \
   misc/ed.c \
   compare/misc/cmp.c compare/misc/comm.c \
   search/grep/main.c search/grep/grep.h search/grep/sub.c search/grep/grep.y \
   search/grep/comp.c search/grep/globals.c \
-  archive/tar/tar.c
+  archive/tar/tar.c \
+  archive/gzip/gzip.h archive/gzip/gzip.c archive/gzip/gunzip.c
+
 
 
 sync:VI:

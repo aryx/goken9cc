@@ -1,0 +1,22 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LIBNAME=libflate.a
+
+OFILES=\
+	deflate.$O\
+	deflatezlib.$O\
+	deflateblock.$O\
+	deflatezlibblock.$O\
+	inflate.$O\
+	inflatezlib.$O\
+	inflateblock.$O\
+	inflatezlibblock.$O\
+	flateerr.$O\
+	crc.$O\
+	adler.$O\
+
+HFILES=	$TOP/include/flate.h zlib.h
+
+<$TOP/mkfiles/mksyslib
