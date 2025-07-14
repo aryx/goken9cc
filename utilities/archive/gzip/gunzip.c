@@ -25,6 +25,7 @@ static  int gunzip(fdt ofd, char *ofile, Biobuf *bin);
 static  void    header(Biobuf *bin, GZHead *h);
 static  void    trailer(Biobuf *bin, long wlen);
 static  void    error(char*, ...);
+
 #pragma varargck    argpos  error   1
 
 /*s: globals flags gunzip.c */
@@ -67,7 +68,7 @@ void
 main(int argc, char *argv[])
 {
     int i;
-    // enum<FlateError> and then error0 (hmmm)
+    // enum<FlateError> (OK = 0) and then error0 (OK = 1, hmmm)
     int ok;
     // -c
     bool stdout;
@@ -105,7 +106,7 @@ main(int argc, char *argv[])
         infile = "<stdin>";
         ok = gunzip(STDOUT, "<stdout>", &bin);
     }else{
-        ok = 1;
+        ok = OK_1;
         if(stdout)
             settimes = false;
         for(i = 0; i < argc; i++)
@@ -353,7 +354,6 @@ get1(Biobuf *b)
     return c;
 }
 /*e: function [[get1]](gunzip.c) */
-
 /*s: function [[crcwrite]](gunzip.c) */
 static int
 crcwrite(void *out, void *buf, int n)
