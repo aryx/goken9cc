@@ -1,0 +1,10 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-lbio -l9 -lm
+
+#TODO bc
+TARG=dc
+
+<$TOP/mkfiles/mkmany

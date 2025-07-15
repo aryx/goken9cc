@@ -23,7 +23,8 @@ SRC_VIEWS=\
   search/grep/main.c search/grep/grep.h search/grep/sub.c search/grep/grep.y \
   search/grep/comp.c search/grep/globals.c \
   archive/tar/tar.c \
-  archive/gzip/gzip.h archive/gzip/gzip.c archive/gzip/gunzip.c
+  archive/gzip/gzip.h archive/gzip/gzip.c archive/gzip/gunzip.c \
+  calc/dc.c
 
 
 
