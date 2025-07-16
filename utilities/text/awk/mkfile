@@ -28,6 +28,7 @@ YFILES=awkgram.y
 proctab.c: y.tab.h maketab.c $O.maketab
 	   ./$O.maketab > proctab.c
 
+#TODO: replace by an ed script, like mkenam but mkproctab here
 $O.maketab: maketab.$O
 	   $LD $LDFLAGS -o $target $prereq $LDLIBS
 
