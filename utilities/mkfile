@@ -8,6 +8,7 @@ DIRS=archive byte calc compare files misc pipe time
 
 # ------------------------------------------------------------------------------
 
+#TODO? pwd.c echo.c
 SRC_VIEWS=\
   files/cat.c files/ls.c \
   files/touch.c files/mkdir.c \
@@ -21,12 +22,15 @@ SRC_VIEWS=\
   misc/basename.c misc/file.c misc/iconv.c misc/strings.c misc/unicode.c \
   misc/ed.c \
   compare/misc/cmp.c compare/misc/comm.c \
-  text/grep/main.c text/grep/grep.h text/grep/sub.c text/grep/grep.y \
-  text/grep/comp.c text/grep/globals.c \
   archive/tar/tar.c \
   archive/gzip/gzip.h archive/gzip/gzip.c archive/gzip/gunzip.c \
   archive/zip/zip.h archive/zip/zip.c archive/zip/unzip.c \
-  calc/dc.c calc/bc.y
+  calc/dc.c calc/bc.y \
+  text/grep/main.c text/grep/grep.h text/grep/sub.c text/grep/grep.y \
+  text/grep/comp.c text/grep/globals.c \
+  text/awk/awk.h  text/awk/proto.h text/awk/awkgram.y text/awk/lex.c text/awk/lib.c \
+  text/awk/main.c text/awk/maketab.c text/awk/parse.c text/awk/re.c text/awk/run.c \
+  text/awk/tran.c
 
 
 
