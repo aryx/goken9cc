@@ -1,6 +1,8 @@
 /*s: calc/dc.c */
+/*s: plan9 includes */
 #include <u.h>
 #include <libc.h>
+/*e: plan9 includes */
 #include <bio.h>
 
 typedef void*   pointer;
@@ -12,16 +14,19 @@ typedef void*   pointer;
 #define PTRSZ sizeof(int*)
 #define TBLSZ 256           /* 1<<BI2BY */
 
+/*s: constants dc.c */
 #define HEADSZ 1024
 #define STKSZ 100
 #define RDSKSZ 100
 #define ARRAYST 221
 #define MAXIND 2048
+/*e: constants dc.c */
 
 #define NL 1
 #define NG 2
 #define NE 3
 
+/*s: macros on [[Blk]] dc.c */
 #define length(p)   ((p)->wt-(p)->beg)
 #define rewind(p)   (p)->rd=(p)->beg
 #define create_(p)   (p)->rd = (p)->wt = (p)->beg
@@ -44,18 +49,22 @@ typedef void*   pointer;
 #define sclobber(p) ((p)->rd = --(p)->wt)
 #define zero(p)     for(pp=(p)->beg;pp<(p)->last;)\
                 *pp++='\0'
+/*e: macros on [[Blk]] dc.c */
+/*s: macros dc.c */
 #define OUTC(x)     {Bputc(&bout,x); if(--count == 0){Bprint(&bout,"\\\n"); count=ll;} }
 #define TEST2       {if((count -= 2) <=0){Bprint(&bout,"\\\n");count=ll;}}
 #define EMPTY       if(stkerr != 0){Bprint(&bout,"stack empty\n"); continue; }
-#define EMPTYR(x)   if(stkerr!=0){pushp(x);Bprint(&bout,"stack empty\n");continue;}
+#define EMPTYR(x)   if(stkerr != 0){pushp(x);Bprint(&bout,"stack empty\n");continue;}
 #define EMPTYS      if(stkerr != 0){Bprint(&bout,"stack empty\n"); return(1);}
-#define EMPTYSR(x)  if(stkerr !=0){Bprint(&bout,"stack empty\n");pushp(x);return(1);}
+#define EMPTYSR(x)  if(stkerr != 0){Bprint(&bout,"stack empty\n");pushp(x);return(1);}
 #define error(p)    {Bprint(&bout,p); continue; }
 #define errorrt(p)  {Bprint(&bout,p); return(1); }
+/*e: macros dc.c */
 
 #define LASTFUN 026
 
 typedef struct  Blk Blk;
+/*s: struct [[Blk]](dc.c) */
 struct  Blk
 {
     char    *rd;
@@ -63,13 +72,17 @@ struct  Blk
     char    *beg;
     char    *last;
 };
+/*e: struct [[Blk]](dc.c) */
 typedef struct  Sym Sym;
+/*s: struct [[Sym]](dc.c) */
 struct  Sym
 {
     Sym *next;
     Blk *val;
 };
+/*e: struct [[Sym]](dc.c) */
 typedef struct  Wblk    Wblk;
+/*s: struct [[Wblk]](dc.c) */
 struct  Wblk
 {
     Blk **rdw;
@@ -77,11 +90,21 @@ struct  Wblk
     Blk **begw;
     Blk **lastw;
 };
+/*e: struct [[Wblk]](dc.c) */
 
-Biobuf  *curfile, *fsave;
+/*s: global flags dc.c */
+bool dbg;
+/*e: global flags dc.c */
+
+/*s: globals dc.c */
+Biobuf  bin;
+Biobuf  bout;
+/*x: globals dc.c */
+Biobuf *curfile;
+/*x: globals dc.c */
+Biobuf *fsave;
 Blk *arg1, *arg2;
 uchar   savk;
-int dbg;
 int ifile;
 Blk *scalptr, *basptr, *tenptr, *inbas;
 Blk *sqtemp, *chptr, *strptr, *divxyz;
@@ -116,14 +139,14 @@ char    *dummy;
 long    longest, maxsize, active;
 int lall, lrel, lcopy, lmore, lbytes;
 int inside;
-Biobuf  bin;
-Biobuf  bout;
+/*e: globals dc.c */
 
+// forward decls
 void    main(int argc, char *argv[]);
 void    commnds(void);
 Blk*    readin(void);
 Blk*    div_(Blk *ddivd, Blk *ddivr);
-int dscale(void);
+int     dscale(void);
 Blk*    removr(Blk *p, int n);
 Blk*    dcsqrt(Blk *p);
 void    init(int argc, char *argv[]);
@@ -134,7 +157,7 @@ Blk*    readin(void);
 Blk*    add0(Blk *p, int ct);
 Blk*    mult(Blk *p, Blk *q);
 void    chsign(Blk *p);
-int readc(void);
+int     readc(void);
 void    unreadc(char c);
 void    binop(char c);
 void    dcprint(Blk *hptr);
@@ -145,15 +168,15 @@ void    oneot(Blk *p, int sc, char ch);
 void    hexot(Blk *p, int flg);
 void    bigot(Blk *p, int flg);
 Blk*    add(Blk *a1, Blk *a2);
-int eqk(void);
+int     eqk(void);
 Blk*    removc(Blk *p, int n);
 Blk*    scalint(Blk *p);
 Blk*    scale(Blk *p, int n);
-int subt(void);
-int command(void);
-int cond(char c);
+int     subt(void);
+int     command(void);
+int     cond(char c);
 void    load(void);
-int log2_(long n);
+int     log2_(long n);
 Blk*    salloc(int size);
 Blk*    morehd(void);
 Blk*    copy(Blk *hptr, int size);
@@ -167,7 +190,7 @@ void    release(Blk *p);
 Blk*    dcgetwd(Blk *p);
 void    putwd(Blk *p, Blk *c);
 Blk*    lookwd(Blk *p);
-int getstk(void);
+int     getstk(void);
 
 /********debug only**/
 void
@@ -185,25 +208,33 @@ tpr(char *cp, Blk *bp)
 }
 /************/
 
+/*s: function [[main]](dc.c) */
 void
 main(int argc, char *argv[])
 {
-    Binit(&bin, 0, OREAD);
-    Binit(&bout, 1, OWRITE);
+    Binit(&bin, STDIN, OREAD);
+    Binit(&bout, STDOUT, OWRITE);
     init(argc,argv);
     commnds();
-    exits(0);
+    exits(nil);
 }
+/*e: function [[main]](dc.c) */
 
+/*s: function [[commnds]](dc.c) */
 void
 commnds(void)
 {
-    Blk *p, *q, **ptr, *s, *t;
+    /*s: [[commnds()]] locals (dc.c) */
+    int c;
+    Blk *p;
+    /*x: [[commnds()]] locals (dc.c) */
+    Blk *q, **ptr, *s, *t;
     long l;
     Sym *sp;
-    int sk, sk1, sk2, c, sign, n, d;
+    int sk, sk1, sk2, sign, n, d;
+    /*e: [[commnds()]] locals (dc.c) */
 
-    while(1) {
+    while(true) {
         Bflush(&bout);
         if(((c = readc())>='0' && c <= '9') ||
             (c>='A' && c <='F') || c == '.') {
@@ -213,36 +244,23 @@ commnds(void)
             continue;
         }
         switch(c) {
+        /*s: [[commnds()]] switch [[c]] cases (dc.c) */
         case ' ':
         case '\t':
         case '\n':
         case -1:
             continue;
-        case 'Y':
-            sdump("stk",*stkptr);
-            Bprint(&bout, "all %ld rel %ld headmor %ld\n",all,rel,headmor);
-            Bprint(&bout, "nbytes %ld\n",nbytes);
-            Bprint(&bout, "longest %ld active %ld maxsize %ld\n", longest,
-                active, maxsize);
-            Bprint(&bout, "new all %d rel %d copy %d more %d lbytes %d\n",
-                lall, lrel, lcopy, lmore, lbytes);
-            lall = lrel = lcopy = lmore = lbytes = 0;
-            continue;
-        case '_':
-            p = readin();
-            savk = sunputc(p);
-            chsign(p);
-            sputc(p,savk);
-            pushp(p);
-            continue;
-        case '-':
-            subt();
-            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case '+':
             if(eqk() != 0)
                 continue;
             binop('+');
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case '-':
+            subt();
+            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case '*':
             arg1 = pop();
             EMPTY;
@@ -266,6 +284,7 @@ commnds(void)
             }
             pushp(p);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case '/':
         casediv:
             if(dscale() != 0)
@@ -275,6 +294,7 @@ commnds(void)
                 release(irem);
             release(rem);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case '%':
             if(dscale() != 0)
                 continue;
@@ -293,30 +313,15 @@ commnds(void)
             sputc(q,skd);
             pushp(q);
             continue;
-        case 'v':
-            p = pop();
-            EMPTY;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case '_':
+            p = readin();
             savk = sunputc(p);
-            if(length(p) == 0) {
-                sputc(p,savk);
-                pushp(p);
-                continue;
-            }
-            if(sbackc(p)<0) {
-                error("sqrt of neg number\n");
-            }
-            if(k<savk)
-                n = savk;
-            else {
-                n = k*2-savk;
-                savk = k;
-            }
-            arg1 = add0(p,n);
-            arg2 = dcsqrt(arg1);
-            sputc(arg2,savk);
-            pushp(arg2);
+            chsign(p);
+            sputc(p,savk);
+            pushp(p);
             continue;
-
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case '^':
             neg = 0;
             arg1 = pop();
@@ -370,6 +375,94 @@ commnds(void)
             pushp(q);
             pushp(p);
             goto casediv;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case '<':
+        case '>':
+        case '=':
+            if(cond(c) == 1)
+                goto execute;
+            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case '[':
+            n = 0;
+            p = salloc(0);
+            for(;;) {
+                if((c = readc()) == ']') {
+                    if(n == 0)
+                        break;
+                    n--;
+                }
+                sputc(p,c);
+                if(c == '[')
+                    n++;
+            }
+            pushp(p);
+            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case 'q':
+            if(readptr <= &readstk[1])
+                exits(nil);
+            // else
+            if(*readptr != 0)
+                release(*readptr);
+            readptr--;
+            if(*readptr != 0)
+                release(*readptr);
+            readptr--;
+            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case 'p':
+            if(stkptr == &stack[0])
+                Bprint(&bout,"empty stack\n");
+            else {
+                dcprint(*stkptr);
+            }
+            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case 'P':
+            p = pop();
+            EMPTY;
+            sputc(p,0);
+            Bprint(&bout,"%s",p->beg);
+            release(p);
+            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case 'Y':
+            sdump("stk",*stkptr);
+            Bprint(&bout, "all %ld rel %ld headmor %ld\n",all,rel,headmor);
+            Bprint(&bout, "nbytes %ld\n",nbytes);
+            Bprint(&bout, "longest %ld active %ld maxsize %ld\n", longest,
+                active, maxsize);
+            Bprint(&bout, "new all %d rel %d copy %d more %d lbytes %d\n",
+                lall, lrel, lcopy, lmore, lbytes);
+            lall = lrel = lcopy = lmore = lbytes = 0;
+            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
+        case 'v':
+            p = pop();
+            EMPTY;
+            savk = sunputc(p);
+            if(length(p) == 0) {
+                sputc(p,savk);
+                pushp(p);
+                continue;
+            }
+            if(sbackc(p)<0) {
+                error("sqrt of neg number\n");
+            }
+            if(k<savk)
+                n = savk;
+            else {
+                n = k*2-savk;
+                savk = k;
+            }
+            arg1 = add0(p,n);
+            arg2 = dcsqrt(arg1);
+            sputc(arg2,savk);
+            pushp(arg2);
+            continue;
+
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'z':
             p = salloc(2);
             n = stkptr - stkbeg;
@@ -381,6 +474,7 @@ commnds(void)
             sputc(p,0);
             pushp(p);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'Z':
             p = pop();
             EMPTY;
@@ -413,6 +507,7 @@ commnds(void)
             sputc(q,0);
             pushp(q);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'i':
             p = pop();
             EMPTY;
@@ -420,11 +515,13 @@ commnds(void)
             release(inbas);
             inbas = p;
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'I':
             p = copy(inbas,length(inbas)+1);
             sputc(p,0);
             pushp(p);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'o':
             p = pop();
             EMPTY;
@@ -484,26 +581,13 @@ commnds(void)
                 continue;
             ll = (70/fw)*fw;
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'O':
             p = copy(basptr,length(basptr)+1);
             sputc(p,0);
             pushp(p);
             continue;
-        case '[':
-            n = 0;
-            p = salloc(0);
-            for(;;) {
-                if((c = readc()) == ']') {
-                    if(n == 0)
-                        break;
-                    n--;
-                }
-                sputc(p,c);
-                if(c == '[')
-                    n++;
-            }
-            pushp(p);
-            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'k':
             p = pop();
             EMPTY;
@@ -518,11 +602,13 @@ commnds(void)
             release(scalptr);
             scalptr = p;
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'K':
             p = copy(scalptr,length(scalptr)+1);
             sputc(p,0);
             pushp(p);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'X':
             p = pop();
             EMPTY;
@@ -534,6 +620,7 @@ commnds(void)
             sputc(p,0);
             pushp(p);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'Q':
             p = pop();
             EMPTY;
@@ -554,16 +641,7 @@ commnds(void)
                 readptr--;
             }
             continue;
-        case 'q':
-            if(readptr <= &readstk[1])
-                exits(0);
-            if(*readptr != 0)
-                release(*readptr);
-            readptr--;
-            if(*readptr != 0)
-                release(*readptr);
-            readptr--;
-            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'f':
             if(stkptr == &stack[0])
                 Bprint(&bout,"empty stack\n");
@@ -573,20 +651,7 @@ commnds(void)
                 }
             }
             continue;
-        case 'p':
-            if(stkptr == &stack[0])
-                Bprint(&bout,"empty stack\n");
-            else {
-                dcprint(*stkptr);
-            }
-            continue;
-        case 'P':
-            p = pop();
-            EMPTY;
-            sputc(p,0);
-            Bprint(&bout,"%s",p->beg);
-            release(p);
-            continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'd':
             if(stkptr == &stack[0]) {
                 Bprint(&bout,"empty stack\n");
@@ -597,6 +662,7 @@ commnds(void)
             p = copy(*stkptr,n);
             pushp(p);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'c':
             while(stkerr == 0) {
                 p = pop();
@@ -604,6 +670,7 @@ commnds(void)
                     release(p);
             }
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'S':
             if(stkptr == &stack[0]) {
                 error("save: args\n");
@@ -629,6 +696,7 @@ commnds(void)
             continue;
         sempty:
             error("symbol table overflow\n");
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 's':
             if(stkptr == &stack[0]) {
                 error("save:args\n");
@@ -653,9 +721,11 @@ commnds(void)
             p = pop();
             sptr->val = p;
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'l':
             load();
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'L':
             c = getstk() & 0377;
             sptr = stable[c];
@@ -676,6 +746,7 @@ commnds(void)
             }
             pushp(p);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case ':':
             p = pop();
             EMPTY;
@@ -721,6 +792,7 @@ commnds(void)
             salterwd(p, s);
             sptr->val = p;
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case ';':
             p = pop();
             EMPTY;
@@ -757,6 +829,7 @@ commnds(void)
             sputc(q, 0);
             pushp(q);
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case 'x':
         execute:
             p = pop();
@@ -779,6 +852,7 @@ commnds(void)
                     unreadc(c);
             }
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case '?':
             if(++readptr == &readstk[RDSKSZ]) {
                 error("nesting depth\n");
@@ -798,21 +872,18 @@ commnds(void)
             curfile = fsave;
             *readptr = p;
             continue;
+        /*x: [[commnds()]] switch [[c]] cases (dc.c) */
         case '!':
             if(command() == 1)
                 goto execute;
             continue;
-        case '<':
-        case '>':
-        case '=':
-            if(cond(c) == 1)
-                goto execute;
-            continue;
+        /*e: [[commnds()]] switch [[c]] cases (dc.c) */
         default:
             Bprint(&bout,"%o is unimplemented\n",c);
         }
     }
 }
+/*e: function [[commnds]](dc.c) */
 
 Blk*
 div_(Blk *ddivd, Blk *ddivr)
@@ -1169,15 +1240,16 @@ edone:
     return(r);
 }
 
+/*s: function [[init]](dc.c) */
 void
 init(int argc, char *argv[])
 {
-    Sym *sp;
     Dir *d;
+    Sym *sp;
 
     ARGBEGIN {
     default:
-        dbg = 1;
+        dbg = true;
         break;
     } ARGEND
     ifile = 1;
@@ -1185,20 +1257,21 @@ init(int argc, char *argv[])
     if(*argv){
         d = dirstat(*argv);
         if(d == nil) {
-            fprint(2, "dc: can't open file %s\n", *argv);
+            fprint(STDERR, "dc: can't open file %s\n", *argv);
             exits("open");
         }
         if(d->mode & DMDIR) {
-            fprint(2, "dc: file %s is a directory\n", *argv);
+            fprint(STDERR, "dc: file %s is a directory\n", *argv);
             exits("open");
         }
         free(d);
-        if((curfile = Bopen(*argv, OREAD)) == 0) {
-            fprint(2,"dc: can't open file %s\n", *argv);
+        if((curfile = Bopen(*argv, OREAD)) == nil) {
+            fprint(STDERR,"dc: can't open file %s\n", *argv);
             exits("open");
         }
     }
-/*  dummy = malloc(0);  /* prepare for garbage-collection */
+//  dummy = malloc(0);  /* prepare for garbage-collection */
+    /*s: [[init()]] initialize globals(dc.c) */
     scalptr = salloc(1);
     sputc(scalptr,0);
     basptr = salloc(1);
@@ -1223,6 +1296,7 @@ init(int argc, char *argv[])
     stkerr = 0;
     readptr = &readstk[0];
     k=0;
+
     sp = sptr = &symlst[0];
     while(sptr < &symlst[TBLSZ-1]) {
         sptr->next = ++sp;
@@ -1230,8 +1304,11 @@ init(int argc, char *argv[])
     }
     sptr->next=0;
     sfree = &symlst[0];
+    /*e: [[init()]] initialize globals(dc.c) */
 }
+/*e: function [[init]](dc.c) */
 
+/*s: function [[pushp]](dc.c) */
 void
 pushp(Blk *p)
 {
@@ -1243,17 +1320,20 @@ pushp(Blk *p)
     *++stkptr = p;
     return;
 }
-
+/*e: function [[pushp]](dc.c) */
+/*s: function [[pop]](dc.c) */
 Blk*
 pop(void)
 {
     if(stkptr == stack) {
         stkerr=1;
-        return(0);
+        return nil;
     }
     return(*stkptr--);
 }
+/*e: function [[pop]](dc.c) */
 
+/*s: function [[readin]](dc.c) */
 Blk*
 readin(void)
 {
@@ -1305,6 +1385,8 @@ gotnum:
         return(q);
     }
 }
+/*e: function [[readin]](dc.c) */
+
 
 /*
  * returns pointer to struct with ct 0's & p
@@ -1425,6 +1507,7 @@ chsign(Blk *p)
     return;
 }
 
+/*s: function [[readc]](dc.c) */
 int
 readc(void)
 {
@@ -1439,6 +1522,7 @@ loop:
     lastchar = Bgetc(curfile);
     if(lastchar != -1)
         return(lastchar);
+    // else
     if(readptr != &readptr[0]) {
         readptr--;
         if(*readptr == 0)
@@ -1450,10 +1534,11 @@ loop:
         curfile = &bin;
         goto loop;
     }
-    exits(0);
+    exits(nil);
     return 0;   /* shut up ken */
 }
-
+/*e: function [[readc]](dc.c) */
+/*s: function [[unreadc]](dc.c) */
 void
 unreadc(char c)
 {
@@ -1464,7 +1549,9 @@ unreadc(char c)
         Bungetc(curfile);
     return;
 }
+/*e: function [[unreadc]](dc.c) */
 
+/*s: function [[binop]](dc.c) */
 void
 binop(char c)
 {
@@ -1487,7 +1574,9 @@ binop(char c)
     sputc(r,savk);
     pushp(r);
 }
+/*e: function [[binop]](dc.c) */
 
+/*s: function [[dcprint]](dc.c) */
 void
 dcprint(Blk *hptr)
 {
@@ -1582,6 +1671,7 @@ dcprint(Blk *hptr)
         OUTC(sgetc(strptr));
     Bprint(&bout,"\n");
 }
+/*e: function [[dcprint]](dc.c) */
 
 Blk*
 getdec(Blk *p, int sc)
@@ -1890,6 +1980,7 @@ scale(Blk *p, int n)
     return(q);
 }
 
+/*s: function [[subt]](dc.c) */
 int
 subt(void)
 {
@@ -1904,7 +1995,9 @@ subt(void)
     binop('+');
     return(0);
 }
+/*e: function [[subt]](dc.c) */
 
+/*s: function [[command]](dc.c) */
 int
 command(void)
 {
@@ -1938,6 +2031,7 @@ command(void)
         return(0);
     }
 }
+/*e: function [[command]](dc.c) */
 
 int
 cond(char c)
@@ -2038,6 +2132,7 @@ log2_(long n)
     return i-1;
 }
 
+/*s: function [[salloc]](dc.c) */
 Blk*
 salloc(int size)
 {
@@ -2067,7 +2162,8 @@ salloc(int size)
     hdr->last = ptr+size;
     return(hdr);
 }
-
+/*e: function [[salloc]](dc.c) */
+/*s: function [[morehd]](dc.c) */
 Blk*
 morehd(void)
 {
@@ -2087,7 +2183,8 @@ morehd(void)
     (h-1)->rd=0;
     return(hfree);
 }
-
+/*e: function [[morehd]](dc.c) */
+/*s: function [[copy]](dc.c) */
 Blk*
 copy(Blk *hptr, int size)
 {
@@ -2124,7 +2221,9 @@ copy(Blk *hptr, int size)
         *ptr++ = '\0';
     return(hdr);
 }
+/*e: function [[copy]](dc.c) */
 
+/*s: function [[sdump]](dc.c) */
 void
 sdump(char *s1, Blk *hptr)
 {
@@ -2141,6 +2240,7 @@ sdump(char *s1, Blk *hptr)
         Bprint(&bout,"%d ",*p++);
     Bprint(&bout,"\n");
 }
+/*e: function [[sdump]](dc.c) */
 
 void
 seekc(Blk *hptr, int n)
@@ -2215,6 +2315,7 @@ more(Blk *hptr)
     hptr->last = p+size;
 }
 
+/*s: function [[ospace]](dc.c) */
 void
 ospace(char *s)
 {
@@ -2224,13 +2325,15 @@ ospace(char *s)
     sdump("stk",*stkptr);
     abort();
 }
-
+/*e: function [[ospace]](dc.c) */
+/*s: function [[garbage]](dc.c) */
 void
 garbage(char *s)
 {
     USED(s);
 }
-
+/*e: function [[garbage]](dc.c) */
+/*s: function [[release]](dc.c) */
 void
 release(Blk *p)
 {
@@ -2241,6 +2344,7 @@ release(Blk *p)
     hfree = p;
     free(p->beg);
 }
+/*e: function [[release]](dc.c) */
 
 Blk*
 dcgetwd(Blk *p)

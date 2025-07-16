@@ -4,7 +4,10 @@ TOP=../..
 
 LDLIBS=-lbio -l9 -lm
 
-#TODO bc
-TARG=dc
+TARG=dc bc
 
 <$TOP/mkfiles/mkmany
+
+bc.c: bc.y
+      $YACC -d bc.y
+      mv y.tab.c bc.c
