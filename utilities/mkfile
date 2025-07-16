@@ -1,7 +1,8 @@
 TOP=..
 <$TOP/mkconfig
 
-DIRS=byte compare files misc pipe time archive
+#TODO: text
+DIRS=archive byte calc compare files misc pipe time
 
 <$TOP/mkfiles/mkdirs
 
@@ -24,6 +25,7 @@ SRC_VIEWS=\
   text/grep/comp.c text/grep/globals.c \
   archive/tar/tar.c \
   archive/gzip/gzip.h archive/gzip/gzip.c archive/gzip/gunzip.c \
+  archive/zip/zip.h archive/zip/zip.c archive/zip/unzip.c \
   calc/dc.c calc/bc.y
 
 

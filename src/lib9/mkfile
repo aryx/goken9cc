@@ -102,6 +102,7 @@ LIB9OFILES=\
         cistrcmp.$O\
         lock.$O\
         dirread.$O\
+        tm2sec.$O\
 
 #ifeq ($(GOOS),windows)
 #LIB9OFILES+=\
