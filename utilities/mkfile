@@ -20,8 +20,8 @@ SRC_VIEWS=\
   misc/basename.c misc/file.c misc/iconv.c misc/strings.c misc/unicode.c \
   misc/ed.c \
   compare/misc/cmp.c compare/misc/comm.c \
-  search/grep/main.c search/grep/grep.h search/grep/sub.c search/grep/grep.y \
-  search/grep/comp.c search/grep/globals.c \
+  text/grep/main.c text/grep/grep.h text/grep/sub.c text/grep/grep.y \
+  text/grep/comp.c text/grep/globals.c \
   archive/tar/tar.c \
   archive/gzip/gzip.h archive/gzip/gzip.c archive/gzip/gunzip.c \
   calc/dc.c calc/bc.y
