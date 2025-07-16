@@ -2,6 +2,10 @@ TOP=../../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
+# -l9 just for chartorune
+# -lm just for a few math functions
+LDLIBS=-l9 -lm
+
 TARG=awk
 OFILES=re.$O\
 	lex.$O\
@@ -11,7 +15,7 @@ OFILES=re.$O\
 	tran.$O\
 	lib.$O\
 	run.$O\
-	awkgram.$O\
+	y.tab.$O\
 
 HFILES=awk.h\
 	y.tab.h\
@@ -21,6 +25,17 @@ YFILES=awkgram.y
 
 <$TOP/mkfiles/mkone
 
+proctab.c: y.tab.h maketab.c $O.maketab
+	   ./$O.maketab > proctab.c
+
+$O.maketab: maketab.$O
+	   $LD $LDFLAGS -o $target $prereq $LDLIBS
+
+maketab.$O: maketab.c
+	    $CC $CFLAGS $CFLAGS_EXTRA maketab.c
+
+CLEANFILES=$O.maketab proctab.c
+
 #CFLAGS=-FTV -c -D_REGEXP_EXTENSION -D_RESEARCH_SOURCE -D_BSD_EXTENSION -DUTF
 #YFLAGS=-S -d -v
 #CC=pcc
@@ -29,19 +44,10 @@ YFILES=awkgram.y
 #
 #y.tab.h awkgram.c:	$YFILES
 #	$YACC -o awkgram.c $YFLAGS $prereq
-#
-#clean:V:
-#	rm -f *.[$OS] [$OS].out [$OS].maketab y.tab.? y.debug y.output $TARG
-#
-#nuke:V:
-#	rm -f *.[$OS] [$OS].out [$OS].maketab y.tab.? y.debug y.output awkgram.c $TARG
-#
 #proctab.c:	$cpuobjtype.maketab
 #	./$cpuobjtype.maketab >proctab.c
-#
 #$cpuobjtype.maketab:	y.tab.h maketab.c
 #	objtype=$cputype
 #	mk maketab.$cputype
-#
 #maketab.$cputype:V:	y.tab.h maketab.$O
 #	$LD -o $O.maketab maketab.$O

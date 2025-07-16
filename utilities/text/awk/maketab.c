@@ -137,7 +137,10 @@ int main(int argc, char *argv[])
             continue;
         if (tok < FIRSTTOKEN || tok > LASTTOKEN) {
             fprintf(stderr, "maketab funny token %d %s\n", tok, buf);
-            exit(1);
+            // switched to 'continue' because bison generates mant YYxx
+            // macros that we just want to ignore
+            //exit(1);
+            continue;
         }
         names[tok-FIRSTTOKEN] = (char *) malloc(strlen(name)+1);
         strcpy(names[tok-FIRSTTOKEN], name);
