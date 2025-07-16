@@ -1,0 +1,7 @@
+TOP=../..
+<$TOP/mkconfig
+
+#TODO grep misc
+DIRS=awk
+
+<$TOP/mkfiles/mkdirs

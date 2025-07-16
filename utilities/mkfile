@@ -1,8 +1,7 @@
 TOP=..
 <$TOP/mkconfig
 
-#TODO: text
-DIRS=archive byte calc compare files misc pipe time
+DIRS=archive byte calc compare files misc pipe text time
 
 <$TOP/mkfiles/mkdirs
 
