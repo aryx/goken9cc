@@ -6,8 +6,6 @@ TOP=../..
 CFLAGS_EXTRA=-DUnix
 LDLIBS=-lbio -l9 -lm
 
-#TODO: tee: miss atnotify, tail: miss p9sleep
-TARG=xargs p mc
+TARG=xargs p mc tee tail
 
 <$TOP/mkfiles/mkmany
-

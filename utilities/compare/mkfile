@@ -1,7 +1,6 @@
 TOP=../..
 <$TOP/mkconfig
 
-#TODO: diff need atnotify
-DIRS=misc
+DIRS=diff misc
 
 <$TOP/mkfiles/mkdirs

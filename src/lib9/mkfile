@@ -103,6 +103,8 @@ LIB9OFILES=\
         lock.$O\
         dirread.$O\
         tm2sec.$O\
+        atnotify.$O\
+        sleep.$O\
 
 #ifeq ($(GOOS),windows)
 #LIB9OFILES+=\
