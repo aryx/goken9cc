@@ -15,7 +15,7 @@ SRC_VIEWS=\
   files/chmod.c files/chgrp.c \
   files/mtime.c \
   files/wc.c files/du.c \
-  pipe/p.c pipe/mc.c pipe/sort.c pipe/uniq.c pipe/tail.c pipe/tee.c pipe/xargs.c \
+  pipe/p.c pipe/mc.c pipe/tail.c pipe/tee.c pipe/xargs.c \
   byte/xd.c byte/dd.c byte/split.c \
   time/date.c time/cal.c \
   misc/basename.c misc/file.c misc/iconv.c misc/strings.c misc/unicode.c \
@@ -25,6 +25,7 @@ SRC_VIEWS=\
   archive/gzip/gzip.h archive/gzip/gzip.c archive/gzip/gunzip.c \
   archive/zip/zip.h archive/zip/zip.c archive/zip/unzip.c \
   calc/dc.c calc/bc.y \
+  text/misc/sort.c text/misc/uniq.c \
   text/grep/main.c text/grep/grep.h text/grep/sub.c text/grep/grep.y \
   text/grep/comp.c text/grep/globals.c \
   text/awk/awk.h  text/awk/proto.h text/awk/awkgram.y text/awk/lex.c text/awk/lib.c \

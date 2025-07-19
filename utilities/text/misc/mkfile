@@ -1,0 +1,10 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-lbio -l9 -lm
+
+# sort: miss tobaserune
+TARG=uniq
+
+<$TOP/mkfiles/mkmany
