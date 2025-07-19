@@ -1,4 +1,6 @@
-<$PLAN9/src/mkhdr
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=eqn
 OFILES=main.$O\
@@ -24,22 +26,25 @@ OFILES=main.$O\
 	size.$O\
 	sqrt.$O\
 	text.$O\
-	eqn.$O\
+	y.tab.$O\
+
+#	eqn.$O\
 
 YFILES=eqn.y\
 
 HFILES=e.h\
 	y.tab.h\
 
-<$PLAN9/src/mkone
+<$TOP/mkfiles/mkone
 
-YFLAGS=-d -S
+#YFLAGS=-d -S
+YFLAGS=-d
 
-eqn.c:	y.tab.c prevy.tab.h
-	mv y.tab.c $target
-
-prevy.tab.h:	y.tab.h
-	sh -c 'cmp -s y.tab.h prevy.tab.h || cp y.tab.h prevy.tab.h'
-
-clean:
-	rm -f eqn.c prevy.tab.h
+#eqn.c:	y.tab.c prevy.tab.h
+#	mv y.tab.c $target
+#
+#prevy.tab.h:	y.tab.h
+#	sh -c 'cmp -s y.tab.h prevy.tab.h || cp y.tab.h prevy.tab.h'
+#
+#clean:
+#	rm -f eqn.c prevy.tab.h
