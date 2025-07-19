@@ -1,0 +1,6 @@
+TOP=..
+<$TOP/mkconfig
+
+DIRS=troff2html
+
+<$TOP/mkfiles/mkdirs

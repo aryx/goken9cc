@@ -1,8 +1,12 @@
-<$PLAN9/src/mkhdr
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS= -lbio -l9
 
 TARG=troff2html
 HFILES=chars.h
-OFILES=troff2html.$O\
+OFILES=troff2html.$O
 
-<$PLAN9/src/mkone
+<$TOP/mkfiles/mkone
 
