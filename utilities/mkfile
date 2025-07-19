@@ -26,6 +26,7 @@ SRC_VIEWS=\
   archive/zip/zip.h archive/zip/zip.c archive/zip/unzip.c \
   calc/dc.c calc/bc.y \
   text/misc/sort.c text/misc/uniq.c text/misc/join.c \
+  text/misc/tr.c text/misc/sed.c \
   text/grep/main.c text/grep/grep.h text/grep/sub.c text/grep/grep.y \
   text/grep/comp.c text/grep/globals.c \
   text/awk/awk.h  text/awk/proto.h text/awk/awkgram.y text/awk/lex.c text/awk/lib.c \

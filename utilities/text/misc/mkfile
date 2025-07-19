@@ -4,7 +4,7 @@ TOP=../../..
 
 LDLIBS=-lbio -l9 -lm
 
-# sort: miss tobaserune, join: ?? error j1
-TARG=uniq
+# sort: miss tobaserune, join: ?? error j1, sed: kenccext
+TARG=uniq tr
 
 <$TOP/mkfiles/mkmany
