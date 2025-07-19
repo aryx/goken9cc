@@ -1,8 +1,11 @@
-<$PLAN9/src/mkhdr
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
 
 TARG=grap
 OFILES=\
-	grap.$O\
+	y.tab.$O\
 	grapl.$O\
 	main.$O\
 	input.$O\
@@ -21,11 +24,13 @@ HFILES=grap.h\
 YFILES=grap.y
 LFILES=grapl.lx
 
-<$PLAN9/src/mkone
-YFLAGS=-d -S
+<$TOP/mkfiles/mkone
 
-grap.c:	y.tab.c
-	mv $prereq $target
+#YFLAGS=-d -S
+YFLAGS=-d
+
+#grap.c:	y.tab.c
+#	mv $prereq $target
 
 grapl.c:D: $LFILES
 	$LEX -t $prereq > $target
