@@ -1,0 +1,18 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+#TODO: atnotify 
+
+TARG=diff
+LDLIBS=-lbio -l9
+
+OFILES=\
+	diffdir.$O\
+	diffio.$O\
+	diffreg.$O\
+	main.$O\
+
+HFILES=diff.h
+
+<$TOP/mkfiles/mkone
