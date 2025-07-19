@@ -1,6 +1,7 @@
 TOP=..
 <$TOP/mkconfig
 
-DIRS=troff2html
+#TODO: htmlroff: misc runestrcmp and a few other
+DIRS=troff2html misc tbl
 
 <$TOP/mkfiles/mkdirs

@@ -1,4 +1,8 @@
-<$PLAN9/src/mkhdr
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-lbio -l9
 
 TARG=htmlroff
 
@@ -32,7 +36,8 @@ OFILES=\
 
 HFILES=a.h
 
-<$PLAN9/src/mkone
+<$TOP/mkfiles/mkone
+
 
 auth:V: auth.html
 	web auth.html

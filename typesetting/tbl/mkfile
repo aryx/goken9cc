@@ -1,6 +1,11 @@
-<$PLAN9/src/mkhdr
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-lbio -l9
 
 TARG=tbl
+
 OFILES=\
 	t8.$O\
 	t4.$O\
@@ -28,4 +33,4 @@ OFILES=\
 HFILES=\
 	t.h\
 
-<$PLAN9/src/mkone
+<$TOP/mkfiles/mkone
