@@ -4,7 +4,7 @@ TOP=../../..
 
 LDLIBS=-lbio -l9 -lm
 
-# sort: miss tobaserune
+# sort: miss tobaserune, join: ?? error j1
 TARG=uniq
 
 <$TOP/mkfiles/mkmany
