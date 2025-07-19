@@ -13,7 +13,7 @@ DIRS=\
   src/cmd/5l src/cmd/5a src/cmd/5c machines/5i \
   src/cmd/va src/cmd/vl src/cmd/vc \
   src/cmd/prof src/cmd/cov \
-  utilities
+  utilities typesetting
 
 <$TOP/mkfiles/mkdirs
 
