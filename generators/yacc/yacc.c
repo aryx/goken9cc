@@ -589,7 +589,7 @@ main(int argc, char *argv[])
 
     char *s;
     if((s = getenv("YACCPAR")) != 0)
-		parser = s ;
+  parser = s ;
     else
         parser = unsharp(PARSER);
 
@@ -843,15 +843,15 @@ summary(void)
 void
 error(char *s, ...)
 {
-	va_list arg;
+ va_list arg;
 
     nerrors++;
     fprint(2, "\n fatal error:");
     // THIS does not work, need to use va_start probably
     //old: fprint(2, s, (&s)[1]);
-	va_start(arg, s);
-	vfprint(2, s, arg);
-	va_end(arg);
+ va_start(arg, s);
+ vfprint(2, s, arg);
+ va_end(arg);
     fprint(2, ", %s:%d\n", infile, lineno);
     if(!fatfl)
         return;
