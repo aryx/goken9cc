@@ -2,11 +2,15 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
+LDLIBS=-l9 -lm
 
 TARG=grap
+
+#	grapl.$O\
+
 OFILES=\
 	y.tab.$O\
-	grapl.$O\
+	lex.yy.$O\
 	main.$O\
 	input.$O\
 	print.$O\
@@ -18,22 +22,26 @@ OFILES=\
 	label.$O\
 	misc.$O\
 
-HFILES=grap.h\
-	y.tab.h\
+HFILES=grap.h y.tab.h
 
 YFILES=grap.y
 LFILES=grapl.lx
+
+YACC=$TOP/generators/yacc/o.yacc
+LEX=$TOP/generators/lex/o.out
 
 <$TOP/mkfiles/mkone
 
 #YFLAGS=-d -S
 YFLAGS=-d
 
+LFLAGS=-t
+
 #grap.c:	y.tab.c
 #	mv $prereq $target
-
-grapl.c:D: $LFILES
-	$LEX -t $prereq > $target
-
-clean:V:
-	rm -f [$OS].out *.[$OS] y.tab.? lex.yy.c grapl.c grap.c grap
+#
+#grapl.c:D: $LFILES
+#	$LEX -t $prereq > $target
+#
+#clean:V:
+#	rm -f [$OS].out *.[$OS] y.tab.? lex.yy.c grapl.c grap.c grap

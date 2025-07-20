@@ -2,6 +2,8 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
+LDLIBS=-l9
+
 TARG=eqn
 OFILES=main.$O\
 	tuning.$O\
@@ -30,10 +32,11 @@ OFILES=main.$O\
 
 #	eqn.$O\
 
-YFILES=eqn.y\
+YFILES=eqn.y
 
-HFILES=e.h\
-	y.tab.h\
+YACC=$TOP/generators/yacc/o.yacc
+
+HFILES=e.h y.tab.h
 
 <$TOP/mkfiles/mkone
 

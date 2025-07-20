@@ -2,8 +2,8 @@ TOP=..
 <$TOP/mkconfig
 
 #TODO: htmlroff: misc runestrcmp and a few other
-# eqn: need old yacc
 # grap: need old lex
-DIRS=troff tbl   troff2html misc 
+# pic: ??
+DIRS=troff tbl eqn   troff2html misc 
 
 <$TOP/mkfiles/mkdirs
