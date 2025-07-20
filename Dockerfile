@@ -17,7 +17,9 @@ RUN ./scripts/promote-mk.sh
 # coupling: env.sh
 ENV PATH="/src/bin:${PATH}"
 ENV MKSHELL="/src/bin/rc"
+#alt: PLAN9="/src"
 ENV RCMAIN="/src/etc/rcmain.unix"
+ENV YACCPAR="/src/etc/yaccpar"
 
 RUN ./configure
 RUN mk
