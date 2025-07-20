@@ -1,0 +1,30 @@
+TOP=..
+<$TOP/mkconfig
+
+# lex depends on yacc so let's build yacc first
+DIRS=yacc lex
+
+<$TOP/mkfiles/mkdirs
+
+# ------------------------------------------------------------------------------
+
+SRC_VIEWS=\
+  lex/ldefs.h\
+  lex/parser.y\
+  lex/liblex/allprint.c\
+  lex/liblex/main.c\
+  lex/liblex/reject.c\
+  lex/liblex/yyless.c\
+  lex/liblex/yywrap.c\
+  lex/globals.c\
+  lex/header.c\
+  lex/sub1.c\
+  lex/sub2.c\
+  lex/lmain.c\
+  yacc/yacc.c\
+
+sync:VI:
+	for (i in $SRC_VIEWS) {
+	   if (~ $i y.tab.[ch]) echo skipping $i
+	   if not  syncweb -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/generators/CompilerGenerator_c.nw  $i
+        }

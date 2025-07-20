@@ -1,0 +1,9 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-lbio -l9
+
+TARG=yacc
+
+<$TOP/mkfiles/mkmany
