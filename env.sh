@@ -5,3 +5,5 @@ export PATH=`pwd`/bin:`pwd`/ROOT/amd64/bin:$PATH
 export MKSHELL=`pwd`/bin/rc
 # for rc to find its init file
 export RCMAIN=`pwd`/etc/rcmain.unix
+# for yacc to find its template file
+export YACCPAR=`pwd`/etc/yaccparxxx

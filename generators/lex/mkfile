@@ -16,7 +16,8 @@ OFILES=globals.$O\
 HFILES=ldefs.h
 
 # ugly? 
-YACC=../yacc/o.yacc -d
+YACC=$TOP/generators/yacc/o.yacc
+
 YFILES=parser.y
 
 <$TOP/mkfiles/mkone

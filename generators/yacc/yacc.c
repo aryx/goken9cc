@@ -26,11 +26,11 @@
 
 /*s: constant PARSER */
 // was /sys/lib/yaccpar
-#define PARSER		"#9/data/yacc/yaccpar"
+#define PARSER		"#9/etc/yaccpar"
 /*e: constant PARSER */
 /*s: constant PARSERS */
 // was /sys/lib/yaccpars
-#define PARSERS		"#9/data/yacc/yaccpars"
+#define PARSERS		"#9/etc/yaccpars"
 /*e: constant PARSERS */
 /*s: constant TEMPNAME */
 #define TEMPNAME	"y.tmp.XXXXXX"
@@ -587,7 +587,11 @@ void
 main(int argc, char *argv[])
 {
 
-    parser=unsharp(PARSER);
+    char *s;
+    if((s = getenv("YACCPAR")) != 0)
+		parser = s ;
+    else
+        parser = unsharp(PARSER);
 
     setup(argc, argv);	/* initialize and read productions */
     tbitset = NWORDS(ntokens);
