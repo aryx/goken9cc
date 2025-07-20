@@ -322,6 +322,7 @@ extern	long	dirreadall(fdt, Dir**);
 extern	int	fd2path(int, char*, int);
 
 extern	char*	cleanname(char*);
+// plan9port specific
 extern	char*	unsharp(char*);
 
 //PAD: why was in libc.h?? it's part of rc actually

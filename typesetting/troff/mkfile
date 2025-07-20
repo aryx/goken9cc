@@ -1,4 +1,8 @@
-<$PLAN9/src/mkhdr
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-l9
 
 TARG=troff
 OFILES=n1.$O\
@@ -26,32 +30,36 @@ HFILES=tdef.h\
 	dwbinit.h\
 
 
-<$PLAN9/src/mkone
-CFLAGS=-DUNICODE
+<$TOP/mkfiles/mkone
+
+
+CFLAGS_EXTRA=-DUNICODE
 
 TMACDIR='"tmac/tmac."'
+
+TDEVNAME='"utf"'
+NDEVNAME='"utf"'
+
+ni.$O:	ni.c $HFILES
+	$CC $CFLAGS '-DTMACDIR='^$TMACDIR ni.c
+
+t10.$O:	t10.c $HFILES
+	$CC $CFLAGS '-DTDEVNAME='^$TDEVNAME t10.c
+
 FONTDIR='"troff/font"'
 NTERMDIR='"troff/term/tab."'
 ALTHYPHENS='"lib/hyphen.tex"'
 TEXHYPHENS='"#9/lib/hyphen.tex"'
 DWBHOME='"#9/"'
-TDEVNAME='"utf"'
-NDEVNAME='"utf"'
-
-ni.$O:	ni.c $HFILES
-	$CC $CFLAGS -DTMACDIR=$TMACDIR ni.c
-
-t10.$O:	t10.c $HFILES
-	$CC $CFLAGS -DTDEVNAME=$TDEVNAME t10.c
 
 n1.$O:	n1.c $HFILES
-	$CC $CFLAGS -DFONTDIR=$FONTDIR -DNTERMDIR=$NTERMDIR -DTEXHYPHENS=$TEXHYPHENS -DALTHYPHENS=$ALTHYPHENS -DDWBHOME=$DWBHOME n1.c
+	$CC $CFLAGS $CFLAGS_EXTRA '-DFONTDIR="troff/font"' '-DNTERMDIR="troff/term/tab."' '-DTEXHYPHENS="#9/lib/hyphen.tex"' '-DALTHYPHENS="lib/hyphen.tex"' '-DDWBHOME="#9/"' n1.c
 
 n10.$O:	n10.c $HFILES
-	$CC $CFLAGS -DTDEVNAME=$NDEVNAME n10.c
+	$CC $CFLAGS '-DTDEVNAME='^$NDEVNAME n10.c
 
 n8.$O:	n8.c $HFILES
-	$CC $CFLAGS -DTEXHYPHENS=$TEXHYPHENS n8.c
+	$CC $CFLAGS '-DTEXHYPHENS='^$TEXHYPHENS n8.c
 
 dwbinit.$O:	dwbinit.c
-	$CC $CFLAGS -DDWBHOME=$DWBHOME dwbinit.c
+	$CC $CFLAGS '-DDWBHOME='^$DWBHOME dwbinit.c

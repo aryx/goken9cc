@@ -105,6 +105,9 @@ LIB9OFILES=\
         tm2sec.$O\
         atnotify.$O\
         sleep.$O\
+        \
+        get9root.$O\
+        unsharp.$O\
 
 #ifeq ($(GOOS),windows)
 #LIB9OFILES+=\
@@ -131,4 +134,7 @@ HFILES=\
 
 #bugfix: do not use $preqeq below because then HFILES are also passed
 goos.$O: goos.c
-	$CC $CFLAGS $CFLAGS_EXTRA '-DGOOS="$GOOS"' '-DGOARCH="$GOARCH"' '-DGOROOT="$ROOT"' '-DGOVERSION="goken"' goos.c
+	$CC $CFLAGS $CFLAGS_EXTRA '-DGOOS='"$GOOS" '-DGOARCH='"$GOARCH" '-DGOROOT='"$ROOT" '-DGOVERSION='"goken" goos.c
+
+get9root.$O: get9root.c
+	$CC $CFLAGS $CFLAGS_EXTRA '-DPLAN9_TARGET='"/home/pad/goken/" get9root.c

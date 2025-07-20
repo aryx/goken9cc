@@ -4,6 +4,6 @@ TOP=..
 #TODO: htmlroff: misc runestrcmp and a few other
 # eqn: need old yacc
 # grap: need old lex
-DIRS=troff2html misc tbl
+DIRS=troff tbl   troff2html misc 
 
 <$TOP/mkfiles/mkdirs
