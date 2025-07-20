@@ -9,7 +9,7 @@ static struct {
 	char *old;
 	char *new;
 } replace[] = {
-	"#9", nil,	/* must be first */
+	"#9", nil,	/* must be first */ // nil is replaced by get9root() below
 	"#d", "/dev/fd",
 };
 

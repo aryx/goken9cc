@@ -136,5 +136,7 @@ HFILES=\
 goos.$O: goos.c
 	$CC $CFLAGS $CFLAGS_EXTRA '-DGOOS='"$GOOS" '-DGOARCH='"$GOARCH" '-DGOROOT='"$ROOT" '-DGOVERSION='"goken" goos.c
 
+ROOTDIR=`{cd ../..; pwd}
+
 get9root.$O: get9root.c
-	$CC $CFLAGS $CFLAGS_EXTRA '-DPLAN9_TARGET='"/home/pad/goken/" get9root.c
+	$CC $CFLAGS $CFLAGS_EXTRA '-DPLAN9_TARGET='"$ROOTDIR" get9root.c
