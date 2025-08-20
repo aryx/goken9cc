@@ -247,6 +247,8 @@ static  struct
     0,             0
   };
 
+extern void killchildren(char *msg);
+
 static void
 notifyf(int sig)
 {

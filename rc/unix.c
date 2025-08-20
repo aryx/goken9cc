@@ -7,6 +7,7 @@
 // to avoid conflict for wait(), waitpid() signatures
 #define NOPLAN9DEFINES
 #include "rc.h"
+#include "fns.h"
 #include "io.h"
 #include "exec.h"
 #include "getflags.h"
@@ -225,7 +226,7 @@ char *sigmsg[] = {
 // weird bugs like the $status was containing weird strings and so
 // failing mk even if the command was run correctly.
 // Anyway, simpler to uncomment and use the Waitfor() below.
-void
+int
 Waitfor(int pid, bool persist)
 {
  int wpid, sig;
@@ -377,7 +378,7 @@ Opendir(name)
 }
 
 int
-Readdir(int f, char *p, int onlydirs)
+Readdir(int f, void *p, int onlydirs)
 {
   struct dirent *dp = readdir(dirlist[f]);
 

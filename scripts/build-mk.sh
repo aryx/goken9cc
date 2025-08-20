@@ -20,16 +20,46 @@ if [ ! -f configure ]; then
 fi
 
 TOP=`pwd`
+
+#coupling: mkconfig
+#GOOS=linux
+#GOARCH=amd64
+ARCH=`uname -m`
+case "$ARCH" in
+    x86_64)
+        GOARCH=amd64
+        ;;
+    aarch64 | arm64)
+        GOARCH=arm64
+        ;;
+    *)
+        echo "Unsupported architecture: $ARCH" >&2
+        exit 1
+        ;;
+esac
+OS=`uname -s`
+case "$OS" in
+    Linux)
+        GOOS=linux
+        YACC=yacc
+        ;;
+    Darwin)
+        GOOS=darwin
+        YACC=byacc
+        ;;
+    *)
+        echo "Unsupported OS: $OS" >&2
+        exit 1
+        ;;
+esac
+
 #coupling: mkfiles/mkfile.proto and mkfiles/amd64/mkfile
 CFLAGS="-Wno-cpp --std=gnu89 -c -I$TOP/include -I. -O0 -fno-inline -ggdb"
-LDFLAGS="-L$TOP/ROOT/amd64/lib"
-#coupling: mkconfig
-GOOS=linux
-GOARCH=amd64
+LDFLAGS="-L$TOP/ROOT/$GOARCH/lib"
 
 #Note that because we just need to compile mk and rc, we don't need all of lib9
 # so we could reduce the list below. However, then we need to delete lib9.a
-# when compiling the rest of goken, which we now do (see end of this file).
+# when compiling the rest of goken (see end of this file).
 cd $TOP/src/lib9
 gcc $CFLAGS -DPLAN9PORT _p9dir.c -o _p9dir.o
 gcc $CFLAGS -DPLAN9PORT _exits.c -o _exits.o
@@ -104,7 +134,7 @@ gcc $CFLAGS -DPLAN9PORT utf/utfrune.c -o utf/utfrune.o
 gcc $CFLAGS -DPLAN9PORT utf/utfutf.c -o utf/utfutf.o
 gcc $CFLAGS -DPLAN9PORT utf/runetype.c -o utf/runetype.o
 ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o create.o dirfstat.o dirfwstat.o dirstat.o dirwstat.o dup.o errstr.o exec.o execl.o exitcode.o exits.o getenv.o getfields.o getwd.o goos.o main.o math/nan.o nulldir.o open.o readn.o seek.o strecpy.o sysfatal.o time.o tokenize.o await.o getuser.o jmp.o notify.o rfork.o ctime.o zoneinfo.o fmt/dofmt.o fmt/fltfmt.o fmt/fmt.o fmt/fmtfd.o fmt/fmtfdflush.o fmt/fmtlocale.o fmtlock2.o fmt/fmtnull.o fmt/fmtprint.o fmt/fmtquote.o fmt/fmtrune.o fmt/fmtstr.o fmt/fmtvprint.o fmt/fprint.o fmt/nan64.o fmt/print.o fmt/seprint.o fmt/smprint.o fmt/snprint.o fmt/sprint.o fmt/strtod.o fmt/vfprint.o fmt/vseprint.o fmt/vsmprint.o fmt/vsnprint.o fmt/charstod.o fmt/pow10.o utf/rune.o utf/utfecpy.o utf/utflen.o utf/utfnlen.o utf/utfrrune.o utf/utfrune.o utf/utfutf.o utf/runetype.o
-cp lib9.a $TOP/ROOT/amd64/lib/lib9.a
+cp lib9.a $TOP/ROOT/$GOARCH/lib/lib9.a
 
 
 cd $TOP/src/libbio
@@ -125,7 +155,7 @@ gcc $CFLAGS -c bread.c
 gcc $CFLAGS -c bseek.c
 gcc $CFLAGS -c bwrite.c
 ar rsc libbio.a bbuffered.o bfildes.o bflush.o bgetc.o bgetrune.o bgetd.o binit.o boffset.o bprint.o bputc.o bputrune.o brdline.o brdstr.o bread.o bseek.o bwrite.o
-cp libbio.a $TOP/ROOT/amd64/lib/libbio.a
+cp libbio.a $TOP/ROOT/$GOARCH/lib/libbio.a
 
 cd $TOP/lib_strings/libregexp
 gcc $CFLAGS -c regcomp.c
@@ -136,7 +166,7 @@ gcc $CFLAGS -c regaux.c
 gcc $CFLAGS -c rregexec.c
 gcc $CFLAGS -c rregsub.c
 ar rsc libregexp.a regcomp.o regerror.o regexec.o regsub.o regaux.o rregexec.o rregsub.o
-cp libregexp.a $TOP/ROOT/amd64/lib/libregexp.a
+cp libregexp.a $TOP/ROOT/$GOARCH/lib/libregexp.a
 
 cd $TOP/mk
 gcc $CFLAGS -c globals.c
@@ -163,10 +193,10 @@ gcc $CFLAGS -c varsub.c
 gcc $CFLAGS -c word.c
 gcc $CFLAGS -c Posix.c
 gcc $LDFLAGS -o o.out globals.o utils.o dumpers.o archive.o bufblock.o env.o file.o graph.o lex.o main.o match.o mk.o parse.o rc.o recipe.o rule.o run.o shprint.o symtab.o var.o varsub.o word.o Posix.o -lregexp -lbio -l9 -lm
-cp o.out $TOP/ROOT/amd64/bin/mk
+cp o.out $TOP/ROOT/$GOARCH/bin/mk
 
 cd $TOP/rc
-yacc -d syn.y
+$YACC -d syn.y
 gcc $CFLAGS -DUnix -c code.c
 gcc $CFLAGS -DUnix -c exec.c
 gcc $CFLAGS -DUnix -c getflags.c
@@ -196,16 +226,16 @@ gcc $CFLAGS -DUnix -c main.c
 gcc $CFLAGS -DUnix -c y.tab.c
 gcc $CFLAGS -DUnix -c unix.c
 gcc $LDFLAGS -o o.out code.o exec.o getflags.o glob.o here.o io.o lex.o pcmd.o pfnc.o simple.o trap.o tree.o var.o processes.o globals.o utils.o error.o words.o executils.o status.o builtins.o input.o path.o env.o fmt.o main.o y.tab.o unix.o -l9 -lm
-cp o.out $TOP/ROOT/amd64/bin/rc
+cp o.out $TOP/ROOT/$GOARCH/bin/rc
 
 # We now also compile 'ed' because it is needed by mkenam and it is simpler
 # to reduce external deps.
 cd $TOP/utilities/misc/
 gcc $CFLAGS -c ed.c
 gcc $LDFLAGS -o o.out ed.o -lregexp -lbio -l9 -lm
-cp o.out $TOP/ROOT/amd64/bin/ed
+cp o.out $TOP/ROOT/$GOARCH/bin/ed
 
 # Safer to delete the generated libs as we may have forgotten objects
 # that are not needed for mk/rc but might be needed by other programs
 # (especially libc.a).
-rm -f $TOP/ROOT/amd64/lib/*.a
+rm -f $TOP/ROOT/$GOARCH/lib/*.a

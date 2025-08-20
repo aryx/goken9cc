@@ -7,6 +7,8 @@
 #include "io.h"
 /*e: includes */
 
+extern int needsrcquote(int c);
+
 /*s: global [[pfmtnest]] */
 int pfmtnest = 0;
 /*e: global [[pfmtnest]] */
