@@ -10,7 +10,7 @@
 
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
-  build-mk.sh to "boostrap" mk/rc
+  build-mk.sh to "bootstrap" mk/rc
 - add also ed source code from principia softwarica so no need external 'ed' and
   build-mk.sh now build mk, rc, and 'ed'
 

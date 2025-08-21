@@ -191,14 +191,14 @@ main(int argc, char *argv[])
     if(oflag) {
         p1 = "/fd/1";
         p2 = savedfile;
-        while(*p2++ = *p1++)
+        while((*p2++ = *p1++))
             ;
         globp = L"a";
     } else
     if(*argv) {
         p1 = *argv;
         p2 = savedfile;
-        while(*p2++ = *p1++)
+        while((*p2++ = *p1++))
             if(p2 >= &savedfile[sizeof(savedfile)])
                 p2--;
         globp = L"r";
@@ -654,7 +654,7 @@ filename(int comm)
         if(*p1 == 0 && comm != 'f')
             error(Q);
         p2 = file;
-        while(*p2++ = *p1++)
+        while((*p2++ = *p1++))
             ;
         return;
     }
@@ -675,7 +675,7 @@ filename(int comm)
     if(savedfile[0] == 0 || comm == 'e' || comm == 'f') {
         p1 = savedfile;
         p2 = file;
-        while(*p1++ = *p2++)
+        while((*p1++ = *p2++))
             ;
     }
 }
@@ -790,7 +790,7 @@ notifyf(void *a, char *s)
 int
 getchr(void)
 {
-    if(lastc = peekc) {
+    if((lastc = peekc)) {
         peekc = 0;
         return lastc;
     }
@@ -1107,7 +1107,7 @@ getline(int tl)
     bp = getblock(tl, OREAD);
     nl = nleft;
     tl &= ~((BLKSIZE/sizeof(Rune)) - 1);
-    while(*lp++ = *bp++) {
+    while((*lp++ = *bp++)) {
         nl -= sizeof(Rune);
         if(nl == 0) {
             tl += BLKSIZE/sizeof(Rune);
@@ -1131,7 +1131,7 @@ putline(void)
     bp = getblock(tl, OWRITE);
     nl = nleft;
     tl &= ~((BLKSIZE/sizeof(Rune))-1);
-    while(*bp = *lp++) {
+    while((*bp = *lp++)) {
         if(*bp++ == '\n') {
             bp[-1] = 0;
             linebp = lp;
@@ -1151,7 +1151,7 @@ putline(void)
 /*e: function [[putline]](ed.c) */
 /*s: function [[blkio]](ed.c) */
 void
-blkio(int b, uchar *buf, long (*iofcn)(int, void *, long))
+blkio(int b, uchar *buf, long (*iofcn)(int, void *, unsigned long))
 {
     seek(tfile, b*BLKSIZE, SEEK__START);
     if((*iofcn)(tfile, buf, BLKSIZE) != BLKSIZE) {
@@ -1184,14 +1184,14 @@ getblock(int atl, int iof)
         return (Rune*)(obuff+off);
     if(iof == OREAD) {
         if(ichanged)
-            blkio(iblock, ibuff, write);
+            blkio(iblock, ibuff, (long (*)(int, void *, unsigned long))write);
         ichanged = 0;
         iblock = bno;
         blkio(bno, ibuff, read);
         return (Rune*)(ibuff+off);
     }
     if(oblock >= 0)
-        blkio(oblock, obuff, write);
+        blkio(oblock, obuff, (long (*)(int, void *, unsigned long))write);
     oblock = bno;
     return (Rune*)(obuff+off);
 }
@@ -1292,13 +1292,13 @@ join(void)
     gp = genbuf;
     for(a1=addr1; a1<=addr2; a1++) {
         lp = getline(*a1);
-        while(*gp = *lp++)
+        while((*gp = *lp++))
             if(gp++ >= &genbuf[LBSIZE-sizeof(Rune)])
                 error(Q);
     }
     lp = linebuf;
     gp = genbuf;
-    while(*lp++ = *gp++)
+    while((*lp++ = *gp++))
         ;
     *addr1 = putline();
     if(addr1 < addr2)
@@ -1409,7 +1409,7 @@ getsub(void)
     p1 = linebuf;
     if((p2 = linebp) == 0)
         return EOF;
-    while(*p1++ = *p2++)
+    while((*p1++ = *p2++))
         ;
     linebp = 0;
     return 0;
@@ -1427,7 +1427,7 @@ dosub(void)
     rp = rhsbuf;
     while(lp < loc1)
         *sp++ = *lp++;
-    while(c = *rp++) {
+    while((c = *rp++)) {
         if(c == '&'){
             sp = place(sp, loc1, loc2);
             continue;
@@ -1446,12 +1446,12 @@ dosub(void)
     }
     lp = loc2;
     loc2 = sp - genbuf + linebuf;
-    while(*sp++ = *lp++)
+    while((*sp++ = *lp++))
         if(sp >= &genbuf[LBSIZE])
             error(Q);
     lp = linebuf;
     sp = genbuf;
-    while(*lp++ = *sp++)
+    while((*lp++ = *sp++))
         ;
 }
 /*e: function [[dosub]](ed.c) */
