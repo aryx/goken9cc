@@ -24,14 +24,58 @@ set -eu # to debug this script add '-x'
 #
 # TODO: 
 #  - check for gcc/clang
-#  - detect arch and generate appropriate mkconfig
-#    (imitate what x9cc/configure does)
 #  - detect if bin/ contains mk, rc, and ed
 #    and maybe run scripts/build-mk.sh and promote-mk.sh automatically
 
 ###############################################################################
 # Entry point
 ###############################################################################
+
+#TODO: imitate what x9cc/configure does
+ARCH=`uname -m`
+case "$ARCH" in
+    x86_64)
+        GOARCH=amd64
+        ;;
+    aarch64 | arm64)
+        GOARCH=arm64
+        ;;
+    *)
+        echo "Unsupported architecture: $ARCH" >&2
+        exit 1
+        ;;
+esac
+OS=`uname -s`
+case "$OS" in
+    Linux)
+        GOOS=linux
+        YACC=yacc
+        ;;
+    Darwin)
+        GOOS=darwin
+        YACC=byacc
+        ;;
+    *)
+        echo "Unsupported OS: $OS" >&2
+        exit 1
+        ;;
+esac
+
+echo 'Generating ./mkconfig'
+#alt: could be set by env.sh
+# in mkfiles/$objtype/mkfile
+#O=o
+# in mkfiles/mkfile.proto included from mkfiles/$objtype/mkfile
+#CPUS=arm amd64 386
+#OS=568
+echo "objtype=$GOARCH" > mkconfig
+echo "GOOS=$GOOS" >> mkconfig
+echo "GOARCH=$GOARCH" >> mkconfig
+#GOHOSTOS=linux
+#GOHOSTARCH=amd64
+echo "YACC=$YACC" >> mkconfig
+
+#TODO: run scripts/build-mk.sh and scripts/promote-mk.sh
 
 echo 'Everything looks fine. You can now run: '
 echo

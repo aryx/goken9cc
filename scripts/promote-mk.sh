@@ -10,8 +10,13 @@ if [ ! -f configure ]; then
 	echo 'this script must be run from the project root'
 	exit 1
 fi
+if [ ! -f mkconfig ]; then
+	echo 'you must run ./configure first'
+	exit 1
+fi
+. ./mkconfig
 set -x
 
-cp ROOT/amd64/bin/mk bin/
-cp ROOT/amd64/bin/rc bin/
-cp ROOT/amd64/bin/ed bin/
+cp ROOT/$GOARCH/bin/mk bin/
+cp ROOT/$GOARCH/bin/rc bin/
+cp ROOT/$GOARCH/bin/ed bin/

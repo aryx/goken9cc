@@ -18,40 +18,14 @@ if [ ! -f configure ]; then
 	echo 'this script must be run from the project root'
 	exit 1
 fi
+if [ ! -f mkconfig ]; then
+	echo 'you must run ./configure first'
+	exit 1
+fi
+. ./mkconfig
 
 TOP=`pwd`
 
-#coupling: mkconfig
-#GOOS=linux
-#GOARCH=amd64
-ARCH=`uname -m`
-case "$ARCH" in
-    x86_64)
-        GOARCH=amd64
-        ;;
-    aarch64 | arm64)
-        GOARCH=arm64
-        ;;
-    *)
-        echo "Unsupported architecture: $ARCH" >&2
-        exit 1
-        ;;
-esac
-OS=`uname -s`
-case "$OS" in
-    Linux)
-        GOOS=linux
-        YACC=yacc
-        ;;
-    Darwin)
-        GOOS=darwin
-        YACC=byacc
-        ;;
-    *)
-        echo "Unsupported OS: $OS" >&2
-        exit 1
-        ;;
-esac
 
 #coupling: mkfiles/mkfile.proto and mkfiles/amd64/mkfile
 CFLAGS="-Wno-cpp --std=gnu89 -c -I$TOP/include -I. -O0 -fno-inline -ggdb"
