@@ -211,6 +211,18 @@ main(int argc, char **argv)
     insert(buf, '\0');
     symlook("MKARGS", S_VAR, (void *) stow(buf->start));
 
+    //pad-ext: MKSHELL environment var to specify the path to rc
+    //LATER: allow also to change the shell from rc to sh (or something else)
+    //note: shell->shell must be set before parsing the mkfile as mkfile
+    // can contain `{...} command that requires to run the shell
+    sym = symlook("MKSHELL", S_VAR, 0);
+    if(sym != nil) {
+      w = (Word*) sym->u.value;
+      if(w != nil && w->s != nil) {
+        shell->shell = w->s;
+      }
+    }
+
     freebuf(buf);
     /*e: [[main()]] set MKARGS variable */
     /*e: [[main()]] set variables for recursive mk */
@@ -255,16 +267,6 @@ main(int argc, char **argv)
         freebuf(whatif);
     }
     /*e: [[main()]] initializations before building */
-
-    //pad-ext: MKSHELL environment var to specify the path to rc
-    //LATER: allow also to change the shell from rc to sh (or something else)
-    sym = symlook("MKSHELL", S_VAR, 0);
-    if(sym != nil) {
-      w = (Word*) sym->u.value;
-      if(w != nil && w->s != nil) {
-        shell->shell = w->s;
-      }
-    }
 
     /*s: [[main()]] setting the targets, call [[mk()]] */
     if(*argv == nil){
