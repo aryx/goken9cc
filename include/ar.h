@@ -1,14 +1,14 @@
 // Format of the header of Plan9 libraries (e.g., libc.a) produced by 'ar'
 
-// AR magic string
+// ar magic string
 #define	ARMAG	"!<arch>\n"
-// size AR magic string
+// size ar magic string
 #define	SARMAG	8
 
-// AR file separator magic
+// ar file separator magic
 #define	ARFMAG	"`\n"
 
-// size AR name entry
+// size ar name entry
 #define SARNAME	64
 
 struct	ar_hdr
@@ -22,5 +22,5 @@ struct	ar_hdr
 	byte	fmag[2];
 };
 
-// total size AR header
+// total size ar header
 #define	SAR_HDR	(SARNAME+44)
