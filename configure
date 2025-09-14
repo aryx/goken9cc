@@ -81,3 +81,6 @@ echo 'Everything looks fine. You can now run: '
 echo
 echo '   $ make'
 echo '   $ make install'
+echo
+echo 'Here is the content of your ./mkconfig that configure wrote:'
+cat mkconfig
