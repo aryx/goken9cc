@@ -107,7 +107,7 @@ extern	long	strspn(char*, char*);
 extern	long	strcspn(char*, char*);
  */
 
-//extern	int	cistrcmp(char*, char*);
+extern	int	cistrcmp(char*, char*);
 //extern	int	cistrncmp(char*, char*, int);
 //extern	char*	cistrstr(char*, char*);
 
@@ -315,6 +315,8 @@ extern	void	nulldir(Dir*);
 // ??
 extern	long	dirreadall(fdt, Dir**);
 
+extern long dirread(int fd, Dir **dp);
+
 //******************************************************************************
 // Path
 //******************************************************************************
@@ -450,6 +452,8 @@ extern	void*	malloc(ulong);
  */
 // mallocz ?? free?
 
+extern void* mallocz(unsigned long n, int clr);
+
 //******************************************************************************
 // Time
 //******************************************************************************
@@ -495,8 +499,9 @@ extern	int	p9sleep(long);
 //******************************************************************************
 
 // rand(), srand(), frand(), nrand(), truerand() ??
-// lnrand(), ntruerand() ??
+// ntruerand() ??
 extern long lrand(void);
+extern long lnrand(long n);
 
 //******************************************************************************
 // Concurrency
@@ -574,7 +579,7 @@ extern	int	notedisable(char*);
 extern	int	notifyon(char*);
 extern	int	notifyoff(char*);
 
-//TODO? atnotify()?
+extern int atnotify(int (*f)(void*, char*), int in);
 
 // Rendez type?
 extern	ulong	rendezvous(ulong, ulong);
