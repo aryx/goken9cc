@@ -139,7 +139,7 @@ extern	uvlong	strtoull(char*, char**, int);
  */
 
 // ?? a = ?
-extern	int	    p9atoi(char*);
+extern	int     p9atoi(char*);
 extern	long	p9atol(char*);
 extern	vlong	p9atoll(char*);
 
@@ -401,7 +401,7 @@ extern	void	_exits(char*);
 extern	int	exitcode(char*);
 
 extern	char*	p9getenv(char*);
-extern	int	    p9putenv(char*, char*);
+extern	int     p9putenv(char*, char*);
 
 
 // missing getpid(), getppid() compared to plan9 libc
@@ -409,7 +409,7 @@ extern	int	    p9putenv(char*, char*);
 /* extern	int	getppid(void); */
 
 extern	char*	p9getwd(char*, int);
-extern	int	    p9chdir(char*);
+extern	int     p9chdir(char*);
 
 extern	int	p9exec(char*, char*[]);
 extern	int	p9execl(char*, ...);
@@ -472,8 +472,8 @@ struct Tm
 	int	tzoff;
 } Tm;
 
-extern	Tm*	    p9gmtime(long);
-extern	Tm*	    p9localtime(long);
+extern	Tm*     p9gmtime(long);
+extern	Tm*     p9localtime(long);
 extern	char*	p9asctime(Tm*);
 extern	char*	p9ctime(long);
 
@@ -495,7 +495,8 @@ extern	int	p9sleep(long);
 //******************************************************************************
 
 // rand(), srand(), frand(), nrand(), truerand() ??
-// lrand(), lnrand(), ntruerand() ??
+// lnrand(), ntruerand() ??
+extern long lrand(void);
 
 //******************************************************************************
 // Concurrency

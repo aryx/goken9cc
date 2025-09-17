@@ -50,8 +50,8 @@ void exportenv(ShellEnvVar *e);
 
 
 // lex.c
-bool		assline(Biobuf *, Bufblock *);
-int		nextrune(Biobuf*, bool);
+bool	assline(Biobuf *, Bufblock *);
+int	nextrune(Biobuf*, bool);
 
 // parse.c
 void	parse(char*, fdt, bool);
@@ -73,7 +73,7 @@ ulong	mkmtime(char*, bool);
 void	delete(char*);
 
 // match.c
-bool		match(char*, char*, char*);
+bool	match(char*, char*, char*);
 void	subst(char*, char*, char*, int);
 
 
@@ -84,18 +84,18 @@ bool    outofdate(Node*, Arc*, bool);
 void	update(Node*, bool);
 
 // recipe.c
-void		dorecipe(Node*, bool*);
+void	dorecipe(Node*, bool*);
 
 // run.c
 void	run(Job*);
-int		waitup(int, int*);
+int	waitup(int, int*);
 void	nproc(void);
 //
 void	prusage(void);
 void	usage(void);
 //
-int		execsh(char*, char*, Bufblock*, ShellEnvVar*);
-int		pipecmd(char*, ShellEnvVar*, int*);
+int	execsh(char*, char*, Bufblock*, ShellEnvVar*);
+int	pipecmd(char*, ShellEnvVar*, int*);
 void	catchnotes(void);
 void	Exit(void);
 

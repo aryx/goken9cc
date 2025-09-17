@@ -17,6 +17,7 @@ enum
 	Bbad		= -2,
 };
 
+// BioState
 enum
 {
 	Binactive	= 0,		/* states */
@@ -34,7 +35,9 @@ struct	Biobuf
 	int	ocount;		/* num of bytes at bob */
 	int	rdline;		/* num of bytes after rdline */
 	int	runesize;	/* num of bytes of last getrune */
+        // enum<BioState>
 	int	state;		/* r/w/inactive */
+        //TODO: fdt
 	int	fid;		/* open file */
 	int	flag;		/* magic if malloc'ed */
 	vlong	offset;		/* offset of buffer in file */
