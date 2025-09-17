@@ -12,8 +12,7 @@ if(~ $rcname ?.out) prompt=('broken! ' '	')
 if(flag p) path=/bin
 if not {
 	finit
-	#TODO: hack for Dockerfile.mkrc
-	if(~ $#path 0) path=(. /bin /usr/bin /usr/local/bin /src/bin /src/ROOT/amd64/bin)
+	if(~ $#path 0) path=(. /bin /usr/bin /usr/local/bin)
 }
 fn sigexit
 if(! ~ $#cflag 0){
