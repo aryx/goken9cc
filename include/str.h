@@ -5,6 +5,7 @@
 // well with the 3-letters utf.h, bio.h, fmt.h, etc.).
 // Copied from plan9 include/string.h
 
+//TODO? use autolib and ifdef guards like in bio.h?
 #pragma	src	"/sys/src/libstring"
 #pragma	lib	"libstring.a"
 

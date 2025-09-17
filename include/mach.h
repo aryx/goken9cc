@@ -2,6 +2,8 @@
  *	Architecture-dependent application data
  */
 
+// mach for machine
+
 typedef	struct	Exec	Exec;
 struct	Exec
 {

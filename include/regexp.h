@@ -1,3 +1,4 @@
+// TODO? use autolib like in bio.h and ifdef guards?
 #pragma	src	"/src/libregexp"
 #pragma	lib	"libregexp.a"
 

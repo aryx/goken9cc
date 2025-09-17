@@ -216,6 +216,7 @@ enum _bool
 
 typedef	uint8			byte;
 
+//TODO? Rename to shorter EQ LT GT probably
 enum _ord {
   ORD__EQ = 0,
   ORD__INF = -1,
@@ -238,6 +239,7 @@ enum _seek_cursor {
 
 typedef int pidt; // pid type
 
+// Let's stop abusing int and contradictory code for error management
 #define OK_0 0
 #define OK_1 1
 #define ERROR_0 0

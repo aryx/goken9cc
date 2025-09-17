@@ -14,7 +14,9 @@
 #ifndef _FMT_H_
 #define _FMT_H_ 1
 
+//TODO? what for?
 #include <stdarg.h>
+
 #include <utf.h>
 
 // most useful one
