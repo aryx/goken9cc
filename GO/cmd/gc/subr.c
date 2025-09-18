@@ -2695,7 +2695,7 @@ setmaxarg(Type *t)
 /* unicode-aware case-insensitive strcmp */
 
 static int
-cistrcmp(char *p, char *q)
+cistrcmp_(char *p, char *q)
 {
 	Rune rp, rq;
 
@@ -2737,7 +2737,7 @@ lookdot0(Sym *s, Type *t, Type **save, int ignorecase)
 	c = 0;
 	if(u->etype == TSTRUCT || u->etype == TINTER) {
 		for(f=u->type; f!=T; f=f->down)
-			if(f->sym == s || (ignorecase && cistrcmp(f->sym->name, s->name) == 0)) {
+			if(f->sym == s || (ignorecase && cistrcmp_(f->sym->name, s->name) == 0)) {
 				if(save)
 					*save = f;
 				c++;
@@ -2746,7 +2746,7 @@ lookdot0(Sym *s, Type *t, Type **save, int ignorecase)
 	u = methtype(t);
 	if(u != T) {
 		for(f=u->method; f!=T; f=f->down)
-			if(f->embedded == 0 && (f->sym == s || (ignorecase && cistrcmp(f->sym->name, s->name) == 0))) {
+			if(f->embedded == 0 && (f->sym == s || (ignorecase && cistrcmp_(f->sym->name, s->name) == 0))) {
 				if(save)
 					*save = f;
 				c++;
