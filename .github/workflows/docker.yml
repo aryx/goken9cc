@@ -14,17 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f Dockerfile -t goken9cc-mkrc .
+      - run: docker build -f Dockerfile --tag goken9cc --target build .
+      - run: docker build -f Dockerfile --tag goken9cc-test --target test .
 
   build-golang:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       # alt: make build-gosrc
-      - run: docker build -f Dockerfile.golang -t goken9cc-gosrc .
+      - run: docker build -f Dockerfile.golang .
 
   build-alpine:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f Dockerfile.alpine -t goken9cc-alpine .
+      - run: docker build -f Dockerfile.alpine .

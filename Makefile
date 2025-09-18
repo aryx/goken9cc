@@ -20,14 +20,17 @@ test:
 hellotest:
 	echo TODO
 
-build-docker: build-mkrc
+# works for both amd64 and arm64
+build-docker:
+	docker build -f Dockerfile --tag goken9cc --target build .
+# works only on amd64 for now
+build-docker-test: 
+	docker build -f Dockerfile --tag goken9cc-test --target test .
 
 build-gosrc:
-	docker build -f Dockerfile.golang -t "goken9cc-gosrc" .
+	docker build -f Dockerfile.golang .
 build-alpine:
-	docker build -f Dockerfile.alpine -t "goken9cc-alpine" .
-build-mkrc:
-	docker build -f Dockerfile -t "goken9cc-mkrc" .
+	docker build -f Dockerfile.alpine .
 
 ###############################################################################
 # Go tests
