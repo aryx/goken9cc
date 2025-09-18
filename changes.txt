@@ -6,7 +6,7 @@
 - add lex/yacc (generators)
 - adapt to goken ia/il/ic
 
-* Beta (Q3 2025) (mk/rc, utilities, typesetting, arm64 7a/7c/7l, arm64 build)
+* Beta (Q3 2025) (mk/rc, utilities, typesetting, arm64 7a/7c/7l, riscv ia/ic/il, arm64 build)
 
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
@@ -34,7 +34,7 @@
   principia softwarica (actually was not built in principia)
 
 
-* Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc)
+* Alpha (Q2 2025) (focus on C (not Go), Dockerfile/Nix/GHA, mips va/vl/vc)
 # see also pad.org history section
 
 ** toolchain
