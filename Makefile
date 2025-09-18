@@ -22,7 +22,7 @@ hellotest:
 
 # works for both amd64 and arm64
 build-docker:
-	docker build -f Dockerfile --tag goken9cc --target build .
+	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc --target build .
 # works only on amd64 for now
 build-docker-test: 
 	docker build -f Dockerfile --tag goken9cc-test --target test .

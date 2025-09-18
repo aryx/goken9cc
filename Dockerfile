@@ -23,12 +23,15 @@ RUN ./configure
 # which is used by the mkenam script run during the build
 RUN ./scripts/build-mk.sh
 RUN ./scripts/promote-mk.sh
+
 # coupling: env.sh
 ENV PATH="/src/bin:${PATH}"
 ENV MKSHELL="/src/bin/rc"
 #alt: PLAN9="/src" and use more #9/... paths in the code like in plan9port
 ENV RCMAIN="/src/etc/rcmain.unix"
 ENV YACCPAR="/src/etc/yaccpar"
+ARG NPROC
+ENV NPROC=${NPROC}
 
 RUN mk
 RUN mk install
