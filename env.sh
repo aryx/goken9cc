@@ -10,3 +10,5 @@ export MKSHELL=`pwd`/bin/rc
 export RCMAIN=`pwd`/etc/rcmain.unix
 # for yacc to find its template file
 export YACCPAR=`pwd`/etc/yaccpar
+
+export NPROC=`nproc`
