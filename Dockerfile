@@ -11,7 +11,7 @@ FROM ubuntu:22.04 AS build
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
-RUN apt-get install -y --no-install-recommends gcc libc6-dev bison
+RUN apt-get install -y --no-install-recommends gcc libc6-dev byacc
 
 # Now let's build from source
 WORKDIR /src
