@@ -3,6 +3,26 @@
 #include "y.tab.h"
 #include <ctype.h>
 
+
+//goken: was partially in a.h before
+enum				/* keep in synch with ../cc/cc.h */
+{
+	Plan9	= 1<<0,
+	Unix	= 1<<1,
+	Windows	= 1<<2,
+};
+int
+systemtype(int sys)
+{
+	return sys&Plan9;
+}
+//goken: was in 6a but not 5a, so let's be consistent
+int
+pathchar(void)
+{
+	return '/';
+}
+
 void
 main(int argc, char *argv[])
 {
@@ -11,10 +31,15 @@ main(int argc, char *argv[])
 
 	thechar = '7';
 	thestring = "arm64";
+
+	ensuresymb(NSYMB);
+
 	memset(debug, 0, sizeof(debug));
 	cinit();
 	outfile = 0;
-	include[ninclude++] = ".";
+	//goken: include[ninclude++] = ".";
+    setinclude(".");
+
 	ARGBEGIN {
 	default:
 		c = ARGC();
@@ -52,16 +77,21 @@ main(int argc, char *argv[])
 		c = 0;
 		nout = 0;
 		for(;;) {
+
+            //goken: I removed myxxx() calls and switched to regular xxx()
+            Waitmsg *w;
+          
 			while(nout < nproc && argc > 0) {
-				i = myfork();
+				i = fork();
 				if(i < 0) {
-					i = mywait(&status);
-					if(i < 0)
+					//i = mywait(&status);
+					//if(i < 0)
+                        fprint(2, "fork: %r\n");
 						errorexit();
-					if(status)
-						c++;
-					nout--;
-					continue;
+					//if(status)
+					//	c++;
+					//nout--;
+					//continue;
 				}
 				if(i == 0) {
 					print("%s:\n", *argv);
@@ -73,13 +103,16 @@ main(int argc, char *argv[])
 				argc--;
 				argv++;
 			}
-			i = mywait(&status);
-			if(i < 0) {
+			//i = mywait(&status);
+			//if(i < 0) {
+            w = wait();
+            if(w == nil) {
 				if(c)
 					errorexit();
 				exits(0);
 			}
-			if(status)
+			//if(status)
+            if(w->msg[0])
 				c++;
 			nout--;
 		}
@@ -126,7 +159,8 @@ assemble(char *file)
 		}
 	}
 
-	of = mycreat(outfile, 0664);
+	//goken: of = mycreat(outfile, 0664);
+    of = create(outfile, OWRITE, 0664);
 	if(of < 0) {
 		yyerror("%ca: cannot create %s", thechar, outfile);
 		errorexit();

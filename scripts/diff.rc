@@ -1,4 +1,4 @@
-#!/opt/plan9/bin/rc
+#!/home/pad/goken/bin/rc
 
 # Script to compare the source code in the different kencc-derived
 # repositories, to ultimately try to unify them in one repo (goken).

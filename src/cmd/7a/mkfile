@@ -1,21 +1,22 @@
-<../../../mkconfig
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=7a
+LDLIBS=-lbio -l9 -lm
 OFILES=\
 	y.tab.$O\
 	lex.$O\
 
 HFILES=\
-	../7c/7.out.h\
+	../7l/7.out.h\
 	y.tab.h\
 	a.h\
 
 YFILES=a.y\
 
-LIBS=cc bio 9		# order is important
-
-BIN=$ROOT/$OBJDIR/bin
-<$ROOT/mkfiles/mkone-$SHELLTYPE
 YFLAGS=-D1 -d
+
+<$TOP/mkfiles/mkone
 
 lex.$O:	../cc/macbody ../cc/lexbody

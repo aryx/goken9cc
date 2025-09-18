@@ -2,17 +2,20 @@
 
 * TODO
 - add 5i/vi (machines or emulators)
+  and test if 5l/vl is working correctly
 - add lex/yacc (generators)
-- adapt to goken 7a/7l/7c
 - adapt to goken ia/il/ic
 
-* Beta (Q3 2025) (mk/rc, utilities)
+* Beta (Q3 2025) (mk/rc, utilities, typesetting, arm64 7a/7c/7l, arm64 build)
 
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
   build-mk.sh to "bootstrap" mk/rc
+- fix mk/rc for unix (RCMAIN, MKSHELL, import PATH, etc.)
+  adapting improvements from kencc and plan9port
 - add also ed source code from principia softwarica so no need external 'ed' and
   build-mk.sh now build mk, rc, and 'ed'
+- adapt to build on arm64 linux and arm64 macos
 
 ** internals
 - reorg code with all Go related stuff under GO/ (GOSRC/, GOMISC/, GOTEST/)
@@ -26,9 +29,12 @@
 
 ** utilities
 - add source code of many utilities (cat, cp, grep, ed, diff, etc.) from
-  principia softwarica so easier to build and test for principia readers.
+  principia softwarica so easier to build and test for principia readers
+- add source code of typesetting tools (troff, eqn, tbl, etc.) from
+  principia softwarica (actually was not built in principia)
 
-* Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc, arm64 7a/7c/7l, riscv ia/ic/il)
+
+* Alpha (Q2 2025) (Dockerfile/Nix/GHA, mips va/vl/vc)
 # see also pad.org history section
 
 ** toolchain
