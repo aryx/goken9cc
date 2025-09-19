@@ -5,7 +5,9 @@ test:V: all
 	./helloprintf.exe
 
 clean:V:
-	rm -f *.6 *.exe *.a
+	rm -f *.[67] *.exe *.a
+
+#TODO: create also linux_arm64.s! and use 7c/7a/7l!
 
 # can use -v for verbose mode to help debug
 helloprintf.exe: helloprintf.c
@@ -14,6 +16,6 @@ helloprintf.exe: helloprintf.c
    6c -c print.c
    6c -c float.c
    6c -c helloprintf.c
-   6a -c linux.s
-   iar grc libprint.a linux.6 print.6 float.6 misc.6
+   6a -c linux_amd64.s
+   iar grc libprint.a linux_amd64.6 print.6 float.6 misc.6
    6l -X -L. -o $target -E main helloprintf.6
