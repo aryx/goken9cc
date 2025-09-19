@@ -1,16 +1,15 @@
-<../../../mkconfig
-HOST=Posix
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=7l
+LDLIBS=-lbio -l9 -lm
 OFILES=\
-	$HOST.$O\
 	asm.$O\
 	asmout.$O\
 	bits.$O\
 	cnam.$O\
 	dyn.$O\
-	elf.$O\
-	enam.$O\
 	falloc.$O\
 	list.$O\
 	mod.$O\
@@ -21,30 +20,37 @@ OFILES=\
 	pobj.$O\
 	span.$O\
 	sub.$O\
+	enam.$O\
+
+#HOST=Posix
+
+#	$HOST.$O\
+#	elf.$O\
 
 HFILES=\
 	l.h\
-	../7c/7.out.h\
+	7.out.h\
 	../ld/elf.h\
 	../ld/ld.h\
 
-LIBS=bio 9			# order is important
 
-BIN=$ROOT/$OBJDIR/bin
-CFLAGS=$CFLAGS  -I.
-<$ROOT/mkfiles/mkone-$SHELLTYPE
+CLEANFILES=enam.c
+
+<$TOP/mkfiles/mkone
+
+enam.c: 7.out.h
+	sh mkenam
 
 #../7c/enam.c: ../7c/7.out.h
 #	@ { cd ../7c; mk enam.c }
+#enam.$O:	../7c/enam.c
+#	$CC $CFLAGS ../7c/enam.c
 
-cnam.c:	l.h
-	rc ../ld/mkcname
+#cnam.c:	l.h
+#	rc ../ld/mkcname
 
-enam.$O:	../7c/enam.c
-	$CC $CFLAGS ../7c/enam.c
-%.$O:	../ld/%.c
-	$CC $CFLAGS ../ld/$stem.c
-
-x:V:	$O.out
-	$O.out -la -o/dev/null x.7
+#%.$O:	../ld/%.c
+#	$CC $CFLAGS ../ld/$stem.c
+#x:V:	$O.out
+#	$O.out -la -o/dev/null x.7
 

@@ -1,5 +1,5 @@
 #include	"../ld/ld.h"
-#include	"../7c/7.out.h"
+#include	"7.out.h"
 
 typedef	struct	Mask	Mask;
 typedef	struct	Optab	Optab;
