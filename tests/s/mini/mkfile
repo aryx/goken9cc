@@ -1,12 +1,14 @@
 
-all:V: hello_linux_amd64.exe hello_linux_386.exe hello_macos_amd64.exe hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
+all:V: hello_linux_amd64.exe hello_linux_386.exe hello_linux_arm64.exe \
+  hello_macos_amd64.exe \
+  hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe 
 
 test:V: all
       ./hello_linux_amd64.exe
       ./hello_linux_386.exe
 
 clean:V:
-	rm -f *.[568v] *.exe
+	rm -f *.[5678iv] *.exe
 
 hello_linux_amd64.exe: hello_linux_amd64.s
    6a -c $prereq
@@ -34,3 +36,7 @@ hello_plan9_arm.exe: hello_plan9_arm.s
 hello_plan9_mips.exe: hello_plan9_mips.s
    va -c $prereq
    vl -o $target -H 2 -E _main hello_plan9_mips.v
+
+hello_linux_arm64.exe: hello_linux_arm64.s
+   7a -c $prereq
+   7l -v -o $target -E _start hello_linux_arm64.7

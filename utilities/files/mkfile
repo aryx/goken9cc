@@ -8,7 +8,9 @@ CFLAGS_EXTRA=-DUnix
 # -lbio needed only for wc
 LDLIBS=-lbio -lstring -l9 -lm
 
-TARG=cat touch mkdir cp mv rm chmod chgrp mtime wc du ls
+# let's not build cp and ls by default
+# cp ls
+TARG=cat touch mkdir mv rm chmod chgrp mtime wc du
 
 <$TOP/mkfiles/mkmany
 #<$TOP/mkfiles/mkmanyauto

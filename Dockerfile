@@ -58,6 +58,6 @@ RUN mk test
 # Setup for arm32 tests
 # sudo dpkg --add-architecture armhf
 # sudo apt-get update # needed otherwise can't find any package
-# sudo apt install libc6:armhf libstdc++6:armhf
+# sudo apt install libc6:armhf
 # sudo apt install gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
 
