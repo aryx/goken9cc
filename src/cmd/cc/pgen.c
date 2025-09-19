@@ -146,6 +146,18 @@ supgen(Node *n)
 	warnreach = owarn;
 }
 
+
+// added for 7c
+Node*
+uncomma(Node *n)
+{
+	while(n != Z && n->op == OCOMMA) {
+		cgen(n->left, Z);
+		n = n->right;
+	}
+	return n;
+}
+
 void
 gen(Node *n)
 {

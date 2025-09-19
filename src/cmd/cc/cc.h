@@ -677,6 +677,9 @@ int	tcomx(Node*);
 int	tlvalue(Node*);
 void	constas(Node*, Type*, Type*);
 
+// pgen.c
+Node*	uncomma(Node*);
+
 /*
  * con.c
  */

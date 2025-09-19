@@ -13,7 +13,8 @@ ginit(void)
 	thestring = "arm64";
 	exregoffset = REGEXT;
 	exfregoffset = FREGEXT;
-	newvlongcode = 1;
+	//TODO: newvlongcode = 1;
+    //  need restore in cc.h and use in pgen.c, see 9-cc code
 	listinit();
 	nstring = 0;
 	mnstring = 0;
@@ -26,7 +27,8 @@ ginit(void)
 	lastp = P;
 	tfield = types[TLONG];
 
-	typeswitch = typechlv;
+	//TODO: typeswitch = typechlv;
+    //  need also restore in cc.h and use in pgen.c, see 9-cc code
 	typeword = typechlvp;
 	typecmplx = typesu;
 	/* TO DO */
@@ -1274,7 +1276,8 @@ gpseudo(int a, Sym *s, Node *n)
 	p->from.sym = s;
 	p->from.name = D_EXTERN;
 	if(a == ATEXT)
-		p->reg = (profileflg ? 0 : NOPROF);
+		//goken: was p->reg = (profileflg ? 0 : NOPROF);
+        p->reg = textflag;
 	if(s->class == CSTATIC)
 		p->from.name = D_STATIC;
 	naddr(n, &p->to);
@@ -1335,7 +1338,7 @@ usableoffset(Node *n, vlong o, Node *v)
 	return o >= -256 || o < 4095*s;
 }
 
-long
+int32
 exreg(Type *t)
 {
 	long o;
@@ -1387,7 +1390,7 @@ schar	ewidth[NTYPE] =
 	SZ_INT,		/* [TENUM] */
 };
 
-long	ncast[NTYPE] =
+int32	ncast[NTYPE] =
 {
 	0,				/* [TXXX] */
 	BCHAR|BUCHAR,			/* [TCHAR] */
