@@ -17,16 +17,21 @@ OFILES=\
 	list.$O\
 	machcap.$O\
 	mul.$O\
-	../cc/pgen.$O\
-	../cc/pswt.$O\
 	peep.$O\
 	reg.$O\
 	sgen.$O\
 	swt.$O\
 	txt.$O\
+        \
+	pgen.$O\
+	pswt.$O\
 	../8l/enam.$O\
 
 LIB=\
 	../cc/cc.a\
 
 <$TOP/mkfiles/mkone
+
+# see 7c/mkfile for more info
+p%.$O: ../cc2/p%.c
+	$CC $CFLAGS ../cc2/p$stem.c

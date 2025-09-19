@@ -15,9 +15,10 @@ OFILES=\
 	swt.$O\
 	txt.$O\
 	machcap.$O\
+        \
+	pgen.$O\
+	pswt.$O\
 	../il/enam.$O\
-	../cc/pgen.$O\
-	../cc/pswt.$O\
 
 #	lex.$O\
 
@@ -29,6 +30,10 @@ HFILES=\
 LIB=../cc/cc.a
 
 <$TOP/mkfiles/mkone
+
+# see 7c/mkfile for more info
+p%.$O: ../cc2/p%.c
+	$CC $CFLAGS ../cc2/p$stem.c
 
 #TODO: trick for ic and jc
 #lex.$O: ../cc/lex.c ../cc/y.tab.h
@@ -42,8 +47,5 @@ LIB=../cc/cc.a
 #	cd ../cc
 #	mk $MKFLAGS y.tab.h
 #
-#
-#%.$O: ../cc/%.c
-#	$CC -I. $CFLAGS ../cc/$stem.c
 #
 #install:V:	$BIN/jc

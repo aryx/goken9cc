@@ -16,8 +16,9 @@ OFILES=\
 	sgen.$O\
 	swt.$O\
 	txt.$O\
-	../cc/pgen.$O\
-	../cc/pswt.$O\
+        \
+	pgen.$O\
+	pswt.$O\
 	../7l/enam.$O\
 
 HFILES=\
@@ -29,13 +30,17 @@ LIB=../cc/cc.a
 
 <$TOP/mkfiles/mkone
 
+# have to use p% to restrict to pgen/pswt and not enam
+# otherwise with just %.$O we get rule ambiguity
+p%.$O: ../cc2/p%.c
+	$CC $CFLAGS ../cc2/p$stem.c
+
 #$ROOT/$OBJDIR/lib/libcc.a:
 #	cd ../cc
 #	mk install
 #	mk clean
 #
-#%.$O: ../cc/%.c
-#	$CC $CFLAGS ../cc/$stem.c
+
 #
 #t:V:	$O.out
 #	$O.out -S t

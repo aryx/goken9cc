@@ -19,11 +19,16 @@ OFILES=\
 	mul.$O\
 	reg.$O\
 	peep.$O\
-	../cc/pgen.$O\
-	../cc/pswt.$O\
+        \
+	pgen.$O\
+	pswt.$O\
 	../5l/enam.$O\
 
 LIB=\
 	../cc/cc.a\
 
 <$TOP/mkfiles/mkone
+
+# see 7c/mkfile for more info
+p%.$O: ../cc2/p%.c
+	$CC $CFLAGS ../cc2/p$stem.c
