@@ -3,10 +3,14 @@
 * TODO
 - add 5i/vi (machines or emulators)
   and test if 5l/vl is working correctly
+- test if 7l works correctly
 - add lex/yacc (generators)
-- adapt to goken ia/il/ic
 
-* Beta (Q3 2025) (mk/rc, utilities, typesetting, arm64 7a/7c/7l, riscv ia/ic/il, arm64 build)
+* Beta (Q3 2025) (arm64 7a/7c/7l, riscv ia/ic/il, arm64 build, mk/rc, utilities, typesetting)
+
+** toolchain
+- adapt to goken 7a/7c/7l
+- adapt to goken ia/ic/il (but not tested, hard to test)
 
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
@@ -68,8 +72,11 @@
 
 * Goken9cc Pre-history
 
-** Richard Miller: 2020
+** Richard Miller: 2018
 - cmd/z[alc]/ for RISC-V (later renamed to i[alc] for riscv and j for riscv64)
+
+** Richard Miller: 2014
+- cmd/7[alc] for arm64
 
 ** Go pre 1.0: 2008-2010
 # see DELETED/doc/devel/release.html for a compact list of changes
