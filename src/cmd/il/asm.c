@@ -144,10 +144,11 @@ asmb(void)
 		lput(lcsize);
 		break;
 	case 5:
-		if(thechar == 'j')
-			elf64(243, ELFDATA2LSB, 0, nil);		/* 243 is RISCV */
-		else
-			elf32(243, ELFDATA2LSB, 0, nil);
+        //TODO:
+		//if(thechar == 'j')
+		//	elf64(243, ELFDATA2LSB, 0, nil);		/* 243 is RISCV */
+		//else
+		//	elf32(243, ELFDATA2LSB, 0, nil);
 	}
 	cflush();
 }
