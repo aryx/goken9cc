@@ -15,7 +15,7 @@ OFILES=\
 	swt.$O\
 	txt.$O\
 	machcap.$O\
-	../7l/enam.$O\
+	../il/enam.$O\
 	../cc/pgen.$O\
 	../cc/pswt.$O\
 
