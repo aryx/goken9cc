@@ -14,7 +14,7 @@ DIRS=\
   src/cmd/8l src/cmd/8a src/cmd/8c \
   src/cmd/5l src/cmd/5a src/cmd/5c machines/5i \
   src/cmd/va src/cmd/vl src/cmd/vc \
-  src/cmd/ia src/cmd/il \
+  src/cmd/ia src/cmd/il src/cmd/ic \
   src/cmd/prof src/cmd/cov \
   utilities typesetting
 

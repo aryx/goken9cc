@@ -1,48 +1,49 @@
-<../../mkconfig
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=ic		# also makes jc (for riscv64)
+LDLIBS=-lbio -l9 -lm
 
 OFILES=\
 	cgen.$O\
-	enam.$O\
 	list.$O\
 	mul.$O\
 	peep.$O\
-	pgen.$O\
-	pswt.$O\
 	reg.$O\
 	sgen.$O\
 	swt.$O\
 	txt.$O\
-	lex.$O\
 	machcap.$O\
+	../7l/enam.$O\
+	../cc/pgen.$O\
+	../cc/pswt.$O\
+
+#	lex.$O\
 
 HFILES=\
 	gc.h\
-	i.out.h\
+	../il/i.out.h\
 	../cc/cc.h\
 
-LIBS=cc bio 9		# order is important
+LIB=../cc/cc.a
 
-BIN=$ROOT/$OBJDIR/bin
+<$TOP/mkfiles/mkone
 
-<$ROOT/mkfiles/mkone-$SHELLTYPE
+#TODO: trick for ic and jc
+#lex.$O: ../cc/lex.c ../cc/y.tab.h
+#	$CC -Dmain'='ccmain $CFLAGS ../cc/lex.c
 
-CFLAGS=	$CFLAGS -I../include
-
-$ROOT/$OBJDIR/lib/libcc.a:
-	cd ../cc
-	mk $MKFLAGS install
-	mk $MKFLAGS clean
-
-../cc/y.tab.h: ../cc/cc.y
-	cd ../cc
-	mk $MKFLAGS y.tab.h
-
-lex.$O: ../cc/lex.c ../cc/y.tab.h
-	$CC -Dmain'='ccmain $CFLAGS ../cc/lex.c
-
-%.$O: ../cc/%.c
-	$CC -I. $CFLAGS ../cc/$stem.c
-
-install:V:	$BIN/jc
+#$ROOT/$OBJDIR/lib/libcc.a:
+#	cd ../cc
+#	mk $MKFLAGS install
+#	mk $MKFLAGS clean
+#../cc/y.tab.h: ../cc/cc.y
+#	cd ../cc
+#	mk $MKFLAGS y.tab.h
+#
+#
+#%.$O: ../cc/%.c
+#	$CC -I. $CFLAGS ../cc/$stem.c
+#
+#install:V:	$BIN/jc

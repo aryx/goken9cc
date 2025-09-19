@@ -2,51 +2,57 @@
 
 static long ncast64[];
 
-extern void ccmain(int, char**);
-
-void
-main(int argc, char **argv)
-{
-	char *p;
-	int oargc;
-	char **oargv;
-
-	thechar = 'i';
-	p = strrchr(argv[0], '/');
-	if(p == nil)
-		p = argv[0];
-	else
-		p++;
-	if(*p == 'j')
-		thechar = 'j';
-	oargc = argc;
-	oargv = argv;
-	ARGBEGIN {
-	case 'j':
-		thechar = 'j';
-		break;
-	case 'o':
-	case 'D':
-	case 'I':
-		p = ARGF();
-	} ARGEND
-	USED(p);
-
-	if(thechar == 'j'){
-		thestring = "riscv64";
-		ewidth[TIND] = 8;
-	}else{
-		thestring = "riscv";
-		ewidth[TIND] = 4;
-	}
-	ccmain(oargc, oargv);
-}
+//TODO: trick for ic and jc (32 ad 64 bits riscv)
+//extern void ccmain(int, char**);
+//void
+//main(int argc, char **argv)
+//{
+//	char *p;
+//	int oargc;
+//	char **oargv;
+//
+//	thechar = 'i';
+//	p = strrchr(argv[0], '/');
+//	if(p == nil)
+//		p = argv[0];
+//	else
+//		p++;
+//	if(*p == 'j')
+//		thechar = 'j';
+//	oargc = argc;
+//	oargv = argv;
+//	ARGBEGIN {
+//	case 'j':
+//		thechar = 'j';
+//		break;
+//	case 'o':
+//	case 'D':
+//	case 'I':
+//		p = ARGF();
+//	} ARGEND
+//	USED(p);
+//
+//	if(thechar == 'j'){
+//		thestring = "riscv64";
+//		ewidth[TIND] = 8;
+//	}else{
+//		thestring = "riscv";
+//		ewidth[TIND] = 4;
+//	}
+//	//ccmain(oargc, oargv);
+//}
 
 void
 ginit(void)
 {
 	int i;
 	Type *t;
+
+    // hardcoded i for now and skip main above
+	thechar = 'i';
+    thestring = "riscv";
+    ewidth[TIND] = 4;
+
 
 	exregoffset = REGEXT;
 	exfregoffset = FREGEXT;
@@ -64,7 +70,8 @@ ginit(void)
 
 	if(thechar == 'j'){
 		typeword = typechlvp;
-		typeswitch = typechlv;
+		//TODO: typeswitch = typechlv;
+        // like for 7c, need to add in cc.h and pgen.c from 9cc
 		typecmplx = typesu;
 	}
 
@@ -1346,7 +1353,8 @@ gpseudo(int a, Sym *s, Node *n)
 	p->from.type = D_OREG;
 	p->from.sym = s;
 	if(a == ATEXT)
-		p->reg = (profileflg ? 0 : NOPROF);
+		//goken: p->reg = (profileflg ? 0 : NOPROF);
+        p->reg = textflag;
 	p->from.name = D_EXTERN;
 	if(s->class == CSTATIC)
 		p->from.name = D_STATIC;
@@ -1378,7 +1386,7 @@ sval(long v)
 	return 0;
 }
 
-long
+int32
 exreg(Type *t)
 {
 	long o;
@@ -1424,7 +1432,7 @@ schar	ewidth[NTYPE] =
 	SZ_INT,		/* [TENUM] */
 };
 
-long	ncast[NTYPE] =
+int32	ncast[NTYPE] =
 {
 	0,				/* [TXXX] */
 	BCHAR|BUCHAR,			/* [TCHAR] */
