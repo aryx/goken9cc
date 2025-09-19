@@ -41,5 +41,5 @@ echo REPORT for $cmd with base $base
 
 for (dir in $dirs) {
   echo '###########################' $dir '############################'
-  diff $flags $base/$cmd $dir/$cmd
+  diff $flags xxx/$base/$cmd xxx/$dir/$cmd
 }

@@ -62,8 +62,9 @@ in the Go repository in October 2010 at this precise commit:
 https://github.com/golang/go/commit/99a10eff16b79cfb8ccf36e586532a40b17a203c
 (see pad.org for an explanation of why I forked at this precise commit).
 
-The Go compiler code was actually itself a fork of the "kencc" toolchain in
-inferno-os at https://github.com/inferno-os/inferno-os (in the utils/ subdirectory)
+The C toolchain that was part of the Go repository was actually
+itself a fork of the "kencc"
+toolchain in inferno-os at https://github.com/inferno-os/inferno-os (in the utils/ subdirectory)
 as well as code from the plan9port https://github.com/9fans/plan9port
 which both were themselves forks of the kencc toolchain in the plan9 operating
 system at https://github.com/plan9foundation/plan9

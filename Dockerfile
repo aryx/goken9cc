@@ -1,7 +1,7 @@
 ###############################################################################
 # Overview
 ###############################################################################
-# Build and test goken9cc on Ubuntu using mk/rc
+# Build and test goken9cc on Ubuntu using gcc/binutils (and mk/rc)
 
 ###############################################################################
 # Stage1: build
@@ -40,6 +40,7 @@ RUN mk install
 # Stage2: Test
 ###############################################################################
 
+# amd64/i386 testing
 FROM build AS test
 
 # Setup for 386 tests
@@ -50,3 +51,13 @@ ENV GOOS="linux"
 ENV PATH="/src/ROOT/amd64/bin:${PATH}"
 # Run tests
 RUN mk test
+
+# TODO:
+# arm64/arm32 testing
+
+# Setup for arm32 tests
+# sudo dpkg --add-architecture armhf
+# sudo apt-get update # needed otherwise can't find any package
+# sudo apt install libc6:armhf libstdc++6:armhf
+# sudo apt install gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
+
