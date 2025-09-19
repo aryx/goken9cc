@@ -1,9 +1,6 @@
-TOP=../../..
-<$TOP/mkconfig
-<$TOP/mkfiles/$objtype/mkfile
+<../../mkconfig
 
 TARG=il		# also makes jl (for riscv64)
-LDLIBS=-lbio -l9 -lm
 
 OFILES=\
 	asm.$O\
@@ -15,28 +12,28 @@ OFILES=\
 	pass.$O\
 	span.$O\
 	enam.$O\
-
-#	$TARGMODEL.$O\
-#	elf.$O\
+	$TARGMODEL.$O\
+	elf.$O\
 
 HFILES=\
 	l.h\
-	i.out.h\
+	../ic/i.out.h\
 	../ld/elf.h\
 
-CLEANFILES=enam.c
+LIBS=bio 9			# order is important
 
-<$TOP/mkfiles/mkone
+BIN=$ROOT/$OBJDIR/bin
 
-enam.c: i.out.h
-	sh mkenam
+<$ROOT/mkfiles/mkone-$SHELLTYPE
 
-#enam.$O:	../ic/enam.c
-#	$CC $CFLAGS ../ic/enam.c
-#elf.$O:	../ld/elf.c
-#	$CC $CFLAGS ../ld/elf.c
+CFLAGS=	$CFLAGS -I../include -I.
 
-#$TARGMODEL.$O:	../ld/$TARGMODEL.c
-#	$CC $CFLAGS ../ld/$TARGMODEL.c
+enam.$O:	../ic/enam.c
+	$CC $CFLAGS ../ic/enam.c
+elf.$O:	../ld/elf.c
+	$CC $CFLAGS ../ld/elf.c
 
-#install:V:	$BIN/jl
+$TARGMODEL.$O:	../ld/$TARGMODEL.c
+	$CC $CFLAGS ../ld/$TARGMODEL.c
+
+install:V:	$BIN/jl

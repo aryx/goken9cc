@@ -1,4 +1,4 @@
-ed - i.out.h <<'!'
+ed - ../ic/i.out.h <<'!'
 v/^	A/d
 ,s/^	A/	"/
 g/ .*$/s///
