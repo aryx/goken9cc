@@ -1,6 +1,6 @@
 // same than principia/ROOT/tests/s/hello_arm.s
 // but with goken we need to use 5l -H2 to force plan9 output
-// can be assembled/lined by 5a/5l and run via 5i or on raspberry pi 1 or 2
+// can be assembled/linked by 5a/5l and run via 5i or on raspberry pi 1 or 2
 
 TEXT _main(SB), $20
 	//TODO: port xdefine("setR12",...) from layout.c in principia to goken

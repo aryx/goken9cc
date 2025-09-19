@@ -1,5 +1,5 @@
 // same than principia/ROOT/tests/s/hello_mips.s
-// can be assembled/lined by va/vl and run via vi
+// can be assembled/linked by va/vl and run via vi
 
 TEXT _main(SB), $20
 	// very important instruction! vl assumes R30 is set correctly so that
