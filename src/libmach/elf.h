@@ -152,6 +152,7 @@ enum {
 	POWER = 20,		/* PowerPC */
 	ARM = 40,			/* ARM */
 	AMD64 = 62,		/* Amd64 */
+    //TODO? ARM64 ???
 
 	NO_VERSION = 0,		/* version, ident[VERSION] */
 	CURRENT = 1,
