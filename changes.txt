@@ -75,7 +75,7 @@
 ** Richard Miller: 2018
 - cmd/z[alc]/ for RISC-V (later renamed to i[alc] for riscv and j for riscv64)
 
-** Richard Miller: 2014
+** Charles Forsyth?: 2014
 - cmd/7[alc] for arm64
 
 ** Go pre 1.0: 2008-2010
