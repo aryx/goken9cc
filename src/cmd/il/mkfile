@@ -22,7 +22,8 @@ OFILES=\
 HFILES=\
 	l.h\
 	i.out.h\
-	../ld/elf.h\
+
+#	../ld/elf.h\
 
 CLEANFILES=enam.c
 

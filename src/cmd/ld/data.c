@@ -32,7 +32,7 @@
 
 #include	"l.h"
 #include	"../ld/lib.h"
-#include	"../ld/elf.h"
+#include	"../ld/elf_.h"
 
 /*
  * divide-and-conquer list-link

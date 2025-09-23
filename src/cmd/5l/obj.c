@@ -33,7 +33,7 @@
 #define	EXTERN
 #include	"l.h"
 #include	"../ld/lib.h"
-#include	"../ld/elf.h"
+#include	"../ld/elf_.h"
 #include	<ar.h>
 
 #ifndef	DEFAULT

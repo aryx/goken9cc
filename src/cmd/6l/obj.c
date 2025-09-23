@@ -33,7 +33,7 @@
 #define	EXTERN
 #include	"l.h"
 #include	"../ld/lib.h"
-#include	"../ld/elf.h"
+#include	"../ld/elf_.h"
 #include	"../ld/macho.h"
 #include	"../ld/dwarf.h"
 #include	<ar.h>

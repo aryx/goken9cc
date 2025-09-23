@@ -31,7 +31,7 @@ HFILES=\
 	l.h\
 	../8l/8.out.h\
 	../ld/dwarf.h\
-	../ld/elf.h\
+	../ld/elf_.h\
 	../ld/macho.h\
 	../ld/pe.h\
 
