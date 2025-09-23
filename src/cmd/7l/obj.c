@@ -134,10 +134,10 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 0x100000;
 		break;
-	case 7:	/* elf executable */
+	case 7:	/* elf executable */ // Linux arm64
 		HEADR = rnd(Ehdr64sz+3*Phdr64sz, 16);
 		if(INITTEXT == -1)
-			INITTEXT = (1<<22)+HEADR;
+			INITTEXT = (1<<22)+HEADR; // like in 6l
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)
