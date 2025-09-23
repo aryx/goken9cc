@@ -1,7 +1,8 @@
 
 all:V: hello_linux_amd64.exe hello_linux_arm.exe hello_linux_386.exe hello_linux_arm64.exe \
   hello_macos_amd64.exe \
-  hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe 
+  hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe \
+  exit_linux_arm64.exe
 
 test:V: all
       ./hello_linux_amd64.exe
@@ -44,3 +45,7 @@ hello_linux_arm.exe: hello_linux_arm.s
 hello_linux_arm64.exe: hello_linux_arm64.s
    7a -c $prereq
    7l -v -o $target -H7 -E _start hello_linux_arm64.7
+
+exit_linux_arm64.exe: exit_linux_arm64.s
+   7a -c $prereq
+   7l -v -o $target -H7 -E _start exit_linux_arm64.7
