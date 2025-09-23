@@ -1,3 +1,6 @@
+// arm-linux-gnueabihf-as -o hello.o hello_linux_arm.s
+// arm-linux-gnueabihf-ld -o hello hello.o
+
     .global _start
 
     .section .data
