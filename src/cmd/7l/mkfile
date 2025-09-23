@@ -25,18 +25,17 @@ OFILES=\
 	span.$O\
 	sub.$O\
 	enam.$O\
+	elf.$O\
 
 #HOST=Posix
 
 #	$HOST.$O\
-#	elf.$O\
 
 HFILES=\
 	l.h\
 	7.out.h\
 	../ld/ld.h\
-
-#	../ld/elf.h\
+	../ld/elf.h\
 
 
 CLEANFILES=enam.c
@@ -54,8 +53,9 @@ enam.c: 7.out.h
 #cnam.c:	l.h
 #	rc ../ld/mkcname
 
-#%.$O:	../ld/%.c
-#	$CC $CFLAGS ../ld/$stem.c
+%.$O:	../ld/%.c
+	$CC $CFLAGS ../ld/$stem.c
+
 #x:V:	$O.out
 #	$O.out -la -o/dev/null x.7
 

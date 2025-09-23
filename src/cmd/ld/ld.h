@@ -1,8 +1,9 @@
 #include	<lib9.h>
 #include	<bio.h>
 
-//#include	"../ld/elf.h"
-//typedef vlong int64;
+//old:
+// #include	"../ld/elf.h" (now elf_.h)
+// typedef vlong int64;
 typedef size_t usize;
 
 /*

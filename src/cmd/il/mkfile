@@ -15,15 +15,14 @@ OFILES=\
 	pass.$O\
 	span.$O\
 	enam.$O\
+	elf.$O\
 
 #	$TARGMODEL.$O\
-#	elf.$O\
 
 HFILES=\
 	l.h\
 	i.out.h\
-
-#	../ld/elf.h\
+	../ld/elf.h\
 
 CLEANFILES=enam.c
 
@@ -34,8 +33,8 @@ enam.c: i.out.h
 
 #enam.$O:	../ic/enam.c
 #	$CC $CFLAGS ../ic/enam.c
-#elf.$O:	../ld/elf.c
-#	$CC $CFLAGS ../ld/elf.c
+elf.$O:	../ld/elf.c
+	$CC $CFLAGS ../ld/elf.c
 
 #$TARGMODEL.$O:	../ld/$TARGMODEL.c
 #	$CC $CFLAGS ../ld/$TARGMODEL.c
