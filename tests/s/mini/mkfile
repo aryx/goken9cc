@@ -43,4 +43,4 @@ hello_linux_arm.exe: hello_linux_arm.s
 
 hello_linux_arm64.exe: hello_linux_arm64.s
    7a -c $prereq
-   7l -v -o $target -H7 -T 0x4000b0 -E _start hello_linux_arm64.7
+   7l -v -o $target -H7 -E _start hello_linux_arm64.7
