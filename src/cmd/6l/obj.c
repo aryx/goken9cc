@@ -33,9 +33,11 @@
 #define	EXTERN
 #include	"l.h"
 #include	"../ld/lib.h"
+
 #include	"../ld/elf_.h"
 #include	"../ld/macho.h"
 #include	"../ld/dwarf.h"
+
 #include	<ar.h>
 
 char	*noname		= "<none>";
@@ -49,7 +51,7 @@ char*	paramspace	= "FP";
  *	-H5 -T0x80110000 -R4096		is ELF32
  *	-H6 -Tx -Rx			is apple MH-exec
  *	-H7 -Tx -Rx			is linux elf-exec
- *      -H9 -Tx -Rx			is FreeBSD elf-exec
+ *  -H9 -Tx -Rx			is FreeBSD elf-exec
  *
  *	options used: 189BLQSWabcjlnpsvz
  */

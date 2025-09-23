@@ -318,7 +318,7 @@ inst:
 /*
  * FMULA
  */
-|	LTYPE9 freg ',' freg ', ' freg ',' freg comma
+|	LTYPE9 freg ',' freg ',' freg ',' freg comma
 	{
 		outcode4($1, &$2, $4.reg, &$6, &$8);
 	}
