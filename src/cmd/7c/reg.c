@@ -76,6 +76,7 @@ regopt(Prog *p)
 	}
 	val = 0;
 	for(; p != P; p = p->link) {
+        //printf("p = %#lx\n", p);
 		switch(p->as) {
 		case ADATA:
 		case AGLOBL:

@@ -1,8 +1,6 @@
-
 TEXT xwrite+0(SB), 7, $0        // NOSPLIT | DUPOK | NOPROF
-    MOVQ    $1, AX             // syscall number for write
-    MOVQ    $1, DI             // fd = 1 (stdout)
-    MOVQ    buf+0(FP), SI      // 1st argument: buf
-    MOVQ    len+8(FP), DX      // 2nd argument: len
-    SYSCALL
-    RET
+    MOV count+8(FP), R2
+    MOV R0, R1 // buf
+    MOV $1, R0          // fd = 1
+    MOV $64, R8         // syscall number: write
+    SVC $0

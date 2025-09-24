@@ -10,10 +10,19 @@ clean:V:
 test:V: all
 	./helloc.exe
 
+# can use $CC_ -S to see the assembly code
 helloc.exe: helloc.c
-   6c -c $prereq
-   6a -c xwrite_$objtype.s
-   6a -c xexit_$objtype.s
-   iar grc libmini.a xwrite_$objtype.6 xexit_$objtype.6
+   $CC_ -D$objtype -c $prereq
+   $AS_ -c xwrite_$objtype.s
+   $AS_ -c xexit_$objtype.s
+   iar grc libmini.a xwrite_$objtype.$O_ xexit_$objtype.$O_
    # -X to require NOSPLIT for all linked code, especially in $stem.6
-   6l -X -L. -o $target -E main helloc.6
+   $LD_ -X -L. -o $target -E main helloc.$O_
+
+#TODO: merge with previous target once iar is fixed and automatic
+# detection for -H7 is added to 7l
+helloc_arm64.exe: helloc.c
+   $CC_ -D$objtype -c $prereq
+   $AS_ -c xwrite_$objtype.s
+   $AS_ -c xexit_$objtype.s
+   $LD_ -H7 -L. -o $target -E main helloc.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_

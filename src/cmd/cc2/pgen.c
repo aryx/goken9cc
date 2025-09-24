@@ -83,8 +83,11 @@ codgen(Node *n, Node *nn)
 	}
 	nearln = nn->lineno;
 
-	p = gtext(n1->sym, stkoff);
+    //TODO: do not do p = gtext(...), WEIRD
+    // pointer change from 0xaaaa to 0xffff, weird
+    gtext(n1->sym, stkoff);
 	sp = p;
+    //printf("p 1 = %#lx\n", p);
 
 	/*
 	 * isolate first argument
