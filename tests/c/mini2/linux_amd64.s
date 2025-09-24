@@ -1,16 +1,3 @@
-//TEXT	write0(SB), 7, $0
-//	MOVQ	$1, AX          // syscall number for write
-//	MOVQ	fd+0(FP), DI     // fd (arg 1)
-//	MOVQ	buf+8(FP), SI    // buf (arg 2)
-//	MOVQ	n+16(FP), DX     // n (arg 3)
-//	SYSCALL
-//	RET
-//
-//TEXT    exit0(SB), 7, $0
-//        // syscall: exit(0)
-//        MOVQ    $60, AX
-//        XORQ    DI, DI
-//        SYSCALL
 
 TEXT    panic(SB), 7, $0
         // syscall: exit(0)
@@ -25,6 +12,13 @@ TEXT	exit(SB),7,$0-8
 	MOVL	$60, AX	// exit - exit the current os thread
 	SYSCALL
 	RET
+
+//alt?
+//TEXT    exit0(SB), 7, $0
+//        // syscall: exit(0)
+//        MOVQ    $60, AX
+//        XORQ    DI, DI
+//        SYSCALL
 
 TEXT	open(SB),7,$0-16
 	MOVQ	8(SP), DI
@@ -41,6 +35,15 @@ TEXT	write(SB),7,$0-24
 	MOVL	$1, AX			// syscall entry
 	SYSCALL
 	RET
+
+//alt?
+//TEXT	write0(SB), 7, $0
+//	MOVQ	$1, AX          // syscall number for write
+//	MOVQ	fd+0(FP), DI     // fd (arg 1)
+//	MOVQ	buf+8(FP), SI    // buf (arg 2)
+//	MOVQ	n+16(FP), DX     // n (arg 3)
+//	SYSCALL
+//	RET
 
 TEXT	gettime(SB), 7, $32
 	LEAQ	8(SP), DI
