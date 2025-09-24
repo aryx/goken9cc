@@ -192,11 +192,12 @@ elf64shdr(void (*putl)(long), void (*putll)(vlong), ulong name, ulong type,
 static void
 elf64sectab(void (*putl)(long), void (*putll)(vlong))
 {
-	seek(cout, HEADR+textsize+datsize+symsize, 0);
+	seek(cout, HEADR+textsize+datsize+symsize, SEEK__START);
 	elf64shdr(putl, putll, Stitext, Progbits, Salloc|Sexec, INITTEXT,
 		HEADR, textsize, 0, 0, 0x10000, 0);
+    //NEW: must rnd() data segment for ELF Linux
 	elf64shdr(putl, putll, Stidata, Progbits, Salloc|Swrite, INITDAT,
-		HEADR+textsize, datsize, 0, 0, 0x10000, 0);
+		rnd(HEADR+textsize, INITRND)/*old: HEADR+textsize*/, datsize, 0, 0, 0x10000, 0);
 	elf64shdr(putl, putll, Stistrtab, Strtab, 1 << 5, 0,
 		HEADR+textsize+datsize+symsize+3*Shdr64sz, 14, 0, 0, 1, 0);
 	elfstrtab();
@@ -253,7 +254,8 @@ elf64(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 	 * see 32-bit ELF case for physical data address computation.
 	 */
 	phydata = INITDAT - (INITTEXT - INITTEXTP);
-	elf64phdr(putl, putll, PT_LOAD, HEADR+textsize, INITDAT, phydata,
+    //NEW: must rnd() data segment for ELF Linux
+	elf64phdr(putl, putll, PT_LOAD, rnd(HEADR+textsize, INITRND)/*old: HEADR+textsize*/, INITDAT, phydata,
 		datsize, datsize+bsssize, R|W, INITRND); /* data */
 	elf64phdr(putl, putll, NOPTYPE, HEADR+textsize+datsize, 0, 0,
 		symsize, lcsize, R, 4);			/* symbol table */

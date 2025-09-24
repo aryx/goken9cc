@@ -41,7 +41,7 @@ asmb(void)
 		Bprint(&bso, "%5.2f asm\n", cputime());
 	Bflush(&bso);
 	OFFSET = HEADR;
-	seek(cout, OFFSET, 0);
+	seek(cout, OFFSET, SEEK__START);
 	pc = INITTEXT;
 	for(p = firstp; p != P; p = p->link) {
 		if(p->as == ATEXT) {
@@ -83,13 +83,21 @@ asmb(void)
 	switch(HEADTYPE) {
 	case 0:
 	case 2:
-	case 7:
 		OFFSET = HEADR+textsize;
-		seek(cout, OFFSET, 0);
+		seek(cout, OFFSET, SEEK__START);
 		break;
 	case 6:	/* no header, padded segments */
 		OFFSET = rnd(HEADR+textsize, 4096);
-		seek(cout, OFFSET, 0);
+		seek(cout, OFFSET, SEEK__START);
+		break;
+	case 7:
+        //NEW: ELF Linux constrain that virtual
+        // address modulo page must match file offset modulo
+        // page, so simpler to start data at a page boundary
+        //coupling: must match the code generating the ELF
+        // section and ELF program header in elf.c
+		OFFSET = rnd(HEADR+textsize, INITRND);
+		seek(cout, OFFSET, SEEK__START);
 		break;
 	}
 	if(dlm){
@@ -117,11 +125,11 @@ asmb(void)
 			break;
 		case 2:
 			OFFSET = HEADR+textsize+datsize;
-			seek(cout, OFFSET, 0);
+			seek(cout, OFFSET, SEEK__START);
 			break;
 		case 6:	/* no header, padded segments */
 			OFFSET += rnd(datsize, 4096);
-			seek(cout, OFFSET, 0);
+			seek(cout, OFFSET, SEEK__START);
 			break;
 		case 7:
 			break;
@@ -146,8 +154,9 @@ asmb(void)
 	if(debug['v'])
 		Bprint(&bso, "%5.2f header\n", cputime());
 	Bflush(&bso);
+
 	OFFSET = 0;
-	seek(cout, OFFSET, 0);
+	seek(cout, OFFSET, SEEK__START);
 	switch(HEADTYPE) {
 	case 0:	/* no header */
 	case 6:	/* no header, padded segments */
