@@ -12,8 +12,8 @@ test:V: all
 
 helloc.exe: helloc.c
    6c -c $prereq
-   6a -c xwrite.s
-   6a -c xexit.s
-   iar grc libmini.a xwrite.6 xexit.6
+   6a -c xwrite_$objtype.s
+   6a -c xexit_$objtype.s
+   iar grc libmini.a xwrite_$objtype.6 xexit_$objtype.6
    # -X to require NOSPLIT for all linked code, especially in $stem.6
    6l -X -L. -o $target -E main helloc.6
