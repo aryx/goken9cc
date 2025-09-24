@@ -4,7 +4,7 @@
 # Build and test goken9cc on Ubuntu using gcc/binutils (and mk/rc)
 
 ###############################################################################
-# Stage1: build
+# Stage1: build (on amd64/arm64)
 ###############################################################################
 
 FROM ubuntu:22.04 AS build
@@ -42,7 +42,6 @@ RUN mk install
 
 # amd64/i386 testing
 FROM build AS test
-
 # Setup for 386 tests
 RUN dpkg --add-architecture i386 # so we can run also hello_linux_386.exe
 RUN apt-get update # needed otherwise can't find any package
@@ -60,4 +59,3 @@ RUN mk test
 # sudo apt-get update # needed otherwise can't find any package
 # sudo apt install libc6:armhf
 # sudo apt install gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
-
