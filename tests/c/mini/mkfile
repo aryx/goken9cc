@@ -1,8 +1,11 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/$objtype/mkconfig
 
 all:V: helloc.exe
 
 clean:V:
-	rm -f *.6 *.exe *.a
+	rm -f *.[67] *.exe *.a
 
 test:V: all
 	./helloc.exe
