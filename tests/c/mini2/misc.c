@@ -1,5 +1,6 @@
 #include "minilibc.h"
 
+//??
 int32
 findnull(byte *s)
 {

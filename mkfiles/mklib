@@ -32,6 +32,6 @@ installall:V:
 		mk $stem
 
 clean:V:
-	rm -f *.[$OS] y.tab.? y.output y.error $CLEANFILES
+	rm -f *.[$OS] y.tab.? y.output y.error $CLEANFILES *.$O $OFILES $LIBNAME
 nuke:V:
-	rm -f *.[$OS] y.tab.? y.output y.error $CLEANFILES $LIB
+	rm -f *.[$OS] y.tab.? y.output y.error $CLEANFILES *.$O $OFILES $LIB

@@ -1,14 +1,18 @@
 /*
  * basic types
  */
-typedef	signed char		int8;
-typedef	unsigned char		uint8;
-typedef	signed short		int16;
-typedef	unsigned short		uint16;
-typedef	signed int		int32;
-typedef	unsigned int		uint32;
-typedef	signed long long int	int64;
-typedef	unsigned long long int	uint64;
+typedef	signed char            int8;
+typedef	unsigned char          uint8;
+typedef	signed short           int16;
+typedef	unsigned short         uint16;
+
+//TODO??? this is correct on 64 archs?????
+typedef	signed int             int32;
+typedef	unsigned int           uint32;
+typedef	signed long long int   int64;
+typedef	unsigned long long int uint64;
+
+//TODO??? again correct on 64 archs???
 typedef	float			float32;
 typedef	double			float64;
 
@@ -57,7 +61,7 @@ enum
 
 // extern decls
 extern void	panic(int32);
-extern int32	findnull(byte*);
+extern int32 findnull(byte*);
 
 // float.c
 extern bool	isInf(float64 f, int32 sign);
@@ -67,9 +71,8 @@ extern bool	isNaN(float64 f);
 extern void printf(char *s, ...);
 //void ·printpc(void *p);
 
-//TODO? needed? for ?
+//for printf typechecker?
 //#pragma	varargck	argpos	printf	1
-//
 //#pragma	varargck	type	"d"	int32
 //#pragma	varargck	type	"d"	uint32
 //#pragma	varargck	type	"D"	int64
@@ -84,8 +87,7 @@ extern void printf(char *s, ...);
 //#pragma	varargck	type	"s"	uint8*
 //#pragma	varargck	type	"S"	String
 
-
 // linux.s
-extern void write(int32 fd, char* buf, int32 n);
-extern void exit(int);
+extern void write(/*unsigned int*/int fd, char* buf, /*size_t*/ int count);
+extern void exit(/*unsigned int*/int);
 void*	·getcallerpc(void*);

@@ -1,6 +1,6 @@
 TOP=../../..
 <$TOP/mkconfig
-<$TOP/$objtype/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 all:V: helloc.exe
 

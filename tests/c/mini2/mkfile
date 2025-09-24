@@ -1,3 +1,6 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 all:V: helloprintf.exe
 

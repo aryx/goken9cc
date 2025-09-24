@@ -158,8 +158,12 @@ EXTERN	Node*	nodret;
 EXTERN	Node*	nodsafe;
 EXTERN	long	nrathole;
 EXTERN	long	nstring;
+
 EXTERN	Prog*	p;
+
 EXTERN	long	pc;
+
+
 EXTERN	Node	regnode;
 EXTERN	Node	qregnode;
 EXTERN	char	string[NSNAME];

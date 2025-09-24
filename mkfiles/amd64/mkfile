@@ -7,3 +7,9 @@ CC=gcc -Wno-cpp --std=gnu89 -c
 LD=gcc -Wl,--allow-multiple-definition
 AS=gcc
 O=o
+
+# used in tests/
+O_=6
+CC_=6c
+LD_=6l
+AS_=6a
