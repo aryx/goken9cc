@@ -4,7 +4,7 @@ all:V: \
   hello_linux_arm.exe  hello_linux_arm64.exe \
   exit_linux_arm64.exe \
   hello_macos_amd64.exe \
-  hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe \
+  hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 
 # part of mk test CI regression check in Dockerfile and GHA
 # (requires dpkg --add-architecture i386 for _386.exe to run)
