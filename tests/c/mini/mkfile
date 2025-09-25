@@ -5,7 +5,7 @@ TOP=../../..
 all:V: helloc.exe
 
 clean:V:
-	rm -f *.[67] *.exe *.a
+	rm -f *.[5678] *.exe *.a
 
 test:V: all
 	./helloc.exe
