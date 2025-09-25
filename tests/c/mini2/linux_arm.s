@@ -24,6 +24,8 @@ TEXT ·getcallerpc(SB), 1, $-4
 	MOVW	0(R13), R0
 	RET
 
+//TODO: see GO/.../runtime/arm/asm.s and copy the code there
+
 // no arm instructions for those operations so must be
 // provided as "builtins"
 TEXT 	_div+0(SB), 7, $0

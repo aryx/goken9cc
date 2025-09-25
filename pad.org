@@ -230,6 +230,7 @@ https://opensource.googleblog.com/2009/11/hey-ho-lets-go.html first announced by
 + 728003e340ab6d20d49f8f67f1b36722d5de2d65: Dwarf in Macho (Sep 2010)
 + eb572e017448157aaedab367a17d0faceec81187: DWARF frame info (Sep 2010)
 
+-? 8052786e51f606ac201e92d288ed8d49069b71f4: Stop using R12 as SB (Oct 2010)
 + 99a10eff16b79cfb8ccf36e586532a40b17a203c: 8l, runtime initial support for plan9 (Oct 2010)
 ---------------------------- FORK POINT -------------------------------------
 = 9cc8e9ef48d17bd7e8bb2c1c41406f51366a7925: fix build (isplan9 bug) by previous PR (Oct 2010)
