@@ -7,12 +7,10 @@ typedef	signed char            int8;
 typedef	unsigned char          uint8;
 typedef	signed short           int16;
 typedef	unsigned short         uint16;
-
 // Note that this is also correct on 64-bit archs with Linux
 // and macOS where sizeof(int) is also 4.
 typedef	signed int             int32;
 typedef	unsigned int           uint32;
-
 #ifndef NO_64
 typedef	signed long long int   int64;
 typedef	unsigned long long int uint64;
