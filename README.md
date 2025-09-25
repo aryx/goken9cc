@@ -18,7 +18,7 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
   Build C programs that can *run* on Linux, macOS (only old macOS for now), TODO Windows, and Plan 9
 - **Multi-architecture support:**
   Build C programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
-  and mips architectures (TODO arm64, RISC V, and Wasm)
+  arm64 (a.k.a. aarch64), RISC V, and mips architectures (TODO and Wasm)
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
   (e.g., you can build from a Linux 386 machine a binary for amd64 macOS)
