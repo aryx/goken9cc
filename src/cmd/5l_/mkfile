@@ -1,6 +1,9 @@
-<../../../mkconfig
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
-TARG=5l
+TARG=5l_
+LDLIBS=-lbio -l9 -lm
 
 OFILES=\
 	asm.$O\
@@ -11,27 +14,33 @@ OFILES=\
 	pass.$O\
 	span.$O\
 	enam.$O\
-	$TARGMODEL.$O\
 	elf.$O\
+
+#	$TARGMODEL.$O\
 
 HFILES=\
 	l.h\
-	../5c/5.out.h\
-	${ROOT}/include/ar.h\
+	../5l_/5.out.h\
 
-LIBS=bio 9			# order is important
+#	${ROOT}/include/ar.h\
 
+CLEANFILES=enam.c
 
-BIN=$ROOT/$OBJDIR/bin
-
-<$ROOT/mkfiles/mkone-$SHELLTYPE
 CFLAGS= $CFLAGS -I.
 
-enam.$O:	../5c/enam.c
-	$CC $CFLAGS ../5c/enam.c
+<$TOP/mkfiles/mkone
 
-elf.$O:	../ld/elf.c
-	$CC $CFLAGS ../ld/elf.c
+enam.c: 5.out.h
+	sh mkenam
 
-$TARGMODEL.$O:	../ld/$TARGMODEL.c
-	$CC $CFLAGS ../ld/$TARGMODEL.c
+#enam.$O:	../5c/enam.c
+#	$CC $CFLAGS ../5c/enam.c
+
+%.$O:	../ld/%.c
+	$CC $CFLAGS ../ld/$stem.c
+
+#elf.$O:	../ld/elf.c
+#	$CC $CFLAGS ../ld/elf.c
+
+#$TARGMODEL.$O:	../ld/$TARGMODEL.c
+#	$CC $CFLAGS ../ld/$TARGMODEL.c

@@ -1,6 +1,7 @@
-#include	<lib9.h>
+#include	<u.h>
+#include	<libc.h>
 #include	<bio.h>
-#include	"../5c/5.out.h"
+#include	"../5l_/5.out.h"
 #include	"../ld/elf.h"
 
 #ifndef	EXTERN
