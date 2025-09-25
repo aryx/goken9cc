@@ -41,6 +41,7 @@ Optab	optab[] =
 	{ ASLL,		C_REG,	C_REG,	C_REG,		 9, 4, 0 },
 
 	{ ASWI,		C_NONE,	C_NONE,	C_NONE,		10, 4, 0 },
+	{ ASWI,		C_NONE,	C_NONE,	C_LCON,		10, 4, 0 }, // pad: for SWI $0
 	{ ASWI,		C_NONE,	C_NONE,	C_LOREG,	10, 4, 0 },
 
 	{ AWORD,	C_NONE,	C_NONE,	C_LCON,		11, 4, 0 },
