@@ -1,3 +1,5 @@
+// code taken from GO/src/pkg/runtime/
+
 /*
  * basic types
  */
@@ -6,15 +8,20 @@ typedef	unsigned char          uint8;
 typedef	signed short           int16;
 typedef	unsigned short         uint16;
 
-//TODO??? this is correct on 64 archs?????
+// Note that this is also correct on 64-bit archs with Linux
+// and macOS where sizeof(int) is also 4.
 typedef	signed int             int32;
 typedef	unsigned int           uint32;
+
+#ifndef NO_64
 typedef	signed long long int   int64;
 typedef	unsigned long long int uint64;
+#endif
 
-//TODO??? again correct on 64 archs???
+#ifndef NO_FLOAT
 typedef	float			float32;
 typedef	double			float64;
+#endif
 
 #ifdef _64BIT
 typedef	uint64		uintptr;
@@ -64,8 +71,10 @@ extern void	panic(int32);
 extern int32 findnull(byte*);
 
 // float.c
+#ifndef NO_64
 extern bool	isInf(float64 f, int32 sign);
 extern bool	isNaN(float64 f);
+#endif
 
 // print.c
 extern void printf(char *s, ...);
@@ -88,6 +97,6 @@ extern void printf(char *s, ...);
 //#pragma	varargck	type	"S"	String
 
 // linux.s
-extern void write(/*unsigned int*/int fd, char* buf, /*size_t*/ int count);
-extern void exit(/*unsigned int*/int);
+extern void write(uint32 fd, char* buf, /*size_t*/ int count);
+extern void exit(uint32);
 void*	·getcallerpc(void*);

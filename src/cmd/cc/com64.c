@@ -32,7 +32,7 @@
 
 /*
  * this is machine depend, but it is totally
- * common on all of the 64-bit symulating machines.
+ * common on all of the 64-bit simulating machines.
  */
 
 #define	FNX	100	/* botch -- redefinition */

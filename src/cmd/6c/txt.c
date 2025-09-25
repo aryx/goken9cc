@@ -118,8 +118,8 @@ ginit(void)
 	nodret = new(OIND, nodret, Z);
 	complex(nodret);
 
-	if(0)
-		com64init();
+	//if(0)
+	//	com64init();
 
 	for(i=0; i<nelem(reg); i++) {
 		reg[i] = 1;

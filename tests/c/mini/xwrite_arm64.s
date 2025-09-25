@@ -4,5 +4,4 @@ TEXT xwrite+0(SB), 7, $0        // NOSPLIT | DUPOK | NOPROF
     MOV $1, R0          // fd = 1
     MOV $64, R8         // syscall number: write
     SVC $0
-    //TODO? no RET?
-    //RET
+    RETURN

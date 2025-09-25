@@ -97,6 +97,7 @@ ginit(void)
 	nodret = new(OIND, nodret, Z);
 	complex(nodret);
 
+    //pad: needed on arch64 arch?
 	com64init();
 
 	memset(reg, 0, sizeof(reg));

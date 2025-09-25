@@ -4,6 +4,7 @@ TEXT    exit+0(SB), 7, $0
     //MOV    0(FP), R0          // status = 0
     MOV    $93, R8         // syscall number: exit
     SVC     $0
+    RETURN // never reached
 
 
 TEXT write+0(SB), 7, $0        // NOSPLIT | DUPOK | NOPROF
@@ -12,12 +13,14 @@ TEXT write+0(SB), 7, $0        // NOSPLIT | DUPOK | NOPROF
     MOV count+24(FP), R2
     MOV $64, R8         // syscall number: write
     SVC $0
+    RETURN
 
 TEXT    panic(SB), 7, $0
         // syscall: exit(0)
     MOV    $0, R0          // status = 0
     MOV    $93, R8         // syscall number: exit
     SVC     $0
+    RETURN
 
 // from 9front libc/arm64/getcallerpc.s
 TEXT ·getcallerpc(SB), $0

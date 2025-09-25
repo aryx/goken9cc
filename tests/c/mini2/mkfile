@@ -23,6 +23,18 @@ helloprintf.exe: helloprintf.c
    iar grc libprint.a linux_$objtype.$O_ print.$O_ float.$O_ misc.$O_
    $LD_ -X -L. -o $target -E main helloprintf.$O_
 
+# useful when troubleshooting issues to just
+# first get rid of float/64 bits instructions and see if everything
+# else works at least
+helloprintf_nofloat_no64.exe: helloprintf.c
+   $CC_ $CC_FLAGS -DNO_FLOAT -DNO_64 -c misc.c
+   $CC_ $CC_FLAGS -DNO_FLOAT -DNO_64 -c rune.c
+   $CC_ $CC_FLAGS -DNO_FLOAT -DNO_64 -c print_nofloat_no64.c
+   $CC_ $CC_FLAGS -DNO_FLOAT -DNO_64 -c helloprintf.c
+   $AS_ -c linux_$objtype.s
+   iar grc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
+   $LD_ -X -L. -o $target -E main helloprintf.$O_
+
 #TODO: does not work yet, weird findnull: DWORD linker errors
 helloprintf_arm64.exe: helloprintf.c
    $CC_ $CC_FLAGS -c misc.c
