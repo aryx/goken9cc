@@ -51,6 +51,17 @@ elfinit(void)
 		hdr.shentsize = ELF64SHDRSIZE;	/* Must be ELF64SHDRSIZE */
 		break;
 
+    //goken: 
+	case '5':
+        // similar to default case below
+		hdr.phoff = ELF32HDRSIZE;
+		hdr.shoff = ELF32HDRSIZE;
+		hdr.ehsize = ELF32HDRSIZE;
+		hdr.phentsize = ELF32PHDRSIZE;
+		hdr.shentsize = ELF32SHDRSIZE;
+        //goken: Version5 EABI
+        hdr.flags = 0x5000200;
+
 	// 32-bit architectures
 	default:
 		hdr.phoff = ELF32HDRSIZE;	/* Must be be ELF32HDRSIZE: first PHdr must follow ELF header */

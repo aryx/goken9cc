@@ -1,13 +1,15 @@
 
+all:V: hello64 hello32
+
 # on an arm64 machine with as/ld from binutils for arm64
 hello64: hello_linux_arm64_binutils.S 
 	 as -o hello64.o hello_linux_arm64_binutils.S 
-	 ld -o hello64 hello64.o 
+	 ld -o $target hello64.o 
 
 # running arm32 on arm64 machine
 hello32:
 	arm-linux-gnueabihf-as hello_linux_arm_binutils.S -o hello.o
-	arm-linux-gnueabihf-ld -o hello hello.o
+	arm-linux-gnueabihf-ld -o $target hello.o
 
 clean:
 	rm -f hello64 hello32 *.o

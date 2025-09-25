@@ -2,7 +2,7 @@
 all:V: \
   hello_linux_386.exe hello_linux_amd64.exe \
   hello_linux_arm.exe  hello_linux_arm64.exe \
-  exit_linux_arm64.exe \
+  exit_linux_arm.exe exit_linux_arm64.exe \
   hello_macos_amd64.exe \
   hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 
@@ -44,12 +44,17 @@ hello_plan9_mips.exe: hello_plan9_mips.s
 
 hello_linux_arm.exe: hello_linux_arm.s
    5a -c $prereq
-   5l -X -o $target -E _start hello_linux_arm.5
+   5l -v -X -o $target -E _start hello_linux_arm.5
+
+%.exe: %.s
+   5a -c $prereq
+   5l -v -X -o $target -E _start $stem.5
 
 # -H 7 this time
 hello_linux_arm64.exe: hello_linux_arm64.s
    7a -c $prereq
    7l -o $target -H7 -E _start hello_linux_arm64.7
+
 
 exit_linux_arm64.exe: exit_linux_arm64.s
    7a -c $prereq

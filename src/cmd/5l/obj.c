@@ -32,6 +32,7 @@
 
 #define	EXTERN
 #include	"l.h"
+
 #include	"../ld/lib.h"
 #include	"../ld/elf_.h"
 #include	<ar.h>
@@ -50,6 +51,8 @@ char	*thestring 	= "arm";
  *	-H3 -T0xF0000020 -R4		is NetBSD format
  *	-H4				is IXP1200 (raw)
  *	-H5 -T0xC0008010 -R1024		is ipaq
+ *
+ *  -H6 is Linux ELF (default)
  */
 
 static char*
@@ -138,6 +141,7 @@ main(int argc, char *argv[])
 			HEADTYPE = 1;
 		if(debug['9'])
 			HEADTYPE = 2;
+        // Linux ELF
 		HEADTYPE = 6;
 	}
 	switch(HEADTYPE) {
