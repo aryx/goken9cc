@@ -1,37 +1,23 @@
 // -------------------------------------------
 // main procedure
 // -------------------------------------------
+TEXT _start(SB), 1, $0
 
-TEXT _start+0(SB), 7, $20
-	//TODO: port xdefine("setR12",...) from layout.c in principia to goken
-	//MOVW	$setR12(SB), R12
-        /* prepare the system call PWRITE(1,&hello,12, 00) */
-        MOVW $1, R1
-        MOVW R1, 4(R13)
-        MOVW $hello(SB), R1
-        MOVW R1, 8(R13)
-        MOVW $12, R1
-        MOVW R1, 12(R13)
-        MOVW $0, R1
-        MOVW R1, 16(R13)
-        MOVW R1, 20(R13)
-        MOVW $9 /*PWRITE*/, R0
-        /* system call */
-        SWI $0
-        BL exit(SB)
-        RET /* not reached */
-loop:
-        B loop
+	//setR12 ??
 
-TEXT exit(SB), 7, $4
-        /* prepare the system call EXITS(0) */
-        MOVW $0, R1
-        MOVW R1, 4(R13)
-        MOVW $3 /*EXITS*/, R0
-        /* system call */
-        SWI $0
-        RET /* not reached */
+        /* write(1, msg, len) */
+	MOVW    $1, R0              /* fd = 1 (stdout) */
+        MOVW    $msg(SB), R1        /* buf = &msg */
+        MOVW    $14, R2          /* count = len */
+        MOVW    $4, R7              /* syscall 4 = sys_write */
+        SWI     $0
 
-GLOBL   hello(SB), $12
-DATA    hello+0(SB)/8, $"hello wo"
-DATA    hello+8(SB)/4, $"rld\n"
+	/* exit(0) */
+        MOVW    $0, R0              /* exit code */
+        MOVW    $1, R7              /* syscall 1 = sys_exit */
+        SWI     $0
+
+GLOBL   msg(SB), $14
+DATA    msg+0(SB)/8, $"Hello, w"
+DATA    msg+8(SB)/6, $"orld\n"
+
