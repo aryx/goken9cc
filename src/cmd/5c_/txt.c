@@ -1182,7 +1182,8 @@ gpseudo(int a, Sym *s, Node *n)
 	p->from.sym = s;
 	p->from.name = D_EXTERN;
 	if(a == ATEXT)
-		p->reg = (profileflg ? 0 : NOPROF);
+		//goken: p->reg = (profileflg ? 0 : NOPROF);
+        p->reg = textflag;
 	if(s->class == CSTATIC)
 		p->from.name = D_STATIC;
 	naddr(n, &p->to);
@@ -1226,7 +1227,7 @@ sval(long v)
 	return 0;
 }
 
-long
+int32
 exreg(Type *t)
 {
 	long o;
@@ -1278,7 +1279,7 @@ schar	ewidth[NTYPE] =
 	SZ_INT,		/* [TENUM] */
 };
 
-long	ncast[NTYPE] =
+int32	ncast[NTYPE] =
 {
 	0,				/* [TXXX] */
 	BCHAR|BUCHAR,			/* [TCHAR] */

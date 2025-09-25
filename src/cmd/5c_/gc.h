@@ -1,5 +1,5 @@
 #include	"../cc/cc.h"
-#include	"../5c/5.out.h"
+#include	"../5l_/5.out.h"
 
 /*
  * 5c/arm
@@ -144,6 +144,10 @@ EXTERN	long	curarg;
 EXTERN	long	cursafe;
 EXTERN	Prog*	firstp;
 EXTERN	Prog*	lastp;
+
+//goken: new
+EXTERN	int	retok;
+
 EXTERN	long	maxargsafe;
 EXTERN	int	mnstring;
 EXTERN	Multab	multab[20];
@@ -265,18 +269,18 @@ void	gpseudo(int, Sym*, Node*);
 /*
  * swt.c
  */
-int	swcmp(void*, void*);
+int	swcmp(const void*, const void*);
 void	doswit(Node*);
 void	swit1(C1*, int, long, Node*);
 void	swit2(C1*, int, long, Node*, Node*);
 void	casf(void);
 void	bitload(Node*, Node*, Node*, Node*, Node*);
 void	bitstore(Node*, Node*, Node*, Node*, Node*);
-long	outstring(char*, long);
+int32	outstring(char*, int32);
 int	mulcon(Node*, Node*);
 Multab*	mulcon0(long);
 void	nullwarn(Node*, Node*);
-void	gextern(Sym*, Node*, long, long);
+void	gextern(Sym*, Node*, int32, int32);
 void	outcode(void);
 void	ieeedtod(Ieee*, double);
 
@@ -296,7 +300,7 @@ int	Rconv(Fmt*);
  * reg.c
  */
 Reg*	rega(void);
-int	rcmp(void*, void*);
+int	rcmp(const void*, const void*);
 void	regopt(Prog*);
 void	addmove(Reg*, int, int, int);
 Bits	mkvar(Adr*, int);
