@@ -1,29 +1,22 @@
-<../../../mkconfig
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
-TARG=5a
-
+TARG=5a_
+LDLIBS=-lbio -l9 -lm
 OFILES=\
 	y.tab.$O\
 	lex.$O\
 
 HFILES=\
-	../5c/5.out.h\
+	../5l_/5.out.h\
 	y.tab.h\
 	a.h\
 
-YFILES=a.y\
-
-LIBS=cc bio 9		# order is important
-
-BIN=$ROOT/$OBJDIR/bin
-
-<$ROOT/mkfiles/mkone-$SHELLTYPE
+YFILES=a.y
 
 YFLAGS=-D1 -d
 
-lex.$O:	../cc/macbody ../cc/lexbody
+<$TOP/mkfiles/mkone
 
-$ROOT/$OBJDIR/lib/libcc.a:
-	cd ../cc
-	mk $MKFLAGS install
-	mk $MKFLAGS clean
+lex.$O:	../cc/macbody ../cc/lexbody

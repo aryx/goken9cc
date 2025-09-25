@@ -2,15 +2,17 @@
 
 * TODO
 - add 5i/vi (machines or emulators)
-  and test if 5l/vl is working correctly
-- test if 7l works correctly
+  and test if 5l_/5l/vl are working correctly
 - add lex/yacc (generators)
 
-* Beta (Q3 2025) (arm64 7a/7c/7l, riscv ia/ic/il, arm64 build, mk/rc, utilities, typesetting)
+* Beta (Q3 2025) (arm64 7a/7c/7l, riscv ia/ic/il, arm64 build, arm32 linux run, mk/rc, utilities, typesetting)
 
 ** toolchain
-- adapt to goken 7a/7c/7l
+- adapt to goken 7a/7c/7l 
+  (working hello_linux_arm64.exe and half working helloc.exe)
 - adapt to goken ia/ic/il (but not tested, hard to test)
+- adapt 5a/5c/5l to generate valid arm32 Linux binaries (EABI)
+  (working hello_linux_arm.exe and helloc.exe)
 
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
@@ -43,7 +45,7 @@
 
 ** toolchain
 - add mips toolchain va/vl/vc from https://bitbucket.org/plan9-from-bell-labs/9-cc.git
-  and adapt it to goken; tested va/vl with vi from principia on hello_mips.s
+  and adapt it to goken; tested va/vl with vi from principia on hello_plan9_mips.s
 - add arm64 toolchain 7a/7l/7c from https://github.com/inferno-os/inferno-os
   (not tested though)
 - add riscv toolchain ia/il/ic from https://github.com/inferno-os/inferno-os
