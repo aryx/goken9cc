@@ -8,7 +8,7 @@ test:V: all
 	./helloprintf.exe
 
 clean:V:
-	rm -f *.[67] *.exe *.a
+	rm -f *.[5678] *.exe *.a
 
 CC_FLAGS=-D$objtype
 

@@ -24,6 +24,17 @@ TEXT ·getcallerpc(SB), 1, $-4
 	MOVW	0(R13), R0
 	RET
 
+// no arm instructions for those operations so must be
+// provided as "builtins"
+TEXT 	_div+0(SB), 7, $0
+	RET
+TEXT 	_divu+0(SB), 7, $0
+	RET
+TEXT 	_mod+0(SB), 7, $0
+	RET
+TEXT 	_modu+0(SB), 7, $0
+	RET
+
 //Float and 64bits stuff
 //TEXT 	_si2v+0(SB), 7, $0
 //	RET
@@ -64,14 +75,6 @@ TEXT ·getcallerpc(SB), 1, $-4
 //TEXT 	_rshlv+0(SB), 7, $0
 //	RET
 //
-//TEXT 	_div+0(SB), 7, $0
-//	RET
-//TEXT 	_divu+0(SB), 7, $0
-//	RET
-//TEXT 	_mod+0(SB), 7, $0
-//	RET
-//TEXT 	_modu+0(SB), 7, $0
-//	RET
 //
 //TEXT 	_lov+0(SB), 7, $0
 //	RET
