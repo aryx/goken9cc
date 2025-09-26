@@ -8,35 +8,15 @@
 
 static int32 fd = 1;
 
-// forward decls
-void	·printpointer(void*);
-void	·printbool(bool);
-void	·printint(int32);
-void	·printpointer(void*);
-void	·printuint(uint32);
-void	·printhex(uint32);
-
-void prints(int8 *s);
-
-static void vprintf(int8*, byte*);
-
 void
-dump(byte *p, int32 n)
+·printbool(bool v)
 {
-	int32 i;
-
-	for(i=0; i<n; i++) {
-		·printpointer((byte*)(p[i]>>4));
-		·printpointer((byte*)(p[i]&0xf));
-		if((i&15) == 15)
-			prints("\n");
-		else
-			prints(" ");
+	if(v) {
+		write(fd, "true", 4);
+		return;
 	}
-	if(n & 15)
-		prints("\n");
+	write(fd, "false", 5);
 }
-
 
 void
 prints(int8 *s)
@@ -44,16 +24,54 @@ prints(int8 *s)
 	write(fd, s, findnull((byte*)s));
 }
 
-// need NOSPLIT otherwise 5l will complain because func uses '...' arg
-#pragma textflag 7
 void
-printf(int8 *s, ...)
+·printhex(uint32 v)
 {
-	byte *arg;
+	static int8 *dig = "0123456789abcdef";
+	byte buf[100];
+	int32 i;
 
-	arg = (byte*)(&s+1);
-	vprintf(s, arg);
+	i=nelem(buf);
+	for(; v>0; v/=16)
+		buf[--i] = dig[v%16];
+	if(i == nelem(buf))
+		buf[--i] = '0';
+	buf[--i] = 'x';
+	buf[--i] = '0';
+	write(fd, (char*) buf+i, nelem(buf)-i);
 }
+
+void
+·printpointer(void *p)
+{
+	·printhex((uint32)p);
+}
+
+void
+·printuint(uint32 v)
+{
+	byte buf[100];
+	int32 i;
+
+	for(i=nelem(buf)-1; i>0; i--) {
+		buf[i] = v%10 + '0';
+		if(v < 10)
+			break;
+		v = v/10;
+	}
+	write(fd, (char*) buf+i, nelem(buf)-i);
+}
+
+void
+·printint(int32 v)
+{
+	if(v < 0) {
+		write(fd, "-", 1);
+		v = -v;
+	}
+	·printuint(v);
+}
+
 
 static byte*
 vrnd(byte *p, int32 x)
@@ -121,72 +139,13 @@ vprintf(int8 *s, byte *arg)
 }
 
 
+// need NOSPLIT otherwise 5l will complain because func uses '...' arg
+#pragma textflag 7
 void
-·printbool(bool v)
+printf(int8 *s, ...)
 {
-	if(v) {
-		write(fd, "true", 4);
-		return;
-	}
-	write(fd, "false", 5);
-}
+	byte *arg;
 
-void
-·printuint(uint32 v)
-{
-	byte buf[100];
-	int32 i;
-
-	for(i=nelem(buf)-1; i>0; i--) {
-		buf[i] = v%10 + '0';
-		if(v < 10)
-			break;
-		v = v/10;
-	}
-	write(fd, (char*) buf+i, nelem(buf)-i);
-}
-
-void
-·printint(int32 v)
-{
-	if(v < 0) {
-		write(fd, "-", 1);
-		v = -v;
-	}
-	·printuint(v);
-}
-
-void
-·printhex(uint32 v)
-{
-	static int8 *dig = "0123456789abcdef";
-	byte buf[100];
-	int32 i;
-
-	i=nelem(buf);
-	for(; v>0; v/=16)
-		buf[--i] = dig[v%16];
-	if(i == nelem(buf))
-		buf[--i] = '0';
-	buf[--i] = 'x';
-	buf[--i] = '0';
-	write(fd, (char*) buf+i, nelem(buf)-i);
-}
-
-void
-·printpointer(void *p)
-{
-	·printhex((uint32)p);
-}
-
-void
-·printsp(void)
-{
-	write(fd, " ", 1);
-}
-
-void
-·printnl(void)
-{
-	write(fd, "\n", 1);
+	arg = (byte*)(&s+1);
+	vprintf(s, arg);
 }
