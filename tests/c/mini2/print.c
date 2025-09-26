@@ -15,40 +15,12 @@ void	·printpointer(void*);
 void	·printbool(bool);
 void	·printfloat(float64);
 void	·printint(int64);
-void	·printpc(void*);
 void	·printuint(uint64);
 void	·printhex(uint64);
 
-//void	·printiface(Iface);
-//void	·printeface(Eface);
-//void	·printstring(String);
-//void	·printslice(Slice);
-//void	·printcomplex(Complex128);
-
 void prints(int8 *s);
 
-
-//static Lock debuglock;
-
 static void vprintf(int8*, byte*);
-
-void
-dump(byte *p, int32 n)
-{
-	int32 i;
-
-	for(i=0; i<n; i++) {
-		·printpointer((byte*)(p[i]>>4));
-		·printpointer((byte*)(p[i]&0xf));
-		if((i&15) == 15)
-			prints("\n");
-		else
-			prints(" ");
-	}
-	if(n & 15)
-		prints("\n");
-}
-
 
 void
 prints(int8 *s)
@@ -82,8 +54,6 @@ vprintf(int8 *s, byte *arg)
 {
 	int8 *p, *lp;
 	byte *narg;
-
-//	lock(&debuglock);
 
 	lp = p = s;
 	for(; *p; p++) {
@@ -184,25 +154,9 @@ vprintf(int8 *s, byte *arg)
 	if(p > lp)
 		write(fd, lp, p-lp);
 
-//	unlock(&debuglock);
 }
 
 #pragma textflag 7
-//void
-//·printf(String s, ...)
-//{
-//	// Can assume s has terminating NUL because only
-//	// the Go compiler generates calls to ·printf, using
-//	// string constants, and all the string constants have NULs.
-//	vprintf((int8*)s.str, (byte*)(&s+1));
-//}
-
-void
-·printpc(void *p)
-{
-	prints("PC=");
-	·printhex((uint64)·getcallerpc(p));
-}
 
 void
 ·printbool(bool v)
@@ -292,15 +246,6 @@ void
 	write(fd, (char*) buf, n+7);
 }
 
-//void
-//·printcomplex(Complex128 v)
-//{
-//	write(fd, "(", 1);
-//	·printfloat(v.real);
-//	·printfloat(v.imag);
-//	write(fd, "i)", 2);
-//}
-
 void
 ·printuint(uint64 v)
 {
@@ -348,19 +293,6 @@ void
 {
 	·printhex((uint64)p);
 }
-
-//void
-//·printstring(String v)
-//{
-//	extern int32 maxstring;
-//
-//	if(v.len > maxstring) {
-//		write(fd, "[invalid string]", 16);
-//		return;
-//	}
-//	if(v.len > 0)
-//		write(fd, v.str, v.len);
-//}
 
 void
 ·printsp(void)
