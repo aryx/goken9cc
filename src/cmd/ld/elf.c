@@ -4,6 +4,8 @@
  */
 #include "l.h"
 
+extern char thechar;
+
 enum {
 	/* offsets into string table */
 	Stitext		= 1,
@@ -82,7 +84,7 @@ elf32sectab(void (*putl)(long))
 		HEADR, textsize, 0, 0, 0x10000, 0);
     //NEW: must rnd() data segment for ELF Linux
 	elf32shdr(putl, Stidata, Progbits, Salloc|Swrite, INITDAT,
-		rnd(HEADR+textsize, INITRD), datsize, 0, 0, 0x10000, 0);
+		rnd(HEADR+textsize, INITRND), datsize, 0, 0, 0x10000, 0);
 	elf32shdr(putl, Stistrtab, Strtab, 1 << 5, 0,
 		HEADR+textsize+datsize+symsize+3*Shdr32sz, 14, 0, 0, 1, 0);
 	elfstrtab();
@@ -117,8 +119,17 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 		putl(HEADR+textsize+datsize+symsize); /* offset to first shdr */
 	else
 		putl(0);
-    //TODO:
-	putl(0L);			/* flags */
+
+	switch(thechar) {
+    case '5':
+        //goken: version5 EABI for Linux
+        putl(0x5000200);			/* flags */
+        break;
+    default:
+        putl(0L);			/* flags */
+        break;
+    }
+    
 	putw(Ehdr32sz);
 	putw(Phdr32sz);
 	putw(3 + addpsects);		/* # of Phdrs */
@@ -144,7 +155,7 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 	 */
 	phydata = INITDAT - (INITTEXT - INITTEXTP);
     //NEW: must rnd() data segment for ELF Linux
-	elf32phdr(putl, PT_LOAD, rnd(HEADR+textsize, INITRD), INITDAT, phydata,
+	elf32phdr(putl, PT_LOAD, rnd(HEADR+textsize, INITRND), INITDAT, phydata,
 		datsize, datsize+bsssize, R|W|X, INITRND); /* data */
 	elf32phdr(putl, NOPTYPE, HEADR+textsize+datsize, 0, 0,
 		symsize, lcsize, R, 4);			/* symbol table */
