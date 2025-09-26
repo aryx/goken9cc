@@ -23,10 +23,25 @@ typedef	float			float32;
 typedef	double			float64;
 #endif
 
-#ifdef _64BIT
+// 64 bits archs
+#ifndef NO_64
+#ifdef arm64
 typedef	uint64		uintptr;
 typedef	int64		intptr;
-#else
+#endif
+#ifdef amd64
+typedef	uint64		uintptr;
+typedef	int64		intptr;
+#endif
+#endif
+
+//TODO: ifdef 386 ? need ARCH_386 prefix?
+
+#ifdef arm
+typedef	uint32		uintptr;
+typedef int32		intptr;
+#endif
+#ifdef arm_
 typedef	uint32		uintptr;
 typedef int32		intptr;
 #endif
