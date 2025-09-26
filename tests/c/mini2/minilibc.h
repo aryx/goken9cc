@@ -14,17 +14,12 @@ typedef	unsigned int           uint32;
 
 // Useful to get rid of 64 and float for archs like arm
 // which require special functions for 64 bits conversion and floats
-#ifndef NO_64
 typedef	signed long long int   int64;
 typedef	unsigned long long int uint64;
-#endif
-#ifndef NO_FLOAT
 typedef	float			float32;
 typedef	double			float64;
-#endif
 
 // 64 bits archs
-#ifndef NO_64
 #ifdef arm64
 typedef	uint64		uintptr;
 typedef	int64		intptr;
@@ -32,7 +27,6 @@ typedef	int64		intptr;
 #ifdef amd64
 typedef	uint64		uintptr;
 typedef	int64		intptr;
-#endif
 #endif
 
 //TODO: ifdef 386 ? need ARCH_386 prefix?
@@ -105,10 +99,8 @@ extern void printf(char *s, ...);
 extern int32 findnull(byte*);
 
 // float.c
-#ifndef NO_64
 extern bool	isInf(float64 f, int32 sign);
 extern bool	isNaN(float64 f);
-#endif
 
 // linux_$objtype.s
 extern void	panic(int32);

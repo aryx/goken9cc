@@ -27,16 +27,16 @@ helloprintf.exe: helloprintf.c
 # first get rid of float/64 bits instructions and see if everything
 # else works at least
 helloprintf_nofloat_no64.exe: helloprintf.c
-   $CC_ $CC_FLAGS -DNO_FLOAT -DNO_64 -c misc.c
-   $CC_ $CC_FLAGS -DNO_FLOAT -DNO_64 -c rune.c
-   $CC_ $CC_FLAGS -DNO_FLOAT -DNO_64 -c print_nofloat_no64.c
-   $CC_ $CC_FLAGS -DNO_FLOAT -DNO_64 -c helloprintf.c
+   $CC_ $CC_FLAGS -c misc.c
+   $CC_ $CC_FLAGS -c rune.c
+   $CC_ $CC_FLAGS -c print_nofloat_no64.c
+   $CC_ $CC_FLAGS -c helloprintf.c
    $AS_ -c linux_$objtype.s
-   iar grc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
-   $LD_ -X -L. -o $target -E main helloprintf.$O_
+   #iar grc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
+   $LD_ -X -L. -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
 
 #TODO: does not work yet, weird findnull: DWORD linker errors
-helloprintf_arm64.exe: helloprintf.c
+helloprintf_arm64.exe: helloprintf.c misc.c rune.c print.c float.c
    $CC_ $CC_FLAGS -c misc.c
    $CC_ $CC_FLAGS -c rune.c
    $CC_ $CC_FLAGS -c print.c
@@ -46,10 +46,10 @@ helloprintf_arm64.exe: helloprintf.c
    $LD_ -H7 -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print.$O_ float.$O_ misc.$O_
 
 helloprintf_arm_nofloat_no64.exe: helloprintf.c
-   5c_ -Darm_ -DNO_FLOAT -DNO_64 -c misc.c
-   5c_ -Darm_ -DNO_FLOAT -DNO_64 -c print_nofloat_no64.c
-   5c_ -Darm_ -DNO_FLOAT -DNO_64 -c helloprintf.c
-   5a_ -Darm_ -DNO_FLOAT -DNO_64 -c linux_arm.s
+   5c_ -Darm_ -c misc.c
+   5c_ -Darm_ -c print_nofloat_no64.c
+   5c_ -Darm_ -c helloprintf.c
+   5a_ -Darm_ -c linux_arm.s
    5l_ -H7 -o $target -E _start helloprintf.5 linux_arm.5 print_nofloat_no64.5 misc.5
 
 helloprintf_arm_.exe: helloprintf.c misc.c float.c vlrt.c print.c linux_arm.s
