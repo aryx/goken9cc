@@ -11,18 +11,30 @@ static	uint64	uvnan		= 0x7FF0000000000001ULL;
 static	uint64	uvinf		= 0x7FF0000000000000ULL;
 static	uint64	uvneginf	= 0xFFF0000000000000ULL;
 
-uint32
-float32tobits(float32 f)
-{
-	// The obvious cast-and-pointer code is technically
-	// not valid, and gcc miscompiles it.  Use a union instead.
-	union {
-		float32 f;
-		uint32 i;
-	} u;
-	u.f = f;
-	return u.i;
-}
+//uint32
+//float32tobits(float32 f)
+//{
+//	// The obvious cast-and-pointer code is technically
+//	// not valid, and gcc miscompiles it.  Use a union instead.
+//	union {
+//		float32 f;
+//		uint32 i;
+//	} u;
+//	u.f = f;
+//	return u.i;
+//}
+//float32
+//float32frombits(uint32 i)
+//{
+//	// The obvious cast-and-pointer code is technically
+//	// not valid, and gcc miscompiles it.  Use a union instead.
+//	union {
+//		float32 f;
+//		uint32 i;
+//	} u;
+//	u.i = i;
+//	return u.f;
+//}
 
 uint64
 float64tobits(float64 f)
@@ -45,19 +57,6 @@ float64frombits(uint64 i)
 	union {
 		float64 f;
 		uint64 i;
-	} u;
-	u.i = i;
-	return u.f;
-}
-
-float32
-float32frombits(uint32 i)
-{
-	// The obvious cast-and-pointer code is technically
-	// not valid, and gcc miscompiles it.  Use a union instead.
-	union {
-		float32 f;
-		uint32 i;
 	} u;
 	u.i = i;
 	return u.f;
@@ -100,76 +99,76 @@ Inf(int32 sign)
 		return float64frombits(uvneginf);
 }
 
-enum
-{
-	MASK	= 0x7ffL,
-	SHIFT	= 64-11-1,
-	BIAS	= 1022L,
-};
-
-float64
-frexp(float64 d, int32 *ep)
-{
-	uint64 x;
-
-	if(d == 0) {
-		*ep = 0;
-		return 0;
-	}
-	x = float64tobits(d);
-	*ep = (int32)((x >> SHIFT) & MASK) - BIAS;
-	x &= ~((uint64)MASK << SHIFT);
-	x |= (uint64)BIAS << SHIFT;
-	return float64frombits(x);
-}
-
-float64
-ldexp(float64 d, int32 e)
-{
-	uint64 x;
-
-	if(d == 0)
-		return 0;
-	x = float64tobits(d);
-	e += (int32)(x >> SHIFT) & MASK;
-	if(e <= 0)
-		return 0;	/* underflow */
-	if(e >= MASK){		/* overflow */
-		if(d < 0)
-			return Inf(-1);
-		return Inf(1);
-	}
-	x &= ~((uint64)MASK << SHIFT);
-	x |= (uint64)e << SHIFT;
-	return float64frombits(x);
-}
-
-float64
-modf(float64 d, float64 *ip)
-{
-	float64 dd;
-	uint64 x;
-	int32 e;
-
-	if(d < 1) {
-		if(d < 0) {
-			d = modf(-d, ip);
-			*ip = -*ip;
-			return -d;
-		}
-		*ip = 0;
-		return d;
-	}
-
-	x = float64tobits(d);
-	e = (int32)((x >> SHIFT) & MASK) - BIAS;
-
-	/*
-	 * Keep the top 11+e bits; clear the rest.
-	 */
-	if(e <= 64-11)
-		x &= ~(((uint64)1 << (64LL-11LL-e))-1);
-	dd = float64frombits(x);
-	*ip = dd;
-	return d - dd;
-}
+//enum
+//{
+//	MASK	= 0x7ffL,
+//	SHIFT	= 64-11-1,
+//	BIAS	= 1022L,
+//};
+//
+//float64
+//frexp(float64 d, int32 *ep)
+//{
+//	uint64 x;
+//
+//	if(d == 0) {
+//		*ep = 0;
+//		return 0;
+//	}
+//	x = float64tobits(d);
+//	*ep = (int32)((x >> SHIFT) & MASK) - BIAS;
+//	x &= ~((uint64)MASK << SHIFT);
+//	x |= (uint64)BIAS << SHIFT;
+//	return float64frombits(x);
+//}
+//
+//float64
+//ldexp(float64 d, int32 e)
+//{
+//	uint64 x;
+//
+//	if(d == 0)
+//		return 0;
+//	x = float64tobits(d);
+//	e += (int32)(x >> SHIFT) & MASK;
+//	if(e <= 0)
+//		return 0;	/* underflow */
+//	if(e >= MASK){		/* overflow */
+//		if(d < 0)
+//			return Inf(-1);
+//		return Inf(1);
+//	}
+//	x &= ~((uint64)MASK << SHIFT);
+//	x |= (uint64)e << SHIFT;
+//	return float64frombits(x);
+//}
+//
+//float64
+//modf(float64 d, float64 *ip)
+//{
+//	float64 dd;
+//	uint64 x;
+//	int32 e;
+//
+//	if(d < 1) {
+//		if(d < 0) {
+//			d = modf(-d, ip);
+//			*ip = -*ip;
+//			return -d;
+//		}
+//		*ip = 0;
+//		return d;
+//	}
+//
+//	x = float64tobits(d);
+//	e = (int32)((x >> SHIFT) & MASK) - BIAS;
+//
+//	/*
+//	 * Keep the top 11+e bits; clear the rest.
+//	 */
+//	if(e <= 64-11)
+//		x &= ~(((uint64)1 << (64LL-11LL-e))-1);
+//	dd = float64frombits(x);
+//	*ip = dd;
+//	return d - dd;
+//}

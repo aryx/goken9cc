@@ -1,5 +1,5 @@
 
-TEXT _start(SB), 1, $0
+TEXT _start(SB), 7, $0
 #ifdef arm_
 	MOVW $setR12(SB), R12
 #endif
@@ -25,6 +25,14 @@ TEXT    panic+0(SB), 7, $0
         SWI     $0
 	RET // never reached
 
+// for vlrt.c
+TEXT    abort+0(SB), 7, $0
+        MOVW    $3, R0
+        MOVW    $1, R7          // syscall number 1 = sys_exit
+        SWI     $0
+	RET // never reached
+
+
 TEXT write+0(SB), 7, $0
 #ifdef arm_
 #else
@@ -37,11 +45,16 @@ TEXT write+0(SB), 7, $0
 	RET
 
 // from 9front/.../libc/arm/getcallerpc.s
-TEXT ·getcallerpc(SB), 1, $-4
+TEXT ·getcallerpc(SB), 7, $-4
 	MOVW	0(R13), R0
 	RET
 
 //TODO: see GO/.../runtime/arm/asm.s and copy the code there
+// or principia/.../libc/arm/
+
+//---------------------------------
+// from principia/libc/arm/div.s
+//---------------------------------
 
 // no arm instructions for those operations so must be
 // provided as "builtins"
@@ -54,9 +67,6 @@ TEXT ·getcallerpc(SB), 1, $-4
 //TEXT 	_modu+0(SB), 7, $0
 //	RET
 
-//---------------------------------
-// from principia/libc/arm/div.s
-//---------------------------------
 Q	= 0
 N	= 1
 D	= 2
@@ -183,50 +193,95 @@ out:
 // end of principia/libc/arm/div.s
 //---------------------------------
 
+//---------------------------------
+// 64bits ("very long" or vl) operations
+//---------------------------------
+// see also vlrt.c!
 
+TEXT 	debug+0(SB), 7, $0
+	MOVW R0, R1
+	//alt: call write
+	MOVW $1, R0
+	MOVW $4, R2
+	MOVW    $4, R7
+	SWI     $0
+	RET
 
-//
-////Float and 64bits stuff
+//// signed int to vlong
 //TEXT 	_si2v+0(SB), 7, $0
+//DATA    si2v(SB)/4, $"si2v"
+//	MOVW $si2v(SB), R0
+//	BL debug(SB)
 //	RET
+//
+//// unsigned int to vlong
 //TEXT 	_ui2v+0(SB), 7, $0
+//DATA    ui2v(SB)/4, $"ui2v"
+//	MOVW $ui2v(SB), R0
+//	BL debug(SB)
 //	RET
-//TEXT 	_v2si+0(SB), 7, $0
+//
+//GLOBL   si2v(SB), $4
+//GLOBL   ui2v(SB), $4
+//
+//TEXT 	_modvu+0(SB), 7, $0
+//DATA    mdvu(SB)/4, $"mdvu"
+//	MOVW $mdvu(SB), R0
+//	BL debug(SB)
 //	RET
-//TEXT 	_v2sl+0(SB), 7, $0
+//TEXT 	_divvu+0(SB), 7, $0
+//DATA    dvvu(SB)/4, $"dvvu"
+//	MOVW $dvvu(SB), R0
+//	BL debug(SB)
 //	RET
+//
+//GLOBL   mdvu(SB), $4
+//GLOBL   dvvu(SB), $4
+//
+//TEXT 	_addv+0(SB), 7, $0
+//DATA    addv(SB)/4, $"addv"
+//	MOVW $addv(SB), R0
+//	BL debug(SB)
+//	RET
+//TEXT 	_subv+0(SB), 7, $0
+//DATA    subv(SB)/4, $"subv"
+//	MOVW $subv(SB), R0
+//	BL debug(SB)
+//	RET
+//
+//GLOBL   addv(SB), $4
+//GLOBL   subv(SB), $4
+//
+//
+////TEXT 	_v2si+0(SB), 7, $0
+////	RET
+////TEXT 	_v2sl+0(SB), 7, $0
+////	RET
 //TEXT 	_v2uc+0(SB), 7, $0
 //	RET
 //TEXT 	_v2ul+0(SB), 7, $0
 //	RET
 //TEXT 	_v2ui+0(SB), 7, $0
 //	RET
+//
 //TEXT 	_p2v+0(SB), 7, $0
 //	RET
 //
-//TEXT 	_modvu+0(SB), 7, $0
-//	RET
-//TEXT 	_divvu+0(SB), 7, $0
-//	RET
 //
-//TEXT 	_addv+0(SB), 7, $0
-//	RET
-//TEXT 	_subv+0(SB), 7, $0
-//	RET
 //TEXT 	_andv+0(SB), 7, $0
 //	RET
-//TEXT 	_xorv+0(SB), 7, $0
-//	RET
-//TEXT 	_orv+0(SB), 7, $0
-//	RET
+////TEXT 	_xorv+0(SB), 7, $0
+////	RET
+////TEXT 	_orv+0(SB), 7, $0
+////	RET
 //TEXT 	_eqv+0(SB), 7, $0
 //	RET
-//TEXT 	_lshv+0(SB), 7, $0
-//	RET
+////TEXT 	_lshv+0(SB), 7, $0
+////	RET
 //TEXT 	_rshlv+0(SB), 7, $0
 //	RET
-//
-//
+////
+////
 //TEXT 	_lov+0(SB), 7, $0
 //	RET
 //TEXT 	_ltv+0(SB), 7, $0
@@ -235,5 +290,11 @@ out:
 //	RET
 //TEXT 	_hiv+0(SB), 7, $0
 //	RET
+
+
+//---------------------------------
+// Float operations
+//---------------------------------
+
 //TEXT 	_sfloat+0(SB), 7, $0
 //	RET
