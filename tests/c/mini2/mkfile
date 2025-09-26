@@ -44,3 +44,12 @@ helloprintf_arm64.exe: helloprintf.c
    $CC_ $CC_FLAGS -c helloprintf.c
    $AS_ -c linux_$objtype.s
    $LD_ -H7 -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print.$O_ float.$O_ misc.$O_
+
+helloprintf_arm_.exe: helloprintf.c
+   5c_ -Darm_ -DNO_FLOAT -DNO_64 -c misc.c
+   5c_ -Darm_ -DNO_FLOAT -DNO_64 -c rune.c
+   5c_ -Darm_ -DNO_FLOAT -DNO_64 -c print_nofloat_no64.c
+   #5c_ -Darm_ -DNO_FLOAT -DNO_64 -c float.c
+   5c_ -Darm_ -DNO_FLOAT -DNO_64 -c helloprintf.c
+   5a_ -Darm_ -DNO_FLOAT -DNO_64 -c linux_arm.s
+   5l_ -H7 -o $target -E _start helloprintf.5 linux_arm.5 print_nofloat_no64.5 misc.5
