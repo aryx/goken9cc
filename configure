@@ -11,7 +11,7 @@ set -eu # to debug this script add '-x'
 # The goal is also to use a single command that can work on all platforms:
 #  - Linux (Alpine for Docker, Ubuntu for Github Actions, Nix/Arch/...)
 #  - macOS (HomeBrew, Nix)
-#  - Windows (Cygwin, Mingw, WSL, Nix?)
+#  - Windows (Cygwin, Mingw, WSL)
 # and that setup everything (e.g., gcc/clang, mk/rc).
 #
 # This is reminescent of the classic "configure; make; make install"
@@ -19,7 +19,7 @@ set -eu # to debug this script add '-x'
 # new world of software development with powerful package managers and
 # software written using multiple programming languages.
 #
-# This script assumes that gcc (and binutils) as well as
+# This script currently assumes that gcc (and binutils) as well as
 # a few other utilities (e.g., make, bash) have already been installed.
 #
 # TODO: 
@@ -45,6 +45,7 @@ case "$ARCH" in
         exit 1
         ;;
 esac
+
 OS=`uname -s`
 case "$OS" in
     Linux)
@@ -63,14 +64,15 @@ esac
 
 echo 'Generating ./mkconfig'
 #alt: could be set by env.sh
-# in mkfiles/$objtype/mkfile
-#O=o
-# in mkfiles/mkfile.proto included from mkfiles/$objtype/mkfile
-#CPUS=arm amd64 386
-#OS=568
+#old: now in mkfiles/$objtype/mkfile
+#  O=o
+#old: now in mkfiles/mkfile.proto included from mkfiles/$objtype/mkfile
+#  CPUS=arm amd64 386
+#  OS=568
 echo "objtype=$GOARCH" > mkconfig
 echo "GOOS=$GOOS" >> mkconfig
 echo "GOARCH=$GOARCH" >> mkconfig
+#still needed? used in golang
 #GOHOSTOS=linux
 #GOHOSTARCH=amd64
 echo "YACC=$YACC" >> mkconfig
@@ -82,5 +84,5 @@ echo
 echo '   $ make'
 echo '   $ make install'
 echo
-echo 'Here is the content of your ./mkconfig that configure wrote:'
+echo 'Here is the content of the ./mkconfig that configure generated:'
 cat mkconfig
