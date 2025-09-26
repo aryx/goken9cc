@@ -169,6 +169,11 @@ assemble(char *file)
 
 	pass = 1;
 	pinit(file);
+
+    //goken: for goken iar/gopack that use slightly different
+    // object format
+	//TODO: Bprint(&obuf, "%s\n", thestring);
+
 	for(i=0; i<nDlist; i++)
 		dodefine(Dlist[i]);
 	yyparse();
@@ -176,6 +181,8 @@ assemble(char *file)
 		cclean();
 		return nerrors;
 	}
+
+	//TODO: Bprint(&obuf, "\n!\n");
 
 	pass = 2;
 	outhist();

@@ -1,6 +1,8 @@
 //TODO: fix iar to handle .7 objects
 #ifndef arm64
+#ifndef arm_
 #pragma lib "libmini.a"
+#endif
 #endif
 
 extern void xwrite(char*, int);
