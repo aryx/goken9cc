@@ -80,8 +80,9 @@ elf32sectab(void (*putl)(long))
 	seek(cout, HEADR+textsize+datsize+symsize, 0);
 	elf32shdr(putl, Stitext, Progbits, Salloc|Sexec, INITTEXT,
 		HEADR, textsize, 0, 0, 0x10000, 0);
+    //NEW: must rnd() data segment for ELF Linux
 	elf32shdr(putl, Stidata, Progbits, Salloc|Swrite, INITDAT,
-		HEADR+textsize, datsize, 0, 0, 0x10000, 0);
+		rnd(HEADR+textsize, INITRD), datsize, 0, 0, 0x10000, 0);
 	elf32shdr(putl, Stistrtab, Strtab, 1 << 5, 0,
 		HEADR+textsize+datsize+symsize+3*Shdr32sz, 14, 0, 0, 1, 0);
 	elfstrtab();
@@ -116,6 +117,7 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 		putl(HEADR+textsize+datsize+symsize); /* offset to first shdr */
 	else
 		putl(0);
+    //TODO:
 	putl(0L);			/* flags */
 	putw(Ehdr32sz);
 	putw(Phdr32sz);
@@ -141,7 +143,8 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 	 * correct for INITDAT and INITDATP.
 	 */
 	phydata = INITDAT - (INITTEXT - INITTEXTP);
-	elf32phdr(putl, PT_LOAD, HEADR+textsize, INITDAT, phydata,
+    //NEW: must rnd() data segment for ELF Linux
+	elf32phdr(putl, PT_LOAD, rnd(HEADR+textsize, INITRD), INITDAT, phydata,
 		datsize, datsize+bsssize, R|W|X, INITRND); /* data */
 	elf32phdr(putl, NOPTYPE, HEADR+textsize+datsize, 0, 0,
 		symsize, lcsize, R, 4);			/* symbol table */

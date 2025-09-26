@@ -23,7 +23,7 @@ static	int	maxlibdir = 0;
  *	-H4				is IXP1200 (raw)
  *	-H5 -T0xC0008010 -R1024		is ipaq
  *	-H6 -R4096			no header with segments padded to pages
- *	-H7				is elf
+ *	-H7				is elf Linux
  */
 
 void
@@ -230,7 +230,7 @@ main(int argc, char *argv[])
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)
-			INITRND = 4;
+			INITRND = 4096;
 		break;
 	}
 	if (INITTEXTP == -1)

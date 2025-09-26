@@ -13,6 +13,7 @@ OFILES=\
 	optab.$O\
 	pass.$O\
 	span.$O\
+	\
 	enam.$O\
 	elf.$O\
 
