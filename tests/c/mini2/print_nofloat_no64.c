@@ -12,13 +12,11 @@ static int32 fd = 1;
 void	·printpointer(void*);
 void	·printbool(bool);
 void	·printint(int32);
-void	·printpc(void*);
 void	·printpointer(void*);
 void	·printuint(uint32);
 void	·printhex(uint32);
 
 void prints(int8 *s);
-
 
 static void vprintf(int8*, byte*);
 
@@ -90,17 +88,6 @@ vprintf(int8 *s, byte *arg)
 			arg = vrnd(arg, 4);
 			narg = arg + 4;
 			break;
-		case 'D':	// 64-bit
-		case 'U':
-		case 'X':
-		case 'f':
-			arg = vrnd(arg, sizeof(uintptr));
-			narg = arg + 8;
-			break;
-		case 'C':
-			arg = vrnd(arg, sizeof(uintptr));
-			narg = arg + 16;
-			break;
 		case 'p':	// pointer-sized
 		case 's':
 			arg = vrnd(arg, sizeof(uintptr));
@@ -133,13 +120,6 @@ vprintf(int8 *s, byte *arg)
 		write(fd, lp, p-lp);
 }
 
-
-void
-·printpc(void *p)
-{
-	prints("PC=");
-	·printhex((uint32)·getcallerpc(p));
-}
 
 void
 ·printbool(bool v)

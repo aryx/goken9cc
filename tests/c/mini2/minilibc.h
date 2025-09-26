@@ -11,11 +11,13 @@ typedef	unsigned short         uint16;
 // and macOS where sizeof(int) is also 4.
 typedef	signed int             int32;
 typedef	unsigned int           uint32;
+
+// Useful to get rid of 64 and float for archs like arm
+// which require special functions for 64 bits conversion and floats
 #ifndef NO_64
 typedef	signed long long int   int64;
 typedef	unsigned long long int uint64;
 #endif
-
 #ifndef NO_FLOAT
 typedef	float			float32;
 typedef	double			float64;
@@ -33,6 +35,8 @@ typedef int32		intptr;
  * get rid of C types
  * the / / / forces a syntax error immediately,
  * which will show "last name: XXunsigned".
+ * pad: I kept char and int for now, too many errors when
+ * importing code otherwise.
  */
 #define	unsigned		XXunsigned / / /
 #define	signed			XXsigned / / /
@@ -63,21 +67,9 @@ enum
 #define	nelem(x)	(sizeof(x)/sizeof((x)[0]))
 #define	nil		((void*)0)
 
-
-// extern decls
-extern void	panic(int32);
-extern int32 findnull(byte*);
-
-// float.c
-#ifndef NO_64
-extern bool	isInf(float64 f, int32 sign);
-extern bool	isNaN(float64 f);
-#endif
-
 // print.c
 extern void printf(char *s, ...);
 //void ·printpc(void *p);
-
 //for printf typechecker?
 //#pragma	varargck	argpos	printf	1
 //#pragma	varargck	type	"d"	int32
@@ -94,7 +86,17 @@ extern void printf(char *s, ...);
 //#pragma	varargck	type	"s"	uint8*
 //#pragma	varargck	type	"S"	String
 
-// linux.s
+// misc.c (used in print
+extern int32 findnull(byte*);
+
+// float.c
+#ifndef NO_64
+extern bool	isInf(float64 f, int32 sign);
+extern bool	isNaN(float64 f);
+#endif
+
+// linux_$objtype.s
+extern void	panic(int32);
 extern void write(uint32 fd, char* buf, /*size_t*/ int count);
 extern void exit(uint32);
 void*	·getcallerpc(void*);

@@ -15,13 +15,13 @@ void	·printpointer(void*);
 void	·printbool(bool);
 void	·printfloat(float64);
 void	·printint(int64);
+void	·printpc(void*);
+void	·printuint(uint64);
+void	·printhex(uint64);
+
 //void	·printiface(Iface);
 //void	·printeface(Eface);
 //void	·printstring(String);
-void	·printpc(void*);
-void	·printpointer(void*);
-void	·printuint(uint64);
-void	·printhex(uint64);
 //void	·printslice(Slice);
 //void	·printcomplex(Complex128);
 
