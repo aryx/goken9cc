@@ -8,10 +8,10 @@
 #include "minilibc.h"
 
 void main() {
+  printf("Hello %s%s: %t\n", "Wor", "ld", true);
+  printf("Hello %s%s: %x\n", "Wor", "ld", 42);
+  printf("Hello %s%s: %d\n", "Wor", "ld", 42);
   printf("Hello World: %d\n", 42);
-  //printf("Hello %s%s: %t\n", "Wor", "ld", true);
-  //printf("Hello %s%s: %x\n", "Wor", "ld", 42);
-  //printf("Hello %s%s: %d\n", "Wor", "ld", 42);
   exit(0);
 }
 
