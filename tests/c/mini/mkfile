@@ -34,4 +34,5 @@ helloc_arm_.exe: helloc.c
    5a_ -c xwrite_arm.s
    5a_ -c xexit_arm.s
    5a_ -c start_arm.s
+   #iar grc libmini.a start_arm.5 xwrite_arm.5 xexit_arm.5
    5l_ -H7 -L. -o $target -E _start helloc.5 xwrite_arm.5 xexit_arm.5 start_arm.5
