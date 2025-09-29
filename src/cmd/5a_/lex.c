@@ -158,7 +158,7 @@ assemble(char *file)
 	pass = 1;
 	pinit(file);
 
-	//TODO: Bprint(&obuf, "%s\n", thestring);
+	Bprint(&obuf, "%s\n", thestring);
 
 	for(i=0; i<nDlist; i++)
 		dodefine(Dlist[i]);
@@ -168,7 +168,7 @@ assemble(char *file)
 		return nerrors;
 	}
 
-	//TODO: Bprint(&obuf, "\n!\n");
+	Bprint(&obuf, "\n!\n");
 
 	pass = 2;
 	outhist();

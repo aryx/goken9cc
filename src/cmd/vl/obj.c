@@ -763,10 +763,16 @@ ldobj(int f, long c, char *pn)
 	uchar *bloc, *bsize, *stop;
 	Sym *h[NSYM], *s, *di;
 	int v, o, r, skip;
+    int hlen;
 
 	bsize = buf.xbuf;
 	bloc = buf.xbuf;
 	di = S;
+
+    //coupling: va/lex.c and and vc/swt.c
+    hlen = strlen("mips\n\n!\n");
+    seek(f, hlen, SEEK__CUR);
+    c-=hlen;
 
 newloop:
 	memset(h, 0, sizeof(h));

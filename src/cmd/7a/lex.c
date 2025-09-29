@@ -172,7 +172,7 @@ assemble(char *file)
 
     //goken: for goken iar/gopack that use slightly different
     // object format
-	//TODO: Bprint(&obuf, "%s\n", thestring);
+	Bprint(&obuf, "%s\n", thestring);
 
 	for(i=0; i<nDlist; i++)
 		dodefine(Dlist[i]);
@@ -182,7 +182,7 @@ assemble(char *file)
 		return nerrors;
 	}
 
-	//TODO: Bprint(&obuf, "\n!\n");
+	Bprint(&obuf, "\n!\n");
 
 	pass = 2;
 	outhist();

@@ -800,7 +800,7 @@ readsome(int f, uchar *buf, uchar *good, uchar *stop, int max)
 }
 
 void
-ldobj(int f, long c, char *pn)
+ldobj(fdt f, long c, char *pn)
 {
 	long ipc;
 	Prog *p, *t;
@@ -811,6 +811,7 @@ ldobj(int f, long c, char *pn)
 	static int files;
 	static char **filen;
 	char **nfilen;
+    int hlen;
 
 	if((files&15) == 0){
 		nfilen = malloc((files+16)*sizeof(char*));
@@ -823,6 +824,12 @@ ldobj(int f, long c, char *pn)
 	bsize = buf.xbuf;
 	bloc = buf.xbuf;
 	di = S;
+
+    //coupling: 5a_/lex.c and and 5c_/swt.c
+    hlen = strlen("arm\n\n!\n");
+    seek(f, hlen, SEEK__CUR);
+    c-=hlen;
+
 
 newloop:
 	memset(h, 0, sizeof(h));

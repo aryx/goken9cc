@@ -172,6 +172,9 @@ assemble(char *file)
 
 	pass = 1;
 	pinit(file);
+
+	Bprint(&obuf, "%s\n", thestring);
+
 	for(i=0; i<nDlist; i++)
 		dodefine(Dlist[i]);
 	yyparse();
@@ -179,6 +182,8 @@ assemble(char *file)
 		cclean();
 		return nerrors;
 	}
+
+	Bprint(&obuf, "\n!\n");
 
 	pass = 2;
 	outhist();

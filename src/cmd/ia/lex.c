@@ -177,6 +177,9 @@ assemble(char *file)
 
 	pass = 1;
 	pinit(file);
+
+	Bprint(&obuf, "%s\n", thestring);
+
 	if(thechar == 'j')
 		dodefine("XLEN=8");
 	else
@@ -188,6 +191,8 @@ assemble(char *file)
 		cclean();
 		return nerrors;
 	}
+
+	Bprint(&obuf, "\n!\n");
 
 	pass = 2;
 	outhist();
