@@ -249,7 +249,7 @@ cp o.out $TOP/ROOT/$GOARCH/bin/rc
 
 # We now also compile 'ed' because it is needed by mkenam and it is simpler
 # to reduce external deps.
-cd $TOP/utilities/misc/
+cd $TOP/utilities/text/misc/
 gcc $CFLAGS -c ed.c
 gcc $LDFLAGS -o o.out ed.o -lregexp -lbio -l9 -lm
 cp o.out $TOP/ROOT/$GOARCH/bin/ed

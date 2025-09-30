@@ -2,10 +2,10 @@ TOP=../../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-# -lregex for sed
+# -lregex for sed and ed
 LDLIBS=-lregexp -lbio -l9 -lm
 
 # sort: miss tobaserune, join: ?? error j1
-TARG=uniq tr sed
+TARG=uniq tr ed sed
 
 <$TOP/mkfiles/mkmany

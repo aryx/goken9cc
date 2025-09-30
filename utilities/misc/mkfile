@@ -2,10 +2,9 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-# -lregexp needed only for ed
-LDLIBS=-lregexp -lbio -l9 -lm
+LDLIBS=-lbio -l9 -lm
 
 #TODO: file: has pbs, iconv needs draw.h, strings: rune pb, 
-TARG=basename unicode ed
+TARG=basename unicode
 
 <$TOP/mkfiles/mkmany
