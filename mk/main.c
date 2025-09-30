@@ -106,6 +106,9 @@ main(int argc, char **argv)
         case 'i':
             iflag = true;
             break;
+        case 'I':
+            iflag = false;
+            break;
         /*x: [[main()]] -xxx switch cases */
         case 't':
             tflag = true;
