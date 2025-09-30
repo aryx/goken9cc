@@ -3,7 +3,9 @@ TOP=../
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=rc
-LDLIBS=-l9 -lm
+
+# -lstring is needed just for one function in processes.c (for `{...})
+LDLIBS=-lstring -l9 -lm
 
 CFLAGS_EXTRA=-DUnix
 

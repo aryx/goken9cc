@@ -523,14 +523,13 @@ void
 Exit(char *stat, char* loc)
 {
   int n = 0;
-  USED(loc);
-  //if(flag['s'])
-  //  fprint(STDERR, "Exit from %s: %s\n", loc, stat);
+  if(flag['s'])
+     fprint(STDERR, "Exit from %s: %s\n", loc, stat);
 
   while(*stat){
     if(*stat!='|'){
       if(*stat<'0' || '9'<*stat)
- exit(1);
+          exit(1);
       else n = n*10+*stat-'0';
     }
     stat++;

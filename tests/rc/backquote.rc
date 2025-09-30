@@ -1,0 +1,8 @@
+echo test
+X=`{echo foo bar}
+echo $X
+     
+for(I in $X) {
+      echo $I
+}
+echo end
