@@ -1,3 +1,168 @@
+* Big plan
+
+** Overview
+
+# fix float/64bits ops arm32 and arm64 tests/c/mini2,
+# make it work on principia code (arm and x86)! (add wasm later) and bootstrap itself!!!
+# produce from hello.{s,c} binaries for SEMI (old) macos (amd64 TODO arm64), (386) windows
+# reLPize {Assembler,Linker,Compiler,Libcore}.nw and release (and maybe also {Debugger,Profiler}.nw) "principia-toolchain"!
+# => simpler alt to gcc/clang for cross compiling C code! (ex: xv6-{x86,arm,riscv}!)
+
+** Later
+
+*** LATER LONG try to boostrap itself; can compile 6a with 6c?
+
+*** LATER SEMI try to unify all the kencc/inferno/plan9 before lpize (5a/5c/5l) again
+diff5a diff5c diff5l are quite small across kencc/inferno/plan9 and goken
+so no big need to unify. can start from goken probably which has the biggest change
+
+use my diff.rc
+
+*** LATER: start lpize again, redo the work in {Assembler,Linker,Compiler}.nw
+relpize, resplit, but at least can reuse most of the thinking/splitting
+work done for plan9
+AND this time run regression tests first! to catch regression ASAP
+
+alt: unless found bugs in plan9 toolchain and go towards merging with goken
+codebase instead
+
+*** LATER relax factorize in other linker ld.h like 7l
+from l.h -> ld.h factorized
+also 7l/{mod,pass,pobj,subr}.c can be moved to ../ld/
+and factorize with other linkers
+
+but better wait to avoid diff.rc to show big diffs
+
+
+* Last
+
+*** port acid/ so can use it to dump the arm64/arm_ binaries!
+and see the disassembled code.
+right now objdump and llvm-dump and gdb do not work :(
+(strace does at least)
+
+*** RELAX move dirs in goken/, use GOROOT/ in Makefile instead of ../
+
+*** RELAX reorg src/ dirs in goken, imitate principia, do the actual move
+and use SRC/ symlinks
+
+*** plan9 and goken
+
+**** try tests/c/hello_plan9_arm.exe from .c!
+mini libc
+
+**** try tests/c/hello_plan9_mips.exe from .c!
+mini libc
+
+tests/c/mini2/ ?
+
+*** FUN try to use 6prof and 6cov
+
+*** ------------------------------------------------
+
+*** goken/utilities/
+
+**** RELAX LP split tr.c, join.c, sed.c, diff*.c
+and also make it work on goken
+
+**** make utilities work on goken
+
+***** fix 'du' in goken and 'ls' "not a directory" error in both cases
+need copy p9open from plan9port too?
+debug?
+
+seems bug in dirreadall
+
+***** make grep compile and work on goken
+Runemask ??
+
+***** segfault on tar plan9port.tar
+in fmt library, weird s pointer address
+
+***** make tar and gunzip tar tvfz work on goken
+
+***** make zip/unzip work on goken
+
+*** fix bugs in goken progs
+
+**** bug goken 5i, does not seem to work on hello_plan9_arm.exe
+compare to running 5i under plan9
+bug in libmach? because 5i code in goken is the same than in principia
+
+**** sync 5i with principia Machine.nw
+
+**** bug goken mk/rc, adding lnrand.c to lib9/mkfile didn't trigger recompilation
+use mk -dg
+to debug and get graph of deps and time comparisons
+
+does original mk better? maybe because if lib.a more recent
+than lnrand.c, then it does not know. but lib.a depends on
+OFILES so should have new OFILES and so should trigger recompilation
+and re-archiving
+
+**** fix mk/rc in goken so can do `{cd ../..; pwd` for get9root.c to work
+right now /bin/rc: no such file  error
+so then yacc can't work because can't find yaccpar without setting YACCPAR
+
+update: because of pathinit()? should work now?
+
+**** bug mk sync in goken, does not modify the .nw actually
+but then modify the .md5sum which then the next mk sync
+just erase the modif because the orig .nw was not changed at the
+step before
+
+it creates a local Shell.nw! this is bad. need to fix syncweb probably
+
+hard to reproduce, weird.
+"orig Utilities.nw has been updated"
+
+**** fix "Not consumed" in Make.nw, weird
+
+*** goken/typesetting/
+
+**** segfault on o.out lex when used from typesetting/grap
+
+**** compile pic, tbl, etc. now that lex and yacc are there
+
+**** LPize troff? eqn, tbl, pic, grap, tr2post, and page to visualize?
+Documentation preparation system book
+update: actually need postscript interpreter too; page calls gs which is huge
+
+***** try generate end-to-end from hello.man e hello.ps
+troff -man hello.man -Tutf | tr2post ?
+
+***** still? first try troff and page on plan9
+but can't work I think without aladin postscript. page is calling gs
+and lp and tr2post
+
+*** goken/generators
+
+**** RELAX LPize yaccpar too, and yaccpars
+and sync in goken and principia
+
+**** try to remove dependency to bison?
+good though to also work with bison; it reports more bugs
+than plan9 yacc and it's good to be compatible, just like
+getting kencc to compile with gcc so easier to bootstrap.
+
+*** ---------------------------------------------------------------
+
+*** add workflow to check it compiles on macos
+can't run tests, but at least can check we can compile
+most of goken (including utilties)
+
+*** nix.yml with testing also mk/rc build side, and macos/linux
+# was waiting for mk/rc to be added in goken itself, and it is now!
+
+*** FUN Debuggers.nw, try understand acid? and libmach? and add in goken?
+there is a 9-cc/acid/ !
+so it might be portable!
+update: chatGPT says it actually can't debug live process :( or can just inspect
+its state
+maybe still useful though ...
+
+*** port vi to goken
+good test also for lib9
 
 * Components
 
@@ -16,6 +181,12 @@ update: easier when goken 5a_/5c_/5l_ can work on linux
 and can compile itself on linux => that's a good test suite
 
 ** original ARM toolchain : 5a/5c/5l
+
+*** try make golang work for arm32? use armhf gcc and
+compile the whole golang source tree and run the tests?
+=> good regression test infra at least
+
+see GO/all-arm and GO/tests/run-arm 
 
 *** still? can't use 5c on principia libc code, weird!!!
 wait.c:33 unknown type 15 in zaddr
