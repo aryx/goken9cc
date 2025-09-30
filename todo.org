@@ -28,11 +28,6 @@ but got segfault now :( even worse than before
 
 update: better now that I made it work with 5l_ ?
 
-*** try make golang work for arm32? use armhf gcc and
-compile the whole golang source tree and run the tests?
-=> good regression test infra at least
-
-
 ** C compilers: 5c/6c/8c
 
 *** SEMI make it work on principia code!

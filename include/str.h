@@ -42,14 +42,16 @@ extern void	    s_putc(String*, int);
 extern String*	s_unique(String*);
 extern String*	s_grow(String*, int);
 
+// additional functions for libbio
+// ugly? assume has included bio.h before str.h ?
 #ifdef BGETC
 extern int	s_read(Biobuf*, String*, int);
 extern char	*s_read_line(Biobuf*, String*);
 extern char	*s_getline(Biobuf*, String*);
 
+// ??
 typedef struct Sinstack Sinstack;
 #pragma incomplete Sinstack
-
 extern char	    *s_rdinstack(Sinstack*, String*);
 extern Sinstack	*s_allocinstack(char*);
 extern void	     s_freeinstack(Sinstack*);
