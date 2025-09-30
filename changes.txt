@@ -2,17 +2,20 @@
 
 * TODO
 - add 5i/vi (machines or emulators)
-  and test if 5l_/5l/vl are working correctly
 - add lex/yacc (generators)
+- continue reorg code with SRC/ with symlinks to mimic old org.
 
 * Beta (Q3 2025) (arm64 7a/7c/7l, riscv ia/ic/il, arm64 build, arm32 linux run, mk/rc, utilities, typesetting)
 
 ** toolchain
 - adapt to goken 7a/7c/7l 
-  (working hello_linux_arm64.exe and half working helloc.exe)
+  (working hello_linux_arm64.exe and helloc.exe on my thelio astra)
 - adapt to goken ia/ic/il (but not tested, hard to test)
 - adapt 5a/5c/5l to generate valid arm32 Linux binaries (EABI)
-  (working hello_linux_arm.exe and helloc.exe)
+  (working hello_linux_arm.exe, helloc.exe, and helloprintf.exe also
+   on my thelio astra)
+- import original 5a/5c/5l from 9cc/plan9 as 5a_/5c_/5l_ and
+  extend also to ELF EABI and working hello_linux_arm_.exe
 
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
@@ -25,12 +28,11 @@
 
 ** internals
 - reorg code with all Go related stuff under GO/ (GOSRC/, GOMISC/, GOTEST/)
-- reorg code with assemblers/, lib_core/, to match principia-softwarica
-  but keep SRC/ with symlinks to mimic old org.
+- started reorg code with machine/, lib_strings, to match principia-softwarica
 - added lib9/math/ subdir and move files there.
 
 ** libs
-- added libregexp (needed by mk/rc) and libstring (needed by du) from
+- added libregexp (needed by mk/rc) and libstring (needed by du and rc) from
   principia softwarica or plan9port
 
 ** utilities
