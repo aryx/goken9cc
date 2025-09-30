@@ -22,5 +22,5 @@ rm -f ROOT/$GOARCH/bin/5[acl]
 cp ROOT/$GOARCH/bin/iar bin/iar
 cp ROOT/$GOARCH/bin/yacc bin/iyacc
 
-# for libc/9sys/
-cp ROOT/$GOARCH/bin/sed bin/sed
+# still? for libc/9sys/
+# cp ROOT/$GOARCH/bin/sed bin/sed
