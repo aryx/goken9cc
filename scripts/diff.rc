@@ -1,4 +1,6 @@
 #!/home/pad/goken/bin/rc
+# TODO: why this does not work?
+# #!/home/pad/goken/bin/rc -m /home/pad/goken/etc/rcmain.unix
 
 # Script to compare the source code in the different kencc-derived
 # repositories, to ultimately try to unify them in one repo (goken).

@@ -1,12 +1,10 @@
 
 * Components
 
-** ARM toolchain : 5a/5c/5l
-
-*** make it work on principia code!
+** ARM toolchain : 5a_/5c_/5l_
 
 *** test infra! run hello_plan9_arm.exe on raspeberry pi2 via qemu?
-need port principia to raspeberry pi2 first then!
+need port principia to raspberry pi2 first then!
 
 *** LATER factorize ld.a lib? imitate what I've done in principia?
 hmm but l.h change each time so can do it?
@@ -14,9 +12,30 @@ hmm but l.h change each time so can do it?
 *** LATER: merge with principia and fix regression in principia!
 easier when will have test infra via qemu-system-arm
 
+update: easier when goken 5a_/5c_/5l_ can work on linux
+and can compile itself on linux => that's a good test suite
+
+** original ARM toolchain : 5a/5c/5l
+
+*** still? can't use 5c on principia libc code, weird!!!
+wait.c:33 unknown type 15 in zaddr
+can repro minimal case?
+set principia/env.sh to point to goken/ROOT/arm64/bin/?
+
+*** goken: get tests/c/mini2/helloprintf_nofloat_no64.exe working for 5a/5c/5l
+linux_arm.s syscalls
+but got segfault now :( even worse than before
+
+update: better now that I made it work with 5l_ ?
+
+*** try make golang work for arm32? use armhf gcc and
+compile the whole golang source tree and run the tests?
+=> good regression test infra at least
+
+
 ** C compilers: 5c/6c/8c
 
-*** make it work on principia code!
+*** SEMI make it work on principia code!
 
 ** assemblers: 5a/6a/8a
 
@@ -24,29 +43,28 @@ easier when will have test infra via qemu-system-arm
 
 ** mk/rc
 
+*** rc
+
+**** RELAX use #9/data/rc/rcmain ? or #9/etc/rcmain.unix ?
+and also overwrite via RCMAIN var
+
+**** regsub_ in Plan9.c and Posix.c
+alt: adapt libregexp in principia to match the one in goken/kencc
+right now in mk I need to adjust 
+
+-                            regsub(pre->s, buf, /*sizeof(buf),*/ rmatch, NREGEXP);
++                            regsub(pre->s, buf, sizeof(buf), rmatch, NREGEXP);
+
+**** LATER: port enough of :I: so can use goken mk for mk sync too!!!
+so don't need to switch back and forth between kencc/goken mk
+and xix mk
+
+
 ** libs
 
 ** Arch
 
-*** LATER: integrate arm64, and riscv from kencc-latest, just build them! (can't run yet)
-
-use Diff to try to unify all those kencc
-diff.rc va &> /tmp/diffva
-
-**** add 7a, 7c, 7l,  arm64
-how to test? on macbook pro? hello_macos_arm64.s ?
-probably need understand updated linker/assembler first and re-lpized with goken
-
-no diffs across kencc/inferno/plan9
-
-no change across different kencc/inferno/plan9 repos (and nothing in goken)
-
-**** add ia, ic, il,  risc (and riscv64)
-how to test? via xv6-riscv?
-
-add riscv (zc) try it on xv6-riscv!!!!! that would be awesome
-
-**** still? integrate also 5coff ? and coff code?
+*** still? integrate also 5coff ? and coff code?
 
 *** riscv 
 
@@ -73,10 +91,12 @@ alt: take them from latest go repo and hope it's backward compatible?
 
 ** Test infra
 
+*** LATER: try to compile plan9 with goken9cc!!!
+
+*** LATER: try to compile goken with goken9cc!!!
+
 *** LATER add basic regression tests to goken9cc
 and keep all the go stuff which is a great testcase for 6c itself :)
-
-*** LATER: try to compile plan9 with goken9cc!!!
 
 *** More workflows! build_amd64_linux.yaml, build_amd64_windows
 and test_xxx too ? alla semgrep workflows
