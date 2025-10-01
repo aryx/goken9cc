@@ -4,6 +4,8 @@ TOP=../..
 
 LIBNAME=libmach.a
 
+# note that there is no 6db.c; I could not find any in plan9/inferno/9cc/...
+# nobody got the courage to write a disassembler for amd64 :)
 OFILES=\
 	executable.$O\
 	fakeobj.$O\
