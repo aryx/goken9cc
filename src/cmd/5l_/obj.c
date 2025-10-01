@@ -23,7 +23,8 @@ static	int	maxlibdir = 0;
  *	-H4				is IXP1200 (raw)
  *	-H5 -T0xC0008010 -R1024		is ipaq
  *	-H6 -R4096			no header with segments padded to pages
- *	-H7				is elf Linux
+ *
+ *	-H7	is Linux ELF (default)
  */
 
 void
@@ -163,6 +164,10 @@ main(int argc, char *argv[])
 			HEADTYPE = 1;
 		if(debug['9'])
 			HEADTYPE = 2;
+        // Linux ELF
+        // alt: use goos and detect Linux
+		HEADTYPE = 7;
+
 	}
 	switch(HEADTYPE) {
 	default:

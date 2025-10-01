@@ -142,6 +142,7 @@ main(int argc, char *argv[])
 		if(debug['9'])
 			HEADTYPE = 2;
         // Linux ELF
+        // alt: use goos and detect Linux
 		HEADTYPE = 6;
 	}
 	switch(HEADTYPE) {

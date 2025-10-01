@@ -20,16 +20,8 @@ helloc.exe: helloc.c
    # -X to require NOSPLIT for all linked code, especially in $stem.6
    $LD_ -X -L. -o $target -E _start helloc.$O_
 
-#TODO: merge with previous target once iar is fixed and automatic
-# detection for -H7 is added to 7l
-helloc_arm64.exe: helloc.c
-   $CC_ -D$objtype -c $prereq
-   $AS_ -c start_$objtype.s
-   $AS_ -c xwrite_$objtype.s
-   $AS_ -c xexit_$objtype.s
-   $LD_ -H7 -L. -o $target -E _start helloc.$O_ start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
-
 #alt: 5l_ -H7 -L. -o $target -E _start helloc.5 xwrite_arm.5 xexit_arm.5 start_arm.5
+# when iar is not working
 helloc_arm_.exe: helloc.c
    5c_ -Darm_ -c helloc.c
    5a_ -Darm_ -c xwrite_arm.s

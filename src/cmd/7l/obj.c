@@ -13,7 +13,7 @@ char	*thestring 	= "arm64";
  *	-H0				no header
  *	-H2 -T0x100028 -R0x100000		is plan9 format
  *	-H6 -R4096		no header with segments padded to pages
- *	-H7				is elf
+ *	-H7				is elf linux
  */
 
 void
@@ -28,6 +28,7 @@ main(int argc, char *argv[])
 {
 	int c;
 	char *a;
+    char *goos;
 
 	Binit(&bso, 1, OWRITE);
 	cout = -1;
@@ -103,6 +104,7 @@ main(int argc, char *argv[])
 	if(!debug['9'] && !debug['U'] && !debug['B'])
 		debug[DEFAULT] = 1;
 	addlibroot();
+
 	if(HEADTYPE == -1) {
 		if(debug['U'])
 			HEADTYPE = 0;
@@ -110,6 +112,18 @@ main(int argc, char *argv[])
 			HEADTYPE = 1;
 		if(debug['9'])
 			HEADTYPE = 2;
+
+        goos = getgoos();
+
+		if(goos != nil && strcmp(goos, "linux") == 0)
+			HEADTYPE = 7;
+		//if(strcmp(goos, "darwin") == 0)
+		//	HEADTYPE = 6;
+		//else
+		//if(strcmp(goos, "freebsd") == 0)
+		//	HEADTYPE = 9;
+		else
+			print("goos is not known: %s\n", goos);
 	}
 	switch(HEADTYPE) {
 	default:

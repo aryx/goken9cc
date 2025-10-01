@@ -1,7 +1,9 @@
-//TODO: fix iar to handle .7 objects
-#ifndef arm64
+// if iar is not working for your arch you might want to
+// uncomment the ifndef below to prevent the linker to
+// load and link libmini.a
+//#ifndef arm64
 #pragma lib "libmini.a"
-#endif
+//#endif
 
 extern void xwrite(char*, int);
 extern void xexit(void);
