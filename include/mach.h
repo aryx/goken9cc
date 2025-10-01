@@ -36,9 +36,10 @@ struct	Exec
 #define	U_MAGIC		_MAGIC(0, 25)		/* sparc64 */
 #define	S_MAGIC		_MAGIC(HDR_MAGIC, 26)	/* amd64 */
 #define	T_MAGIC		_MAGIC(HDR_MAGIC, 27)	/* powerpc64 */
+#define	R_MAGIC		_MAGIC(HDR_MAGIC, 28)	/* powerpc64 */
 
 #define	MIN_MAGIC	8
-#define	MAX_MAGIC	27			/* <= 90 */
+#define	MAX_MAGIC	28			/* <= 90 */
 
 #define	DYN_MAGIC	0x80000000		/* dlm */
 
@@ -67,6 +68,7 @@ struct	Sym
  *		powerpc,
  *		powerpc64
  *		alpha
+ *      arm64
  */
 enum
 {
@@ -86,6 +88,7 @@ enum
 	MSPARC64,
 	MAMD64,
 	MPOWER64,
+    MARM64,
 				/* types of executables */
 	FNONE = 0,		/* unidentified */
 	FMIPS,			/* v.out */
@@ -115,6 +118,8 @@ enum
 	FAMD64B,		/* 6.out bootable */
 	FPOWER64,		/* 9.out */
 	FPOWER64B,		/* 9.out bootable */
+    FARM64, // arm64
+    FARM64B, // arm64 bootable
 
 	ANONE = 0,		/* dissembler types */
 	AMIPS,
@@ -132,6 +137,7 @@ enum
 	ASPARC64,
 	AAMD64,
 	APOWER64,
+    AARM64,
 				/* object file types */
 	Obj68020 = 0,		/* .2 */
 	ObjSparc,		/* .k */
@@ -149,6 +155,7 @@ enum
 	ObjAmd64,		/* .6 */
 	ObjSpim,		/* .0 */
 	ObjPower64,		/* .9 */
+    ObjArm74, // .7
 	Maxobjtype,
 
 	CNONE  = 0,		/* symbol table classes */

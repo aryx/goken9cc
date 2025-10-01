@@ -542,6 +542,7 @@ ioreg:
 	}
 |	'(' sreg ')' con '!'
 	{
+        //TODO: take fix from cinap in 9front
 		$$.type = D_XPOST;
 		$$.offset = $2;
 	}
