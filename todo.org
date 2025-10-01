@@ -120,6 +120,9 @@ hard to reproduce, weird.
 
 *** goken/typesetting/
 
+**** look at x9base/troff, smaller and self contained? can
+produce postscript from simpler troff files like plan9.ms?
+
 **** segfault on o.out lex when used from typesetting/grap
 
 **** compile pic, tbl, etc. now that lex and yacc are there

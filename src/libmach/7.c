@@ -6,7 +6,7 @@
 #include <bio.h>
 #include <mach.h>
 
-#include "/arm64/include/ureg.h"
+#include <ureg_arm64.h>
 
 #define	REGOFF(x)	(uintptr)(&((struct Ureg *) 0)->x)
 

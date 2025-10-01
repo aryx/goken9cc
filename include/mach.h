@@ -155,7 +155,7 @@ enum
 	ObjAmd64,		/* .6 */
 	ObjSpim,		/* .0 */
 	ObjPower64,		/* .9 */
-    ObjArm74, // .7
+    ObjArm64, // .7
 	Maxobjtype,
 
 	CNONE  = 0,		/* symbol table classes */

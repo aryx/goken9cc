@@ -97,6 +97,7 @@ extern	Mach	m68020;
 extern	Mach	mi386;
 extern	Mach	mamd64;
 extern	Mach	marm;
+extern	Mach	marm64;
 extern	Mach	mpower;
 extern	Mach	mpower64;
 extern	Mach	malpha;
@@ -312,6 +313,15 @@ ExecTable exectab[] =
 		sizeof(Exec),
 		beswal,
 		common },
+    { R_MAGIC,			/* Arm64 7.out and boot image */
+		"arm64 plan 9 executable",
+		"arm64 plan 9 dlm",
+		FARM64,
+		1,
+		&marm64,
+		sizeof(Exec)+8,
+		nil,
+		commonllp64 },
 	{ 0 },
 };
 
@@ -460,6 +470,12 @@ commonboot(Fhdr *fp)
 		fp->name = "alpha plan 9 boot image";
 		fp->dataddr = fp->txtaddr+fp->txtsz;
 		break;
+	case FARM64:
+		fp->type = FARM64B;
+		fp->txtaddr = fp->entry;
+		fp->name = "arm64 plan 9 boot image";
+		fp->dataddr = _round(fp->txtaddr+fp->txtsz, mach->pgsize);
+		return;
 	case FPOWER:
 		fp->type = FPOWERB;
 		fp->txtaddr = (u32int)fp->entry;
