@@ -1,6 +1,6 @@
 
 struct Ureg {
-	uint	r0;
+	uint	r0; // REGARG0, REGRET
 	uint	r1;
 	uint	r2;
 	uint	r3;
@@ -12,11 +12,12 @@ struct Ureg {
 	uint	r9;
 	uint	r10;
 	uint	r11;
-	uint	r12;
+	uint	r12; // REGSB
 	uint	r13;
 	uint	r14;
-	uint	link;
+
+	uint	link; // alias for R14
 	uint	type;
 	uint	psr;
-	uint	pc;
+	uint	pc; // alias for R15
 };

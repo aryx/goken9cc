@@ -4,8 +4,26 @@
 - add 5i/vi (machines or emulators)
 - add lex/yacc (generators)
 - continue reorg code with SRC/ with symlinks to mimic old org.
+- fully working arm32 and arm64 (float, can cross compile principia softwarica)
+- bootstrappable (can compile itself)
 
-* Beta (Q3 2025) (arm64 7a/7c/7l, riscv ia/ic/il, arm64 build, arm32 linux run, mk/rc, utilities, typesetting)
+* 0.1 (Q4 2025) (???)
+
+** toolchain
+
+** test infra
+
+** dev infra
+
+** build infra
+
+** internals
+
+** os
+
+** arch
+
+* Beta (Q3 2025) (arm64 7a/7c/7l v0, riscv ia/ic/il v0, arm64 linux/macos build, arm32 linux run v0, mk/rc, utilities v0, typesetting v0)
 
 ** toolchain
 - adapt to goken 7a/7c/7l 
@@ -42,7 +60,7 @@
   principia softwarica (actually was not built in principia)
 
 
-* Alpha (Q2 2025) (focus on C (not Go), Dockerfile/Nix/GHA, mips va/vl/vc)
+* Alpha (Q2 2025) (focus on C (not Go), Dockerfile/Nix/GHA, mips va/vl/vc v0)
 # see also pad.org history section
 
 ** toolchain
@@ -76,11 +94,16 @@
 
 * Goken9cc Pre-history
 
+** TODO Cinap 9front: 2019-2025?
+- many fixes to 7[alc]
+
 ** Richard Miller: 2018
 - cmd/z[alc]/ for RISC-V (later renamed to i[alc] for riscv and j for riscv64)
+in https://9p.io/sources/contrib/miller/
 
 ** Charles Forsyth?: 2014
 - cmd/7[alc] for arm64
+in https://bitbucket.org/plan9-from-bell-labs/9-cc/src/master/
 
 ** Go pre 1.0: 2008-2010
 # see DELETED/doc/devel/release.html for a compact list of changes
@@ -90,9 +113,10 @@
 fork Go at the October 2010 time to start goken9cc (in May 2025).
 
 *** linker
-+ Mach-O
-+ PE
-+ DWARF
++ ELF for Linux
++ Mach-O for macOS
++ PE for Windows
++ DWARF for gdb
 
 *** assembler
 
@@ -111,6 +135,7 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 
 ** Plan9port: 2001?-2007?
 - lib9/ to make portable the plan9 compiler
+- adapt mk/rc to Unix
  
 ** Inferno-os: 1995-1997
 - make portable the plan9 compiler (with help from plan9port) with lib9/
@@ -134,6 +159,8 @@ the origin:
 - yacc
 
 * Template 0.X (Qx 2025) (major-contrib)
+
+** toolchain
 
 ** test infra
 
