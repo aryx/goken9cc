@@ -13,7 +13,8 @@ void main() {
   printf("Hello %s%s: %d\n", "Wor", "ld", 42);
   printf("Hello World: %d\n", 42);
   // TODO: cause "Illegal instruction" with 5l_
-  //printf("Hello World: %f\n", 0.3333);
+  //TODO: printf("Hello World: %f\n", 0);
+  //TODO: printf("Hello World: %f\n", 0.3333);
   exit(0);
 }
 

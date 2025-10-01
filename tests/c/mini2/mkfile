@@ -59,4 +59,4 @@ helloprintf_arm_.exe: helloprintf.c misc.c float.c vlrt.c print.c linux_arm.s
    5c_ -Darm_ -c print.c
    5c_ -Darm_ -c helloprintf.c
    5a_ -Darm_ -c linux_arm.s
-   5l_ -H7 -o $target -E _start helloprintf.5 linux_arm.5 print.5 misc.5 float.5 vlrt.5
+   5l_ -H7 -o helloprintf_arm_.exe -E _start helloprintf.5 linux_arm.5 print.5 misc.5 float.5 vlrt.5
