@@ -71,7 +71,7 @@ Machtab	machines[] =
 		FAMD64B,
 		AAMD64,
 		&mamd64,
-		&i386mach,	},
+		&i386mach,	}, // no amd64mach, reuse i386mach
 	{	"arm",				/*ARM*/
 		FARM,
 		FARMB,
