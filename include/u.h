@@ -99,6 +99,7 @@ typedef long p9jmp_buf[sizeof(sigjmp_buf)/sizeof(long)];
 #		undef _NEEDUINT
 #		undef _NEEDULONG
 #	endif
+
 #elif defined(__FreeBSD__)
 #	include <sys/types.h>
 #	include <osreldate.h>
@@ -110,6 +111,7 @@ typedef long p9jmp_buf[sizeof(sigjmp_buf)/sizeof(long)];
 #		undef _NEEDUSHORT
 #		undef _NEEDUINT
 #	endif
+
 #elif defined(__APPLE__)
 #	include <sys/types.h>
 #	include <pthread.h>
@@ -125,18 +127,22 @@ typedef long p9jmp_buf[sizeof(sigjmp_buf)/sizeof(long)];
 #		define NSIG 32
 #	endif
 #	define _NEEDLL 1
+
 #elif defined(__NetBSD__)
 #	include <sched.h>
 #	include <sys/types.h>
 #	undef _NEEDUSHORT
 #	undef _NEEDUINT
 #	undef _NEEDULONG
+
 #elif defined(__OpenBSD__)
 #	include <sys/types.h>
 #	undef _NEEDUSHORT
 #	undef _NEEDUINT
 #	undef _NEEDULONG
+
 #elif defined(__MINGW32__)
+
 #else
 	/* No idea what system this is -- try some defaults */
 #	include <pthread.h>
@@ -216,7 +222,7 @@ enum _bool
 
 typedef	uint8			byte;
 
-//TODO? Rename to shorter EQ LT GT probably
+//alt: rename to shorter EQ LT GT?
 enum _ord {
   ORD__EQ = 0,
   ORD__INF = -1,
@@ -224,7 +230,7 @@ enum _ord {
 };
 typedef int ord;
 
-// alt: use enum, but fdt actually can be other than just 0, 1, 2 so macros better
+// alt: use enum, but fdt can be other than just 0, 1, 2 so macros fits better
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2

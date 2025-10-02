@@ -17,7 +17,7 @@ struct	Instr
 	Opcode	*op;
 	Map	*map;
 	uvlong	addr;
-	ulong	w;
+	uint32	w;
 
 	char	*curr;		/* fill point in buffer */
 	char	*end;		/* end of buffer */
@@ -245,10 +245,10 @@ static Opcode opcodes[] =
 
 #define	SYSARG5(op0,op1,Cn,Cm,op2)	((op0)<<19|(op1)<<16|(Cn)<<12|(Cm)<<8|(op2)<<5)
 
-static ulong
+static uint32
 smask(char *s, char c)
 {
-	ulong m;
+	uint32 m;
 	int i;
 
 	m = 0;
@@ -258,7 +258,7 @@ smask(char *s, char c)
 }
 
 static int
-nbits(ulong v)
+nbits(uint32 v)
 {
 	int n = 0;
 	while(v != 0){
@@ -269,7 +269,7 @@ nbits(ulong v)
 }
 
 static int
-nones(ulong v)
+nones(uint32 v)
 {
 	int n = 0;
 	while(v & 1){
@@ -280,27 +280,27 @@ nones(ulong v)
 }
 
 static int
-nshift(ulong m)
+nshift(uint32 m)
 {
 	if(m == 0 || m == ~0UL)
 		return 0;
 	return nones(~m);
 }
 
-static ulong
-unshift(ulong w, ulong m)
+static uint32
+unshift(uint32 w, uint32 m)
 {
 	int s = nshift(m);
 	w >>= s, m >>= s;
 	if((m+1 & m) != 0){	// 0bxxx0000yyyyyy -> 0byyyyyyxxx
-		ulong b = (1UL<<nones(m))-1;
+		uint32 b = (1UL<<nones(m))-1;
 		return ((w & b) << nbits(m & ~b)) | unshift(w, m & ~b);
 	}
 	return w & m;
 }
 
 static long
-sext(ulong u, int n)
+sext(uint32 u, int n)
 {
 	long l = (long)u;
 	if(n > 0){
@@ -320,9 +320,9 @@ arm64excep(Map *, Rgetter)
 static int
 decode(Map *map, uvlong pc, Instr *i)
 {
-	static ulong tab[2*nelem(opcodes)];
+	static uint32 tab[2*nelem(opcodes)];
 	static int once;
-	ulong w, j;
+	uint32 w, j;
 
 	if(!once){
 		Opcode *o;
@@ -425,7 +425,7 @@ format(char *mnemonic, Instr *i, char *f)
 {
 	Symbol s;
 	uvlong v;
-	ulong w, u, m;
+	uint32 w, u, m;
 
 	if(mnemonic)
 		format(0, i, mnemonic);
@@ -629,7 +629,7 @@ arm64instlen(Map*, uvlong)
 static uvlong
 readreg(Instr *i, Rgetter rget, int rc)
 {
-	ulong m;
+	uint32 m;
 	uvlong v;
 	char reg[4];
 	snprint(reg, sizeof(reg), "R%lud", unshift(i->w, smask(i->op->p, rc)));
@@ -679,7 +679,7 @@ passcond(Instr *i, Rgetter rget)
 static uvlong
 jumptarg(Instr *i)
 {
-	ulong m = smask(i->op->p, 'T');
+	uint32 m = smask(i->op->p, 'T');
 	return i->addr + sext(unshift(i->w, m), m)*4;
 }
 
