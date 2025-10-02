@@ -91,7 +91,7 @@ extern	Mach	marm;
 extern	Mach	marm64;
 
 /* BUG: FIX THESE WHEN NEEDED */
-//Mach	mmips;
+Mach	mmips;
 
 ExecTable exectab[] =
 {
