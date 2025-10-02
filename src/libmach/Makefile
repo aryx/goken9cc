@@ -29,6 +29,8 @@
 include ../Make.inc
 O:=$(HOST_O)
 
+#TODO:	7db.$O\
+
 LIB=libmach.a
 OFILES=\
 	executable.$O\
@@ -45,7 +47,6 @@ OFILES=\
 	7.$O\
 	8.$O\
 	5db.$O\
-	7db.$O\
 	8db.$O\
 	5obj.$O\
 	6obj.$O\
