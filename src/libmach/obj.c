@@ -49,26 +49,17 @@ enum
 	HASHMUL	= 79L,
 };
 
-int	_is2(char*),		/* in [$OS].c */
-	_is5(char*),
+/* in [$OS].c */
+int	_is5(char*),
 	_is6(char*),
 	_is7(char*),
 	_is8(char*),
-	_is9(char*),
-	_isk(char*),
-	_isq(char*),
 	_isv(char*),
-	_isu(char*),
-	_read2(Biobuf*, Prog*),
 	_read5(Biobuf*, Prog*),
 	_read6(Biobuf*, Prog*),
 	_read7(Biobuf*, Prog*),
 	_read8(Biobuf*, Prog*),
-	_read9(Biobuf*, Prog*),
-	_readk(Biobuf*, Prog*),
-	_readq(Biobuf*, Prog*),
-	_readv(Biobuf*, Prog*),
-	_readu(Biobuf*, Prog*);
+	_readv(Biobuf*, Prog*);
 
 typedef struct Obj	Obj;
 typedef struct Symtab	Symtab;
@@ -86,7 +77,7 @@ static Obj	obj[] =
 	[ObjArm]	"arm .5",	_is5, _read5,
 	[ObjArm64]	"arm64 .7",	_is7, _read7,
 	[Obj386]	"386 .8",	_is8, _read8,
-	[ObjMips]	"mips .v",	_isv, _readv,
+	//TODO: [ObjMips]	"mips .v",	_isv, _readv,
 	[Maxobjtype]	0, 0
 };
 
