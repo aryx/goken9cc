@@ -1,17 +1,4 @@
 
-struct coffsect
-{
-	char	name[8];
-	uint32	phys;
-	uint32	virt;
-	uint32	size;
-	uint32	fptr;
-	uint32	fptrreloc;
-	uint32	fptrlineno;
-	uint32	nrelocnlineno;
-	uint32	flags;
-};
-
 /*
  * proprietary exec headers, needed to bootstrap various machines
  */
@@ -41,79 +28,6 @@ union{
 	int32	gp_value;	/* the gp value used for this object    */
 };
 
-struct mips4kexec
-{
-	struct mipsexec	h;
-	struct coffsect	itexts;
-	struct coffsect idatas;
-	struct coffsect ibsss;
-};
-
-struct sparcexec
-{
-	short	sjunk;		/* dynamic bit and version number */
-	short	smagic;		/* 0407 */
-	uint32	stext;
-	uint32	sdata;
-	uint32	sbss;
-	uint32	ssyms;
-	uint32	sentry;
-	uint32	strsize;
-	uint32	sdrsize;
-};
-
-struct nextexec
-{
-/* UNUSED
-	struct	nexthdr{
-		uint32	nmagic;
-		uint32	ncputype;
-		uint32	ncpusubtype;
-		uint32	nfiletype;
-		uint32	ncmds;
-		uint32	nsizeofcmds;
-		uint32	nflags;
-	};
-
-	struct nextcmd{
-		uint32	cmd;
-		uint32	cmdsize;
-		uchar	segname[16];
-		uint32	vmaddr;
-		uint32	vmsize;
-		uint32	fileoff;
-		uint32	filesize;
-		uint32	maxprot;
-		uint32	initprot;
-		uint32	nsects;
-		uint32	flags;
-	}textc;
-	struct nextsect{
-		char	sectname[16];
-		char	segname[16];
-		uint32	addr;
-		uint32	size;
-		uint32	offset;
-		uint32	align;
-		uint32	reloff;
-		uint32	nreloc;
-		uint32	flags;
-		uint32	reserved1;
-		uint32	reserved2;
-	}texts;
-	struct nextcmd	datac;
-	struct nextsect	datas;
-	struct nextsect	bsss;
-	struct nextsym{
-		uint32	cmd;
-		uint32	cmdsize;
-		uint32	symoff;
-		uint32	nsyms;
-		uint32	spoff;
-		uint32	pcoff;
-	}symc;
-*/
-};
 
 struct i386exec
 {

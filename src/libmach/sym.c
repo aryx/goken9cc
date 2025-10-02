@@ -106,7 +106,7 @@ static int	filecomp(const void*, const void*);
  *	initialize the symbol tables
  */
 int
-syminit(int fd, Fhdr *fp)
+syminit(fdt fd, Fhdr *fp)
 {
 	Sym *p;
 	int32 i, l, size;

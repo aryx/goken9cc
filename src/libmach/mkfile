@@ -8,7 +8,6 @@ LIBNAME=libmach.a
 # nobody got the courage to write a disassembler for amd64 :)
 OFILES=\
 	executable.$O\
-	fakeobj.$O\
 	map.$O\
 	obj.$O\
 	swap.$O\

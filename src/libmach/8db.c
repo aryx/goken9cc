@@ -30,9 +30,11 @@
 #include <libc.h>
 #include <bio.h>
 #include <mach.h>
+
 #define Ureg UregAmd64
 #include <ureg_amd64.h>
 #undef Ureg
+
 #define Ureg Ureg386
 #include <ureg_x86.h>
 #undef Ureg
@@ -60,6 +62,7 @@ static	char	PROFSYM[] =	"_mainp";
 static	char	FRAMENAME[] =	".frame";
 static	char	LESSSTACK[] = "sys·lessstack";
 static	char	MORESTACK[] = "sys·morestack";
+
 static char *excname[] =
 {
 [0]	"divide error",
@@ -1572,9 +1575,10 @@ mkinstr(Map *map, Instr *ip, uvlong pc)
 	norex = 1;
 	ip->base = -1;
 	ip->index = -1;
-	if(asstype == AI8086)
-		ip->osize = 'W';
-	else {
+	//if(asstype == AI8086)
+		//ip->osize = 'W';
+	//else 
+        {
 		ip->osize = 'L';
 		ip->asize = 'E';
 		ip->amd64 = asstype != AI386;

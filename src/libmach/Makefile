@@ -32,7 +32,6 @@ O:=$(HOST_O)
 LIB=libmach.a
 OFILES=\
 	executable.$O\
-	fakeobj.$O\
 	map.$O\
 	obj.$O\
 	swap.$O\

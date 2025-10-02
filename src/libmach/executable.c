@@ -48,27 +48,23 @@ typedef struct {
 		Ehdr32 elfhdr32;			/* elf.h */
 		Ehdr64 elfhdr64;			/* elf.h */
 		struct mipsexec mips;	/* bootexec.h */
-		struct mips4kexec mipsk4;	/* bootexec.h */
-		struct sparcexec sparc;	/* bootexec.h */
-		struct nextexec next;	/* bootexec.h */
 		Machhdr machhdr;	/* macho.h */
 	} e;
 	int32 dummy;			/* padding to ensure extra int32 */
 } ExecHdr;
 
-static	int	nextboot(int, Fhdr*, ExecHdr*);
-static	int	sparcboot(int, Fhdr*, ExecHdr*);
 static	int	mipsboot(int, Fhdr*, ExecHdr*);
-static	int	mips4kboot(int, Fhdr*, ExecHdr*);
 static	int	common(int, Fhdr*, ExecHdr*);
 static	int	commonllp64(int, Fhdr*, ExecHdr*);
 static	int	adotout(int, Fhdr*, ExecHdr*);
 static	int	elfdotout(int, Fhdr*, ExecHdr*);
 static	int	machdotout(int, Fhdr*, ExecHdr*);
 static	int	armdotout(int, Fhdr*, ExecHdr*);
+
 static	void	setsym(Fhdr*, int32, int32, int32, vlong);
 static	void	setdata(Fhdr*, uvlong, int32, vlong, int32);
 static	void	settext(Fhdr*, uvlong, uvlong, int32, vlong);
+
 static	void	hswal(void*, int, uint32(*)(uint32));
 static	uvlong	_round(uvlong, uint32);
 
@@ -89,29 +85,13 @@ typedef struct Exectable{
 } ExecTable;
 
 extern	Mach	mmips;
-extern	Mach	mmips2le;
-extern	Mach	mmips2be;
-extern	Mach	msparc;
-extern	Mach	msparc64;
-extern	Mach	m68020;
 extern	Mach	mi386;
 extern	Mach	mamd64;
 extern	Mach	marm;
 extern	Mach	marm64;
-extern	Mach	mpower;
-extern	Mach	mpower64;
-extern	Mach	malpha;
 
 /* BUG: FIX THESE WHEN NEEDED */
-Mach	mmips;
-Mach	mmips2le;
-Mach	mmips2be;
-Mach	msparc;
-Mach	msparc64;
-Mach	m68020;
-Mach	mpower;
-Mach	mpower64;
-Mach	malpha;
+//Mach	mmips;
 
 ExecTable exectab[] =
 {
@@ -124,96 +104,6 @@ ExecTable exectab[] =
 		sizeof(Exec),
 		beswal,
 		adotout },
-	{ P_MAGIC,			/* Mips 0.out (r3k le) */
-		"mips plan 9 executable LE",
-		"mips plan 9 dlm LE",
-		FMIPSLE,
-		1,
-		&mmips,
-		sizeof(Exec),
-		beswal,
-		adotout },
-	{ M_MAGIC,			/* Mips 4.out */
-		"mips 4k plan 9 executable BE",
-		"mips 4k plan 9 dlm BE",
-		FMIPS2BE,
-		1,
-		&mmips2be,
-		sizeof(Exec),
-		beswal,
-		adotout },
-	{ N_MAGIC,			/* Mips 0.out */
-		"mips 4k plan 9 executable LE",
-		"mips 4k plan 9 dlm LE",
-		FMIPS2LE,
-		1,
-		&mmips2le,
-		sizeof(Exec),
-		beswal,
-		adotout },
-	{ 0x160<<16,			/* Mips boot image */
-		"mips plan 9 boot image",
-		nil,
-		FMIPSB,
-		0,
-		&mmips,
-		sizeof(struct mipsexec),
-		beswal,
-		mipsboot },
-	{ (0x160<<16)|3,		/* Mips boot image */
-		"mips 4k plan 9 boot image",
-		nil,
-		FMIPSB,
-		0,
-		&mmips2be,
-		sizeof(struct mips4kexec),
-		beswal,
-		mips4kboot },
-	{ K_MAGIC,			/* Sparc k.out */
-		"sparc plan 9 executable",
-		"sparc plan 9 dlm",
-		FSPARC,
-		1,
-		&msparc,
-		sizeof(Exec),
-		beswal,
-		adotout },
-	{ 0x01030107, 			/* Sparc boot image */
-		"sparc plan 9 boot image",
-		nil,
-		FSPARCB,
-		0,
-		&msparc,
-		sizeof(struct sparcexec),
-		beswal,
-		sparcboot },
-	{ U_MAGIC,			/* Sparc64 u.out */
-		"sparc64 plan 9 executable",
-		"sparc64 plan 9 dlm",
-		FSPARC64,
-		1,
-		&msparc64,
-		sizeof(Exec),
-		beswal,
-		adotout },
-	{ A_MAGIC,			/* 68020 2.out & boot image */
-		"68020 plan 9 executable",
-		"68020 plan 9 dlm",
-		F68020,
-		1,
-		&m68020,
-		sizeof(Exec),
-		beswal,
-		common },
-	{ 0xFEEDFACE,			/* Next boot image */
-		"next plan 9 boot image",
-		nil,
-		FNEXTB,
-		0,
-		&m68020,
-		sizeof(struct nextexec),
-		beswal,
-		nextboot },
 	{ I_MAGIC,			/* I386 8.out & boot image */
 		"386 plan 9 executable",
 		"386 plan 9 dlm",
@@ -229,24 +119,6 @@ ExecTable exectab[] =
 		FAMD64,
 		1,
 		&mamd64,
-		sizeof(Exec)+8,
-		nil,
-		commonllp64 },
-	{ Q_MAGIC,			/* PowerPC q.out & boot image */
-		"power plan 9 executable",
-		"power plan 9 dlm",
-		FPOWER,
-		1,
-		&mpower,
-		sizeof(Exec),
-		beswal,
-		common },
-	{ T_MAGIC,			/* power64 9.out & boot image */
-		"power64 plan 9 executable",
-		"power64 plan 9 dlm",
-		FPOWER64,
-		1,
-		&mpower64,
 		sizeof(Exec)+8,
 		nil,
 		commonllp64 },
@@ -295,24 +167,6 @@ ExecTable exectab[] =
 		sizeof(Exec),
 		leswal,
 		armdotout },
-	{ L_MAGIC,			/* alpha 7.out */
-		"alpha plan 9 executable",
-		"alpha plan 9 dlm",
-		FALPHA,
-		1,
-		&malpha,
-		sizeof(Exec),
-		beswal,
-		common },
-	{ 0x0700e0c3,			/* alpha boot image */
-		"alpha plan 9 boot image",
-		nil,
-		FALPHA,
-		0,
-		&malpha,
-		sizeof(Exec),
-		beswal,
-		common },
     { R_MAGIC,			/* Arm64 7.out and boot image */
 		"arm64 plan 9 executable",
 		"arm64 plan 9 dlm",
@@ -340,11 +194,11 @@ couldbe4k(ExecTable *mp)
 		return mp;
 	}
 	free(d);
-	for (f = exectab; f->magic; f++)
-		if(f->magic == M_MAGIC) {
-			f->name = "mips plan 9 executable on mips2 kernel";
-			return f;
-		}
+	//for (f = exectab; f->magic; f++)
+	//	if(f->magic == M_MAGIC) {
+	//		f->name = "mips plan 9 executable on mips2 kernel";
+	//		return f;
+	//	}
 	return mp;
 }
 
@@ -448,10 +302,6 @@ commonboot(Fhdr *fp)
 		return;
 
 	switch(fp->type) {				/* boot image */
-	case F68020:
-		fp->type = F68020B;
-		fp->name = "68020 plan 9 boot image";
-		break;
 	case FI386:
 		fp->type = FI386B;
 		fp->txtaddr = (u32int)fp->entry;
@@ -464,24 +314,12 @@ commonboot(Fhdr *fp)
 		fp->name = "ARM plan 9 boot image";
 		fp->dataddr = _round(fp->txtaddr+fp->txtsz, mach->pgsize);
 		return;
-	case FALPHA:
-		fp->type = FALPHAB;
-		fp->txtaddr = (u32int)fp->entry;
-		fp->name = "alpha plan 9 boot image";
-		fp->dataddr = fp->txtaddr+fp->txtsz;
-		break;
 	case FARM64:
 		fp->type = FARM64B;
 		fp->txtaddr = fp->entry;
 		fp->name = "arm64 plan 9 boot image";
 		fp->dataddr = _round(fp->txtaddr+fp->txtsz, mach->pgsize);
 		return;
-	case FPOWER:
-		fp->type = FPOWERB;
-		fp->txtaddr = (u32int)fp->entry;
-		fp->name = "power plan 9 boot image";
-		fp->dataddr = fp->txtaddr+fp->txtsz;
-		break;
 	case FAMD64:
 		fp->type = FAMD64B;
 		fp->txtaddr = fp->entry;
@@ -578,78 +416,6 @@ abort();
 		break;
 	}
 	setsym(fp, hp->e.nsyms, 0, hp->e.pcsize, hp->e.symptr);
-	fp->hdrsz = 0;			/* header stripped */
-#endif
-	return 1;
-}
-
-/*
- *	mips4k bootable image.
- */
-static int
-mips4kboot(int fd, Fhdr *fp, ExecHdr *hp)
-{
-abort();
-#ifdef unused
-	USED(fd);
-	fp->type = FMIPSB;
-	switch(hp->e.h.amagic) {
-	default:
-	case 0407:	/* some kind of mips */
-		settext(fp, (u32int)hp->e.h.mentry, (u32int)hp->e.h.text_start,
-			hp->e.h.tsize, sizeof(struct mips4kexec));
-		setdata(fp, (u32int)hp->e.h.data_start, hp->e.h.dsize,
-			fp->txtoff+hp->e.h.tsize, hp->e.h.bsize);
-		break;
-	case 0413:	/* some kind of mips */
-		settext(fp, (u32int)hp->e.h.mentry, (u32int)hp->e.h.text_start,
-			hp->e.h.tsize, 0);
-		setdata(fp, (u32int)hp->e.h.data_start, hp->e.h.dsize,
-			hp->e.h.tsize, hp->e.h.bsize);
-		break;
-	}
-	setsym(fp, hp->e.h.nsyms, 0, hp->e.h.pcsize, hp->e.h.symptr);
-	fp->hdrsz = 0;			/* header stripped */
-#endif
-	return 1;
-}
-
-/*
- *	sparc bootable image
- */
-static int
-sparcboot(int fd, Fhdr *fp, ExecHdr *hp)
-{
-abort();
-#ifdef unused
-	USED(fd);
-	fp->type = FSPARCB;
-	settext(fp, hp->e.sentry, hp->e.sentry, hp->e.stext,
-		sizeof(struct sparcexec));
-	setdata(fp, hp->e.sentry+hp->e.stext, hp->e.sdata,
-		fp->txtoff+hp->e.stext, hp->e.sbss);
-	setsym(fp, hp->e.ssyms, 0, hp->e.sdrsize, fp->datoff+hp->e.sdata);
-	fp->hdrsz = 0;			/* header stripped */
-#endif
-	return 1;
-}
-
-/*
- *	next bootable image
- */
-static int
-nextboot(int fd, Fhdr *fp, ExecHdr *hp)
-{
-abort();
-#ifdef unused
-	USED(fd);
-	fp->type = FNEXTB;
-	settext(fp, hp->e.textc.vmaddr, hp->e.textc.vmaddr,
-		hp->e.texts.size, hp->e.texts.offset);
-	setdata(fp, hp->e.datac.vmaddr, hp->e.datas.size,
-		hp->e.datas.offset, hp->e.bsss.size);
-	setsym(fp, hp->e.symc.nsyms, hp->e.symc.spoff, hp->e.symc.pcoff,
-		hp->e.symc.symoff);
 	fp->hdrsz = 0;			/* header stripped */
 #endif
 	return 1;
@@ -883,18 +649,11 @@ elfdotout(int fd, Fhdr *fp, ExecHdr *hp)
 		mach = &mmips;
 		fp->type = FMIPS;
 		break;
-	case SPARC64:
-		mach = &msparc64;
-		fp->type = FSPARC64;
-		break;
-	case POWER:
-		mach = &mpower;
-		fp->type = FPOWER;
-		break;
 	case ARM:
 		mach = &marm;
 		fp->type = FARM;
 		break;
+   //TODO: case ARM64 ??
 	default:
 		return 0;
 	}

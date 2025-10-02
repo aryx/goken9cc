@@ -2,17 +2,33 @@
  *	Architecture-dependent application data
  */
 
-// mach for machine
+//******************************************************************************
+// Prelude
+//******************************************************************************
+// Library used by debugger/profiler/... for arch-specific things.
+// mach in libmach stands for "machine"
+//
+// Note that the linker does not rely on libmach but is producing
+// an executable that can be parsed by tools like debuggers which rely
+// on libmach to do so.
+
+//******************************************************************************
+// Executable header
+//******************************************************************************
 
 typedef	struct	Exec	Exec;
 struct	Exec
 {
 	int32	magic;		/* magic number */
+
 	int32	text;	 	/* size of text segment */
 	int32	data;	 	/* size of initialized data */
 	int32	bss;	  	/* size of uninitialized data */
+
 	int32	syms;	 	/* size of symbol table */
+
 	int32	entry;	 	/* entry point */
+
 	int32	spsz;		/* size of pc/sp offset table */
 	int32	pcsz;		/* size of pc/line number table */
 };
@@ -20,23 +36,11 @@ struct	Exec
 #define HDR_MAGIC	0x00008000		/* header expansion */
 
 #define	_MAGIC(f, b)	((f)|((((4*(b))+0)*(b))+7))
-#define	A_MAGIC		_MAGIC(0, 8)		/* 68020 */
 #define	I_MAGIC		_MAGIC(0, 11)		/* intel 386 */
-#define	J_MAGIC		_MAGIC(0, 12)		/* intel 960 (retired) */
-#define	K_MAGIC		_MAGIC(0, 13)		/* sparc */
 #define	V_MAGIC		_MAGIC(0, 16)		/* mips 3000 BE */
-#define	X_MAGIC		_MAGIC(0, 17)		/* att dsp 3210 (retired) */
-#define	M_MAGIC		_MAGIC(0, 18)		/* mips 4000 BE */
-#define	D_MAGIC		_MAGIC(0, 19)		/* amd 29000 (retired) */
 #define	E_MAGIC		_MAGIC(0, 20)		/* arm */
-#define	Q_MAGIC		_MAGIC(0, 21)		/* powerpc */
-#define	N_MAGIC		_MAGIC(0, 22)		/* mips 4000 LE */
-#define	L_MAGIC		_MAGIC(0, 23)		/* dec alpha */
-#define	P_MAGIC		_MAGIC(0, 24)		/* mips 3000 LE */
-#define	U_MAGIC		_MAGIC(0, 25)		/* sparc64 */
 #define	S_MAGIC		_MAGIC(HDR_MAGIC, 26)	/* amd64 */
-#define	T_MAGIC		_MAGIC(HDR_MAGIC, 27)	/* powerpc64 */
-#define	R_MAGIC		_MAGIC(HDR_MAGIC, 28)	/* powerpc64 */
+#define	R_MAGIC		_MAGIC(HDR_MAGIC, 28)	/* arm64 */
 
 #define	MIN_MAGIC	8
 #define	MAX_MAGIC	28			/* <= 90 */
@@ -54,111 +58,61 @@ struct	Sym
 	int	sequence;	// order in file
 };
 
+//******************************************************************************
+// Enums for the different archs (used to index Mach tables)
+//******************************************************************************
 
 /*
  *	Supported architectures:
  *		mips,
- *		68020,
  *		i386,
  *		amd64,
- *		sparc,
- *		sparc64,
- *		mips2 (R4000)
  *		arm
- *		powerpc,
- *		powerpc64
- *		alpha
  *      arm64
+ *      TODO: riscv
  */
+//TODO: split in different enums with different names so clearer
+// (like in principia)
 enum
 {
-	MMIPS,			/* machine types */
-	MSPARC,
-	M68020,
+    /* machine types */
+	MMIPS = 0,			
 	MI386,
-	MI960,			/* retired */
-	M3210,			/* retired */
-	MMIPS2,
-	NMIPS2,
-	M29000,			/* retired */
 	MARM,
-	MPOWER,
-	MALPHA,
-	NMIPS,
-	MSPARC64,
 	MAMD64,
-	MPOWER64,
     MARM64,
-				/* types of executables */
+
+    /* types of executables */
 	FNONE = 0,		/* unidentified */
 	FMIPS,			/* v.out */
 	FMIPSB,			/* mips bootable */
-	FSPARC,			/* k.out */
-	FSPARCB,		/* Sparc bootable */
-	F68020,			/* 2.out */
-	F68020B,		/* 68020 bootable */
-	FNEXTB,			/* Next bootable */
 	FI386,			/* 8.out */
 	FI386B,			/* I386 bootable */
-	FI960,			/* retired */
-	FI960B,			/* retired */
-	F3210,			/* retired */
-	FMIPS2BE,		/* 4.out */
-	F29000,			/* retired */
 	FARM,			/* 5.out */
 	FARMB,			/* ARM bootable */
-	FPOWER,			/* q.out */
-	FPOWERB,		/* power pc bootable */
-	FMIPS2LE,		/* 0.out */
-	FALPHA,			/* 7.out */
-	FALPHAB,		/* DEC Alpha bootable */
-	FMIPSLE,		/* 3k little endian */
-	FSPARC64,		/* u.out */
 	FAMD64,			/* 6.out */
 	FAMD64B,		/* 6.out bootable */
-	FPOWER64,		/* 9.out */
-	FPOWER64B,		/* 9.out bootable */
     FARM64, // arm64
     FARM64B, // arm64 bootable
 
-	ANONE = 0,		/* dissembler types */
+    /* dissembler types */
+	ANONE = 0,
 	AMIPS,
-	AMIPSCO,		/* native mips */
-	ASPARC,
-	ASUNSPARC,		/* native sun */
-	A68020,
 	AI386,
-	AI8086,			/* oh god */
-	AI960,			/* retired */
-	A29000,			/* retired */
 	AARM,
-	APOWER,
-	AALPHA,
-	ASPARC64,
 	AAMD64,
-	APOWER64,
     AARM64,
-				/* object file types */
-	Obj68020 = 0,		/* .2 */
-	ObjSparc,		/* .k */
-	ObjMips,		/* .v */
+
+    /* object file types */
+	ObjMips = 0,		/* .v */
 	Obj386,			/* .8 */
-	Obj960,			/* retired */
-	Obj3210,		/* retired */
-	ObjMips2,		/* .4 */
-	Obj29000,		/* retired */
 	ObjArm,			/* .5 */
-	ObjPower,		/* .q */
-	ObjMips2le,		/* .0 */
-	ObjAlpha,		/* .7 */
-	ObjSparc64,		/* .u */
 	ObjAmd64,		/* .6 */
-	ObjSpim,		/* .0 */
-	ObjPower64,		/* .9 */
     ObjArm64, // .7
 	Maxobjtype,
 
-	CNONE  = 0,		/* symbol table classes */
+    /* symbol table classes */
+	CNONE  = 0,
 	CAUTO,
 	CPARAM,
 	CSTAB,
@@ -167,6 +121,10 @@ enum
 	CANY,			/* to look for any class */
 };
 
+//******************************************************************************
+// Forward decls
+//******************************************************************************
+
 typedef	struct	Map	Map;
 typedef	struct	Symbol	Symbol;
 typedef	struct	Reglist	Reglist;
@@ -174,11 +132,15 @@ typedef	struct	Mach	Mach;
 typedef	struct	Machdata Machdata;
 typedef	struct	Seg	Seg;
 
+//******************************************************************************
+// Map and Seg
+//******************************************************************************
+
 typedef int Maprw(Map *m, Seg *s, uvlong addr, void *v, uint n, int isread);
 
 struct Seg {
 	char	*name;		/* the segment name */
-	int	fd;		/* file descriptor */
+	fdt	fd;		/* file descriptor */
 	int	inuse;		/* in use - not in use */
 	int	cache;		/* should cache reads? */
 	uvlong	b;		/* base */
@@ -227,14 +189,18 @@ enum {					/* bits in rflags field */
 	RRDONLY	= (1<<1),
 };
 
+//******************************************************************************
+// Mach and Machdata
+//******************************************************************************
+
 /*
  *	Machine-dependent data is stored in two structures:
  *		Mach  - miscellaneous general parameters
  *		Machdata - jump vector of service functions used by debuggers
  *
- *	Mach is defined in ?.c and set in executable.c
+ *	Mach is defined in ${O}.c and set in executable.c
  *
- *	Machdata is defined in ?db.c
+ *	Machdata is defined in ${O}db.c
  *		and set in the debugger startup.
  */
 struct Mach{
@@ -259,6 +225,7 @@ struct Mach{
 	int	szdouble;		/* sizeof(double) */
 };
 
+// important global!
 extern	Mach	*mach;			/* Current machine */
 
 typedef uvlong	(*Rgetter)(Map*, char*);
@@ -283,25 +250,36 @@ struct	Machdata {		/* Machine-dependent debugger support */
 	int	(*instsize)(Map*, uvlong);	/* instruction size */
 };
 
+//******************************************************************************
+// a.out header
+//******************************************************************************
+
 /*
  *	Common a.out header describing all architectures
  */
 typedef struct Fhdr
 {
 	char	*name;		/* identifier of executable */
+
 	uchar	type;		/* file type - see codes above */
 	uchar	hdrsz;		/* header size */
 	uchar	_magic;		/* _MAGIC() magic */
 	uchar	spare;
 	int32	magic;		/* magic number */
+
 	uvlong	txtaddr;	/* text address */
 	vlong	txtoff;		/* start of text in file */
+
 	uvlong	dataddr;	/* start of data segment */
 	vlong	datoff;		/* offset to data seg in file */
+
 	vlong	symoff;		/* offset of symbol table in file */
+
 	uvlong	entry;		/* entry point */
+
 	vlong	sppcoff;	/* offset of sp-pc table in file */
 	vlong	lnpcoff;	/* offset of line number-pc table in file */
+
 	int32	txtsz;		/* text size */
 	int32	datsz;		/* size of data seg */
 	int32	bsssz;		/* size of bss */
@@ -310,18 +288,66 @@ typedef struct Fhdr
 	int32	lnpcsz;		/* size of line number-pc table */
 } Fhdr;
 
+//******************************************************************************
+// Other globals
+//******************************************************************************
+
 extern	int	asstype;	/* dissembler type - machdata.c */
 extern	Machdata *machdata;	/* jump vector - machdata.c */
+
+//******************************************************************************
+// API
+//******************************************************************************
+
+// executable.c:
+// crackhdr
+
+// obj.c: routines universal to all object files
+// objtype, readobj, isar, readar, objtraverse, nextar
+
+// setmach.c: 
+// machines global, machbytype, machbyname
+
+// map.c: file map routines
+// newmap, setmap, findseg, unusedmap, loadmap
+// fdrw, 
+
+// sym.c: 
+// syminit, textseg, symbase, getsym
+// lookup, cdotstrcmp, findlocal, 
+// textsym, filesym, getauto, findsym, fnbound, 
+// localsym, globalsym
+// file2pc, fileline, fileelem
+// pc2sp, pc2line, line2addr, dumphist (ifdef DEBUG)
+
+// access.c: functions to read and write an executable or file image
+// geta, get8, get4, get2, get1
+// puta, put8, put4, put2, put1
+
+// machdata.c: Debugger utilities shared by at least two architectures
+// localaddr, symoff, fpformat, 
+// ieeedftos, ieeesftos, beieeesftos, beieeedftos, leieeesftos, leieeedftos
+// beieee80ftos, leieee80ftos
+// cisctrace, risctrace, ciscframe, riscframe
+
+// swap.c: big/little endian
+// beswab, beswal, beswav, leswab, leswal, leswav
 
 int		beieee80ftos(char*, int, void*);
 int		beieeesftos(char*, int, void*);
 int		beieeedftos(char*, int, void*);
+
 ushort		beswab(ushort);
 uint32		beswal(uint32);
 uvlong		beswav(uvlong);
+
 uvlong		ciscframe(Map*, uvlong, uvlong, uvlong, uvlong);
 int		cisctrace(Map*, uvlong, uvlong, uvlong, Tracer);
-int		crackhdr(int fd, Fhdr*);
+
+// important one!
+int		crackhdr(fdt fd, Fhdr*);
+
+
 uvlong		file2pc(char*, int32);
 int		fileelem(Sym**, uchar *, char*, int);
 int32		fileline(char*, int, uvlong);
@@ -331,54 +357,73 @@ int		findseg(Map*, char*);
 int		findsym(uvlong, int, Symbol *);
 int		fnbound(uvlong, uvlong*);
 int		fpformat(Map*, Reglist*, char*, int, int);
+
 int		get1(Map*, uvlong, uchar*, int);
 int		get2(Map*, uvlong, ushort*);
 int		get4(Map*, uvlong, uint32*);
 int		get8(Map*, uvlong, uvlong*);
 int		geta(Map*, uvlong, uvlong*);
+
 int		getauto(Symbol*, int, int, Symbol*);
 Sym*		getsym(int);
 int		globalsym(Symbol *, int);
 char*		_hexify(char*, uint32, int);
+
 int		ieeesftos(char*, int, uint32);
 int		ieeedftos(char*, int, uint32, uint32);
+
 int		isar(Biobuf*);
+
 int		leieee80ftos(char*, int, void*);
 int		leieeesftos(char*, int, void*);
 int		leieeedftos(char*, int, void*);
+
 ushort		leswab(ushort);
 uint32		leswal(uint32);
 uvlong		leswav(uvlong);
+
 uvlong		line2addr(int32, uvlong, uvlong);
 Map*		loadmap(Map*, int, Fhdr*);
 int		localaddr(Map*, char*, char*, uvlong*, Rgetter);
 int		localsym(Symbol*, int);
+
 int		lookup(char*, char*, Symbol*);
+
 void		machbytype(int);
 int		machbyname(char*);
+
 int		nextar(Biobuf*, int, char*);
 Map*		newmap(Map*, int);
 void		objtraverse(void(*)(Sym*, void*), void*);
+
+// important one
 int		objtype(Biobuf*, char**);
+
 uvlong		pc2sp(uvlong);
 int32		pc2line(uvlong);
+
 int		put1(Map*, uvlong, uchar*, int);
 int		put2(Map*, uvlong, ushort);
 int		put4(Map*, uvlong, uint32);
 int		put8(Map*, uvlong, uvlong);
 int		puta(Map*, uvlong, uvlong);
+
 int		readar(Biobuf*, int, vlong, int);
 int		readobj(Biobuf*, int);
 uvlong		riscframe(Map*, uvlong, uvlong, uvlong, uvlong);
 int		risctrace(Map*, uvlong, uvlong, uvlong, Tracer);
 int		setmap(Map*, int, uvlong, uvlong, vlong, char*, Maprw *rw);
 Sym*		symbase(int32*);
+
 int		syminit(int, Fhdr*);
 int		symoff(char*, int, uvlong, int);
+
 void		textseg(uvlong, Fhdr*);
 int		textsym(Symbol*, int);
+
 void		unusemap(Map*, int);
 
+// proc
 Map*		attachproc(int pid, Fhdr *fp);
 int		ctlproc(int pid, char *msg);
 void		detachproc(Map *m);
@@ -387,4 +432,5 @@ char*		proctextfile(int pid);
 int		procthreadpids(int pid, int *tid, int ntid);
 char*	procstatus(int);
 
+// ??
 Maprw	fdrw;

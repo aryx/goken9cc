@@ -44,13 +44,8 @@ struct machtab
 	Machdata	*machdata;		/* machine functions */
 };
 
-/*
-extern	Mach		mmips, msparc, m68020, mi386, mamd64,
-			marm, mmips2be, mmips2le, mpower, mpower64, malpha, msparc64;
-extern	Machdata	mipsmach, sparcmach, m68020mach, i386mach,
-			armmach, mipsmach2le, powermach, alphamach, sparc64mach;
-*/
-extern	Mach		mi386, mamd64, marm, marm64;
+extern	Mach		    mi386, mamd64, marm, marm64;
+// no amd64mach
 extern	Machdata		i386mach, armmach, arm64mach;
 
 /*
@@ -84,86 +79,12 @@ Machtab	machines[] =
 		AARM64,
 		&marm64,
 		&arm64mach,	},
-#ifdef unused
-	{	"68020",			/*68020*/
-		F68020,
-		F68020B,
-		A68020,
-		&m68020,
-		&m68020mach,	},
-	{	"68020",			/*Next 68040 bootable*/
-		F68020,
-		FNEXTB,
-		A68020,
-		&m68020,
-		&m68020mach,	},
-	{	"mips2LE",			/*plan 9 mips2 little endian*/
-		FMIPS2LE,
-		0,
-		AMIPS,
-		&mmips2le,
-		&mipsmach2le, 	},
-	{	"mips",				/*plan 9 mips*/
-		FMIPS,
-		FMIPSB,
-		AMIPS,
-		&mmips,
-		&mipsmach, 	},
-	{	"mips2",			/*plan 9 mips2*/
-		FMIPS2BE,
-		FMIPSB,
-		AMIPS,
-		&mmips2be,
-		&mipsmach, 	},		/* shares debuggers with native mips */
-	{	"mipsco",			/*native mips - must follow plan 9*/
-		FMIPS,
-		FMIPSB,
-		AMIPSCO,
-		&mmips,
-		&mipsmach,	},
-	{	"sparc",			/*plan 9 sparc */
-		FSPARC,
-		FSPARCB,
-		ASPARC,
-		&msparc,
-		&sparcmach,	},
-	{	"sunsparc",			/*native sparc - must follow plan 9*/
-		FSPARC,
-		FSPARCB,
-		ASUNSPARC,
-		&msparc,
-		&sparcmach,	},
-	{	"86",				/*8086 - a peach of a machine*/
-		FI386,
-		FI386B,
-		AI8086,
-		&mi386,
-		&i386mach,	},
-	{	"power",			/*PowerPC*/
-		FPOWER,
-		FPOWERB,
-		APOWER,
-		&mpower,
-		&powermach,	},
-	{	"power64",			/*PowerPC*/
-		FPOWER64,
-		FPOWER64B,
-		APOWER64,
-		&mpower64,
-		&powermach,	},
-	{	"alpha",			/*Alpha*/
-		FALPHA,
-		FALPHAB,
-		AALPHA,
-		&malpha,
-		&alphamach,	},
-	{	"sparc64",			/*plan 9 sparc64 */
-		FSPARC64,
-		FSPARCB,			/* XXX? */
-		ASPARC64,
-		&msparc64,
-		&sparc64mach,	},
-#endif
+//	{	"mips",				/*plan 9 mips*/
+//		FMIPS,
+//		FMIPSB,
+//		AMIPS,
+//		&mmips,
+//		&mipsmach, 	},
 	{	0		},		/*the terminator*/
 };
 

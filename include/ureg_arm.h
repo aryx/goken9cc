@@ -13,11 +13,11 @@ struct Ureg {
 	uint	r10;
 	uint	r11;
 	uint	r12; // REGSB
-	uint	r13;
-	uint	r14;
+	uint	r13; // REGSP
+	uint	r14; // REGLINK
 
 	uint	link; // alias for R14
 	uint	type;
 	uint	psr;
-	uint	pc; // alias for R15
+	uint	pc; // alias for R15 (alt: use union)
 };
