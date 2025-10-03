@@ -12,8 +12,9 @@ flags=(-u -p -b -B -r -x mkfile)
 
 # missing: 
 # - x9base: no compiler toolchain
-# - plan9port: no compiler toolchain
+# - xplan9port: no compiler toolchain
 # - x9cc: no riscv (ia/ic/il), no 5i, no vi
+# - x9front: no riscv
 
 dirs1=(x9cc x9colombier xinferno xmykencc xkencc-riscv) # xinferno-old
 dirs2=(xmyplan9old xplan9) 

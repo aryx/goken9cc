@@ -7,9 +7,12 @@
 - fully working arm32 and arm64 (float, can cross compile principia softwarica)
 - bootstrappable (can compile itself)
 
-* 0.1 (Q4 2025) (???)
+* 0.1 (Q4 2025) (???, acid)
 
 ** toolchain
+- import orginal acid debugger from 9-cc (derived from plan9)
+  and support for arm64, riscv, and mips in libmach (imported
+  respectively from 9front, inferno-os, and 9-cc).
 
 ** test infra
 
@@ -18,10 +21,6 @@
 ** build infra
 
 ** internals
-
-** os
-
-** arch
 
 * Beta (Q3 2025) (arm64 7a/7c/7l v0, riscv ia/ic/il v0, arm64 linux/macos build, arm32 linux run v0, mk/rc, utilities v0, typesetting v0)
 

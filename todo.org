@@ -171,9 +171,6 @@ update: chatGPT says it actually can't debug live process :( or can just inspect
 its state
 maybe still useful though ...
 
-*** port vi to goken
-good test also for lib9
-
 * Components
 
 ** ARM toolchain : 5a_/5c_/5l_
