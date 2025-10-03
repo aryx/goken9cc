@@ -16,7 +16,7 @@ static char*	mtype;
 
 static	int attachfiles(char*, int);
 int	xfmt(Fmt*);
-extern int	gfltconv(Fmt*), _ifmt(Fmt*);
+//extern int	gfltconv(Fmt*), _ifmt(Fmt*);
 int	isnumeric(char*);
 void	die(void);
 
@@ -123,12 +123,12 @@ main(int argc, char *argv[])
 
 	fmtinstall('x', xfmt);
 	fmtinstall('L', Lfmt);
-	fmtinstall('f', gfltconv);
-	fmtinstall('F', gfltconv);
-	fmtinstall('g', gfltconv);
-	fmtinstall('G', gfltconv);
-	fmtinstall('e', gfltconv);
-	fmtinstall('E', gfltconv);
+//	fmtinstall('f', gfltconv);
+//	fmtinstall('F', gfltconv);
+//	fmtinstall('g', gfltconv);
+//	fmtinstall('G', gfltconv);
+//	fmtinstall('e', gfltconv);
+//	fmtinstall('E', gfltconv);
 	Binit(&bioout, 1, OWRITE);
 	bout = &bioout;
 
@@ -612,5 +612,6 @@ int
 xfmt(Fmt *f)
 {
 	f->flags ^= FmtSharp;
-	return _ifmt(f);
+	//return _ifmt(f);
+    return 0;
 }
