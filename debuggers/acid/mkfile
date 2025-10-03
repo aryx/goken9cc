@@ -1,6 +1,9 @@
-<../../../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=acid
+LDLIBS=-lmach -lbio -lregexp -l9 -lm
 
 OFILES=	main.$O\
 	y.tab.$O\
@@ -13,17 +16,13 @@ OFILES=	main.$O\
 	proc.$O\
 	dot.$O\
 	print.$O\
-	os-$TARGMODEL.$O\
+        \
 	rdebug.$O\
+        \
+	os-Posix.$O\
 
 YFILES=dbg.y
 HFILES=acid.h y.tab.h
 
-LIBS=mach math bio regexp 9
+<$TOP/mkfiles/mkone
 
-
-BIN=$ROOT/$OBJDIR/bin
-
-<$ROOT/mkfiles/mkone-$SHELLTYPE
-
-CFLAGS= $CFLAGS -I${ROOT}/include

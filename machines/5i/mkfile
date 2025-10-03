@@ -18,7 +18,7 @@ OFILES=	globals.$O\
 	bpt.$O\
 	syscall_posix.$O\
 
-HFILES=arm.h\
+HFILES=arm.h
 
 <$TOP/mkfiles/mkone
 
