@@ -1,5 +1,6 @@
 #define	EXTERN
 #include	"l.h"
+
 #include	<ar.h>
 
 #ifndef	DEFAULT
@@ -12,9 +13,9 @@ char	thechar		= 'i';
 char	*thestring 	= "riscv";
 
 /*
- *	-H1						is headerless
+ *	-H0						is headerless
  *	-H2 -T4128 -R4096		is plan9 format
- *	-H5 -T0x4000A0 -R4		is elf executable
+ *	-H7 -T0x4000A0 -R4		is elf executable
  */
 
 int little;
@@ -102,10 +103,6 @@ main(int argc, char *argv[])
 	if(!debug['9'] && !debug['U'] && !debug['B'])
 		debug[DEFAULT] = 1;
 	if(HEADTYPE == -1) {
-		if(debug['U'])
-			HEADTYPE = 5;
-		if(debug['B'])
-			HEADTYPE = 1;
 		if(debug['9'])
 			HEADTYPE = 2;
 	}
@@ -114,7 +111,7 @@ main(int argc, char *argv[])
 		diag("unknown -H option");
 		errorexit();
 
-	case 1:	/* headerless */
+	case 0:	/* headerless */
 		HEADR = 0;
 		if(INITTEXT == -1)
 			INITTEXT = 0;
@@ -132,7 +129,7 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
- 	case 5:	/* elf executable */
+ 	case 7:	/* elf executable */
 		HEADR = rnd(52L+3*32L, 16);
 		if(INITTEXT == -1)
 			INITTEXT = 0;

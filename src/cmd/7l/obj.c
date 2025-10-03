@@ -1,5 +1,6 @@
 #define	EXTERN
 #include	"l.h"
+
 #include	<ar.h>
 
 #ifndef	DEFAULT
@@ -12,7 +13,6 @@ char	*thestring 	= "arm64";
 /*
  *	-H0				no header
  *	-H2 -T0x100028 -R0x100000		is plan9 format
- *	-H6 -R4096		no header with segments padded to pages
  *	-H7				is elf linux
  */
 
@@ -108,8 +108,6 @@ main(int argc, char *argv[])
 	if(HEADTYPE == -1) {
 		if(debug['U'])
 			HEADTYPE = 0;
-		if(debug['B'])
-			HEADTYPE = 1;
 		if(debug['9'])
 			HEADTYPE = 2;
 
@@ -130,7 +128,6 @@ main(int argc, char *argv[])
 		diag("unknown -H option");
 		errorexit();
 	case 0:	/* no header */
-	case 6:	/* no header, padded segments */
 		HEADR = 0L;
 		if(INITTEXT == -1)
 			INITTEXT = 0;

@@ -1,5 +1,6 @@
 #define	EXTERN
 #include	"l.h"
+
 #include	<ar.h>
 
 #ifndef	DEFAULT
@@ -17,13 +18,7 @@ static	int	maxlibdir = 0;
 
 /*
  *	-H0				no header
- *	-H1 -T0x10005000 -R4		is aif for risc os
  *	-H2 -T4128 -R4096		is plan9 format
- *	-H3 -T0xF0000020 -R4		is NetBSD format
- *	-H4				is IXP1200 (raw)
- *	-H5 -T0xC0008010 -R1024		is ipaq
- *	-H6 -R4096			no header with segments padded to pages
- *
  *	-H7	is Linux ELF (default)
  */
 
@@ -160,8 +155,6 @@ main(int argc, char *argv[])
 	if(HEADTYPE == -1) {
 		if(debug['U'])
 			HEADTYPE = 0;
-		if(debug['B'])
-			HEADTYPE = 1;
 		if(debug['9'])
 			HEADTYPE = 2;
         // Linux ELF
@@ -174,19 +167,9 @@ main(int argc, char *argv[])
 		diag("unknown -H option");
 		errorexit();
 	case 0:	/* no header */
-	case 6:	/* no header, padded segments */
 		HEADR = 0L;
 		if(INITTEXT == -1)
 			INITTEXT = 0;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4;
-		break;
-	case 1:	/* aif for risc os */
-		HEADR = 128L;
-		if(INITTEXT == -1)
-			INITTEXT = 0x10005000 + HEADR;
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)
@@ -200,33 +183,6 @@ main(int argc, char *argv[])
 			INITDAT = 0;
 		if(INITRND == -1)
 			INITRND = 4096;
-		break;
-	case 3:	/* boot for NetBSD */
-		HEADR = 32L;
-		if(INITTEXT == -1)
-			INITTEXT = 0xF0000020L;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4096;
-		break;
-	case 4: /* boot for IXP1200 */
-		HEADR = 0L;
-		if(INITTEXT == -1)
-			INITTEXT = 0x0;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4;
-		break;
-	case 5: /* boot for ipaq */
-		HEADR = 16L;
-		if(INITTEXT == -1)
-			INITTEXT = 0xC0008010;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 1024;
 		break;
 	case 7:	/* elf executable */
 		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
@@ -246,6 +202,7 @@ main(int argc, char *argv[])
 	if(debug['v'])
 		Bprint(&bso, "HEADER = -H0x%d -T0x%lux -D0x%lux -R0x%lux\n",
 			HEADTYPE, INITTEXT, INITDAT, INITRND);
+
 	Bflush(&bso);
 	zprg.as = AGOK;
 	zprg.scond = 14;

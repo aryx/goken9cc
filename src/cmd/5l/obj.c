@@ -46,15 +46,12 @@ char	thechar		= '5';
 char	*thestring 	= "arm";
 
 /*
- *	-H1 -T0x10005000 -R4		is aif for risc os
+ *  -H0 no header
  *	-H2 -T4128 -R4096		is plan9 format
- *	-H3 -T0xF0000020 -R4		is NetBSD format
- *	-H4				is IXP1200 (raw)
- *	-H5 -T0xC0008010 -R1024		is ipaq
- *
- *  -H6 is Linux ELF (default)
+ *  -H7 is Linux ELF (default)
  */
 
+// ??
 static char*
 linkername[] =
 {
@@ -129,6 +126,7 @@ main(int argc, char *argv[])
 		usage();
 
 	libinit();
+
 	if(rpath == nil)
 		rpath = smprint("%s/pkg/%s_%s", goroot, goos, goarch);
 
@@ -137,13 +135,11 @@ main(int argc, char *argv[])
 	if(HEADTYPE == -1) {
 		if(debug['U'])
 			HEADTYPE = 0;
-		if(debug['B'])
-			HEADTYPE = 1;
 		if(debug['9'])
 			HEADTYPE = 2;
         // Linux ELF
         // alt: use goos and detect Linux
-		HEADTYPE = 6;
+		HEADTYPE = 7;
 	}
 	switch(HEADTYPE) {
 	default:
@@ -158,15 +154,6 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4;
 		break;
-	case 1:	/* aif for risc os */
-		HEADR = 128L;
-		if(INITTEXT == -1)
-			INITTEXT = 0x10005000 + HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4;
-		break;
 	case 2:	/* plan 9 */
 		HEADR = 32L;
 		if(INITTEXT == -1)
@@ -176,34 +163,7 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
-	case 3:	/* boot for NetBSD */
-		HEADR = 32L;
-		if(INITTEXT == -1)
-			INITTEXT = 0xF0000020L;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4096;
-		break;
-	case 4: /* boot for IXP1200 */
-		HEADR = 0L;
-		if(INITTEXT == -1)
-			INITTEXT = 0x0;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4;
-		break;
-	case 5: /* boot for ipaq */
-		HEADR = 16L;
-		if(INITTEXT == -1)
-			INITTEXT = 0xC0008010;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 1024;
-		break;
-	case 6:	/* arm elf */
+	case 7:	/* arm elf */
 		debug['d'] = 1;	// no dynamic linking
 		elfinit();
 		HEADR = ELFRESERVE;

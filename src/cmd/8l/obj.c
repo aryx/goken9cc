@@ -32,11 +32,13 @@
 
 #define	EXTERN
 #include	"l.h"
+
 #include	"../ld/lib.h"
 #include	"../ld/elf_.h"
 #include	"../ld/macho.h"
 #include	"../ld/dwarf.h"
 #include	"../ld/pe.h"
+
 #include	<ar.h>
 
 #ifndef	DEFAULT
@@ -57,6 +59,7 @@ char	*thestring 	= "386";
  *	-H7 -Tx -Rx			is Linux ELF32
  *	-H8 -Tx -Rx			is Google Native Client
  *	-H9 -Tx -Rx			is FreeBSD ELF32
+ *  -H10 Windows PE
  */
 
 void
@@ -255,7 +258,7 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
-	case 11:
+	case 11: // ??
 		tlsoffset = 0;
 		elfinit();
 		HEADR = ELFRESERVE;

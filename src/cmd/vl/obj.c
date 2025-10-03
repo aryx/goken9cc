@@ -18,13 +18,8 @@ int	nlibdir	= 0;
 static	int	maxlibdir = 0;
 
 /*
- *	-H0 -T0x40004C -D0x10000000	is abbrev unix
- *	-H1 -T0x80020000 -R4		is bootp() format for 3k
- *      -H2 -T16416 -R16384	is plan9 format
- *	-H3 -T0x80020000 -R8		is bootp() format for 4k
- *	-H4 -T0x400000 -R4		is sgi unix coff executable
- *	-H5 -T0x4000A0 -R4		is sgi unix elf executable
- *	-H6						is headerless
+ *	-H0						is headerless
+ *  -H2 -T16416 -R16384	is plan9 format
  */
 
 
@@ -135,8 +130,6 @@ main(int argc, char *argv[])
 	if(HEADTYPE == -1) {
 		if(debug['U'])
 			HEADTYPE = 0;
-		if(debug['B'])
-			HEADTYPE = 1;
 		if(debug['9'])
 			HEADTYPE = 2;
 	}
@@ -145,23 +138,14 @@ main(int argc, char *argv[])
 		diag("unknown -H option");
 		errorexit();
 
-	case 0:	/* unix simple */
-		HEADR = 20L+56L;
+	case 0:	/* headerless */
+		HEADR = 0;
 		if(INITTEXT == -1)
-			INITTEXT = 0x40004CL;
-		if(INITDAT == -1)
-			INITDAT = 0x10000000L;
-		if(INITRND == -1)
-			INITRND = 0;
-		break;
-	case 1:	/* boot for 3k */
-		HEADR = 20L+60L;
-		if(INITTEXT == -1)
-			INITTEXT = 0x80020000L;
+			INITTEXT = 0x80000000L+HEADR;
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)
-			INITRND = 4;
+			INITRND = 4096;
 		break;
 	case 2:	/* plan 9 */
 		HEADR = 32L;
@@ -171,42 +155,6 @@ main(int argc, char *argv[])
 			INITRND = 16*1024;
 		if(INITTEXT == -1)
 			INITTEXT = INITRND + HEADR;
-		break;
-	case 3:	/* boot for 4k */
-		HEADR = 20L+56L+3*40L;
-		if(INITTEXT == -1)
-			INITTEXT = 0x80020000L;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 8;
-		break;
-	case 4:	/* sgi unix coff executable */
-		HEADR = 20L+56L+3*40L;
-		if(INITTEXT == -1)
-			INITTEXT = 0x00400000L+HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0x10000000;
-		if(INITRND == -1)
-			INITRND = 0;
-		break;
-	case 5:	/* sgi unix elf executable */
-		//HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
-		//if(INITTEXT == -1)
-		//	INITTEXT = 0x00400000L+HEADR;
-		//if(INITDAT == -1)
-		//	INITDAT = 0x10000000;
-		//if(INITRND == -1)
-		//	INITRND = 0;
-		break;
-	case 6:	/* headerless */
-		HEADR = 0;
-		if(INITTEXT == -1)
-			INITTEXT = 0x80000000L+HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4096;
 		break;
 	}
 	if (INITTEXTP == -1)
