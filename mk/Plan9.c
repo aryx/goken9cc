@@ -427,11 +427,11 @@ execsh(char *shargs, char *shinput, Bufblock *buf, ShellEnvVar *e)
 }
 /*e: function [[execsh]] */
 /*s: function [[waitfor]] */
-int
+pidt
 xwaitfor(char *msg)
 {
     Waitmsg *w;
-    int pid;
+    pidt pid;
 
     // blocking call, wait for any children
     w = wait();

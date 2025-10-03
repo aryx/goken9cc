@@ -76,11 +76,11 @@ exportenv(Envy *e)
   environ = p;
 }
 
-int
+pidt
 xwaitfor(char *msg)
 {
   int status;
-  int pid;
+  pidt pid;
 
   *msg = 0;
   pid = wait(&status);
@@ -228,7 +228,7 @@ pipecmd(char *cmd, Envy *e, int *fd)
 void
 Exit(void)
 {
-  while(wait(0) >= 0)
+  while(wait(nil) >= 0)
     ;
   exits("error");
 }

@@ -164,14 +164,14 @@ sched(void)
 
 // execsh() is back in Plan9.c
 // xwaitfor() is back in Plan9.c
-extern int xwaitfor(char *msg);
+extern pidt xwaitfor(char *msg);
 
 /*s: function [[waitup]] */
 int
 waitup(int echildok, int *retstatus)
 {
     // child process
-    int pid;
+    pidt pid;
     // return string of child process
     char buf[ERRMAX];
     // index in events[]
