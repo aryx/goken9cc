@@ -46,7 +46,7 @@ varsym(void)
 {
 	int i;
 	Sym *s;
-	long n;
+	int32 n;
 	Lsym *l;
 	ulong v;
 	char buf[1024];
@@ -197,7 +197,7 @@ uvlong
 rget(Map *map, char *reg)
 {
 	Lsym *s;
-	ulong x;
+	uint32 x;
 	uvlong v;
 	int ret;
 

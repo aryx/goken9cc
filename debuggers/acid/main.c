@@ -299,7 +299,7 @@ readtext(char *s)
 	Value *v;
 	Symbol sym;
 	ulong length;
-	extern Machdata mipsmach;
+	extern Machdata mipsmach; // ???
 
 	if(mtype != 0){
 		symmap = newmap(0, 1);

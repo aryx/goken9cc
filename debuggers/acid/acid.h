@@ -26,11 +26,13 @@ typedef struct Value	Value;
 typedef struct Type	Type;
 typedef struct Frtype	Frtype;
 
-Extern int	kernel;
-Extern int	remote;
 Extern int rdebug;
-Extern int remfd;
 Extern int	protodebug;
+//Extern int	remote;
+//Extern int remfd;
+
+Extern int	kernel;
+
 Extern int	text;
 Extern int	silent;
 Extern Fhdr	fhdr;
@@ -232,13 +234,16 @@ void	pushfile(char*);
 void	pushstr(Node*);
 ulong	raddr(char*);
 void	readtext(char*);
-int	remcondset(char, ulong);
-int	remcondstartstop(int);
-int	remget(struct segment*, ulong, long, char*, int);
-int	remoteio(int, char*, char*, int);
-int	remote_read(int, char*, int);
-int	remote_write(int, char*, int);
-int	remput(struct segment*, ulong, long, char*, int);
+
+//int	remcondset(char, ulong);
+//int	remcondstartstop(int);
+//int	remget(struct segment*, ulong, long, char*, int);
+//int	remoteio(int, char*, char*, int);
+//int	remote_read(int, char*, int);
+//int	remote_write(int, char*, int);
+//int	remput(struct segment*, ulong, long, char*, int);
+
+
 void	restartio(void);
 uvlong	rget(Map*, char*);
 String	*runenode(Rune*);
@@ -256,9 +261,10 @@ void	unwind(void);
 void	userinit(void);
 void	varreg(void);
 void	varsym(void);
-char*	waitfor(int);
+Waitmsg*	waitfor(int);
 void	whatis(Lsym*);
 void	windir(Map*, Node*, Node*, Node*);
+
 void	yyerror(char*, ...);
 int	yylex(void);
 int	yyparse(void);
@@ -301,7 +307,7 @@ enum
 	OELSE,
 	OHEAD,
 	OTAIL,
-	OAPPEND,
+	OAPPEND_,
 	ORET,
 	OINDEX,
 	OINDC,

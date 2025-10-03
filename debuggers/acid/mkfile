@@ -17,9 +17,10 @@ OFILES=	main.$O\
 	dot.$O\
 	print.$O\
         \
-	rdebug.$O\
-        \
 	os-Posix.$O\
+
+# was not in plan9
+#	rdebug.$O\
 
 YFILES=dbg.y
 HFILES=acid.h y.tab.h

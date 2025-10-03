@@ -210,7 +210,7 @@ void
 indir(Map *m, ulong addr, char fmt, Node *r)
 {
 	int i;
-	ulong ival;
+	uint32 ival;
 	uvlong vval;
 	int ret;
 	uchar cval;

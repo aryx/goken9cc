@@ -41,7 +41,7 @@ char *typenames[] =
 };
 
 int
-cmp(void *a, void *b)
+cmp(const void *a, const void *b)
 {
 	return strcmp(*(char**)a, *(char**)b);
 }
@@ -341,7 +341,7 @@ pexpr(Node *n)
 		Bprint(bout, "tail ");
 		pexpr(l);
 		break;
-	case OAPPEND:
+	case OAPPEND_:
 		Bprint(bout, "append ");
 		pexpr(l);
 		Bprint(bout, ",");
