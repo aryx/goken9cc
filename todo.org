@@ -10,6 +10,9 @@
 
 ** Later
 
+*** devdraw from plan9port to goken? can draw ? can port
+more stuff to unix? doomplan9?
+
 *** LATER LONG try to boostrap itself; can compile 6a with 6c?
 
 *** LATER SEMI try to unify all the kencc/inferno/plan9 before lpize (5a/5c/5l) again
@@ -22,6 +25,9 @@ use my diff.rc
 relpize, resplit, but at least can reuse most of the thinking/splitting
 work done for plan9
 AND this time run regression tests first! to catch regression ASAP
+update: with 5a_/5c_/5l_ working pretty good, maybe don't have
+ to relpize actually and try 5a__/5c__/5l__ from principia's book
+ and diff and gradually converge and fix bugs
 
 alt: unless found bugs in plan9 toolchain and go towards merging with goken
 codebase instead
@@ -30,6 +36,7 @@ codebase instead
 from l.h -> ld.h factorized
 also 7l/{mod,pass,pobj,subr}.c can be moved to ../ld/
 and factorize with other linkers
+update: better ../lk/
 
 but better wait to avoid diff.rc to show big diffs
 
@@ -184,12 +191,6 @@ update: easier when goken 5a_/5c_/5l_ can work on linux
 and can compile itself on linux => that's a good test suite
 
 ** original ARM toolchain : 5a/5c/5l
-
-*** try make golang work for arm32? use armhf gcc and
-compile the whole golang source tree and run the tests?
-=> good regression test infra at least
-
-see GO/all-arm and GO/tests/run-arm 
 
 *** still? can't use 5c on principia libc code, weird!!!
 wait.c:33 unknown type 15 in zaddr
