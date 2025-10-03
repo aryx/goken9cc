@@ -74,31 +74,31 @@ main(int argc, char *argv[])
 	case 'q':
 		quiet = 0;
 		break;
-	case 'r':
-		pid = 1;
-		remote++;
-		kernel++;
-		break;
-	case 'R':
-		pid = 1;
-		rdebug++;
-		s = ARGF();
-		if(s == 0)
-			usage();
-		remfd = opentty(s, 0);
-		if(remfd < 0){
-			fprint(2, "acid: can't open %s: %r\n", s);
-			exits("open");
-		}
-		break;
+//	case 'r':
+//		pid = 1;
+//		remote++;
+//		kernel++;
+//		break;
+//	case 'R':
+//		pid = 1;
+//		rdebug++;
+//		s = ARGF();
+//		if(s == 0)
+//			usage();
+//		remfd = opentty(s, 0);
+//		if(remfd < 0){
+//			fprint(2, "acid: can't open %s: %r\n", s);
+//			exits("open");
+//		}
+//		break;
 	default:
 		usage();
 	}ARGEND
 
 	if(argc > 0) {
-		if(remote || rdebug)
-			aout = argv[0];
-		else
+		//if(remote || rdebug)
+		//	aout = argv[0];
+		//else
 		if(isnumeric(argv[0])) {
 			pid = atoi(argv[0]);
 			sprint(prog, "/proc/%d/text", pid);
@@ -115,10 +115,11 @@ main(int argc, char *argv[])
 			}
 			aout = argv[0];
 		}
-	} else if(rdebug)
-		aout = "/386/bpc";
-	else if(remote)
-		aout = "/mips/bcarrera";
+	}
+    //else if(rdebug)
+	//	aout = "/386/bpc";
+	//else if(remote)
+	//	aout = "/mips/bcarrera";
 
 	fmtinstall('x', xfmt);
 	fmtinstall('L', Lfmt);
@@ -299,7 +300,7 @@ readtext(char *s)
 	Value *v;
 	Symbol sym;
 	ulong length;
-	extern Machdata mipsmach; // ???
+	extern Machdata armmach; // ???
 
 	if(mtype != 0){
 		symmap = newmap(0, 1);
@@ -311,12 +312,12 @@ readtext(char *s)
 			length = d->length;
 			free(d);
 		}
-		setmap(symmap, text, 0, length, 0, "binary");
+		setmap(symmap, text, 0, length, 0, "binary", nil);
 		free(d);
 		return;
 	}
 
-	machdata = &mipsmach;
+	machdata = &armmach; // ??
 
 	if(!crackhdr(text, &fhdr)) {
 		print("can't decode file header\n");

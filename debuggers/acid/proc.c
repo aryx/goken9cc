@@ -12,11 +12,11 @@ nocore(void)
 {
 	int i;
 
-	if(cormap == 0)
+	if(cormap == nil)
 		return;
 
 	for (i = 0; i < cormap->nsegs; i++)
-		if (cormap->seg[i].mget == 0 && cormap->seg[i].inuse && cormap->seg[i].fd >= 0)
+		if (/*????cormap->seg[i].mget == 0 &&*/ cormap->seg[i].inuse && cormap->seg[i].fd >= 0)
 			close(cormap->seg[i].fd);
 	free(cormap);
 	cormap = 0;
@@ -33,19 +33,20 @@ sproc(int pid)
 	if(symmap == 0)
 		error("no map");
 
-	if(rdebug) {
-		fcor = -1;
-		proctab = 0;
-		i = remoteio(pid, "proc", buf, sizeof(buf));
-		if(i >= 0) {
-			buf[i] = '\0';
-			proctab = strtoul(buf, 0, 16);
-		} else
-			error("can't access pid %d: %r", pid);
-		s = look("proc");
-		if(s != 0)
-			s->v->vstore.u0.sival = proctab;
-	} else {
+	//if(rdebug) {
+	//	fcor = -1;
+	//	proctab = 0;
+	//	i = remoteio(pid, "proc", buf, sizeof(buf));
+	//	if(i >= 0) {
+	//		buf[i] = '\0';
+	//		proctab = strtoul(buf, 0, 16);
+	//	} else
+	//		error("can't access pid %d: %r", pid);
+	//	s = look("proc");
+	//	if(s != 0)
+	//		s->v->vstore.u0.sival = proctab;
+	//} else 
+    {
 		sprint(buf, "/proc/%d/mem", pid);
 		fcor = open(buf, ORDWR);
 		if(fcor < 0)
@@ -75,12 +76,13 @@ sproc(int pid)
 	s->v->vstore.u0.sival = pid;
 
 	nocore();
-	if(rdebug) {
-		cormap = attachremt(remfd, &fhdr);
-		for(i = 0; i < cormap->nsegs; i++)
-			setmapio(cormap, i, remget, remput);
-	} else
-		cormap = attachproc(pid, kernel, fcor, &fhdr);
+	//if(rdebug) {
+	//	cormap = attachremt(remfd, &fhdr);
+	//	for(i = 0; i < cormap->nsegs; i++)
+	//		setmapio(cormap, i, remget, remput);
+	//} else
+		//OLD: cormap = attachproc(pid, kernel, fcor, &fhdr);
+        cormap = attachproc(pid, &fhdr);
 	if (cormap == 0)
 		error("setproc: cant make coremap");
 	i = findseg(cormap, "text");
@@ -119,9 +121,9 @@ notes(int pid)
 	v->vstore.u0.sl = 0;
 	tail = &v->vstore.u0.sl;
 	for(;;) {
-		if(rdebug)
-			i = remoteio(pid, "note", buf, sizeof(buf));
-		else
+		//if(rdebug)
+		//	i = remoteio(pid, "note", buf, sizeof(buf));
+		//else
 			i = read(fd, buf, sizeof(buf));
 		if(i <= 0)
 			break;
@@ -232,9 +234,9 @@ msg(int pid, char *msg)
 	for(i = 0; i < Maxproc; i++) {
 		if(ptab[i].pid == pid) {
 			l = strlen(msg);
-			if(rdebug)
-				ok = sendremote(pid, msg) >= 0;
-			else
+			//if(rdebug)
+			//	ok = sendremote(pid, msg) >= 0;
+			//else
 				ok = write(ptab[i].ctl, msg, l) == l;
 			if(!ok) {
 				errstr(err, sizeof err);
@@ -256,11 +258,11 @@ getstatus(int pid)
 
 	static char buf[128];
 
-	if(rdebug) {
-		if(remoteio(pid, "status", buf, sizeof(buf)) < 0)
-			error("remote status: pid %d: %r", pid);
-		return buf;
-	}
+	//if(rdebug) {
+	//	if(remoteio(pid, "status", buf, sizeof(buf)) < 0)
+	//		error("remote status: pid %d: %r", pid);
+	//	return buf;
+	//}
 	sprint(buf, "/proc/%d/status", pid);
 	fd = open(buf, OREAD);
 	if(fd < 0)

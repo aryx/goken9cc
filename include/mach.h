@@ -424,11 +424,11 @@ int		textsym(Symbol*, int);
 void		unusemap(Map*, int);
 
 // proc
-Map*		attachproc(int pid, Fhdr *fp);
+Map*	attachproc(pidt pid, Fhdr *fp);
 int		ctlproc(int pid, char *msg);
-void		detachproc(Map *m);
+void	detachproc(Map *m);
 int		procnotes(int pid, char ***pnotes);
-char*		proctextfile(int pid);
+char*	proctextfile(int pid);
 int		procthreadpids(int pid, int *tid, int ntid);
 char*	procstatus(int);
 

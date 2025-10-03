@@ -221,17 +221,17 @@ startstop(Node *r, Node *args)
 	expr(args, &res);
 	if(res.type != TINT)
 		error("startstop(pid): arg type");
-	if(rdebug) {
-		Lsym *s;
-		r->op = OCONST;
-		r->type = TINT;
-		r->nstore.u0.sival = remcondstartstop(res.nstore.u0.sival);
-		r->nstore.fmt = 'D';
-
-		s = look("_breakid");
-		if(s)
-			s->v->vstore.u0.sival = (int)r->nstore.u0.sival;
-	} else
+	//if(rdebug) {
+	//	Lsym *s;
+	//	r->op = OCONST;
+	//	r->type = TINT;
+	//	r->nstore.u0.sival = remcondstartstop(res.nstore.u0.sival);
+	//	r->nstore.fmt = 'D';
+    //
+	//	s = look("_breakid");
+	//	if(s)
+	//		s->v->vstore.u0.sival = (int)r->nstore.u0.sival;
+	//} else
 		msg(res.nstore.u0.sival, "startstop");
 	notes(res.nstore.u0.sival);
 	dostop(res.nstore.u0.sival);
@@ -1219,10 +1219,10 @@ _bpcondset(Node *r, Node *args)
 	if(conds.type != TLIST)
 		error("_bpcondset(pid, addr, conds): conds: list expected");
 	l = conds.nstore.u0.sl;
-	remcondset('n', (ulong)id.nstore.u0.sival);
+	//remcondset('n', (ulong)id.nstore.u0.sival);
 	pid = (ulong)p.nstore.u0.sival;
-	if (pid != 0)
-		remcondset('k', pid);
+	//if (pid != 0)
+	//	remcondset('k', pid);
 	while(l != nil) {
 		if(l->type != TLIST || listlen(l->lstore.u0.sl) != 2)
 			error("_bpcondset(addr, list): list elements are {\"op\", val} pairs");
@@ -1232,10 +1232,10 @@ _bpcondset(Node *r, Node *args)
 		val = l->lstore.u0.sl->next;
 		if(val->type != TINT)
 			error("_bpcondset(addr, list): list elements are {string, int} pairs");
-		remcondset(op[0], (ulong)val->lstore.u0.sival);
+		//remcondset(op[0], (ulong)val->lstore.u0.sival);
 		l = l->next;
 	}
-	remcondset('b', (ulong)addr.nstore.u0.sival);
+	//remcondset('b', (ulong)addr.nstore.u0.sival);
 }
 
 void
@@ -1251,7 +1251,7 @@ _bpconddel(Node *r, Node *args)
 	if(res.type != TINT)
 		error("_bpconddel(id): arg type");
 
-	remcondset('d', (ulong)res.nstore.u0.sival);
+	//remcondset('d', (ulong)res.nstore.u0.sival);
 }
 
 void

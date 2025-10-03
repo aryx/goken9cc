@@ -58,12 +58,12 @@ newmap(Map *map, int n)
 	return map;
 }
 
-int
+error0
 setmap(Map *map, int fd, uvlong b, uvlong e, vlong f, char *name, Maprw *rw)
 {
 	int i;
 
-	if (map == 0)
+	if (map == nil)
 		return 0;
 	for (i = 0; i < map->nsegs; i++)
 		if (!map->seg[i].inuse)

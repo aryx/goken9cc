@@ -455,7 +455,7 @@ attachallthreads(int pid)
 }
 
 Map*
-attachproc(int pid, Fhdr *fp)
+attachproc(pidt pid, Fhdr *fp)
 {
 	Map *map;
 
