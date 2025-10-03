@@ -432,7 +432,7 @@ struct Waitmsg
 } Waitmsg;
 
 extern	Waitmsg*	p9wait(void);
-extern	Waitmsg*	p9waitfor(int);
+extern	Waitmsg*	p9waitfor(pidt);
 extern	Waitmsg*	waitnohang(void);
 
 extern	int	        p9waitpid(void);

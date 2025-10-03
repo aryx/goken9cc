@@ -1,15 +1,21 @@
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
+
+
 #include <sys/types.h>
 #include <termios.h>
 #undef getwd
 #undef getwd
 #include <unistd.h>
+
 #include "mach.h"
 #define	Extern extern
 #include "acid.h"
+
 #include <signal.h>
-#include <sys/wait.h>
+
+//#include <sys/wait.h>
 
 static void
 setraw(int fd, int baud)
@@ -62,22 +68,22 @@ detach(void)
 	setpgid(0, 0);
 }
 
-char *
-waitfor(int pid)
-{
-	int n, status;
-	static char buf[32];
-
-	for(;;) {
-		n = wait(&status);
-		if(n < 0)
-			error("wait %r");
-		if(n == pid) {
-			sprint(buf, "%d", status);
-			return buf;
-		}
-	}
-}
+//char *
+//waitfor(int pid)
+//{
+//	int n, status;
+//	static char buf[32];
+//
+//	for(;;) {
+//		n = wait(&status);
+//		if(n < 0)
+//			error("wait %r");
+//		if(n == pid) {
+//			sprint(buf, "%d", status);
+//			return buf;
+//		}
+//	}
+//}
 
 char *
 runcmd(char *cmd)
@@ -98,9 +104,9 @@ runcmd(char *cmd)
 		execv("/bin/sh", argv);
 		exits(0);
 	default:
-		return waitfor(pid);
+		return waitfor(pid)->msg;
 	}
-	return 0;
+	return nil;
 }
 
 void (*notefunc)(int);
