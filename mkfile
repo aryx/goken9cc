@@ -17,6 +17,7 @@ DIRS=\
   src/cmd/va src/cmd/vl src/cmd/vc \
   src/cmd/ia src/cmd/il src/cmd/ic \
   src/cmd/prof src/cmd/cov \
+  debuggers/acid \
   utilities typesetting \
 
 <$TOP/mkfiles/mkdirs
