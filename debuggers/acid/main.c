@@ -146,10 +146,10 @@ main(int argc, char *argv[])
 
 	acidlib = getenv("ACIDLIB");
 	if(acidlib == nil){
-		p = getenv("ROOT");
+		p = getenv("GOROOT");
 		if(p == nil)
-			p = "/usr/inferno";
-		snprint(afile, sizeof(afile)-1, "%s/lib/acid", p);
+			p = unsharp("#9");
+		snprint(afile, sizeof(afile)-1, "%s/etc/acid", p);
 		acidlib = strdup(afile);
 	}
 
