@@ -72,7 +72,7 @@ clean:V:
 
 nuke:V:
         mk clean
-        rm -f *.acid
+        rm -f *.acid $BINS
 
 
 %.clean:V:
