@@ -8,8 +8,8 @@ get9root(void)
 
 	if(s)
 		return s;
-
-	if((s = getenv("PLAN9")) != 0)
+    //goken: was "PLAN9" before
+	if((s = getenv("GOROOT")) != 0)
 		return s;
 	s = PLAN9_TARGET;
 	return s;
