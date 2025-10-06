@@ -107,12 +107,6 @@ than lnrand.c, then it does not know. but lib.a depends on
 OFILES so should have new OFILES and so should trigger recompilation
 and re-archiving
 
-**** fix mk/rc in goken so can do `{cd ../..; pwd` for get9root.c to work
-right now /bin/rc: no such file  error
-so then yacc can't work because can't find yaccpar without setting YACCPAR
-
-update: because of pathinit()? should work now?
-
 **** bug mk sync in goken, does not modify the .nw actually
 but then modify the .md5sum which then the next mk sync
 just erase the modif because the orig .nw was not changed at the
