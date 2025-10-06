@@ -1,6 +1,7 @@
 #include <u.h>
 #include <libc.h>
 
+//plan9port: #pragma weak argv0 ??
 char *argv0;
 
 /*

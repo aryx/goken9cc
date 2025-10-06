@@ -446,13 +446,13 @@ extern	int	        p9waitpid(void);
 /* extern	void*	sbrk(ulong); <unistd.h> */
 
 /*
- * malloc (provied by system <stdlib.h>)
+ * malloc (provided by system <stdlib.h>)
  *
 extern	void*	malloc(ulong);
  */
-// mallocz ?? free?
+// free?
 
-extern void* mallocz(unsigned long n, int clr);
+extern void* mallocz(unsigned long n, bool clr);
 
 //******************************************************************************
 // Time

@@ -36,12 +36,10 @@ dirfwstat(int fd, Dir *dir)
 	struct timeval tv[2];
 
 	ret = 0;
-#ifndef _WIN32
 	if(~dir->mode != 0){
 		if(fchmod(fd, dir->mode) < 0)
 			ret = -1;
 	}
-#endif
 	if(~dir->mtime != 0){
 		tv[0].tv_sec = dir->mtime;
 		tv[0].tv_usec = 0;
@@ -50,6 +48,12 @@ dirfwstat(int fd, Dir *dir)
 		if(futimes(fd, tv) < 0)
 			ret = -1;
 	}
+    //plan9port: check not in 9cc/inferno-os lib9
+	if(~dir->length != 0){
+		if(ftruncate(fd, dir->length) < 0)
+			ret = -1;
+	}
+
 	return ret;
 }
 

@@ -16,6 +16,7 @@ p9getenv(char *s)
 int
 p9putenv(char *s, char *v)
 {
+    //alt: plan9port: return setenv(s, v, 1);
 	char *t;
 
 	t = smprint("%s=%s", s, v);

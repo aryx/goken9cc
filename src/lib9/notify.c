@@ -38,6 +38,7 @@ enum
 {
 	Restart = 1<<0,
 	Ignore = 1<<1
+    //TODO? plan9port: NoNotify 1<<2
 };
 
 static Sig sigs[] = {

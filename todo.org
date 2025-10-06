@@ -107,6 +107,8 @@ than lnrand.c, then it does not know. but lib.a depends on
 OFILES so should have new OFILES and so should trigger recompilation
 and re-archiving
 
+update: fixed by mk -I (now the default) to remove intermediate deps opti?
+
 **** bug mk sync in goken, does not modify the .nw actually
 but then modify the .md5sum which then the next mk sync
 just erase the modif because the orig .nw was not changed at the

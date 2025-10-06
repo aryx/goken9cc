@@ -4,7 +4,7 @@
 #include <libc.h>
 
 void*
-mallocz(unsigned long n, int clr)
+mallocz(unsigned long n, bool clr)
 {
 	void *v;
 
