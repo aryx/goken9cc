@@ -2,12 +2,12 @@ Most of the code in this repository is code from Plan9 and has the
 following copyright: Copyright © 2002 Lucent Technologies Inc.
 with a GPL-like license (See license.txt).
 
-The rest of the code is mostly under an MIT license and come from
+The rest of the code is mostly under an MIT license and comes from
 different sources:
  - plan9port (especially lib9/) by Russ Cox
  - golang (GO/) by Google (including work by Rob Pike, Ken Thompson, Russ Cox
    and many others)
- - inferno-os by Virtua Nova
+ - inferno-os by Vita Nuova Holdings Limited
  - Charles Forsith (arm64 support)
  - Richard Miller (riscv support)
  - 9front (arm64 libmach support)
