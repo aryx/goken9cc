@@ -31,7 +31,8 @@ installall:V:
 clean:V:
         rm -f *.[$OS] [$OS].out $CLEANFILES *.$O $OFILES $LIBNAME
 nuke:V:
-        rm -f *.[$OS] [$OS].out $CLEANFILES *.$O $OFILES $LIBNAME $LIB
+        mk clean
+	rm -f $LIB
 
 %.clean:V:
         rm -f $stem.[$OS] [$OS].$stem $stem.acid $stem

@@ -19,11 +19,10 @@ $O.%:	%.$O $OFILES $LIB
 #%.$O:	%.s
 #	$AS $AFLAGS $stem.s
 
-
 #YFLAGS=-d
-#y.tab.h y.tab.c:	$YFILES
+#y.tab.h y.tab.c: $YFILES
 #	$YACC $YFLAGS $prereq
-#lex.yy.c:	$LFILES
+#lex.yy.c: $LFILES
 #	$LEX $LFLAGS $prereq
 
 
@@ -72,7 +71,8 @@ clean:V:
 	rm -f *.[$OS] *.a[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].??* *.$O $TARG $PROGS $CLEANFILES
 
 nuke:V:
-	rm -f *.[$OS] y.tab.? lex.yy.c y.debug y.output [$OS].??* *.acid $TARG
+        mk clean
+        rm -f *.acid
 
 
 %.clean:V:

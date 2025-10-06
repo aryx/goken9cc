@@ -36,7 +36,8 @@ allall:V:
 clean:V:
 	rm -f *.[$OS] [$OS].out y.tab.? lex.yy.c y.debug y.output $TARG $CLEANFILES $OFILES *.$O $O.out
 nuke:V:
-	rm -f *.[$OS] [$OS].out y.tab.? lex.yy.c y.debug y.output *.acid $TARG
+        mk clean
+	rm -f *.acid
 
 safeinstall:V: $O.out
 	test -e $BIN/$TARG && mv $BIN/$TARG $BIN/_$TARG

@@ -27,11 +27,11 @@ RUN ./scripts/promote-mk.sh
 # coupling: env.sh
 ENV PATH="/src/bin:${PATH}"
 ENV MKSHELL="/src/bin/rc"
-#alt: PLAN9="/src" and use more #9/... paths in the code like in plan9port
-ENV RCMAIN="/src/etc/rcmain.unix"
-ENV YACCPAR="/src/etc/yaccpar"
 ARG NPROC
 ENV NPROC=${NPROC}
+# just to cleanup the artifacts of build-mk.sh (which already
+# does some cleaning but better safe than sorry).
+RUN mk nuke
 
 RUN mk
 RUN mk install

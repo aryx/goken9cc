@@ -19,6 +19,9 @@
 ** dev infra
 
 ** build infra
+- support and use "#9/..." paths like in plan9port instead of needing
+  special env vars like YACCPAR or RCMAIN (kept for compatibility reasons)
+  and pass correct -DGOROOT to goos.c and get9root.c
 
 ** internals
 

@@ -70,9 +70,9 @@ gcc $CFLAGS -DPLAN9PORT exits.c -o exits.o
 gcc $CFLAGS -DPLAN9PORT getenv.c -o getenv.o
 gcc $CFLAGS -DPLAN9PORT getfields.c -o getfields.o
 gcc $CFLAGS -DPLAN9PORT getwd.c -o getwd.o
-gcc $CFLAGS -DPLAN9PORT '-DGOOS="$GOOS"' '-DGOARCH="$GOARCH"' '-DGOROOT="$ROOT"' '-DGOVERSION="goken"' goos.c
+gcc $CFLAGS -DPLAN9PORT -DGOOS=\"$GOOS\" -DGOARCH=\"$GOARCH\" -DGOROOT=\"$ROOT\" -DGOVERSION=\"goken\" goos.c
 gcc $CFLAGS -DPLAN9PORT unsharp.c
-gcc $CFLAGS -DPLAN9PORT get9root.c '-DGOROOT="$ROOT"'
+gcc $CFLAGS -DPLAN9PORT get9root.c -DGOROOT=\"$ROOT\"
 gcc $CFLAGS -DPLAN9PORT main.c -o main.o
 gcc $CFLAGS -DPLAN9PORT math/nan.c -o math/nan.o
 gcc $CFLAGS -DPLAN9PORT nulldir.c -o nulldir.o

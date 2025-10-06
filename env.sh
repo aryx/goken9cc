@@ -6,10 +6,12 @@ export PATH=`pwd`/bin:`pwd`/ROOT/amd64/bin:`pwd`/ROOT/arm64/bin:$PATH
 
 # for mk to find rc
 export MKSHELL=`pwd`/bin/rc
+
+# old: not needed anymore thx to get9root.c and use of #9/etc/...
+# alt: can also be overriden with setting GOROOT
 # for rc to find its init file
-# alt: export GOROOT=`pwd` should work too because of get9root.c
-export RCMAIN=`pwd`/etc/rcmain.unix
+# export RCMAIN=`pwd`/etc/rcmain.unix
 # for yacc to find its template file
-export YACCPAR=`pwd`/etc/yaccpar
+# export YACCPAR=`pwd`/etc/yaccpar
 
 export NPROC=`nproc`

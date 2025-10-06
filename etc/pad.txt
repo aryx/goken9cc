@@ -1,0 +1,4 @@
+Those config files are used at runtime by plan9 programs.
+Those programs usually use "#9/etc/..." to load them
+so you can either rely on the compiled inplace goken ROOT dir
+or adjust GOROOT so that #9 will point somewhere else.
