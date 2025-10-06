@@ -16,7 +16,8 @@
 #include <errno.h>
 
 // system-specific globals defined here but used in other files
-char *Rcmain = "/usr/lib/rcmain";
+//goken: was /usr/lib/rcmain
+char *Rcmain = "#9/etc/rcmain.unix";
 char *Fdprefix = "/dev/fd/";
 
 //******************************************************************************
@@ -92,6 +93,7 @@ pathinit(void)
     //if (s != nil) {
     //  Rcmain = s;
     //}
+    Rcmain = unsharp(Rcmain);
 }
 
 // set in Vinit()

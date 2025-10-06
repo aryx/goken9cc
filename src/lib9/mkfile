@@ -126,9 +126,7 @@ OFILES=\
 	$FMTOFILES\
 	$UTFOFILES\
 
-HFILES=\
-	$TOP/include/u.h\
-	$TOP/include/libc.h\
+HFILES= $TOP/include/u.h $TOP/include/libc.h
 
 <$TOP/mkfiles/mksyslib
 
@@ -136,7 +134,7 @@ HFILES=\
 goos.$O: goos.c
 	$CC $CFLAGS $CFLAGS_EXTRA '-DGOOS='"$GOOS" '-DGOARCH='"$GOARCH" '-DGOROOT='"$ROOT" '-DGOVERSION='"goken" goos.c
 
-ROOTDIR=`{cd ../..; pwd}
+ROOTDIR=`{cd $TOP/ROOT; pwd}
 
 get9root.$O: get9root.c
-	$CC $CFLAGS $CFLAGS_EXTRA '-DPLAN9_TARGET='"$ROOTDIR" get9root.c
+	$CC $CFLAGS $CFLAGS_EXTRA '-DGOROOT='"$ROOTDIR" get9root.c

@@ -588,8 +588,8 @@ main(int argc, char *argv[])
 {
 
     char *s;
-    if((s = getenv("YACCPAR")) != 0)
-  parser = s ;
+    if((s = getenv("YACCPAR")) != nil)
+        parser = s ;
     else
         parser = unsharp(PARSER);
 
