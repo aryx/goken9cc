@@ -73,6 +73,7 @@ LIB9OFILES=\
 	main.$O\
 	nan.$O\
 	nulldir.$O\
+        lock.$O\
 	open.$O\
 	readn.$O\
 	seek.$O\
