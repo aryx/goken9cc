@@ -40,8 +40,10 @@
 
 #define PADDR(a)	((uint32)(a) & ~0x80000000)
 
+#ifdef GOLANG
 char linuxdynld[] = "/lib64/ld-linux-x86-64.so.2";
 char freebsddynld[] = "/libexec/ld-elf.so.1";
+#endif
 
 char	zeroes[32];
 
@@ -535,7 +537,7 @@ asmb(void)
 		pph->vaddr = INITTEXT - HEADR + pph->off;
 		pph->paddr = INITTEXT - HEADR + pph->off;
 		pph->align = INITRND;
-
+#ifdef GOLANG
 		if(!debug['d']) {
 			/* interpreter */
 			sh = newElfShdr(elfstr[ElfStrInterp]);
@@ -556,6 +558,7 @@ asmb(void)
 			ph->flags = PF_R;
 			phsh(ph, sh);
 		}
+#endif
 
 		elfphload(&segtext);
 		elfphload(&segdata);
