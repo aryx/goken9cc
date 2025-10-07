@@ -10,6 +10,10 @@
 #include <fcall.h>
 #endif
 
+// use char[] so put in data writable section, otherwise
+// we can get a segfault in xcleanname
+char default_dir[] = ".";
+
 typedef struct NDir NDir;
 /*s: struct [[NDir]] */
 struct NDir
@@ -121,7 +125,7 @@ main(int argc, char *argv[])
         clk = time(0);
     /*e: [[main]](ls.c) if [[lflag]] */
     if(argc == 0)
-        errs = ls(".", false);
+        errs = ls(default_dir, false);
     else for(i=0; i<argc; i++)
         errs |= ls(argv[i], true);
 
