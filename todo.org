@@ -13,6 +13,9 @@
 *** devdraw from plan9port to goken? can draw ? can port
 more stuff to unix? doomplan9?
 
+maybe most of Graphics.nw can be tested on Linux?
+at least testdraw.c ?
+
 *** LATER LONG try to boostrap itself; can compile 6a with 6c?
 
 *** LATER SEMI try to unify all the kencc/inferno/plan9 before lpize (5a/5c/5l) again
@@ -25,6 +28,7 @@ use my diff.rc
 relpize, resplit, but at least can reuse most of the thinking/splitting
 work done for plan9
 AND this time run regression tests first! to catch regression ASAP
+
 update: with 5a_/5c_/5l_ working pretty good, maybe don't have
  to relpize actually and try 5a__/5c__/5l__ from principia's book
  and diff and gradually converge and fix bugs
@@ -43,7 +47,7 @@ but better wait to avoid diff.rc to show big diffs
 
 * Last
 
-*** port acid/ so can use it to dump the arm64/arm_ binaries!
+*** SEMI port acid/ so can use it to dump the arm64/arm_ binaries!
 and see the disassembled code.
 right now objdump and llvm-dump and gdb do not work :(
 (strace does at least)
@@ -73,12 +77,6 @@ tests/c/mini2/ ?
 and also make it work on goken
 
 **** make utilities work on goken
-
-***** fix 'du' in goken and 'ls' "not a directory" error in both cases
-need copy p9open from plan9port too?
-debug?
-
-seems bug in dirreadall
 
 ***** make grep compile and work on goken
 Runemask ??
@@ -183,7 +181,7 @@ easier when will have test infra via qemu-system-arm
 update: easier when goken 5a_/5c_/5l_ can work on linux
 and can compile itself on linux => that's a good test suite
 
-** original ARM toolchain : 5a/5c/5l
+** golang ARM toolchain : 5a/5c/5l
 
 *** still? can't use 5c on principia libc code, weird!!!
 wait.c:33 unknown type 15 in zaddr
@@ -208,9 +206,6 @@ update: better now that I made it work with 5l_ ?
 
 *** rc
 
-**** RELAX use #9/data/rc/rcmain ? or #9/etc/rcmain.unix ?
-and also overwrite via RCMAIN var
-
 **** regsub_ in Plan9.c and Posix.c
 alt: adapt libregexp in principia to match the one in goken/kencc
 right now in mk I need to adjust 
@@ -222,12 +217,9 @@ right now in mk I need to adjust
 so don't need to switch back and forth between kencc/goken mk
 and xix mk
 
-
 ** libs
 
 ** Arch
-
-*** still? integrate also 5coff ? and coff code?
 
 *** riscv 
 
@@ -237,8 +229,8 @@ also xv6-riscv?
 
 ** Debugger
 
-*** LATER make acid debugger work on it?
-port acid to Linux/macOS/windows? can it run there?
+*** port also db to goken
+seems to be defined in plan9port
 
 ** GO stuff
 
@@ -350,6 +342,8 @@ kencc and 9-cc seems not uptodate
 but at the same time, I don't think it has 5a/5c/... synced
 with the latest plan9 versions 
 (which I did sync to get a working raspberry pi build of plan9)
+
+*** update from 9front?
 
 * Docs
 
