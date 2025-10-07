@@ -3,6 +3,9 @@
 #include <sys/time.h>
 #include <sched.h>
 #include <errno.h>
+// should be included in u.h but does not seem to work correctly
+// on Alpine so half-redundant include here
+#include <pthread.h>
 #include <libc.h>
 
 static pthread_mutex_t initmutex;//XXX: = PTHREAD_MUTEX_INITIALIZER;
