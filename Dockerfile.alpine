@@ -2,6 +2,8 @@
 
 FROM alpine:3.21
 RUN apk add binutils gcc libc-dev bison make bash ed
+# just for lib9/_p9dir.c use of linux/hdreg.h
+RUN apk add linux-headers
 WORKDIR /src
 COPY . .
 ENV IN_DOCKER=true

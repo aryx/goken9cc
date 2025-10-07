@@ -60,6 +60,8 @@ disksize(int fd, struct stat *st)
 }
 
 #elif defined(__linux__)
+// note that this requires the linux-headers package
+// alt: remove support for disksize in lib9; does not look super important
 #include <linux/hdreg.h>
 #include <linux/fs.h>
 #include <sys/ioctl.h>
