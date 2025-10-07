@@ -201,10 +201,13 @@ extern	double	p9pow10(int);
 
 // advanced stuff (no O_APPEND, O_CREATE, O_NONBLOCK as in Unix though)
 #define	OTRUNC	16	/* or'ed in (except for exec), truncate file first */
+#define	OCEXEC	32	/* or'ed in, close on exec */
 #define	ORCLOSE	64	/* or'ed in, remove on close */
 #define	ODIRECT	128	/* or'ed in, direct access */
-#define	OEXCL	0x1000	/* or'ed in, exclusive use (create only) */
+#define	ONONBLOCK 256	/* or'ed in, non-blocking call */
 
+#define	OEXCL	0x1000	/* or'ed in, exclusive use (create only) */
+#define	OLOCK	0x2000	/* or'ed in, lock after opening */
 #define	OAPPEND	0x4000	/* or'ed in, append only */
 
 extern	fdt	p9open(char*, int);

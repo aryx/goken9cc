@@ -56,7 +56,6 @@ gcc $CFLAGS -DPLAN9PORT _exits.c -o _exits.o
 gcc $CFLAGS -DPLAN9PORT argv0.c -o argv0.o
 gcc $CFLAGS -DPLAN9PORT atoi.c -o atoi.o
 gcc $CFLAGS -DPLAN9PORT cleanname.c -o cleanname.o
-gcc $CFLAGS -DPLAN9PORT create.c -o create.o
 gcc $CFLAGS -DPLAN9PORT dirfstat.c -o dirfstat.o
 gcc $CFLAGS -DPLAN9PORT dirfwstat.c -o dirfwstat.o
 gcc $CFLAGS -DPLAN9PORT dirstat.c -o dirstat.o
@@ -127,7 +126,7 @@ gcc $CFLAGS -DPLAN9PORT utf/utfutf.c -o utf/utfutf.o
 gcc $CFLAGS -DPLAN9PORT utf/runetype.c -o utf/runetype.o
 gcc $CFLAGS -DPLAN9PORT lock.c -o lock.o
 gcc $CFLAGS -DPLAN9PORT mallocz.c -o mallocz.o
-ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o create.o dirfstat.o dirfwstat.o dirstat.o dirwstat.o dup.o errstr.o exec.o execl.o exitcode.o exits.o getenv.o getfields.o getwd.o goos.o unsharp.o get9root.o main.o math/nan.o nulldir.o open.o readn.o seek.o strecpy.o sysfatal.o time.o tokenize.o await.o getuser.o jmp.o notify.o rfork.o ctime.o zoneinfo.o fmt/dofmt.o fmt/fltfmt.o fmt/fmt.o fmt/fmtfd.o fmt/fmtfdflush.o fmt/fmtlocale.o fmtlock2.o fmt/fmtnull.o fmt/fmtprint.o fmt/fmtquote.o fmt/fmtrune.o fmt/fmtstr.o fmt/fmtvprint.o fmt/fprint.o fmt/nan64.o fmt/print.o fmt/seprint.o fmt/smprint.o fmt/snprint.o fmt/sprint.o fmt/strtod.o fmt/vfprint.o fmt/vseprint.o fmt/vsmprint.o fmt/vsnprint.o fmt/charstod.o fmt/pow10.o utf/rune.o utf/utfecpy.o utf/utflen.o utf/utfnlen.o utf/utfrrune.o utf/utfrune.o utf/utfutf.o utf/runetype.o lock.o mallocz.o
+ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o dirfstat.o dirfwstat.o dirstat.o dirwstat.o dup.o errstr.o exec.o execl.o exitcode.o exits.o getenv.o getfields.o getwd.o goos.o unsharp.o get9root.o main.o math/nan.o nulldir.o open.o readn.o seek.o strecpy.o sysfatal.o time.o tokenize.o await.o getuser.o jmp.o notify.o rfork.o ctime.o zoneinfo.o fmt/dofmt.o fmt/fltfmt.o fmt/fmt.o fmt/fmtfd.o fmt/fmtfdflush.o fmt/fmtlocale.o fmtlock2.o fmt/fmtnull.o fmt/fmtprint.o fmt/fmtquote.o fmt/fmtrune.o fmt/fmtstr.o fmt/fmtvprint.o fmt/fprint.o fmt/nan64.o fmt/print.o fmt/seprint.o fmt/smprint.o fmt/snprint.o fmt/sprint.o fmt/strtod.o fmt/vfprint.o fmt/vseprint.o fmt/vsmprint.o fmt/vsnprint.o fmt/charstod.o fmt/pow10.o utf/rune.o utf/utfecpy.o utf/utflen.o utf/utfnlen.o utf/utfrrune.o utf/utfrune.o utf/utfutf.o utf/runetype.o lock.o mallocz.o
 cp lib9.a $TOP/ROOT/$GOARCH/lib/lib9.a
 
 

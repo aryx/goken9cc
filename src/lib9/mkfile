@@ -63,7 +63,6 @@ LIB9OFILES=\
 	argv0.$O\
 	atoi.$O\
 	cleanname.$O\
-	create.$O\
 	dirfstat.$O\
 	dirfwstat.$O\
 	dirstat.$O\
@@ -101,7 +100,6 @@ LIB9OFILES=\
         mallocz.$O\
         cistrcmp.$O\
         lock.$O\
-        dirread.$O\
         tm2sec.$O\
         atnotify.$O\
         sleep.$O\
