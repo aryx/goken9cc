@@ -38,9 +38,7 @@ int32	OFFSET;
 
 static Prog *PP;
 
-#ifdef GOLANG
 char linuxdynld[] = "/lib/ld-linux.so.2";
-#endif
 
 int32
 entryvalue(void)
@@ -477,7 +475,6 @@ asmb(void)
 		pph->paddr = INITTEXT - HEADR + pph->off;
 		pph->align = INITRND;
 
-#ifdef GOLANG
 		if(!debug['d']) {
 			/* interpreter for dynamic linking */
 			sh = newElfShdr(elfstr[ElfStrInterp]);
@@ -491,7 +488,6 @@ asmb(void)
 			ph->flags = PF_R;
 			phsh(ph, sh);
 		}
-#endif
 
 		elfphload(&segtext);
 		elfphload(&segdata);

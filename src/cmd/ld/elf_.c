@@ -331,8 +331,6 @@ elfwriteinterp(void)
 	return n;
 }
 
-// for dynamic linking
-#ifdef GOLANG
 void
 elfinterp(ElfShdr *sh, uint64 startva, char *p)
 {
@@ -344,7 +342,6 @@ elfinterp(ElfShdr *sh, uint64 startva, char *p)
 	sh->off = ELFRESERVE - n;
 	sh->size = n;
 }
-#endif
 
 void
 elfdynhash(int nsym)

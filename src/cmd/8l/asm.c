@@ -39,11 +39,8 @@
 
 #define	Dbufslop	100
 
-#ifdef GOLANG
 char linuxdynld[] = "/lib/ld-linux.so.2";
 char freebsddynld[] = "/usr/libexec/ld-elf.so.1";
-#endif
-
 uint32 symdatva = SYMDATVA;
 
 int32
@@ -650,7 +647,6 @@ asmb(void)
 			pph->align = INITRND;
 		}
 
-#ifdef GOLANG
 		if(!debug['d']) {
 			/* interpreter */
 			sh = newElfShdr(elfstr[ElfStrInterp]);
@@ -671,7 +667,6 @@ asmb(void)
 			ph->flags = PF_R;
 			phsh(ph, sh);
 		}
-#endif
 
 		elfphload(&segtext);
 		if(segrodata.len > 0)
