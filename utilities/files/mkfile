@@ -8,9 +8,8 @@ CFLAGS_EXTRA=-DUnix
 # -lbio needed only for wc
 LDLIBS=-lbio -lstring -l9 -lm
 
-# let's not build cp and ls by default
-# cp ls
-TARG=cat touch mkdir mv rm chmod chgrp mtime wc du
+#alt: skip cp and ls
+TARG=cat touch mkdir mv rm chmod chgrp mtime wc du cp ls
 
 <$TOP/mkfiles/mkmany
 #<$TOP/mkfiles/mkmanyauto
