@@ -8,8 +8,8 @@ CFLAGS_EXTRA=-DUnix
 # -lbio needed only for wc
 LDLIBS=-lbio -lstring -l9 -lm
 
-#alt: skip cp and ls
-TARG=cat touch mkdir mv rm chmod chgrp mtime wc du cp ls
+# we skip 'cp' as mk install will lead to a "Text file busy" error
+TARG=cat touch mkdir mv rm chmod chgrp mtime wc du ls
 
 <$TOP/mkfiles/mkmany
 #<$TOP/mkfiles/mkmanyauto
