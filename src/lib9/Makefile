@@ -56,7 +56,6 @@ LIB9OFILES=\
 	argv0.$O\
 	atoi.$O\
 	cleanname.$O\
-	create.$O\
 	dirfstat.$O\
 	dirfwstat.$O\
 	dirstat.$O\
