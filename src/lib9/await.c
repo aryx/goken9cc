@@ -127,6 +127,7 @@ _wait(int pid4, int opt)
 	}
 }
 
+//plan9port: in wait.c
 Waitmsg*
 p9wait(void)
 {
@@ -145,6 +146,7 @@ p9waitnohang(void)
 	return _wait(-1, WNOHANG);
 }
 
+//plan9port: in waitpid.c
 int
 p9waitpid(void)
 {
