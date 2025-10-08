@@ -12,13 +12,12 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
 ## Features
 
 - **Portable:**
-  It can *build* on Linux, macOS, and Windows (TODO and Plan 9) using gcc or clang
-  (TODO or a boostrapped version of itself)
+  It can *build* on Linux, macOS, and Windows (TODO and Plan 9) using gcc or clang (TODO or a boostrapped version of itself)
 - **Multi-OS support:** 
   Build C programs that can *run* on Linux, macOS (only old macOS for now), TODO Windows, and Plan 9
 - **Multi-architecture support:**
   Build C programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
-  arm64 (a.k.a. aarch64), RISC V, and mips architectures (TODO and Wasm)
+  arm64 (a.k.a. aarch64), risc-v (32 and 64), and mips architectures (TODO and Wasm)
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
   (e.g., you can build from a Linux 386 machine a binary for amd64 macOS)
@@ -62,12 +61,12 @@ in the Go repository in October 2010 at this precise commit:
 https://github.com/golang/go/commit/99a10eff16b79cfb8ccf36e586532a40b17a203c
 (see pad.org for an explanation of why I forked at this precise commit).
 
-The C toolchain that was part of the Go repository was actually
-itself a fork of the "kencc"
-toolchain in inferno-os at https://github.com/inferno-os/inferno-os (in the utils/ subdirectory)
+The C toolchain that was part of the Go repository was actually itself
+a fork of the "kencc" toolchain in inferno-os at
+https://github.com/inferno-os/inferno-os (in the utils/ subdirectory)
 as well as code from the plan9port https://github.com/9fans/plan9port
-which both were themselves forks of the kencc toolchain in the plan9 operating
-system at https://github.com/plan9foundation/plan9
+which both were themselves forks of the kencc toolchain in the plan9
+operating system at https://github.com/plan9foundation/plan9
 
 The main improvements in the Go repository to the C toolchain compared
 to the original kencc toolchain in Plan 9 are the support for other
@@ -77,3 +76,15 @@ machO (for macOS), and PE (for Windows) as well as the management of
 syscalls to those different operating systems. Another nice improvement
 was the support for the DWARF debugging format so the generated binaries
 could be debugged using gdb (instead of just the Plan9 acid debugger).
+
+---
+
+## Environment variables
+
+build time:
+GOOS
+GOARCH
+GODYNLINK
+
+run time:
+GOROOT
