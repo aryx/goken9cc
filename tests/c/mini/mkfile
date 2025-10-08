@@ -7,6 +7,10 @@ all:V: helloc.exe
 clean:V:
 	rm -f *.[5678] *.exe *.a
 
+#TODO: 386 mips riscv
+ARCHS=amd64 arm arm64
+#TODO: iterate over ARCHS or build 5.helloc 8.helloc etc?
+
 test:V: all
 	./helloc.exe
 
