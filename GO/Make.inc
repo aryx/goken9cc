@@ -47,7 +47,7 @@ ifeq ($(GOHOSTOS),darwin)
 GOHOSTARCH:=${shell if sysctl machdep.cpu.extfeatures | grep EM64T >/dev/null; then echo amd64; else uname -m | sed 's/i386/386/'; fi}
 else
 # Ask uname -m for the processor.
-GOHOSTARCH:=${shell uname -m | sed 's/^..86$$/386/; s/^.86$$/386/; s/x86_64/amd64/; s/arm.*/arm/'}
+GOHOSTARCH:=${shell uname -m | sed 's/^..86$$/386/; s/^.86$$/386/; s/x86_64/amd64/; s/arm.*/arm/; s/aarch64/arm64/;'}
 endif
 endif
 
@@ -65,15 +65,16 @@ O:=8
 else ifeq ($(GOARCH),amd64)
 O:=6
 else ifeq ($(GOARCH),arm)
-
 O:=5
 ifeq ($(GOOS),linux)
 else
 $(error Invalid $$GOOS '$(GOOS)' for GOARCH=arm; must be linux)
 endif
-
+else ifeq ($(GOARCH),arm64)
+#TODO: use 7 at some point
+O:=5
 else
-$(error Invalid $$GOARCH '$(GOARCH)'; must be 386, amd64, or arm)
+$(error Invalid $$GOARCH '$(GOARCH)'; must be 386, amd64, arm, or arm64)
 endif
 
 # Save for recursive make to avoid recomputing.

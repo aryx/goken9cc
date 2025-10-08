@@ -29,6 +29,9 @@ case "$(uname -m -p)-$GOHOSTARCH" in
 	;;
 *x86_64* | *amd64*)
 	gcc="$gcc -m64"
+#TODO? does not seem to help though, still "betypeinit error in 5g"
+#*aarch64*)
+#        gcc=arm-linux-gnueabihf-gcc	
 esac
 
 GCCWNO="-Wno-sign-compare -Wno-missing-braces -Wno-parentheses -Wno-unknown-pragmas -Wno-switch -Wno-comment"
