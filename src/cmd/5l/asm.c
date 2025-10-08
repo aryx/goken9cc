@@ -326,17 +326,17 @@ asmb(void)
 	case 0:
 	case 2:
 		OFFSET = HEADR+textsize;
-		seek(cout, OFFSET, 0);
+		seek(cout, OFFSET, SEEK__START);
 		break;
 	case 7:
 		OFFSET = rnd(segtext.fileoff+segtext.filelen, INITRND);
-		seek(cout, OFFSET, 0);
+		seek(cout, OFFSET, SEEK__START);
 		break;
 	default:
 		diag("unknown -H option");
 		errorexit();
 	}
-	segdata.fileoff = seek(cout, 0, 1);
+	segdata.fileoff = seek(cout, 0, SEEK__CUR);
 	datblk(INITDAT, segdata.filelen);
 
 	/* output symbol table */
@@ -352,12 +352,12 @@ asmb(void)
 			break;
 		case 2:
 			OFFSET = HEADR+textsize+segdata.filelen;
-			seek(cout, OFFSET, 0);
+			seek(cout, OFFSET, SEEK__START);
 			break;
 		case 7:
 			OFFSET += segdata.filelen;
 			symo = rnd(OFFSET, INITRND);
-			seek(cout, symo + 8, 0);
+			seek(cout, symo + 8, SEEK__START);
 			break;
 		}
 		if(!debug['s'])
@@ -383,7 +383,7 @@ asmb(void)
 		Bprint(&bso, "%5.2f header\n", cputime());
 	Bflush(&bso);
 	OFFSET = 0;
-	seek(cout, OFFSET, 0);
+	seek(cout, OFFSET, SEEK__START);
 	switch(HEADTYPE) {
 	case 0:	/* no header */
 		break;
@@ -416,7 +416,7 @@ asmb(void)
 		pph->vaddr = INITTEXT - HEADR + pph->off;
 		pph->paddr = INITTEXT - HEADR + pph->off;
 		pph->align = INITRND;
-
+#ifdef GODYNLINK
 		if(!debug['d']) {
 			/* interpreter for dynamic linking */
 			sh = newElfShdr(elfstr[ElfStrInterp]);
@@ -430,6 +430,7 @@ asmb(void)
 			ph->flags = PF_R;
 			phsh(ph, sh);
 		}
+#endif
 
 		elfphload(&segtext);
 		elfphload(&segdata);
