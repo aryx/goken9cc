@@ -225,18 +225,14 @@ asmb(void)
 	curtext = P;
 	switch(HEADTYPE) {
 	case 0:
-	case 4:
 		OFFSET = rnd(HEADR+textsize, 4096);
 		seek(cout, OFFSET, 0);
 		break;
-	case 1:
 	case 2:
-	case 3:
-	case 5:
-	case 6:
 		OFFSET = HEADR+textsize;
 		seek(cout, OFFSET, 0);
 		break;
+    //TODO: case 7 Elf ?
 	}
 	for(t = 0; t < datsize; t += sizeof(buf)-100) {
 		if(datsize-t > sizeof(buf)-100)
@@ -253,18 +249,14 @@ asmb(void)
 		Bflush(&bso);
 		switch(HEADTYPE) {
 		case 0:
-		case 4:
 			OFFSET = rnd(HEADR+textsize, 4096)+datsize;
 			seek(cout, OFFSET, 0);
 			break;
-		case 3:
 		case 2:
-		case 1:
-		case 5:
-		case 6:
 			OFFSET = HEADR+textsize+datsize;
 			seek(cout, OFFSET, 0);
 			break;
+        //TODO: case 7 Elf ?
 		}
 		if(!debug['s'])
 			asmsym();
@@ -303,29 +295,6 @@ asmb(void)
 		lput(0L);
 		lput(~0L);			/* gp value ?? */
 		break;
-	case 1:
-		lput(0x160L<<16);		/* magic and sections */
-		lput(0L);			/* time and date */
-		lput(HEADR+textsize+datsize);
-		lput(symsize);			/* nsyms */
-		lput((0x38L<<16)|7L);		/* size of optional hdr and flags */
-
-		lput((0407<<16)|0437L);		/* magic and version */
-		lput(textsize);			/* sizes */
-		lput(datsize);
-		lput(bsssize);
-		lput(entryvalue());		/* va of entry */
-		lput(INITTEXT);			/* va of base of text */
-		lput(INITDAT);			/* va of base of data */
-		lput(INITDAT+datsize);		/* va of base of bss */
-		lput(~0L);			/* gp reg mask */
-		lput(lcsize);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(~0L);			/* gp value ?? */
-		lput(0L);			/* complete mystery */
-		break;
 	case 2:
 		if (little)
 			lput(P_MAGIC);		/* mips 3000 LE */
@@ -339,115 +308,8 @@ asmb(void)
 		lput(0L);
 		lput(lcsize);
 		break;
-	case 3:
-		lput((0x160L<<16)|3L);		/* magic and sections */
-		lput(time(0));			/* time and date */
-		lput(HEADR+textsize+datsize);
-		lput(symsize);			/* nsyms */
-		lput((0x38L<<16)|7L);		/* size of optional hdr and flags */
-
-		lput((0407<<16)|0437L);		/* magic and version */
-		lput(textsize);			/* sizes */
-		lput(datsize);
-		lput(bsssize);
-		lput(entryvalue());		/* va of entry */
-		lput(INITTEXT);			/* va of base of text */
-		lput(INITDAT);			/* va of base of data */
-		lput(INITDAT+datsize);		/* va of base of bss */
-		lput(~0L);			/* gp reg mask */
-		lput(lcsize);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(~0L);			/* gp value ?? */
-
-		strnput(".text", 8);		/* text segment */
-		lput(INITTEXT);			/* address */
-		lput(INITTEXT);
-		lput(textsize);
-		lput(HEADR);
-		lput(0L);
-		lput(HEADR+textsize+datsize+symsize);
-		lput(lcsize);			/* line number size */
-		lput(0x20L);			/* flags */
-
-		strnput(".data", 8);		/* data segment */
-		lput(INITDAT);			/* address */
-		lput(INITDAT);
-		lput(datsize);
-		lput(HEADR+textsize);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(0x40L);			/* flags */
-
-		strnput(".bss", 8);		/* bss segment */
-		lput(INITDAT+datsize);		/* address */
-		lput(INITDAT+datsize);
-		lput(bsssize);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(0x80L);			/* flags */
-		break;
-	case 4:
-
-		lput((0x160L<<16)|3L);		/* magic and sections */
-		lput(time(0));			/* time and date */
-		lput(rnd(HEADR+textsize, 4096)+datsize);
-		lput(symsize);			/* nsyms */
-		lput((0x38L<<16)|7L);		/* size of optional hdr and flags */
-
-		lput((0413<<16)|01012L);	/* magic and version */
-		lput(textsize);			/* sizes */
-		lput(datsize);
-		lput(bsssize);
-		lput(entryvalue());		/* va of entry */
-		lput(INITTEXT);			/* va of base of text */
-		lput(INITDAT);			/* va of base of data */
-		lput(INITDAT+datsize);		/* va of base of bss */
-		lput(~0L);			/* gp reg mask */
-		lput(lcsize);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(~0L);			/* gp value ?? */
-
-		strnput(".text", 8);		/* text segment */
-		lput(INITTEXT);			/* address */
-		lput(INITTEXT);
-		lput(textsize);
-		lput(HEADR);
-		lput(0L);
-		lput(HEADR+textsize+datsize+symsize);
-		lput(lcsize);			/* line number size */
-		lput(0x20L);			/* flags */
-
-		strnput(".data", 8);		/* data segment */
-		lput(INITDAT);			/* address */
-		lput(INITDAT);
-		lput(datsize);
-		lput(rnd(HEADR+textsize, 4096));	/* sizes */
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(0x40L);			/* flags */
-
-		strnput(".bss", 8);		/* bss segment */
-		lput(INITDAT+datsize);		/* address */
-		lput(INITDAT+datsize);
-		lput(bsssize);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(0x80L);			/* flags */
-		break;
-	case 5:
+	case 7:
 		//elf32(MIPS, little? ELFDATA2LSB: ELFDATA2MSB, 0, nil);
-		break;
-	case 6:
 		break;
 	}
 	cflush();
