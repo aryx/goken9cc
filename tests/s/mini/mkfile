@@ -3,10 +3,10 @@
 HELLOLINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
   hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe \
 
-#hello_linux_riscv32.exe
+#hello_linux_riscv.exe
 
 EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe \
-  exit_linux_riscv32.exe exit_linux_mips.exe
+  exit_linux_riscv.exe exit_linux_mips.exe
 
 PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 MACOSBINS=hello_macos_amd64.exe
@@ -39,9 +39,9 @@ hello_linux_386.exe: hello_linux_386.s
    8l -X -d -o $target -E _start hello_linux_386.8
 
 # Linux
-hello_linux_riscv32.exe: hello_linux_riscv32.s
+hello_linux_riscv.exe: hello_linux_riscv.s
    ia -c $prereq
-   il -o $target -E _start hello_linux_riscv32.i
+   il -o $target -E _start hello_linux_riscv.i
 			
 
 # macOS
@@ -92,9 +92,9 @@ hello_linux_arm_.exe: hello_linux_arm.s
    5a_ -c $prereq
    5l_ -H7 -o $target -E _start hello_linux_arm.5
 
-exit_linux_riscv32.exe: exit_linux_riscv32.s
+exit_linux_riscv.exe: exit_linux_riscv.s
    ia -c $prereq
-   il -v -o $target -E _start exit_linux_riscv32.i
+   il -v -o $target -E _start exit_linux_riscv.i
 
 exit_linux_mips.exe: exit_linux_mips.s
    va -c $prereq
