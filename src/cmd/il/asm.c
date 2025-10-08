@@ -72,18 +72,14 @@ asmb(void)
 	curtext = P;
 	switch(HEADTYPE) {
 	case 0:
-	case 4:
 		OFFSET = rnd(HEADR+textsize, 4096);
 		seek(cout, OFFSET, 0);
 		break;
-	case 1:
 	case 2:
-	case 3:
-	case 5:
-	case 6:
 		OFFSET = HEADR+textsize;
 		seek(cout, OFFSET, 0);
 		break;
+    //TODO: case 7 Elf Linux??
 	}
 	for(t = 0; t < datsize; t += sizeof(buf)-100) {
 		if(datsize-t > sizeof(buf)-100)
@@ -100,18 +96,14 @@ asmb(void)
 		Bflush(&bso);
 		switch(HEADTYPE) {
 		case 0:
-		case 4:
 			OFFSET = rnd(HEADR+textsize, 4096)+datsize;
 			seek(cout, OFFSET, 0);
 			break;
-		case 3:
 		case 2:
-		case 1:
-		case 5:
-		case 6:
 			OFFSET = HEADR+textsize+datsize;
 			seek(cout, OFFSET, 0);
 			break;
+        //TODO: case 7: elf ??
 		}
 		if(!debug['s'])
 			asmsym();
@@ -129,8 +121,6 @@ asmb(void)
 	OFFSET = 0;
 	seek(cout, OFFSET, 0);
 	switch(HEADTYPE) {
-	case 1:
-		break;
 	case 2:
 		/* XXX expanded header needed? */
 		t = thechar == 'j' ? 30 : 29;
@@ -143,11 +133,12 @@ asmb(void)
 		lput(0L);
 		lput(lcsize);
 		break;
-	case 5:
+	case 5: // ???
 		if(thechar == 'j')
 			elf64(243, ELFDATA2LSB, 0, nil);		/* 243 is RISCV */
 		else
 			elf32(243, ELFDATA2LSB, 0, nil);
+    //TODO: case 7: elf ??
 	}
 	cflush();
 }
