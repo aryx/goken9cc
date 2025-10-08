@@ -82,9 +82,13 @@ could be debugged using gdb (instead of just the Plan9 acid debugger).
 ## Environment variables
 
 build time:
-GOOS
 GOARCH
+GOOS
 GODYNLINK
+GOLANG
 
 run time:
-GOROOT
+for all: GOROOT (used for "#9/..." paths)
+for mk: MKSHELL
+for rc: RCMAIN
+for yacc: YACCPAR
