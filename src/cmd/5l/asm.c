@@ -324,20 +324,17 @@ asmb(void)
 	cursym = nil;
 	switch(HEADTYPE) {
 	case 0:
-	case 1:
 	case 2:
-	case 5:
 		OFFSET = HEADR+textsize;
 		seek(cout, OFFSET, 0);
 		break;
-	case 3:
-		OFFSET = rnd(HEADR+textsize, 4096);
-		seek(cout, OFFSET, 0);
-		break;
-	case 6:
+	case 7:
 		OFFSET = rnd(segtext.fileoff+segtext.filelen, INITRND);
 		seek(cout, OFFSET, 0);
 		break;
+	default:
+		diag("unknown -H option");
+		errorexit();
 	}
 	segdata.fileoff = seek(cout, 0, 1);
 	datblk(INITDAT, segdata.filelen);
@@ -351,20 +348,13 @@ asmb(void)
 		Bflush(&bso);
 		switch(HEADTYPE) {
 		case 0:
-		case 1:
-		case 4:
-		case 5:
 			debug['s'] = 1;
 			break;
 		case 2:
 			OFFSET = HEADR+textsize+segdata.filelen;
 			seek(cout, OFFSET, 0);
 			break;
-		case 3:
-			OFFSET += rnd(segdata.filelen, 4096);
-			seek(cout, OFFSET, 0);
-			break;
-		case 6:
+		case 7:
 			OFFSET += segdata.filelen;
 			symo = rnd(OFFSET, INITRND);
 			seek(cout, symo + 8, 0);
@@ -397,36 +387,6 @@ asmb(void)
 	switch(HEADTYPE) {
 	case 0:	/* no header */
 		break;
-	case 1:	/* aif for risc os */
-		lputl(0xe1a00000);		/* NOP - decompress code */
-		lputl(0xe1a00000);		/* NOP - relocation code */
-		lputl(0xeb000000 + 12);		/* BL - zero init code */
-		lputl(0xeb000000 +
-			(entryvalue()
-			 - INITTEXT
-			 + HEADR
-			 - 12
-			 - 8) / 4);		/* BL - entry code */
-
-		lputl(0xef000011);		/* SWI - exit code */
-		lputl(textsize+HEADR);		/* text size */
-		lputl(segdata.filelen);			/* data size */
-		lputl(0);			/* sym size */
-
-		lputl(segdata.len - segdata.filelen);			/* bss size */
-		lputl(0);			/* sym type */
-		lputl(INITTEXT-HEADR);		/* text addr */
-		lputl(0);			/* workspace - ignored */
-
-		lputl(32);			/* addr mode / data addr flag */
-		lputl(0);			/* data addr */
-		for(t=0; t<2; t++)
-			lputl(0);		/* reserved */
-
-		for(t=0; t<15; t++)
-			lputl(0xe1a00000);	/* NOP - zero init code */
-		lputl(0xe1a0f00e);		/* B (R14) - zero init return */
-		break;
 	case 2:	/* plan 9 */
 		lput(0x647);			/* magic */
 		lput(textsize);			/* sizes */
@@ -437,25 +397,7 @@ asmb(void)
 		lput(0L);
 		lput(lcsize);
 		break;
-	case 3:	/* boot for NetBSD */
-		lput((143<<16)|0413);		/* magic */
-		lputl(rnd(HEADR+textsize, 4096));
-		lputl(rnd(segdata.filelen, 4096));
-		lputl(segdata.len - segdata.filelen);
-		lputl(symsize);			/* nsyms */
-		lputl(entryvalue());		/* va of entry */
-		lputl(0L);
-		lputl(0L);
-		break;
-	case 4: /* boot for IXP1200 */
-		break;
-	case 5: /* boot for ipaq */
-		lputl(0xe3300000);		/* nop */
-		lputl(0xe3300000);		/* nop */
-		lputl(0xe3300000);		/* nop */
-		lputl(0xe3300000);		/* nop */
-		break;
-	case 6:
+	case 7:
 		/* elf arm */
 		eh = getElfEhdr();
 		fo = HEADR;

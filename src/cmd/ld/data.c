@@ -696,7 +696,7 @@ dodata(void)
 	xdefine("edata", SBSS, segdata.filelen);
 	xdefine("end", SBSS, segdata.len);
 
-	if(debug['s'] || HEADTYPE == 8)
+	if(debug['s'] || HEADTYPE == 8) // HEADTYPE 8 ??
 		xdefine("symdat", SFIXED, 0);
 	else
 		xdefine("symdat", SFIXED, SYMDATVA);
