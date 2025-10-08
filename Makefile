@@ -25,7 +25,7 @@ build-docker:
 	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc --target build .
 #TODO: works only on amd64 for now
 build-docker-test: 
-	docker build -f Dockerfile --tag goken9cc-test --target test .
+	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc-test --target test .
 
 # Golang regression testing
 build-gosrc:
