@@ -37,25 +37,23 @@ RUN mk
 RUN mk install
 
 ###############################################################################
-# Stage2: Test
+# Stage2: Test (on amd64/arm64)
 ###############################################################################
 
-# amd64/i386 testing
 FROM build AS test
-# Setup for 386 tests
-RUN dpkg --add-architecture i386 # so we can run also hello_linux_386.exe
-RUN apt-get update # needed otherwise can't find any package
-RUN apt-get install -y libc6:i386
+
+#old: Setup for 386/arm32 tests
+# RUN dpkg --add-architecture i386 # so we can run also hello_linux_386.exe
+# RUN dpkg --add-architecture armhf
+# RUN apt-get update # needed otherwise can't find any package
+# RUN apt-get install -y libc6:i386 libc6:armhf
+# RUN apt install gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
+
+# qemu-user-binfmt allows to execute binaries directly without
+# prepending qemu-xxx before
+RUN apt-get install -y qemu-user qemu-user-binfmt
+
 ENV GOOS="linux"
-ENV PATH="/src/ROOT/amd64/bin:${PATH}"
+ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
 # Run tests
 RUN mk test
-
-# TODO:
-# arm64/arm32 testing
-
-# Setup for arm32 tests
-# sudo dpkg --add-architecture armhf
-# sudo apt-get update # needed otherwise can't find any package
-# sudo apt install libc6:armhf
-# sudo apt install gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf

@@ -8,7 +8,8 @@ all:V: \
   hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 
 # part of mk test CI regression check in Dockerfile and GHA
-# (requires dpkg --add-architecture i386 for _386.exe to run)
+# (requires dpkg --add-architecture i386 for _386.exe to run
+#  or qemu-user and qemu-user-binfmt)
 test:V: all
       ./hello_linux_amd64.exe
       ./hello_linux_386.exe
