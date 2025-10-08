@@ -43,6 +43,8 @@
 char	*noname		= "<none>";
 char	thechar		= '6';
 char*	thestring 	= "amd64";
+
+// ??
 char*	paramspace	= "FP";
 
 /*
@@ -110,9 +112,11 @@ main(int argc, char *argv[])
 	case 'R':
 		INITRND = atolwhex(EARGF(usage()));
 		break;
+#ifdef GOLANG
 	case 'r':
 		rpath = EARGF(usage());
 		break;
+#endif
 	case 'V':
 		print("%cl version %s\n", thechar, getgoversion());
 		errorexit();
@@ -122,8 +126,10 @@ main(int argc, char *argv[])
 		usage();
 
 	libinit();
+#ifdef GOLANG
 	if(rpath == nil)
 		rpath = smprint("%s/pkg/%s_%s", goroot, goos, goarch);
+#endif
 
 	if(HEADTYPE == -1) {
 		HEADTYPE = 2;
@@ -140,9 +146,6 @@ main(int argc, char *argv[])
 	}
 
 	switch(HEADTYPE) {
-	default:
-		diag("unknown -H option");
-		errorexit();
 	case 2:	/* plan 9 */
 		HEADR = 32L+8L;
 		if(INITTEXT == -1)
@@ -203,6 +206,9 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
+	default:
+		diag("unknown -H option");
+		errorexit();
 	}
 	if(INITDAT != 0 && INITRND != 0)
 		print("warning: -D0x%llux is ignored because of -R0x%ux\n",

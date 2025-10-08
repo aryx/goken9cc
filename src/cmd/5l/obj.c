@@ -37,10 +37,6 @@
 #include	"../ld/elf_.h"
 #include	<ar.h>
 
-#ifndef	DEFAULT
-#define	DEFAULT	'9'
-#endif
-
 char	*noname		= "<none>";
 char	thechar		= '5';
 char	*thestring 	= "arm";
@@ -108,9 +104,11 @@ main(int argc, char *argv[])
 	case 'R':
 		INITRND = atolwhex(EARGF(usage()));
 		break;
+#ifdef GOLANG
 	case 'r':
 		rpath = EARGF(usage());
 		break;
+#endif
 	case 'H':
 		HEADTYPE = atolwhex(EARGF(usage()));
 		/* do something about setting INITTEXT */
@@ -127,17 +125,13 @@ main(int argc, char *argv[])
 
 	libinit();
 
+#ifdef GOLANG
 	if(rpath == nil)
 		rpath = smprint("%s/pkg/%s_%s", goroot, goos, goarch);
+#endif
 
-	if(!debug['9'] && !debug['U'] && !debug['B'])
-		debug[DEFAULT] = 1;
 	if(HEADTYPE == -1) {
-		if(debug['U'])
-			HEADTYPE = 0;
-		if(debug['9'])
-			HEADTYPE = 2;
-        // Linux ELF
+        // Default to Linux ELF
         // alt: use goos and detect Linux
 		HEADTYPE = 7;
 	}

@@ -3,10 +3,6 @@
 
 #include	<ar.h>
 
-#ifndef	DEFAULT
-#define	DEFAULT	'9'
-#endif
-
 char	*noname		= "<none>";
 char	symname[]	= SYMDEF;
 char	thechar		= '5';
@@ -140,23 +136,19 @@ main(int argc, char *argv[])
 
 	if(*argv == 0)
 		usage();
-	if(!debug['9'] && !debug['U'] && !debug['B'])
-		debug[DEFAULT] = 1;
-	a = getenv("ccroot");
-	if(a != nil && *a != '\0') {
-		if(!fileexists(a)) {
-			diag("nonexistent $ccroot: %s", a);
-			errorexit();
-		}
-	}else
-		a = "";
+
+    //TODO? replace by GOROOT
+	//a = getenv("ccroot");
+	//if(a != nil && *a != '\0') {
+	//	if(!fileexists(a)) {
+	//		diag("nonexistent $ccroot: %s", a);
+	//		errorexit();
+	//	}
+	//}else
+	a = "";
 	snprint(name, sizeof(name), "%s/%s/lib", a, thestring);
 	addlibpath(name);
 	if(HEADTYPE == -1) {
-		if(debug['U'])
-			HEADTYPE = 0;
-		if(debug['9'])
-			HEADTYPE = 2;
         // Linux ELF
         // alt: use goos and detect Linux
 		HEADTYPE = 7;

@@ -41,10 +41,6 @@
 
 #include	<ar.h>
 
-#ifndef	DEFAULT
-#define	DEFAULT	'9'
-#endif
-
 char	*noname		= "<none>";
 char	thechar		= '8';
 char	*thestring 	= "386";
@@ -59,7 +55,7 @@ char	*thestring 	= "386";
  *	-H7 -Tx -Rx			is Linux ELF32
  *	-H8 -Tx -Rx			is Google Native Client
  *	-H9 -Tx -Rx			is FreeBSD ELF32
- *  -H10 Windows PE
+ *  -H10                is Windows PE
  */
 
 void
@@ -115,9 +111,11 @@ main(int argc, char *argv[])
 	case 'R':
 		INITRND = atolwhex(EARGF(usage()));
 		break;
+#ifdef GOLANG
 	case 'r':
 		rpath = EARGF(usage());
 		break;
+#endif
 	case 'V':
 		print("%cl version %s\n", thechar, getgoversion());
 		errorexit();
@@ -159,14 +157,12 @@ main(int argc, char *argv[])
 	}
 
 	libinit();
+#ifdef GOLANG
 	if(rpath == nil)
 		rpath = smprint("%s/pkg/%s_%s", goroot, goos, goarch);
+#endif
 
 	switch(HEADTYPE) {
-	default:
-		diag("unknown -H option");
-		errorexit();
-
 	case 0:	/* this is garbage */
 		HEADR = 20L+56L;
 		if(INITTEXT == -1)
@@ -269,6 +265,10 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
+	default:
+		diag("unknown -H option");
+		errorexit();
+
 	}
 	if(INITDAT != 0 && INITRND != 0)
 		print("warning: -D0x%ux is ignored because of -R0x%ux\n",

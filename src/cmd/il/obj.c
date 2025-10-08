@@ -3,10 +3,6 @@
 
 #include	<ar.h>
 
-#ifndef	DEFAULT
-#define	DEFAULT	'9'
-#endif
-
 char	*noname		= "<none>";
 char	symname[]	= SYMDEF;
 char	thechar		= 'i';
@@ -100,11 +96,9 @@ main(int argc, char *argv[])
 		thestring = "riscv64";
 		ptrsize = 8;
 	}
-	if(!debug['9'] && !debug['U'] && !debug['B'])
-		debug[DEFAULT] = 1;
 	if(HEADTYPE == -1) {
-		if(debug['9'])
-			HEADTYPE = 2;
+        // Default to ELF Linux
+        HEADTYPE = 7;
 	}
 	switch(HEADTYPE) {
 	default:

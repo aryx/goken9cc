@@ -3,10 +3,6 @@
 
 #include	<ar.h>
 
-#ifndef	DEFAULT
-#define	DEFAULT	'9'
-#endif
-
 char	thechar		= '7';
 char	*thestring 	= "arm64";
 
@@ -101,18 +97,11 @@ main(int argc, char *argv[])
 
 	if(*argv == 0)
 		usage();
-	if(!debug['9'] && !debug['U'] && !debug['B'])
-		debug[DEFAULT] = 1;
 	addlibroot();
 
 	if(HEADTYPE == -1) {
-		if(debug['U'])
-			HEADTYPE = 0;
-		if(debug['9'])
-			HEADTYPE = 2;
-
+        HEADTYPE = 2;
         goos = getgoos();
-
 		if(goos != nil && strcmp(goos, "linux") == 0)
 			HEADTYPE = 7;
 		//if(strcmp(goos, "darwin") == 0)
@@ -124,9 +113,6 @@ main(int argc, char *argv[])
 			print("goos is not known: %s\n", goos);
 	}
 	switch(HEADTYPE) {
-	default:
-		diag("unknown -H option");
-		errorexit();
 	case 0:	/* no header */
 		HEADR = 0L;
 		if(INITTEXT == -1)
@@ -154,6 +140,9 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
+	default:
+		diag("unknown -H option");
+		errorexit();
 	}
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;

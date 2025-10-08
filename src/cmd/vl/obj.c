@@ -3,10 +3,6 @@
 #include	"l.h"
 #include	<ar.h>
 
-#ifndef	DEFAULT
-#define	DEFAULT	'9'
-#endif
-
 char	*noname		= "<none>";
 char	symname[]	= SYMDEF;
 char	thechar		= 'v';
@@ -20,6 +16,7 @@ static	int	maxlibdir = 0;
 /*
  *	-H0						is headerless
  *  -H2 -T16416 -R16384	is plan9 format
+ *  TODO: -H7 ELF Linux
  */
 
 
@@ -115,29 +112,22 @@ main(int argc, char *argv[])
 
 	if(*argv == 0)
 		usage();
-	if(!debug['9'] && !debug['U'] && !debug['B'])
-		debug[DEFAULT] = 1;
-	a = getenv("ccroot");
-	if(a != nil && *a != '\0') {
-		if(!fileexists(a)) {
-			diag("nonexistent $ccroot: %s", a);
-			errorexit();
-		}
-	}else
+
+    //TODO? switch to GOROOT instead
+	//a = getenv("ccroot");
+	//if(a != nil && *a != '\0') {
+	//	if(!fileexists(a)) {
+	//		diag("nonexistent $ccroot: %s", a);
+	//		errorexit();
+	//	}
+	//}else
 		a = "";
 	snprint(name, sizeof(name), "%s/%s/lib", a, thestring);
 	addlibpath(name);
 	if(HEADTYPE == -1) {
-		if(debug['U'])
-			HEADTYPE = 0;
-		if(debug['9'])
-			HEADTYPE = 2;
+        HEADTYPE = 2;
 	}
 	switch(HEADTYPE) {
-	default:
-		diag("unknown -H option");
-		errorexit();
-
 	case 0:	/* headerless */
 		HEADR = 0;
 		if(INITTEXT == -1)
@@ -156,6 +146,9 @@ main(int argc, char *argv[])
 		if(INITTEXT == -1)
 			INITTEXT = INITRND + HEADR;
 		break;
+	default:
+		diag("unknown -H option");
+		errorexit();
 	}
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;
