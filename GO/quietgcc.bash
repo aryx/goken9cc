@@ -57,7 +57,8 @@ esac
 
 # Run gcc, save error status, redisplay output without noise, exit with gcc status.
 tmp=/tmp/qcc.$$.$USER.out
-$gcc -Wall $GCCWNO $GCCWNOEXTRA $GCCDFLAGS "$@" >$tmp 2>&1
+#pad: I added -DGOLANG now that the linkers use those ifdefs
+$gcc -Wall -DGOLANG $GCCWNO $GCCWNOEXTRA $GCCDFLAGS "$@" >$tmp 2>&1
 status=$?
 grep -E -v "$ignore" $tmp | uniq | tee $tmp.1
 
