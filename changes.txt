@@ -6,15 +6,22 @@
 - continue reorg code with SRC/ with symlinks to mimic old org.
 - fully working arm32 and arm64 (float, can cross compile principia softwarica)
 - bootstrappable (can compile itself)
+- hello_linux_mips.exe
+- hello_linux_riscv.exe
 
-* 0.1 (Q4 2025) (???, acid)
+* 0.1 (Q4 2025) (??? vi mips emulator?, mips v1?, riscv v1?, acid)
 
 ** toolchain
 - import orginal acid debugger from 9-cc (derived from plan9)
-  and support for arm64, riscv, and mips in libmach (imported
+- support for arm64, riscv, and mips in libmach (imported
   respectively from 9front, inferno-os, and 9-cc).
 
+** lib9
+- import open.c/_p9dir.c from plan9port which fixed ls/du bugs
+
 ** test infra
+- multi-arch testing thanks to qemu-user-binfmt (see tests/s/mini/)
+- docker build and test working for both amd64 and arm64
 
 ** dev infra
 
@@ -22,6 +29,9 @@
 - support and use "#9/..." paths like in plan9port instead of needing
   special env vars like YACCPAR or RCMAIN (kept for compatibility reasons)
   and pass correct -DGOROOT to goos.c and get9root.c
+- started to add GODYNLINK and GOLANG #ifdefs to guard optional
+  or golang specific code in the toolchain (defined when building GO/
+  but disabled otherwise)
 
 ** internals
 
@@ -30,10 +40,10 @@
 ** toolchain
 - adapt to goken 7a/7c/7l 
   (working hello_linux_arm64.exe and helloc.exe on my thelio astra)
-- adapt to goken ia/ic/il (but not tested, hard to test)
+- adapt to goken ia/ic/il (but not tested)
 - adapt 5a/5c/5l to generate valid arm32 Linux binaries (EABI)
   (working hello_linux_arm.exe, helloc.exe, and helloprintf.exe also
-   on my thelio astra)
+   on my thelio astra which can run both arm64 and arm32 binaries)
 - import original 5a/5c/5l from 9cc/plan9 as 5a_/5c_/5l_ and
   extend also to ELF EABI and working hello_linux_arm_.exe
 
