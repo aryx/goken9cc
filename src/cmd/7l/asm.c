@@ -86,12 +86,8 @@ asmb(void)
 		OFFSET = HEADR+textsize;
 		seek(cout, OFFSET, SEEK__START);
 		break;
-	case 6:	/* no header, padded segments */
-		OFFSET = rnd(HEADR+textsize, 4096);
-		seek(cout, OFFSET, SEEK__START);
-		break;
 	case 7:
-        //NEW: ELF Linux constrain that virtual
+        //NEW: ELF Linux constrains that virtual
         // address modulo page must match file offset modulo
         // page, so simpler to start data at a page boundary
         //coupling: must match the code generating the ELF
@@ -121,16 +117,17 @@ asmb(void)
 		Bflush(&bso);
 		switch(HEADTYPE) {
 		case 0:
-			debug['s'] = 1;
+			debug['s'] = true;
 			break;
 		case 2:
 			OFFSET = HEADR+textsize+datsize;
 			seek(cout, OFFSET, SEEK__START);
 			break;
-		case 6:	/* no header, padded segments */
-			OFFSET += rnd(datsize, 4096);
-			seek(cout, OFFSET, SEEK__START);
-			break;
+		//case 6:	/* no header, padded segments */
+		//	OFFSET += rnd(datsize, 4096);
+		//	seek(cout, OFFSET, SEEK__START);
+		//	break;
+        //TODO: no symbol table for ELF Linux?
 		case 7:
 			break;
 		}
@@ -159,7 +156,6 @@ asmb(void)
 	seek(cout, OFFSET, SEEK__START);
 	switch(HEADTYPE) {
 	case 0:	/* no header */
-	case 6:	/* no header, padded segments */
 		break;
 	case 2:	/* plan 9 */
 		magic = 4*28*28+7;
@@ -178,7 +174,7 @@ asmb(void)
 		llput(vl);			/* va of entry */
 		break;
 	case 7:	/* elf */
-		debug['S'] = 1;			/* symbol table */
+		debug['S'] = true;			/* symbol table */
 		elf64(ARM64, ELFDATA2LSB, 0, nil);
 		break;
 	}
