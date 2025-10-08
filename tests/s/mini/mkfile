@@ -2,6 +2,7 @@
 
 HELLOLINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
   hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe \
+  hello_linux_mips.exe
 
 #hello_linux_riscv.exe
 
@@ -42,6 +43,10 @@ hello_linux_386.exe: hello_linux_386.s
 hello_linux_riscv.exe: hello_linux_riscv.s
    ia -c $prereq
    il -o $target -E _start hello_linux_riscv.i
+
+hello_linux_mips.exe: hello_linux_mips.s
+   va -c $prereq
+   vl -o $target -E _start hello_linux_mips.v
 			
 
 # macOS

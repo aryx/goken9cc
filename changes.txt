@@ -18,8 +18,7 @@
   explorer
 - support for arm64, riscv, and mips in libmach (imported
   respectively from 9front, inferno-os, and 9-cc).
-- mips: generate ELF-linux compatible binaries 
-  (can test with qemu-mips)
+- mips: generate ELF-Linux binaries (can test with qemu-mips)
 
 ** lib9
 - import open.c/_p9dir.c from plan9port which fixed ls/du bugs

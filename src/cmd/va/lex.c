@@ -3,7 +3,7 @@
 #include "y.tab.h"
 #include <ctype.h>
 
-//kengo: new, was partially in a.h before
+//goken: new, was partially in a.h before
 enum
 {
 	Plan9	= 1<<0,
@@ -37,7 +37,7 @@ main(int argc, char *argv[])
 	memset(debug, 0, sizeof(debug));
 	cinit();
 	outfile = 0;
-	//kengo: was include[ninclude++] = ".";
+	//goken: was include[ninclude++] = ".";
 	setinclude(".");
 
 	ARGBEGIN {
@@ -66,6 +66,7 @@ main(int argc, char *argv[])
 		thestring = "spim";
 		break;
 	} ARGEND
+
 	if(*argv == 0) {
 		print("usage: %ca [-options] file.s\n", thechar);
 		errorexit();
@@ -81,7 +82,7 @@ main(int argc, char *argv[])
 		c = 0;
 		nout = 0;
 		for(;;) {
-		  //kengo: remove myxxx() and switch to regular xxx()
+		  //goken: remove myxxx() and switch to regular xxx()
 		  Waitmsg *w;
 
 			while(nout < nproc && argc > 0) {
@@ -162,7 +163,7 @@ assemble(char *file)
 		}
 	}
 
-	//kengo: of = mycreat(outfile, 0664);
+	//goken: of = mycreat(outfile, 0664);
 	of = create(outfile, OWRITE, 0664);
 	if(of < 0) {
 		yyerror("%ca: cannot create %s", thechar, outfile);
