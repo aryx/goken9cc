@@ -1,18 +1,23 @@
 # add -v to some linker command to debug
 
-all:V: \
-  hello_linux_386.exe hello_linux_amd64.exe \
-  hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe \
-  exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe \
-  hello_macos_amd64.exe \
-  hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
+HELLOLINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
+  hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe
+
+EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe
+
+PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
+MACOSBINS=hello_macos_amd64.exe
+
+all:V: $HELLOLINUXBINS $EXITLINUXBINS $PLAN9BINS $MACOSBINS
 
 # part of mk test CI regression check in Dockerfile and GHA
 # (requires dpkg --add-architecture i386 for _386.exe to run
 #  or qemu-user and qemu-user-binfmt)
 test:V: all
-      ./hello_linux_amd64.exe
-      ./hello_linux_386.exe
+      for (i in $HELLOLINUXBINS) {
+         echo $i
+	 ./$i
+      }
 
 clean:V:
 	rm -f *.[5678iv] *.exe
