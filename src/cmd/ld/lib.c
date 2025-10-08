@@ -36,11 +36,12 @@
 int iconv(Fmt*);
 
 char	symname[]	= SYMDEF;
-char	pkgname[]	= "__.PKGDEF";
 char*	libdir[16];
 int	nlibdir = 0;
 int	cout = -1;
 
+//TODO: ifdef GOLANG
+char	pkgname[]	= "__.PKGDEF";
 char*	goroot;
 char*	goarch;
 char*	goos;
@@ -59,6 +60,7 @@ void
 libinit(void)
 {
 	fmtinstall('i', iconv);
+//TODO: ifdef GOLANG
 	mywhatsys();	// get goroot, goarch, goos
 	if(strcmp(goarch, thestring) != 0)
 		print("goarch is not known: %s\n", goarch);
@@ -219,22 +221,24 @@ void
 loadlib(void)
 {
 	char pname[1024];
-	int i, found;
+	int i;
 	int32 h;
 	Sym *s;
 
-	found = 0;
+#ifdef GOLANG    
+    bool found = false;
 	for(i=0; i<nlibdir; i++) {
 		snprint(pname, sizeof pname, "%s/runtime.a", libdir[i]);
 		if(debug['v'] && !debug['X'])
 			Bprint(&bso, "searching for runtime.a in %s\n", pname);
 		if(access(pname, AEXIST) >= 0 && !debug['X']) {
 			addlibpath("internal", "internal", pname, "runtime");
-			found = 1;
+			found = true;
 			break;
 		}
 	}
 	if(!found) Bprint(&bso, "warning: unable to find runtime.a\n");
+#endif
 
 loop:
 	xrefresolv = 0;
@@ -752,6 +756,7 @@ Bget4(Biobuf *f)
 	return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
 }
 
+//TODO: ifdef GOLANG
 void
 mywhatsys(void)
 {
