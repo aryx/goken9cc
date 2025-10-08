@@ -13,6 +13,8 @@ all:V: $HELLOLINUXBINS $EXITLINUXBINS $PLAN9BINS $MACOSBINS
 # part of mk test CI regression check in Dockerfile and GHA
 # (requires dpkg --add-architecture i386 for _386.exe to run
 #  or qemu-user and qemu-user-binfmt)
+# TODO: cmp with "Hello world" string
+# TODO: run $EXITLINUXBINS and expect exit code to be 42
 test:V: all
       for (i in $HELLOLINUXBINS) {
          echo $i
