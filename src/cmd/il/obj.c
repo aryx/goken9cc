@@ -101,10 +101,6 @@ main(int argc, char *argv[])
         HEADTYPE = 7;
 	}
 	switch(HEADTYPE) {
-	default:
-		diag("unknown -H option");
-		errorexit();
-
 	case 0:	/* headerless */
 		HEADR = 0;
 		if(INITTEXT == -1)
@@ -124,14 +120,20 @@ main(int argc, char *argv[])
 			INITRND = 4096;
 		break;
  	case 7:	/* elf executable */
-		HEADR = rnd(52L+3*32L, 16);
+        // similar to 5l_ code
+		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+		//alt: HEADR = rnd(52L+3*32L, 16);
 		if(INITTEXT == -1)
-			INITTEXT = 0;
+			INITTEXT = 0x10000 + HEADR;
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)
-			INITRND = 8;
+			INITRND = 4096;
 		break;
+	default:
+		diag("unknown -H option");
+		errorexit();
+
 	}
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;

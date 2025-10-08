@@ -1,9 +1,12 @@
 # add -v to some linker command to debug
 
 HELLOLINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
-  hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe
+  hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe \
 
-EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe
+#hello_linux_riscv32.exe
+
+EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe \
+  exit_linux_riscv32.exe
 
 PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 MACOSBINS=hello_macos_amd64.exe
@@ -35,6 +38,11 @@ hello_linux_386.exe: hello_linux_386.s
    8a -c $prereq
    8l -X -d -o $target -E _start hello_linux_386.8
 
+# Linux
+hello_linux_riscv32.exe: hello_linux_riscv32.s
+   ia -c $prereq
+   il -o $target -E _start hello_linux_riscv32.i
+			
 
 # macOS
 hello_macos_amd64.exe: hello_macos_amd64.s
@@ -83,3 +91,7 @@ exit_linux_arm64.exe: exit_linux_arm64.s
 hello_linux_arm_.exe: hello_linux_arm.s
    5a_ -c $prereq
    5l_ -H7 -o $target -E _start hello_linux_arm.5
+
+exit_linux_riscv32.exe: exit_linux_riscv32.s
+   ia -c $prereq
+   il -v -o $target -E _start exit_linux_riscv32.i
