@@ -40,8 +40,10 @@
 
 #define PADDR(a)	((uint32)(a) & ~0x80000000)
 
+#ifdef GODYNLINK
 char linuxdynld[] = "/lib64/ld-linux-x86-64.so.2";
 char freebsddynld[] = "/libexec/ld-elf.so.1";
+#endif
 
 char	zeroes[32];
 
@@ -189,6 +191,7 @@ doelf(void)
 	}
 	elfstr[ElfStrShstrtab] = addstring(shstrtab, ".shstrtab");
 
+#ifdef GODYNLINK
 	if(!debug['d']) {	/* -d suppresses dynamic loader format */
 		elfstr[ElfStrInterp] = addstring(shstrtab, ".interp");
 		elfstr[ElfStrHash] = addstring(shstrtab, ".hash");
@@ -320,6 +323,7 @@ doelf(void)
 			elfwritedynent(s, DT_RUNPATH, addstring(dynstr, rpath));
 		elfwritedynent(s, DT_NULL, 0);
 	}
+#endif
 }
 
 void
@@ -399,8 +403,10 @@ asmb(void)
 		/* index of elf text section; needed by asmelfsym, double-checked below */
 		/* !debug['d'] causes 8 extra sections before the .text section */
 		elftextsh = 1;
+#ifdef GODYNLINK
 		if(!debug['d'])
 			elftextsh += 8;
+#endif
 		break;
 	}
 
@@ -536,6 +542,7 @@ asmb(void)
 		pph->paddr = INITTEXT - HEADR + pph->off;
 		pph->align = INITRND;
 
+#ifdef GODYNLINK
 		if(!debug['d']) {
 			/* interpreter */
 			sh = newElfShdr(elfstr[ElfStrInterp]);
@@ -556,6 +563,7 @@ asmb(void)
 			ph->flags = PF_R;
 			phsh(ph, sh);
 		}
+#endif
 
 		elfphload(&segtext);
 		elfphload(&segdata);
@@ -569,6 +577,7 @@ asmb(void)
 			elfphload(&segsym);
 		}
 
+#ifdef GODYNLINK
 		/* Dynamic linking sections */
 		if (!debug['d']) {	/* -d suppresses dynamic loader format */
 			/* S headers for dynamic linking */
@@ -642,6 +651,7 @@ asmb(void)
 				ph->align = 8;
 			}
 		}
+#endif
 
 		ph = newElfPhdr();
 		ph->type = PT_GNU_STACK;
