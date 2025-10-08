@@ -163,9 +163,6 @@ main(int argc, char *argv[])
 
 	}
 	switch(HEADTYPE) {
-	default:
-		diag("unknown -H option");
-		errorexit();
 	case 0:	/* no header */
 		HEADR = 0L;
 		if(INITTEXT == -1)
@@ -193,6 +190,9 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
+	default:
+		diag("unknown -H option");
+		errorexit();
 	}
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;

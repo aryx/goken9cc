@@ -77,25 +77,20 @@ asmb(void)
 	curtext = P;
 	switch(HEADTYPE) {
 	case 0:
-	case 1:
 	case 2:
-	case 5:
 		OFFSET = HEADR+textsize;
 		seek(cout, OFFSET, SEEK__START);
 		break;
-	case 3:
-	case 6:	/* no header, padded segments */
-		OFFSET = rnd(HEADR+textsize, 4096);
-		seek(cout, OFFSET, SEEK__START);
-		break;
 	case 7:
-        //goken: ELF Linux constrain that virtual
+        //goken: ELF Linux constrains that virtual
         // address modulo page must match file offset modulo
         // page, so simpler to start data at a page boundary
         //coupling: must match the code generating the ELF
         // section and ELF program header in elf.c
 		OFFSET = rnd(HEADR+textsize, INITRND);
-		seek(cout, OFFSET, SEEK__START);	}
+		seek(cout, OFFSET, SEEK__START);
+        break;
+    }
 	if(dlm){
 		char buf[8];
 
@@ -117,22 +112,20 @@ asmb(void)
 		Bflush(&bso);
 		switch(HEADTYPE) {
 		case 0:
-		case 1:
-		case 4:
-		case 5:
 			debug['s'] = 1;
 			break;
 		case 2:
 			OFFSET = HEADR+textsize+datsize;
 			seek(cout, OFFSET, SEEK__START);
 			break;
-		case 3:
-		case 6:	/* no header, padded segments */
-			OFFSET += rnd(datsize, 4096);
-			seek(cout, OFFSET, SEEK__START);
-			break;
-		case 7:
-			break;
+		//case 6:	/* no header, padded segments */
+		//	OFFSET += rnd(datsize, 4096);
+		//	seek(cout, OFFSET, SEEK__START);
+		//	break;
+        //TODO? no symbol table for ELF? this is why set debug['S'] = 1
+        // before?
+        case 7:
+            break;
 		}
 		if(!debug['s'])
 			asmsym();
@@ -158,37 +151,6 @@ asmb(void)
 	seek(cout, OFFSET, SEEK__START);
 	switch(HEADTYPE) {
 	case 0:	/* no header */
-	case 6:	/* no header, padded segments */
-		break;
-	case 1:	/* aif for risc os */
-		lputl(0xe1a00000);		/* NOP - decompress code */
-		lputl(0xe1a00000);		/* NOP - relocation code */
-		lputl(0xeb000000 + 12);		/* BL - zero init code */
-		lputl(0xeb000000 +
-			(entryvalue()
-			 - INITTEXT
-			 + HEADR
-			 - 12
-			 - 8) / 4);		/* BL - entry code */
-
-		lputl(0xef000011);		/* SWI - exit code */
-		lputl(textsize+HEADR);		/* text size */
-		lputl(datsize);			/* data size */
-		lputl(0);			/* sym size */
-
-		lputl(bsssize);			/* bss size */
-		lputl(0);			/* sym type */
-		lputl(INITTEXT-HEADR);		/* text addr */
-		lputl(0);			/* workspace - ignored */
-
-		lputl(32);			/* addr mode / data addr flag */
-		lputl(0);			/* data addr */
-		for(t=0; t<2; t++)
-			lputl(0);		/* reserved */
-
-		for(t=0; t<15; t++)
-			lputl(0xe1a00000);	/* NOP - zero init code */
-		lputl(0xe1a0f00e);		/* B (R14) - zero init return */
 		break;
 	case 2:	/* plan 9 */
 		if(dlm)
@@ -202,24 +164,6 @@ asmb(void)
 		lput(entryvalue());		/* va of entry */
 		lput(0L);
 		lput(lcsize);
-		break;
-	case 3:	/* boot for NetBSD */
-		lput((143<<16)|0413);		/* magic */
-		lputl(rnd(HEADR+textsize, 4096));
-		lputl(rnd(datsize, 4096));
-		lputl(bsssize);
-		lputl(symsize);			/* nsyms */
-		lputl(entryvalue());		/* va of entry */
-		lputl(0L);
-		lputl(0L);
-		break;
-	case 4: /* boot for IXP1200 */
-		break;
-	case 5: /* boot for ipaq */
-		lputl(0xe3300000);		/* nop */
-		lputl(0xe3300000);		/* nop */
-		lputl(0xe3300000);		/* nop */
-		lputl(0xe3300000);		/* nop */
 		break;
 	case 7:	/* elf */
 		debug['S'] = 1;			/* symbol table */
