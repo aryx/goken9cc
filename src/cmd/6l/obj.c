@@ -48,6 +48,7 @@ char*	paramspace	= "FP";
 /*
  *	-H2 -T4136 -R4096		is plan9 64-bit format
  *	-H3 -T4128 -R4096		is plan9 32-bit format
+ // TODO: reverse -H2/-H3 to be consistent, use -H2 for plan9 32 bit?
  *	-H5 -T0x80110000 -R4096		is ELF32
  *	-H6 -Tx -Rx			is apple MH-exec
  *	-H7 -Tx -Rx			is linux elf-exec
