@@ -16,7 +16,7 @@ static	int	maxlibdir = 0;
 /*
  *	-H0						is headerless
  *  -H2 -T16416 -R16384	is plan9 format
- *  TODO: -H7 ELF Linux
+ *  -H7 is Linux ELF (default)
  */
 
 
@@ -125,7 +125,9 @@ main(int argc, char *argv[])
 	snprint(name, sizeof(name), "%s/%s/lib", a, thestring);
 	addlibpath(name);
 	if(HEADTYPE == -1) {
-        HEADTYPE = 2;
+        // Linux ELF
+        // alt: use goos and detect Linux
+        HEADTYPE = 7;
 	}
 	switch(HEADTYPE) {
 	case 0:	/* headerless */
@@ -146,10 +148,20 @@ main(int argc, char *argv[])
 		if(INITTEXT == -1)
 			INITTEXT = INITRND + HEADR;
 		break;
+	case 7:	/* elf executable */
+		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+		if(INITTEXT == -1)
+			INITTEXT = 0x00400000 + HEADR;
+		if(INITDAT == -1)
+			INITDAT = 0;
+		if(INITRND == -1)
+			INITRND = 4096;
+		break;
 	default:
 		diag("unknown -H option");
 		errorexit();
 	}
+
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;
 	if(INITDAT != 0 && INITRND != 0)
@@ -158,6 +170,7 @@ main(int argc, char *argv[])
 	if(debug['v'])
 		Bprint(&bso, "HEADER = -H0x%d -T0x%lux -D0x%lux -R0x%lux\n",
 			HEADTYPE, INITTEXT, INITDAT, INITRND);
+
 	Bflush(&bso);
 	zprg.as = AGOK;
 	zprg.reg = NREG;

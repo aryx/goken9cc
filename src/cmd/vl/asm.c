@@ -232,8 +232,17 @@ asmb(void)
 		OFFSET = HEADR+textsize;
 		seek(cout, OFFSET, 0);
 		break;
-    //TODO: case 7 Elf ?
+	case 7:
+        //goken: ELF Linux constrains that virtual
+        // address modulo page must match file offset modulo
+        // page, so simpler to start data at a page boundary
+        //coupling: must match the code generating the ELF
+        // section and ELF program header in elf.c
+		OFFSET = rnd(HEADR+textsize, INITRND);
+		seek(cout, OFFSET, SEEK__START);
+        break;
 	}
+
 	for(t = 0; t < datsize; t += sizeof(buf)-100) {
 		if(datsize-t > sizeof(buf)-100)
 			datblk(t, sizeof(buf)-100, 0);
@@ -256,7 +265,10 @@ asmb(void)
 			OFFSET = HEADR+textsize+datsize;
 			seek(cout, OFFSET, 0);
 			break;
-        //TODO: case 7 Elf ?
+        //TODO? no symbol table for ELF? this is why set debug['S'] = 1
+        // before?
+        case 7:
+            break;
 		}
 		if(!debug['s'])
 			asmsym();
@@ -308,8 +320,9 @@ asmb(void)
 		lput(0L);
 		lput(lcsize);
 		break;
-	case 7:
-		//elf32(MIPS, little? ELFDATA2LSB: ELFDATA2MSB, 0, nil);
+	case 7: // ELF
+		debug['S'] = 1;			/* symbol table */
+		elf32(MIPS, little? ELFDATA2LSB: ELFDATA2MSB, 0, nil);
 		break;
 	}
 	cflush();

@@ -9,12 +9,17 @@
 - hello_linux_mips.exe
 - hello_linux_riscv.exe
 
-* 0.1 (Q4 2025) (??? vi mips emulator?, mips v1?, riscv v1?, acid)
+* 0.1 (Q4 2025) (??? vi mips emulator?, mips vl v1, riscv il v1?, acid)
 
 ** toolchain
 - import orginal acid debugger from 9-cc (derived from plan9)
+  useful for disassembler (especially because objdump and
+  gdb fails on some of the goken9cc generated binaries) and binary
+  explorer
 - support for arm64, riscv, and mips in libmach (imported
   respectively from 9front, inferno-os, and 9-cc).
+- mips: generate ELF-linux compatible binaries 
+  (can test with qemu-mips)
 
 ** lib9
 - import open.c/_p9dir.c from plan9port which fixed ls/du bugs

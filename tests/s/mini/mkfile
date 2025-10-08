@@ -6,7 +6,7 @@ HELLOLINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
 #hello_linux_riscv32.exe
 
 EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe \
-  exit_linux_riscv32.exe
+  exit_linux_riscv32.exe exit_linux_mips.exe
 
 PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 MACOSBINS=hello_macos_amd64.exe
@@ -95,3 +95,7 @@ hello_linux_arm_.exe: hello_linux_arm.s
 exit_linux_riscv32.exe: exit_linux_riscv32.s
    ia -c $prereq
    il -v -o $target -E _start exit_linux_riscv32.i
+
+exit_linux_mips.exe: exit_linux_mips.s
+   va -c $prereq
+   vl -v -o $target -E _start exit_linux_mips.v

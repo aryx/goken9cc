@@ -2,7 +2,7 @@
 #include	<libc.h>
 #include	<bio.h>
 #include	"../vl/v.out.h"
-//TODO: #include	"../ld/elf.h"
+#include	"../ld/elf.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern

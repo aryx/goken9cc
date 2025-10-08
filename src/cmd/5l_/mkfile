@@ -19,11 +19,7 @@ OFILES=\
 
 #	$TARGMODEL.$O\
 
-HFILES=\
-	l.h\
-	../5l_/5.out.h\
-
-#	${ROOT}/include/ar.h\
+HFILES= l.h 5.out.h $TOP/include/ar.h
 
 CLEANFILES=enam.c
 
