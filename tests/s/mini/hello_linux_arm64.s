@@ -1,4 +1,4 @@
-TEXT _start(SB), 1, $0
+TEXT _start(SB), $0
 
     // seems to also work without the setSB MOV instruction, maybe
     // because MOV $msg(SB), ... further below can be encoded with the

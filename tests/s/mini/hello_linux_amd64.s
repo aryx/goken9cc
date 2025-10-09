@@ -1,13 +1,15 @@
-// 7 below is NOPROF | DUPOK | NOSPLIT
-// and NOSPLIT is what matters and tells 6l to not do go-specific stack stuff
-
 // -------------------------------------------
 // main procedure
 // -------------------------------------------
 
-// we use _start and not main to avoid triggering Go-specific stuff in 6l
-// update: can also now use 6l -X to disable the go-specific stuff
-TEXT    _start+0(SB), 7, $0
+//old: 0 below was '7' before for NOPROF | DUPOK | NOSPLIT
+// and NOSPLIT was what matters to tell 6l to not do go-specific stack
+// stuff
+//update: I have now added some ifdef GOLANG in 6l so don't need it anymore
+//we use _start and not main to avoid triggering Go-specific stuff in 6l
+//update: can also now use 6l -X to disable the go-specific stuff
+//update2: now disabled by default thx to #ifdef GOLANG
+TEXT    _start+0(SB), 0, $0
 
         // Allocate space for return address (CALL pushes return addr)
         SUBQ    $16, SP         // make space: 8 bytes each for buf, len
@@ -28,7 +30,7 @@ TEXT    _start+0(SB), 7, $0
 // -------------------------------------------
 // write(buf *byte, len int)
 // -------------------------------------------
-TEXT    write+0(SB), 7, $0
+TEXT    write+0(SB), $0
 
         MOVQ    $1, AX          // syscall: write
         MOVQ    $1, DI          // fd = 1 (stdout)

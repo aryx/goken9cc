@@ -4,7 +4,7 @@
 // main procedure
 // -------------------------------------------
 
-TEXT    _start+0(SB), 7, $0
+TEXT    _start+0(SB), $0
 
         // Allocate space for return address (CALL pushes return addr)
         SUBL    $8, SP         // make space: 8 bytes each for buf, len

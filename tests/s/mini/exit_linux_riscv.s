@@ -1,4 +1,4 @@
-TEXT _start+0(SB),7,$0
+TEXT _start+0(SB), $0
 
     // RISC-V: a0 = arg0, a7 = syscall number
     MOVW $42, R0      // exit code

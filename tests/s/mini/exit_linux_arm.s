@@ -2,7 +2,7 @@
 // main procedure
 // -------------------------------------------
 
-TEXT _start+0(SB), 7, $20
+TEXT _start+0(SB), $20
 
         MOVW $42, R0 /* exit code */
         MOVW $1 , R7 /* syscall number = exit */

@@ -1,5 +1,5 @@
 
-TEXT    _start(SB), 7, $0
+TEXT    _start(SB), $0
         SUBQ    $16, SP
         LEAQ    msg(SB), AX
         MOVQ    AX, 0(SP)
@@ -8,7 +8,7 @@ TEXT    _start(SB), 7, $0
         ADDQ    $16, SP
         CALL    exit(SB)
 
-TEXT	notok(SB),7,$0
+TEXT	notok(SB), $0
 	MOVL	$0xf1, BP
 	MOVQ	BP, (BP)
 	RET
@@ -16,7 +16,7 @@ TEXT	notok(SB),7,$0
 // -------------------------------------------
 // write(buf *byte, len int)
 // -------------------------------------------
-TEXT    write(SB), 7, $0
+TEXT    write(SB), $0
 	MOVL	$1, DI		// arg 1 fd
 	MOVQ	8(SP), SI		// arg 2 buf
 	MOVL	16(SP), DX		// arg 3 count
@@ -30,7 +30,7 @@ TEXT    write(SB), 7, $0
 // -------------------------------------------
 // exit()
 // -------------------------------------------
-TEXT    exit(SB), 7, $0
+TEXT    exit(SB), $0
 	MOVL	$0, DI		// arg 1 exit status
 	MOVL	$(0x2000000+1), AX	// syscall entry
 	SYSCALL

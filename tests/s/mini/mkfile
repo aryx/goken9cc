@@ -104,8 +104,8 @@ hello_linux_arm_.exe: hello_linux_arm.s
 
 exit_linux_riscv.exe: exit_linux_riscv.s
    ia -c $prereq
-   il -v -o $target -E _start exit_linux_riscv.i
+   il -o $target -E _start exit_linux_riscv.i
 
 exit_linux_mips.exe: exit_linux_mips.s
    va -c $prereq
-   vl -v -o $target -E _start exit_linux_mips.v
+   vl -o $target -E _start exit_linux_mips.v
