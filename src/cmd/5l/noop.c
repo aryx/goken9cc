@@ -114,8 +114,6 @@ noops(void)
 {
 	Prog *p, *q, *q1, *q2;
 	int o, foreign;
-	Prog *pmorestack;
-	Sym *symmorestack;
 
 	/*
 	 * find leaf subroutines
@@ -124,20 +122,23 @@ noops(void)
 	 * expand BECOME pseudo
 	 */
 
+#ifdef GOLANG
+	Prog *pmorestack;
+	Sym *symmorestack;
+
+	symmorestack = lookup("runtime.morestack", 0);
+	if(symmorestack->type != STEXT) {
+	  diag("runtime·morestack not defined");
+	  errorexit();
+	} else {
+	  pmorestack = symmorestack->text;
+	  pmorestack->reg |= NOSPLIT;
+	}
+#endif
+
 	if(debug['v'])
 		Bprint(&bso, "%5.2f noops\n", cputime());
 	Bflush(&bso);
-
-	if (!debug['X']) {
-	  symmorestack = lookup("runtime.morestack", 0);
-	  if(symmorestack->type != STEXT) {
-	    diag("runtime·morestack not defined");
-	    errorexit();
-	  } else {
-	    pmorestack = symmorestack->text;
-	    pmorestack->reg |= NOSPLIT;
-	  }
-	}
 
 	q = P;
 	for(cursym = textp; cursym != nil; cursym = cursym->next) {
@@ -243,8 +244,10 @@ noops(void)
 				}
 	
 				if(thumb){
+                    #ifdef GOLANG
 					if(!(p->reg & NOSPLIT))
 						diag("stack splitting not supported in thumb");
+                    #endif
 					if(!(cursym->text->mark & LEAF)){
 						q = movrr(nil, REGLINK, REGTMPT-1, p);
 						p->link = q;
@@ -273,8 +276,10 @@ noops(void)
 					}
 					break;
 				}
-	
-				if((p->reg & NOSPLIT) || debug['X']) {
+#ifdef GOLANG	
+				if((p->reg & NOSPLIT))
+#endif
+                {
 					q1 = prg();
 					q1->as = AMOVW;
 					q1->scond |= C_WBIT;
@@ -286,7 +291,9 @@ noops(void)
 					q1->to.reg = REGSP;
 					q1->link = p->link;
 					p->link = q1;
-				} else if (autosize < StackBig) {
+				}
+#ifdef GOLANG
+                else if (autosize < StackBig) {
 					// split stack check for small functions
 					// MOVW			g_stackguard(g), R1
 					// CMP			R1, $-autosize(SP)
@@ -410,6 +417,7 @@ noops(void)
 					p->to.offset = -autosize;
 					p->to.reg = REGSP;
 				}
+#endif
 				break;
 	
 			case ARET:

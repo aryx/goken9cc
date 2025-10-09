@@ -351,6 +351,7 @@ brloop(Prog *p)
 	return q;
 }
 
+#ifdef GOLANG
 static char*
 morename[] =
 {
@@ -368,6 +369,7 @@ morename[] =
 };
 Prog*	pmorestack[nelem(morename)];
 Sym*	symmorestack[nelem(morename)];
+#endif
 
 void
 dostkoff(void)
@@ -377,12 +379,14 @@ dostkoff(void)
 	int a, pcsize;
 	uint32 moreconst1, moreconst2, i;
 
-	for(i=0; i<nelem(morename) && !debug['X']; i++) {
+#ifdef GOLANG
+	for(i=0; i<nelem(morename); i++) {
 		symmorestack[i] = lookup(morename[i], 0);
 		if(symmorestack[i]->type != STEXT)
 			diag("morestack trampoline not defined - %s", morename[i]);
 		pmorestack[i] = symmorestack[i]->text;
 	}
+#endif
 
 	autoffset = 0;
 	deltasp = 0;
@@ -395,10 +399,11 @@ dostkoff(void)
 
 		q = P;
 		q1 = P;
+#ifdef GOLANG
 		if((p->from.scale & NOSPLIT) && autoffset >= StackSmall)
 			diag("nosplit func likely to overflow stack");
 
-		if(!(p->from.scale & NOSPLIT) && !debug['X']) {
+		if(!(p->from.scale & NOSPLIT)) {
 			p = appendp(p);	// load g into CX
 			p->as = AMOVQ;
 			if(HEADTYPE == 7 || HEADTYPE == 9)	// ELF uses FS
@@ -526,6 +531,7 @@ dostkoff(void)
 				p->to.sym = symmorestack[3];
 			}
 		}
+#endif
 
 		if(q != P)
 			q->pcond = p->link;

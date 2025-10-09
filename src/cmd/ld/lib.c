@@ -229,9 +229,9 @@ loadlib(void)
     bool found = false;
 	for(i=0; i<nlibdir; i++) {
 		snprint(pname, sizeof pname, "%s/runtime.a", libdir[i]);
-		if(debug['v'] && !debug['X'])
+		if(debug['v'])
 			Bprint(&bso, "searching for runtime.a in %s\n", pname);
-		if(access(pname, AEXIST) >= 0 && !debug['X']) {
+		if(access(pname, AEXIST) >= 0) {
 			addlibpath("internal", "internal", pname, "runtime");
 			found = true;
 			break;

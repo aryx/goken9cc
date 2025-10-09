@@ -39,8 +39,11 @@
 
 #define	Dbufslop	100
 
+#ifdef GODYNLINK
 char linuxdynld[] = "/lib/ld-linux.so.2";
 char freebsddynld[] = "/usr/libexec/ld-elf.so.1";
+#endif
+
 uint32 symdatva = SYMDATVA;
 
 int32
@@ -178,6 +181,7 @@ doelf(void)
 	}
 	elfstr[ElfStrShstrtab] = addstring(shstrtab, ".shstrtab");
 
+#ifdef GODYNLINK
 	if(!debug['d']) {	/* -d suppresses dynamic loader format */
 		elfstr[ElfStrInterp] = addstring(shstrtab, ".interp");
 		elfstr[ElfStrHash] = addstring(shstrtab, ".hash");
@@ -308,6 +312,7 @@ doelf(void)
 			elfwritedynent(s, DT_RUNPATH, addstring(dynstr, rpath));
 		elfwritedynent(s, DT_NULL, 0);
 	}
+#endif
 }
 
 void
@@ -624,7 +629,7 @@ asmb(void)
 	Elfput:
 		/* elf 386 */
 		if(HEADTYPE == 8 || HEADTYPE == 11)
-			debug['d'] = 1;
+			debug['d'] = true;
 
 		eh = getElfEhdr();
 		fo = HEADR;
@@ -646,7 +651,7 @@ asmb(void)
 			pph->paddr = INITTEXT - HEADR + pph->off;
 			pph->align = INITRND;
 		}
-
+#ifdef GODYNLINK
 		if(!debug['d']) {
 			/* interpreter */
 			sh = newElfShdr(elfstr[ElfStrInterp]);
@@ -667,6 +672,7 @@ asmb(void)
 			ph->flags = PF_R;
 			phsh(ph, sh);
 		}
+#endif
 
 		elfphload(&segtext);
 		if(segrodata.len > 0)
@@ -682,6 +688,7 @@ asmb(void)
 			elfphload(&segsym);
 		}
 
+#ifdef GODYNLINK
 		/* Dynamic linking sections */
 		if (!debug['d']) {	/* -d suppresses dynamic loader format */
 			/* S headers for dynamic linking */
@@ -755,6 +762,7 @@ asmb(void)
 				ph->align = 4;
 			}
 		}
+#endif
 
 		ph = newElfPhdr();
 		ph->type = PT_GNU_STACK;

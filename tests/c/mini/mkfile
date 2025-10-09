@@ -18,8 +18,8 @@ helloc.exe: helloc.c
    $AS_ -D$objtype -c xwrite_$objtype.s
    $AS_ -D$objtype -c xexit_$objtype.s
    iar rc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
-   # -X to require NOSPLIT for all linked code, especially in $stem.6
-   $LD_ -X -L. -o $target -E _start helloc.$O_
+   #old: -X to require NOSPLIT for all linked code, especially in $stem.6
+   $LD_ -L. -o $target -E _start helloc.$O_
 
 #TODO: 386 riscv
 ARCHS=amd64 arm arm64 mips

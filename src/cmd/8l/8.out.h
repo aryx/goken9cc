@@ -30,14 +30,18 @@
 
 #define	NSYM	50
 #define	NSNAME	8
+
 #define NOPROF	(1<<0)
 #define DUPOK	(1<<1)
+#ifdef GOLANG
 #define NOSPLIT	(1<<2)
+#endif
 #define RODATA	(1<<3)
 
 enum	as
 {
 	AXXX,
+
 	AAAA,
 	AAAD,
 	AAAM,

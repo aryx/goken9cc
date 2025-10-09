@@ -375,20 +375,20 @@ dostkoff(void)
 	Prog *p, *q, *q1;
 	int32 autoffset, deltasp;
 	int a;
+#ifdef GOLANG
 	Prog *pmorestack;
 	Sym *symmorestack;
 
 	pmorestack = P;
-	if (!debug['X']) {
-	  symmorestack = lookup("runtime.morestack", 0);
+	symmorestack = lookup("runtime.morestack", 0);
 
-	  if(symmorestack->type != STEXT)
-		diag("runtime.morestack not defined");
-	  else {
-		pmorestack = symmorestack->text;
-		symmorestack->text->from.scale |= NOSPLIT;
-	  }
-        }
+	if(symmorestack->type != STEXT)
+	  diag("runtime.morestack not defined");
+	else {
+	  pmorestack = symmorestack->text;
+	  symmorestack->text->from.scale |= NOSPLIT;
+	}
+#endif
 
 	for(cursym = textp; cursym != nil; cursym = cursym->next) {
 		p = cursym->text;
@@ -399,8 +399,9 @@ dostkoff(void)
 
 		q = P;
 		q1 = P;
+#ifdef GOLANG
 		if(pmorestack != P)
-		if(!(p->from.scale & NOSPLIT)  && !debug['X']) {
+		if(!(p->from.scale & NOSPLIT)) {
 			p = appendp(p);	// load g into CX
 			switch(HEADTYPE) {
 			case 10:	// Windows
@@ -521,6 +522,7 @@ dostkoff(void)
 			p->to.sym = symmorestack;
 
 		}
+#endif
 
 		if(q != P)
 			q->pcond = p->link;

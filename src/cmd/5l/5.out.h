@@ -34,7 +34,9 @@
 
 #define NOPROF		(1<<0)
 #define DUPOK		(1<<1)
+#ifdef GOLANG
 #define NOSPLIT		(1<<2)
+#endif
 #define	ALLTHUMBS	(1<<3)
 
 #define	REGRET		0
@@ -43,9 +45,13 @@
 /* compiler allocates R1 up as temps */
 /* compiler allocates register variables R3 up */
 #define	REGEXT		10
+
+#ifdef GOLANG
 /* these two registers are declared in runtime.h */
 #define REGG        (REGEXT-0)
 #define REGM        (REGEXT-1)
+#endif
+
 /* compiler allocates external registers R10 down */
 #define	REGTMP		11
 #define	REGSB		12

@@ -35,14 +35,14 @@ clean:V:
 
 
 # Linux x86
-# -X to avoid the golang specific stuff and -d to disable dynamic linking
+# old: -X to avoid the golang specific stuff and -d to disable dynamic linking
 hello_linux_amd64.exe: hello_linux_amd64.s
    6a -c $prereq
-   6l -X -d -o $target -E _start hello_linux_amd64.6
+   6l -o $target -E _start hello_linux_amd64.6
 
 hello_linux_386.exe: hello_linux_386.s
    8a -c $prereq
-   8l -X -d -o $target -E _start hello_linux_386.8
+   8l -o $target -E _start hello_linux_386.8
 
 # Linux
 hello_linux_riscv.exe: hello_linux_riscv.s
@@ -57,17 +57,17 @@ hello_linux_mips.exe: hello_linux_mips.s
 # macOS
 hello_macos_amd64.exe: hello_macos_amd64.s
    6a -c $prereq
-   6l -X -o $target -E _start hello_macos_amd64.6
+   6l -o $target -E _start hello_macos_amd64.6
 
 # Plan9
 # -H 2 this time and -E _main
 hello_plan9_386.exe: hello_plan9_386.s
    8a -c $prereq
-   8l -X -o $target -H 2 -E _main hello_plan9_386.8
+   8l -o $target -H 2 -E _main hello_plan9_386.8
 
 hello_plan9_arm.exe: hello_plan9_arm.s
    5a -c $prereq
-   5l -X -o $target -H 2 -E _main hello_plan9_arm.5
+   5l -o $target -H 2 -E _main hello_plan9_arm.5
 
 # actually no need -X; va/vc/vl are new and were not "go-ized"
 # actually -X would print the assembly on stdout in vl ...
@@ -78,11 +78,11 @@ hello_plan9_mips.exe: hello_plan9_mips.s
 # Linux arm
 hello_linux_arm.exe: hello_linux_arm.s
    5a -c $prereq
-   5l -X -o $target -E _start hello_linux_arm.5
+   5l -o $target -E _start hello_linux_arm.5
 
 %.exe: %.s
    5a -c $prereq
-   5l -X -o $target -E _start $stem.5
+   5l -o $target -E _start $stem.5
 
 %_.exe: %.s
    5a_ -c $prereq

@@ -36,11 +36,15 @@ gtext(Sym *s, int32 stkoff)
 	vlong v;
 	
 	v = 0;
+#ifdef GOLANG
 	if(!(textflag & NOSPLIT))
 		v |= argsize() << 32;
+#endif
 	v |= stkoff & 0xffffffff;
+#ifdef GOLANG
 	if((textflag & NOSPLIT) && stkoff >= 128)
 		yyerror("stack frame too large for NOSPLIT function");
+#endif
 
 	gpseudo(ATEXT, s, nodgconst(v, types[TVLONG]));
 	return p;

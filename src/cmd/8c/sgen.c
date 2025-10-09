@@ -35,11 +35,15 @@ gtext(Sym *s, int32 stkoff)
 {
 	int32 a;
 	
+#ifdef GOLANG
 	a = 0;
 	if(!(textflag & NOSPLIT))
+#endif
 		a = argsize();
+#ifdef GOLANG
 	else if(stkoff >= 128)
 		yyerror("stack frame too large for NOSPLIT function");
+#endif
 
 	gpseudo(ATEXT, s, nodconst(stkoff));
 	p->to.type = D_CONST2;
