@@ -5,14 +5,10 @@ TOP=../../..
 all:V: helloc.exe
 
 clean:V:
-	rm -f *.[5678] *.exe *.a
+        rm -f *.[5678] *.exe *.a
 
-#TODO: 386 mips riscv
-ARCHS=amd64 arm arm64
-#TODO: iterate over ARCHS or build 5.helloc 8.helloc etc?
-
-test:V: all
-	./helloc.exe
+test_one:V: all
+        ./helloc.exe
 
 # can use $CC_ -S to see the assembly code
 #TODO? 'iar rc'? in principia we use 'iar vu'
@@ -24,6 +20,18 @@ helloc.exe: helloc.c
    iar rc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
    # -X to require NOSPLIT for all linked code, especially in $stem.6
    $LD_ -X -L. -o $target -E _start helloc.$O_
+
+#TODO: 386 riscv
+ARCHS=amd64 arm arm64 mips
+#alt: build 5.helloc 8.helloc
+test:V:
+        for (arch in $ARCHS) {
+           echo $arch
+           mk clean
+           mk 'objtype='$arch
+           qemu-$arch ./helloc.exe
+        }
+
 
 #alt: 5l_ -H7 -L. -o $target -E _start helloc.5 xwrite_arm.5 xexit_arm.5 start_arm.5
 # when iar is not working
