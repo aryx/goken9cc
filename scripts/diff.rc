@@ -24,7 +24,7 @@ dirs5=() # xmyplan9  x9front
 
 # big comparisons
 base=x9cc
-#base=xinferno # for vi/5i ia/ic/il as x9cc does not have them
+#base=xinferno # for ia/ic/il as x9cc does not have them
 #base=xmyplan9old
 dirs=($dirs1 $dirs2 $dirs3 $dirs4 $dirs5)
 

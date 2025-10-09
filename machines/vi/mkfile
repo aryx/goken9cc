@@ -1,0 +1,23 @@
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=vi
+
+OFILES=vi.$O\
+	run.$O\
+	special.$O\
+	mem.$O\
+	syscall.$O\
+	stats.$O\
+	icache.$O\
+	symbols.$O\
+	cmd.$O\
+	bpt.$O\
+	float.$O\
+
+HFILES=mips.h\
+
+<$TOP/mkfiles/mkone
+
+acid:	
+	$CC -a run.c > acid.def
