@@ -2,7 +2,9 @@
 #include <libc.h>
 #include <bio.h>
 #include <mach.h>
-#include <tos.h>
+
+#include "../5i/tos.h"
+
 #define Extern
 #include "mips.h"
 
@@ -115,7 +117,7 @@ inithdr(int fd)
 	if (!crackhdr(fd, &fhdr))
 		fatal(0, "read text header");
 
-	if(fhdr.type != FMIPS && fhdr.type != FMIPS2BE)
+	if(fhdr.type != FMIPS /*&& fhdr.type != FMIPS2BE*/)
 		fatal(0, "bad magic number: %d %d", fhdr.type, FMIPS);
 
 	if (syminit(fd, &fhdr) < 0)
@@ -239,7 +241,7 @@ procinit(int pid)
 	seginit(m, s, 0, vastart, vaend);
 
 	reg.pc = greg(m, REGOFF(pc));
-	reg.r[29] = greg(m, REGOFF(sp));
+	reg.r[29] = greg(m, REGOFF(u0.sp));
 	reg.r[30] = greg(m, REGOFF(r30));
 	reg.r[31] = greg(m, REGOFF(r31));
 

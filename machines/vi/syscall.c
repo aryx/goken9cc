@@ -14,7 +14,8 @@
 char 	errbuf[ERRMAX];
 ulong	nofunc;
 
-#include "../../lib_core/libc/9syscall/sys.h"
+//#include "../../lib_core/libc/9syscall/sys.h"
+#include "../5i/sys.h"
 
 char *sysctab[]={
     [NOP]		"Nop",
@@ -110,7 +111,7 @@ sysfd2path(void)
 		strcpy(errbuf, "buffer too big");
 		return;
 	}
-	n = fd2path(fd, buf, sizeof buf);
+	//XXX: n = fd2path(fd, buf, sizeof buf);
 	if(n < 0)
 		errstr(buf, sizeof buf);
 	else
