@@ -1,5 +1,5 @@
 
-TEXT    exit+0(SB), 7, $0
+TEXT    exit+0(SB), $0
     // syscall: exit(0)
     //MOV    0(FP), R0          // status = 0
     MOV    $93, R8         // syscall number: exit
@@ -7,7 +7,7 @@ TEXT    exit+0(SB), 7, $0
     RETURN // never reached
 
 
-TEXT write+0(SB), 7, $0        // NOSPLIT | DUPOK | NOPROF
+TEXT write+0(SB), $0        // NOSPLIT | DUPOK | NOPROF
     //MOV fd+8(FP), R0
     MOV buf+16(FP), R1
     MOV count+24(FP), R2
@@ -15,7 +15,7 @@ TEXT write+0(SB), 7, $0        // NOSPLIT | DUPOK | NOPROF
     SVC $0
     RETURN
 
-TEXT    panic(SB), 7, $0
+TEXT    panic(SB), $0
         // syscall: exit(0)
     MOV    $0, R0          // status = 0
     MOV    $93, R8         // syscall number: exit
@@ -29,7 +29,7 @@ TEXT ·getcallerpc(SB), $0
 
 
 
-//TEXT	open(SB),7,$0-16
+//TEXT	open(SB), $0-16
 //	MOVQ	8(SP), DI
 //	MOVL	16(SP), SI
 //	MOVL	20(SP), DX
@@ -38,7 +38,7 @@ TEXT ·getcallerpc(SB), $0
 //	RET
 //
 //
-//TEXT	gettime(SB), 7, $32
+//TEXT	gettime(SB), $32
 //	LEAQ	8(SP), DI
 //	MOVQ	$0, SI
 //	MOVQ	$0xffffffffff600000, AX
@@ -54,13 +54,13 @@ TEXT ·getcallerpc(SB), $0
 //	RET
 //
 //
-//TEXT	·setcallerpc+0(SB),7,$0
+//TEXT	·setcallerpc+0(SB), $0
 //	MOVQ	x+0(FP),AX		// addr of first arg
 //	MOVQ	x+8(FP), BX
 //	MOVQ	BX, -8(AX)		// set calling pc
 //	RET
 //
-//TEXT getcallersp(SB),7,$0
+//TEXT getcallersp(SB), $0
 //	MOVQ	sp+0(FP), AX
 //	RET
 //
@@ -73,7 +73,7 @@ TEXT ·getcallerpc(SB), $0
 ////		return 1;
 ////	} else
 ////		return 0;
-//TEXT cas(SB), 7, $0
+//TEXT cas(SB), $0
 //	MOVQ	8(SP), BX
 //	MOVL	16(SP), AX
 //	MOVL	20(SP), CX

@@ -1,12 +1,12 @@
 
-TEXT _start(SB), 7, $0
+TEXT _start(SB), $0
 #ifdef arm_
 	MOVW $setR12(SB), R12
 #endif
 	BL main(SB)
 
 
-TEXT    exit+0(SB), 7, $0
+TEXT    exit+0(SB), $0
 #ifdef arm_
 	//with 5c_, the first arg is already passed via R0
 #else
@@ -16,7 +16,7 @@ TEXT    exit+0(SB), 7, $0
         SWI     $0
 	RET // never reached
 
-TEXT    panic+0(SB), 7, $0
+TEXT    panic+0(SB), $0
 #ifdef arm_
 #else
         MOVW    status+0(FP), R0
@@ -26,14 +26,14 @@ TEXT    panic+0(SB), 7, $0
 	RET // never reached
 
 // for vlrt.c
-TEXT    abort+0(SB), 7, $0
+TEXT    abort+0(SB), $0
         MOVW    $3, R0
         MOVW    $1, R7          // syscall number 1 = sys_exit
         SWI     $0
 	RET // never reached
 
 
-TEXT write+0(SB), 7, $0
+TEXT write+0(SB), $0
 #ifdef arm_
 #else
         MOVW    fd+0(FP), R0
@@ -45,7 +45,7 @@ TEXT write+0(SB), 7, $0
 	RET
 
 // from 9front/.../libc/arm/getcallerpc.s
-TEXT ·getcallerpc(SB), 7, $-4
+TEXT ·getcallerpc(SB), $-4
 	MOVW	0(R13), R0
 	RET
 
@@ -198,7 +198,7 @@ out:
 //---------------------------------
 // see also vlrt.c!
 
-TEXT 	debug+0(SB), 7, $0
+TEXT 	debug+0(SB), $0
 	MOVW R0, R1
 	//alt: call write
 	MOVW $1, R0
@@ -296,5 +296,5 @@ TEXT 	debug+0(SB), 7, $0
 // Float operations
 //---------------------------------
 
-//TEXT 	_sfloat+0(SB), 7, $0
+//TEXT 	_sfloat+0(SB), $0
 //	RET

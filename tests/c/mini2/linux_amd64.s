@@ -1,5 +1,5 @@
 
-TEXT    panic(SB), 7, $0
+TEXT    panic(SB), $0
         // syscall: exit(0)
         MOVQ    $60, AX
         XORQ    DI, DI
@@ -7,7 +7,7 @@ TEXT    panic(SB), 7, $0
 
 
 // was called exit1 in runtime/linux/amd64/sys.s
-TEXT	exit(SB),7,$0-8
+TEXT	exit(SB), $0-8
 	MOVL	8(SP), DI
 	MOVL	$60, AX	// exit - exit the current os thread
 	SYSCALL
@@ -20,7 +20,7 @@ TEXT	exit(SB),7,$0-8
 //        XORQ    DI, DI
 //        SYSCALL
 
-TEXT	open(SB),7,$0-16
+TEXT	open(SB), $0-16
 	MOVQ	8(SP), DI
 	MOVL	16(SP), SI
 	MOVL	20(SP), DX
@@ -28,7 +28,7 @@ TEXT	open(SB),7,$0-16
 	SYSCALL
 	RET
 
-TEXT	write(SB),7,$0-24
+TEXT	write(SB), $0-24
 	MOVL	8(SP), DI
 	MOVQ	16(SP), SI
 	MOVL	24(SP), DX
@@ -37,7 +37,7 @@ TEXT	write(SB),7,$0-24
 	RET
 
 //alt?
-//TEXT	write0(SB), 7, $0
+//TEXT	write0(SB), $0
 //	MOVQ	$1, AX          // syscall number for write
 //	MOVQ	fd+0(FP), DI     // fd (arg 1)
 //	MOVQ	buf+8(FP), SI    // buf (arg 2)
@@ -45,7 +45,7 @@ TEXT	write(SB),7,$0-24
 //	SYSCALL
 //	RET
 
-TEXT	gettime(SB), 7, $32
+TEXT	gettime(SB), $32
 	LEAQ	8(SP), DI
 	MOVQ	$0, SI
 	MOVQ	$0xffffffffff600000, AX
@@ -60,18 +60,18 @@ TEXT	gettime(SB), 7, $32
 	MOVL	BX, (DI)
 	RET
 
-TEXT	·getcallerpc+0(SB),7,$0
+TEXT	·getcallerpc+0(SB), $0
 	MOVQ	x+0(FP),AX		// addr of first arg
 	MOVQ	-8(AX),AX		// get calling pc
 	RET
 
-TEXT	·setcallerpc+0(SB),7,$0
+TEXT	·setcallerpc+0(SB), $0
 	MOVQ	x+0(FP),AX		// addr of first arg
 	MOVQ	x+8(FP), BX
 	MOVQ	BX, -8(AX)		// set calling pc
 	RET
 
-TEXT getcallersp(SB),7,$0
+TEXT getcallersp(SB), $0
 	MOVQ	sp+0(FP), AX
 	RET
 
@@ -84,7 +84,7 @@ TEXT getcallersp(SB),7,$0
 //		return 1;
 //	} else
 //		return 0;
-TEXT cas(SB), 7, $0
+TEXT cas(SB), $0
 	MOVQ	8(SP), BX
 	MOVL	16(SP), AX
 	MOVL	20(SP), CX
