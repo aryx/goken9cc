@@ -71,84 +71,6 @@ tests/c/mini2/ ?
 
 *** ------------------------------------------------
 
-*** goken/utilities/
-
-**** RELAX LP split tr.c, join.c, sed.c, diff*.c
-and also make it work on goken
-
-**** make utilities work on goken
-
-***** make grep compile and work on goken
-Runemask ??
-
-***** segfault on tar plan9port.tar
-in fmt library, weird s pointer address
-
-***** make tar and gunzip tar tvfz work on goken
-
-***** make zip/unzip work on goken
-
-*** fix bugs in goken progs
-
-**** bug goken 5i, does not seem to work on hello_plan9_arm.exe
-compare to running 5i under plan9
-bug in libmach? because 5i code in goken is the same than in principia
-
-**** sync 5i with principia Machine.nw
-
-**** bug goken mk/rc, adding lnrand.c to lib9/mkfile didn't trigger recompilation
-use mk -dg
-to debug and get graph of deps and time comparisons
-
-does original mk better? maybe because if lib.a more recent
-than lnrand.c, then it does not know. but lib.a depends on
-OFILES so should have new OFILES and so should trigger recompilation
-and re-archiving
-
-update: fixed by mk -I (now the default) to remove intermediate deps opti?
-
-**** bug mk sync in goken, does not modify the .nw actually
-but then modify the .md5sum which then the next mk sync
-just erase the modif because the orig .nw was not changed at the
-step before
-
-it creates a local Shell.nw! this is bad. need to fix syncweb probably
-
-hard to reproduce, weird.
-"orig Utilities.nw has been updated"
-
-**** fix "Not consumed" in Make.nw, weird
-
-*** goken/typesetting/
-
-**** look at x9base/troff, smaller and self contained? can
-produce postscript from simpler troff files like plan9.ms?
-
-**** segfault on o.out lex when used from typesetting/grap
-
-**** compile pic, tbl, etc. now that lex and yacc are there
-
-**** LPize troff? eqn, tbl, pic, grap, tr2post, and page to visualize?
-Documentation preparation system book
-update: actually need postscript interpreter too; page calls gs which is huge
-
-***** try generate end-to-end from hello.man e hello.ps
-troff -man hello.man -Tutf | tr2post ?
-
-***** still? first try troff and page on plan9
-but can't work I think without aladin postscript. page is calling gs
-and lp and tr2post
-
-*** goken/generators
-
-**** RELAX LPize yaccpar too, and yaccpars
-and sync in goken and principia
-
-**** try to remove dependency to bison?
-good though to also work with bison; it reports more bugs
-than plan9 yacc and it's good to be compatible, just like
-getting kencc to compile with gcc so easier to bootstrap.
-
 *** ---------------------------------------------------------------
 
 *** add workflow to check it compiles on macos
@@ -241,6 +163,88 @@ see also DELETED/misc/arm/ and the use of adb and maybe android emulator
 
 *** still? rerun the mkdefs, mksyscall, ... to generate the updated zxxx?
 alt: take them from latest go repo and hope it's backward compatible?
+
+** Rest
+*** goken/generators
+
+**** RELAX LPize yaccpar too, and yaccpars
+and sync in goken and principia
+
+**** try to remove dependency to bison?
+good though to also work with bison; it reports more bugs
+than plan9 yacc and it's good to be compatible, just like
+getting kencc to compile with gcc so easier to bootstrap.
+
+
+*** goken/utilities/
+
+**** RELAX LP split tr.c, join.c, sed.c, diff*.c
+and also make it work on goken
+
+**** make utilities work on goken
+
+***** make grep compile and work on goken
+Runemask ??
+
+***** segfault on tar plan9port.tar
+in fmt library, weird s pointer address
+still?
+tar cvf and xvf seems to work; maybe tvf has bugs
+
+***** make tar and gunzip tar tvfz work on goken
+
+***** make zip/unzip work on goken
+
+*** fix bugs in goken progs
+
+**** bug goken 5i, does not seem to work on hello_plan9_arm.exe
+compare to running 5i under plan9
+bug in libmach? because 5i code in goken is the same than in principia
+
+**** sync 5i with principia Machine.nw
+
+**** bug goken mk/rc, adding lnrand.c to lib9/mkfile didn't trigger recompilation
+use mk -dg
+to debug and get graph of deps and time comparisons
+
+does original mk better? maybe because if lib.a more recent
+than lnrand.c, then it does not know. but lib.a depends on
+OFILES so should have new OFILES and so should trigger recompilation
+and re-archiving
+
+update: fixed by mk -I (now the default) to remove intermediate deps opti?
+
+**** bug mk sync in goken, does not modify the .nw actually
+but then modify the .md5sum which then the next mk sync
+just erase the modif because the orig .nw was not changed at the
+step before
+
+it creates a local Shell.nw! this is bad. need to fix syncweb probably
+
+hard to reproduce, weird.
+"orig Utilities.nw has been updated"
+
+**** fix "Not consumed" in Make.nw, weird
+
+*** goken/typesetting/
+
+**** look at x9base/troff, smaller and self contained? can
+produce postscript from simpler troff files like plan9.ms?
+
+**** segfault on o.out lex when used from typesetting/grap
+
+**** compile pic, tbl, etc. now that lex and yacc are there
+
+**** LPize troff? eqn, tbl, pic, grap, tr2post, and page to visualize?
+Documentation preparation system book
+update: actually need postscript interpreter too; page calls gs which is huge
+
+***** try generate end-to-end from hello.man e hello.ps
+troff -man hello.man -Tutf | tr2post ?
+
+***** still? first try troff and page on plan9
+but can't work I think without aladin postscript. page is calling gs
+and lp and tr2post
 
 * Infra
 
