@@ -26,7 +26,8 @@ jobs:
       - name: Debugging QEMU mips choice
         run: |
           cat /proc/sys/fs/binfmt_misc/qemu-mips
-          ls -al /usr/bin/qemu-*
+          ls -al /usr/bin/
+          ln -sf /usr/bin/qemu-mips-static /usr/bin/qemu-mips
       - uses: docker/setup-buildx-action@v3
       - run: docker build -f Dockerfile --tag goken9cc --target build .
       - run: docker build -f Dockerfile --tag goken9cc-test --target test .
