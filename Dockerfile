@@ -52,6 +52,9 @@ FROM build AS test
 # qemu-user-binfmt allows to execute binaries directly without
 # prepending qemu-xxx before
 RUN apt-get install -y qemu-user qemu-user-binfmt
+# needed for GHA otherwise it tries qemu-mipsn32 by default and fails
+# during mk test
+RUN update-binfmts --disable qemu-mipsn32 || true && update-binfmts --enable qemu-mips
 
 ENV GOOS="linux"
 ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
