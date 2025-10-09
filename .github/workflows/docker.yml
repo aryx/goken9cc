@@ -14,17 +14,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      ## for qemu-user-binfmt (used inside the Dockerfile) to work
-      ## for arm/arm64/riscv?
+
+      ## For qemu-user-binfmt (used inside the Dockerfile) to work
+      ## for arm/arm64 (but does not work for mips)
       #- name: Register QEMU for some common arches
       #  uses: docker/setup-qemu-action@v3
       #  with:
       #    platforms: all
       #    # this actually does not work; only a few archs are supported
       #    # platforms: arm,arm64,mips,386,amd64
+
+      # For qemu-user-binfmt (used inside the Dockerfile) to work.
+      # This will install qemu-mips, but for weird reason it selects
+      # qemu-mipsn32 instead of qemu-mips when inside the docker container.
+      # I tried to deinstall qemu-mipsn32 so it picks a better default
+      # but failed so right now I am explicitely calling qemu-mips
+      # in mk test
       - name: Register QEMU for all arches (including MIPS)
         run: |
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes --install arm,aarch64,mips,x86_64,i386
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - name: Debugging QEMU mips choice
         run: |
           cat /proc/sys/fs/binfmt_misc/qemu-mips

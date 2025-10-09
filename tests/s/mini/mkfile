@@ -2,8 +2,8 @@
 
 HELLOLINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
   hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe \
-  hello_linux_mips.exe
 
+#hello_linux_mips.exe
 #hello_linux_riscv.exe
 
 EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe \
@@ -24,6 +24,8 @@ test:V: all
          echo $i
 	 ./$i
       }
+      echo hello_linux_mips.exe
+      qemu-mips ./hello_linux_mips.exe
 
 clean:V:
 	rm -f *.[5678iv] *.exe
