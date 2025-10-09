@@ -1,8 +1,10 @@
 # add -v to some linker command to debug
 
+# those archs are supported by qemu-user-binfmt in docker GHA
 HELLOLINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
   hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe \
-
+#TODO: those one unfortunately not, because qemu-mips32sn is used instead
+# of qemu-mips which is weird so have to handle them separately
 #hello_linux_mips.exe
 #hello_linux_riscv.exe
 
@@ -12,7 +14,8 @@ EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe \
 PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 MACOSBINS=hello_macos_amd64.exe
 
-all:V: $HELLOLINUXBINS $EXITLINUXBINS $PLAN9BINS $MACOSBINS
+all:V: $HELLOLINUXBINS $EXITLINUXBINS $PLAN9BINS $MACOSBINS \
+   hello_linux_mips.exe
 
 # part of mk test CI regression check in Dockerfile and GHA
 # (requires dpkg --add-architecture i386 for _386.exe to run
@@ -24,11 +27,8 @@ test:V: all
          echo $i
 	 ./$i
       }
-
-#TODO: weird, work locally, work in docker locally, but fails
-# from docker.yml in GHA
-#echo hello_linux_mips.exe
-#      qemu-mips ./hello_linux_mips.exe
+      echo hello_linux_mips.exe
+      qemu-mips ./hello_linux_mips.exe
 
 clean:V:
 	rm -f *.[5678iv] *.exe
