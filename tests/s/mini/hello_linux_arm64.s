@@ -8,7 +8,7 @@ TEXT _start(SB), 1, $0
     MOV    $1, R0          // fd = 1
     MOV    $msg(SB), R1    // buf = &msg
 //alt:   ADR msg, R1
-    MOV    $14, R2         // count = 14
+    MOV    $13, R2         // count = 13
     MOV    $64, R8         // syscall number: write
     SVC     $0
 
@@ -32,7 +32,7 @@ TEXT _start(SB), 1, $0
 // msg: must split into 8-byte chunks
 // -------------------------------------------
 DATA    msg+0(SB)/8, $"Hello, w"
-DATA    msg+8(SB)/6, $"orld\n"
+DATA    msg+8(SB)/5, $"orld\n"
 GLOBL   msg(SB), $14
 
 //old: this was causing an error
