@@ -1,14 +1,13 @@
 # -*- org -*-
 
 * TODO
-- SEMI add 5i/vi (machines or emulators)
 - SEMI add lex/yacc (generators)
 - SEMI fully working arm32 and arm64 (float, can cross compile principia softwarica)
 - SEMI hello_linux_riscv.exe
 - continue reorg code with SRC/ with symlinks to mimic old org.
 - bootstrappable (can compile itself)
 
-* 0.1 (Q4 2025) (acid, ??? vi mips emulator?, mips va/vc/vl v1, riscv ia/ic/il v1?)
+* 0.1 (Q4 2025) (acid, arm/mips emulator (5i/vi), mips va/vc/vl v1, riscv ia/ic/il v1?)
 
 ** toolchain
 - import orginal acid debugger from 9-cc (derived from plan9)
@@ -18,6 +17,7 @@
 - support for arm64, riscv, and mips in libmach (imported
   respectively from 9front, inferno-os, and 9-cc).
 - mips: generate ELF-Linux binaries (can test with qemu-mips)
+- import arm and mips emulator 5i/vi from principia (derived from plan9)
 
 ** lib9
 - import open.c/_p9dir.c from plan9port which fixed ls/du/tar bugs
@@ -34,7 +34,7 @@
   and pass correct -DGOROOT to goos.c and get9root.c
 - started to add GODYNLINK and GOLANG #ifdefs to guard optional
   or golang specific code in the toolchain (defined when building GO/
-  but disabled otherwise)
+  but undefined otherwise)
 
 ** internals
 
