@@ -165,7 +165,7 @@ static Map *mymap;
 static int
 decode(uvlong pc, Instr *i)
 {
-	ulong w;
+	uint32 w;
 
 	if (get4(mymap, pc, &w) < 0) {
 		werrstr("can't read instruction: %r");
@@ -1072,8 +1072,8 @@ extern	int	_mipscoinst(Map *, uvlong, char*, int);
 static int
 mipsinst(Map *map, uvlong pc, char modifier, char *buf, int n)
 {
-	if ((asstype == AMIPSCO && modifier == 'i')
-		|| (asstype == AMIPS && modifier == 'I'))
+	if (/*(asstype == AMIPSCO && modifier == 'i') ||*/
+		(asstype == AMIPS && modifier == 'I'))
 		return _mipscoinst(map, pc, buf, n);
 	else
 		return printins(map, pc, buf, n);

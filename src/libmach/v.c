@@ -3,8 +3,9 @@
  */
 #include <lib9.h>
 #include <bio.h>
-#include "uregv.h"
-#include "mach.h"
+#include <mach.h>
+
+#include <ureg_mips.h>
 
 #define	REGOFF(x)	(ulong)(&((struct Ureg *) 0)->x)
 
