@@ -283,7 +283,7 @@ static char fsub[16] = {
 static int
 mkinstr(Instr *i, Map *map, uvlong pc)
 {
-	ulong w;
+	uint32 w;
 
 	if (get4(map, pc, &w) < 0) {
 		werrstr("can't read instruction: %r");
