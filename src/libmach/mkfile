@@ -4,6 +4,7 @@ TOP=../..
 
 LIBNAME=libmach.a
 
+#coupling: if you add a file, you probably need to extend Makefile too
 # note that there is no 6db.c because 8db.c is used to disassemble x86(_64)?
 OFILES=\
 	executable.$O\
