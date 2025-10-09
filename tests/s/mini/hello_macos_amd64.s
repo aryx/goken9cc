@@ -3,7 +3,7 @@ TEXT    _start(SB), 7, $0
         SUBQ    $16, SP
         LEAQ    msg(SB), AX
         MOVQ    AX, 0(SP)
-        MOVQ    $14, 8(SP)
+        MOVQ    $13, 8(SP)
         CALL    write(SB)
         ADDQ    $16, SP
         CALL    exit(SB)
@@ -39,5 +39,5 @@ TEXT    exit(SB), 7, $0
 // msg: must split into 8-byte chunks
 // -------------------------------------------
 DATA    msg+0(SB)/8, $"Hello, w"
-DATA    msg+8(SB)/6, $"orld\n"
-GLOBL   msg(SB), $14
+DATA    msg+8(SB)/5, $"orld\n"
+GLOBL   msg(SB), $13

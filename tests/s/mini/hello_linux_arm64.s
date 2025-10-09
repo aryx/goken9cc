@@ -32,7 +32,7 @@ TEXT _start(SB), 1, $0
 // msg: must split into 8-byte chunks
 // -------------------------------------------
 DATA    msg+0(SB)/8, $"Hello, w"
-DATA    msg+8(SB)/5, $"orld\n"
+DATA    msg+8(SB)/6, $"orld\n\z"
 GLOBL   msg(SB), $14
 
 //old: this was causing an error

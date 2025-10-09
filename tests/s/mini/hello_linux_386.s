@@ -12,7 +12,7 @@ TEXT    _start+0(SB), 7, $0
         LEAL    msg(SB), AX     // get pointer to message
 	MOVL    $1, 0(SP)       // fd = 1 (stdout)
         MOVL    AX, 4(SP)       // 
-        MOVL    $14, 8(SP)      // 
+        MOVL    $13, 8(SP)      // 
 
         CALL    write(SB)
 
@@ -38,5 +38,5 @@ TEXT write(SB),7,$0
 // msg: must split into 8-byte chunks
 // -------------------------------------------
 DATA    msg+0(SB)/8, $"Hello, w"
-DATA    msg+8(SB)/6, $"orld\n"
-GLOBL   msg(SB), $14
+DATA    msg+8(SB)/5, $"orld\n"
+GLOBL   msg(SB), $13

@@ -14,7 +14,7 @@ TEXT    _start+0(SB), 7, $0
 
         LEAQ    msg(SB), AX     // get pointer to message
         MOVQ    AX, 0(SP)       // push buf (arg 1)
-        MOVQ    $14, 8(SP)      // push len (arg 2)
+        MOVQ    $13, 8(SP)      // push len (arg 2)
 
         CALL    write(SB)
 
@@ -44,5 +44,5 @@ TEXT    write+0(SB), 7, $0
 // msg: must split into 8-byte chunks
 // -------------------------------------------
 DATA    msg+0(SB)/8, $"Hello, w"
-DATA    msg+8(SB)/6, $"orld\n"
-GLOBL   msg(SB), $14
+DATA    msg+8(SB)/5, $"orld\n"
+GLOBL   msg(SB), $13
