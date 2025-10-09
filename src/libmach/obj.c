@@ -43,13 +43,15 @@ struct	Obj		/* functions to handle each intermediate (.$O) file */
 	int	(*read)(Biobuf*, Prog*);	/* read for each type of $O file*/
 };
 
+// used for instance by 'ar' when loading an object to make sure
+// it's a known object file
 static Obj	obj[] =
 {			/* functions to identify and parse each type of obj */
 	[ObjAmd64]	"amd64 .6",	_is6, _read6,
 	[ObjArm]	"arm .5",	_is5, _read5,
 	[ObjArm64]	"arm64 .7",	_is7, _read7,
 	[Obj386]	"386 .8",	_is8, _read8,
-	//TODO: [ObjMips]	"mips .v",	_isv, _readv,
+	[ObjMips]	"mips .v",	_isv, _readv,
 	[Maxobjtype]	0, 0
 };
 

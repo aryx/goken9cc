@@ -15,12 +15,13 @@ test:V: all
 	./helloc.exe
 
 # can use $CC_ -S to see the assembly code
+#TODO? 'iar rc'? in principia we use 'iar vu'
 helloc.exe: helloc.c
    $CC_ -D$objtype -c $prereq
    $AS_ -D$objtype -c start_$objtype.s
    $AS_ -D$objtype -c xwrite_$objtype.s
    $AS_ -D$objtype -c xexit_$objtype.s
-   iar grc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
+   iar rc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
    # -X to require NOSPLIT for all linked code, especially in $stem.6
    $LD_ -X -L. -o $target -E _start helloc.$O_
 

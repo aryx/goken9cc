@@ -612,6 +612,7 @@ scanobj(Biobuf *b, Arfile *ap, long size)
 	if (!allobj)			/* non-object file encountered */
 		return;
 	offset = Boffset(b);
+    // call to libmach!
 	obj = objtype(b, 0);
 	if (obj < 0) {			/* not an object file */
 #ifdef GOLANG
