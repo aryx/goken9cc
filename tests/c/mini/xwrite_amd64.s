@@ -1,5 +1,5 @@
 
-TEXT xwrite+0(SB), 7, $0        // NOSPLIT | DUPOK | NOPROF
+TEXT xwrite+0(SB), $0
     MOVQ    $1, AX             // syscall number for write
     MOVQ    $1, DI             // fd = 1 (stdout)
     MOVQ    buf+0(FP), SI      // 1st argument: buf

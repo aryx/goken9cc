@@ -1,6 +1,6 @@
 // xwrite_arm.s — Linux ARM32 write(fd=1, buf, count)
 
-TEXT xwrite+0(SB), 7, $0
+TEXT xwrite+0(SB), $0
 #ifdef arm_
 	//with 5c, all args are passed in the stack (use 5c -S on helloc.c)
 	//with 5c_, the first arg is passed via R0

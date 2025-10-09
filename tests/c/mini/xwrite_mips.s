@@ -1,5 +1,5 @@
 
-TEXT xwrite+0(SB), 0, $0
+TEXT xwrite+0(SB), $0
 	//the first arg is passed via R1
 
         /* write(1, msg, len) */

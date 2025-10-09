@@ -1,4 +1,4 @@
-TEXT _start(SB), 1, $0
+TEXT _start(SB), $0
 #ifdef arm_
 	// needed for 5l_; without this only "Hello C world"
 	// is printed and not "It works!"

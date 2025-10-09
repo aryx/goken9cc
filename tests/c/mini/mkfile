@@ -1,3 +1,5 @@
+# can use $CC_ -S to see the assembly code
+
 TOP=../../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
@@ -5,20 +7,20 @@ TOP=../../..
 all:V: helloc.exe
 
 clean:V:
-        rm -f *.[5678] *.exe *.a
+        rm -f *.[5678ijv] *.exe *.a
 
 test_one:V: all
         ./helloc.exe
 
-# can use $CC_ -S to see the assembly code
 #TODO? 'iar rc'? in principia we use 'iar vu'
+#old: $LD_ -X to require NOSPLIT for all linked code, especially in $stem.6
+# but not needed anymore
 helloc.exe: helloc.c
    $CC_ -D$objtype -c $prereq
    $AS_ -D$objtype -c start_$objtype.s
    $AS_ -D$objtype -c xwrite_$objtype.s
    $AS_ -D$objtype -c xexit_$objtype.s
    iar rc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
-   #old: -X to require NOSPLIT for all linked code, especially in $stem.6
    $LD_ -L. -o $target -E _start helloc.$O_
 
 #TODO: 386 riscv
