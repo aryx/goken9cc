@@ -7,7 +7,7 @@
 # Stage1: build (on amd64/arm64)
 ###############################################################################
 
-FROM ubuntu:22.04 AS build
+FROM ubuntu:24.04 AS build
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
@@ -52,9 +52,6 @@ FROM build AS test
 # qemu-user-binfmt allows to execute binaries directly without
 # prepending qemu-xxx before
 RUN apt-get install -y qemu-user qemu-user-binfmt
-# needed for GHA otherwise it tries qemu-mipsn32 by default and fails
-# during mk test
-RUN update-binfmts --disable qemu-mipsn32 || true && update-binfmts --enable qemu-mips
 
 ENV GOOS="linux"
 ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
