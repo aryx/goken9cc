@@ -23,7 +23,7 @@
 - import open.c/_p9dir.c from plan9port which fixed ls/du/tar bugs
 
 ** test infra
-- multi-arch testing thanks to qemu-user-binfmt (see tests/s/mini/)
+- multi-arch testing thanks to qemu (see tests/s/mini/)
 - docker build and test working for both amd64 and arm64
 
 ** dev infra
@@ -71,11 +71,12 @@
 ** utilities
 - add source code of many utilities (cat, cp, grep, ed, diff, etc.) from
   principia softwarica so easier to build and test for principia readers
+  and good testsuite for the goken toolchain itself at some point
 - add source code of typesetting tools (troff, eqn, tbl, etc.) from
   principia softwarica (actually was not built in principia)
 
 
-* Alpha (Q2 2025) (focus on C (not Go), Dockerfile/Nix/GHA, mips va/vl/vc v0)
+* Alpha (Q2 2025) (focus on C (not Go), Dockerfile/Nix/GHA, mips/arm64/riscv import v0)
 # see also pad.org history section
 
 ** toolchain
@@ -109,14 +110,14 @@
 
 * Goken9cc Pre-history
 
-** TODO Cinap 9front: 2019-2025?
+** TODO Cinap 9front: 2019-2025
 - many fixes to 7[alc]
 
 ** Richard Miller: 2018
 - cmd/z[alc]/ for RISC-V (later renamed to i[alc] for riscv and j for riscv64)
 in https://9p.io/sources/contrib/miller/
 
-** Charles Forsyth?: 2014
+** Charles Forsyth: 2014
 - cmd/7[alc] for arm64
 in https://bitbucket.org/plan9-from-bell-labs/9-cc/src/master/
 
@@ -131,6 +132,7 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 + ELF for Linux
 + Mach-O for macOS
 + PE for Windows
+
 + DWARF for gdb
 
 *** assembler
