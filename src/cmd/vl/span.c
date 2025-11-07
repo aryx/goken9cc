@@ -370,6 +370,10 @@ oplook(Prog *p)
 		}
 		o = oprange[r].stop; /* just generate an error */
 	}
+	if(debug['O']) {
+		print("oplook %A %d %d %d\n",
+			(int)p->as, a1, a2, a3);
+    }
 	e = oprange[r].stop;
 	c1 = xcmp[a1];
 	c3 = xcmp[a3];

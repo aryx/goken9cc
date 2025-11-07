@@ -200,6 +200,10 @@ asmb(void)
 		}
 		curp = p;
 		o = oplook(p);	/* could probably avoid this call */
+        if(debug['O']) {
+            print("asmout %A %d\n",
+                  (int)p->as, o->type);
+        }
 		if(asmout(p, o, 0)) {
 			p = p->link;
 			pc += 4;
