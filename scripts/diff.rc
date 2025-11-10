@@ -16,28 +16,28 @@ flags=(-u -p -b -B -r -x mkfile)
 # - x9cc: no riscv (ia/ic/il), no 5i, no vi
 # - x9front: no riscv
 
-dirs1=(x9cc x9colombier xinferno xmykencc xkencc-riscv) # xinferno-old
-dirs2=(xmyplan9old xplan9) 
-dirs3=(x9base xplan9port)
-dirs4=(xgoold xgoken)
-dirs5=() # xmyplan9  x9front
+dirs1=(9cc 9colombier inferno mykencc kencc-riscv) # xinferno-old
+dirs2=(myplan9old plan9) 
+dirs3=(9base plan9port)
+dirs4=(goold goken)
+dirs5=() # myplan9  9front
 
 # big comparisons
-base=x9cc
-#base=xinferno # for ia/ic/il as x9cc does not have them
-#base=xmyplan9old
+base=9cc
+#base=inferno # for ia/ic/il as x9cc does not have them
+#base=myplan9old
 dirs=($dirs1 $dirs2 $dirs3 $dirs4 $dirs5)
 
 # goken comparisons
-#base=xgoken
-#dirs=(xgoken xinferno xplan9 x9front)
+#base=goken
+#dirs=(goken inferno plan9 9front)
 
 # kencc comparisons
-#base=x9cc
-#dirs=(x9cc x9colombier xinferno xmykencc) # xkencc-riscv
+#base=9cc
+#dirs=(9cc 9colombier inferno mykencc) # kencc-riscv
 
-#base=xmykencc
-#dirs=(x9colombier)
+#base=mykencc
+#dirs=(9colombier)
 
 echo '# -*- diff -*-'
 echo REPORT for $cmd with base $base
