@@ -162,7 +162,8 @@ enum
 	FCMP		= 1<<6,
 	NOSCHED		= 1<<7,
 
-	BIG		= 32766,
+	//BIG		= 32766,
+    BIG         = 0,
 	STRINGSZ	= 200,
 	NHASH		= 10007,
 	NHUNK		= 100000,
