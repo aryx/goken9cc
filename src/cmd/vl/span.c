@@ -309,9 +309,12 @@ aclass(Adr *a)
 				instoffset = s->value + a->offset;
 				return C_LCON;
 			}
+            // else, fallthrough for SDATA
 			instoffset = s->value + a->offset - BIG;
+            // instoffset != 0L special check for setR30!
 			if(instoffset >= -BIG && instoffset < BIG && instoffset != 0L)
 				return C_SECON;
+            // else
 			instoffset = s->value + a->offset + INITDAT;
 			return C_LCON;
 

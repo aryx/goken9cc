@@ -755,7 +755,7 @@ asmout(Prog *p, Optab *o, int aflag)
 		if(r == NREG)
 			r = o->param;
 		a = AADDU;
-		if(o->a1 == C_ANDCON)
+		if(o->a1 == C_ANDCON) // BUG? accept also == C_SCON ?
 			a = AOR;
 		o1 = OP_IRR(opirr(a), v, r, p->to.reg);
 		break;

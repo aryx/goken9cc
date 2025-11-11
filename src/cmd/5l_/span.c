@@ -480,6 +480,7 @@ aclass(Adr *a)
 			if(!dlm) {
 				instoffset = s->value + a->offset - BIG;
 				t = immrot(instoffset);
+                // special check != 0 for setR12 bootstrapping!
 				if(t && instoffset != 0)
 					return C_RECON;
 			}
