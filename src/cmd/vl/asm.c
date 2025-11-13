@@ -702,7 +702,7 @@ int vshift(int);
 int
 asmout(Prog *p, Optab *o, int aflag)
 {
-	long o1, o2, o3, o4, o5, o6, o7, v;
+	int32 o1, o2, o3, o4, o5, o6, o7, v;
 	Prog *ct;
 	int r, a;
 
@@ -1207,7 +1207,7 @@ isnop(Prog *p)
 	return 1;
 }
 
-long
+int32
 oprrr(int a)
 {
 	switch(a) {
@@ -1281,7 +1281,7 @@ oprrr(int a)
 	return 0;
 }
 
-long
+int32
 opirr(int a)
 {
 	switch(a) {

@@ -170,12 +170,18 @@ xdefine(char *p, int t, long v)
 	}
 }
 
-long
+int32
 regoff(Adr *a)
 {
+    int class;
 
 	instoffset = 0;
-	aclass(a);
+	class = aclass(a);
+
+    if(debug['O'])
+        Bprint(&bso, "regoff: %D, instoffset = %lux (class = %d)\n", a, instoffset, class);
+    Bflush(&bso);
+
 	return instoffset;
 }
 
