@@ -1196,7 +1196,7 @@ diag(Node *n, char *fmt, ...)
 	va_end(arg);
 	Bprint(&diagbuf, "%L %s\n", (n==Z)? nearln: n->lineno, buf);
 
-	if(debug['X']){
+	if(debug['Z']){ // was 'X' but now used for XiX compatible output
 		Bflush(&diagbuf);
 		abort();
 	}
@@ -1265,7 +1265,7 @@ fatal(Node *n, char *fmt, ...)
 	va_end(arg);
 	Bprint(&diagbuf, "%L %s\n", (n==Z)? nearln: n->lineno, buf);
 
-	if(debug['X']){
+	if(debug['Z']){ // was 'X' but now used for XiX compatible output
 		Bflush(&diagbuf);
 		abort();
 	}

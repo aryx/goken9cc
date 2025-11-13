@@ -44,6 +44,11 @@ sched(Prog *p0, Prog *pe)
 	Prog *p, *q;
 	Sch sch[NSCHED], *s, *t, *u, *se, stmp;
 
+    //pad: I added that to disable sched() to more easily compare with
+    // ovl (which did not port sched())
+    if(debug['X'])
+        return;
+
 	/*
 	 * build side structure
 	 */
@@ -52,7 +57,7 @@ sched(Prog *p0, Prog *pe)
 		memset(s, 0, sizeof(*s));
 		s->p = *p;
 		regsused(s, p);
-		if(debug['X']) {
+		if(debug['Z']) { // was 'X' before but it's now used to disable it
 			Bprint(&bso, "%P\t\tset", &s->p);
 			dumpbits(s, &s->set);
 			Bprint(&bso, "; used");
@@ -142,7 +147,7 @@ sched(Prog *p0, Prog *pe)
 			goto out2;
 		no2:;
 		}
-		if(debug['X'])
+		if(debug['Z'])
 			Bprint(&bso, "?l%P\n", &s->p);
 		s->nop = 1;
 		if(debug['v']) {
@@ -162,7 +167,7 @@ sched(Prog *p0, Prog *pe)
 		continue;
 
 	out2:
-		if(debug['X']) {
+		if(debug['Z']) {
 			Bprint(&bso, "!l%P\n", &t->p);
 			Bprint(&bso, "%P\n", &s->p);
 		}
@@ -203,7 +208,7 @@ sched(Prog *p0, Prog *pe)
 		while(s->nop--)
 			addnop(p);
 	}
-	if(debug['X']) {
+	if(debug['Z']) {
 		Bprint(&bso, "\n");
 		Bflush(&bso);
 	}

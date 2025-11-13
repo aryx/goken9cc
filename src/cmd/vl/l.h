@@ -163,6 +163,7 @@ enum
 	NOSCHED		= 1<<7,
 
 	//BIG		= 32766,
+    //TODO: maybe make it a global and reset to 0 when debug['X']
     BIG         = 0,
 	STRINGSZ	= 200,
 	NHASH		= 10007,
