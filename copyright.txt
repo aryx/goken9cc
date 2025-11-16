@@ -1,7 +1,8 @@
 Most of the code in this repository is code from Plan9 and has the 
 following copyright: 
-       Copyright © 2002 Lucent Technologies Inc.
-with a GPL-like license (See license.txt).
+       Copyright © 2021 Plan 9 Foundation
+
+with a MIT-like license (See license.txt).
 
 The rest of the code is mostly under an MIT license and comes from
 different sources:
