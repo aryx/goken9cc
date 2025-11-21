@@ -291,6 +291,7 @@ regalloc(Node *n, Node *tn, Node *o)
 			if(i >= 0 && i < NREG)
 				goto out;
 		}
+       if(!debug['X']) {
 		j = lasti + REGRET+1;
 		for(i=REGRET+1; i<NREG; i++) {
 			if(j >= NREG)
@@ -301,6 +302,14 @@ regalloc(Node *n, Node *tn, Node *o)
 			}
 			j++;
 		}
+       } else {
+        // pad's XiX compliant simpler code
+		for(i=0; i<NREG; i++) {
+			if(reg[i] == 0 && resvreg[i] == 0) {
+				goto out;
+			}
+		}
+       }
 		diag(tn, "out of fixed registers");
 		goto err;
 
@@ -331,6 +340,8 @@ err:
 	return;
 out:
 	reg[i]++;
+    if (debug['g'])
+        print("regalloc: allocate R%d\n", i);
 	lasti++;
 	if(lasti >= 5)
 		lasti = 0;
