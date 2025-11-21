@@ -113,7 +113,10 @@ codgen(Node *n, Node *nn)
 
 	canreach = 1;
 	warnreach = 1;
+
+    // the big call
 	gen(n);
+
 	if(canreach && thisfn->link->etype != TVOID)
 		warn(Z, "no return at end of function: %s", n1->sym->name);
 	noretval(3);
