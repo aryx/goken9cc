@@ -92,7 +92,7 @@ codgen(Node *n, Node *nn)
 	/*
 	 * isolate first argument
 	 */
-	if(REGARG >= 0) {
+	if(REGARG >= 0 && !debug['X']) {
 		if(typesuv[thisfn->link->etype]) {
 			nod1 = *nodret->left;
 			nodreg(&nod, &nod1, REGARG);
@@ -119,7 +119,7 @@ codgen(Node *n, Node *nn)
 	noretval(3);
 	gbranch(ORETURN);
 
-	if(!debug['N'] || debug['R'] || debug['P'])
+	if((!debug['N'] || debug['R'] || debug['P']) && !debug['X'])
 		regopt(sp);
 
 	if(thechar=='6' || thechar=='7')	/* [sic] */

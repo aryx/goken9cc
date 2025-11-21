@@ -395,7 +395,7 @@ brk:
 	 * pass 7
 	 * peep-hole on basic block
 	 */
-	if(!debug['R'] || debug['P'])
+	if((!debug['R'] || debug['P']) && !debug['X'])
 		peep();
 
 	/*

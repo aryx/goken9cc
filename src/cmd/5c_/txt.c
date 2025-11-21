@@ -196,7 +196,7 @@ garg1(Node *n, Node *tn1, Node *tn2, int f, Node **fnxp)
 			sugen(n, tn2, n->type->width);
 		return;
 	}
-	if(REGARG >= 0 && curarg == 0 && typechlp[n->type->etype]) {
+	if(REGARG >= 0 && curarg == 0 && typechlp[n->type->etype] && !debug['X']) {
 		regaalloc1(tn1, n);
 		if(n->complex >= FNX) {
 			cgen(*fnxp, tn1);

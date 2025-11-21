@@ -338,7 +338,7 @@ cgenrel(Node *n, Node *nn, int inrel)
 
 			return;
 		}
-		if(REGARG >= 0)
+		if(REGARG >= 0 && !debug['X'])
 			o = reg[REGARG];
 		gargs(r, &nod, &nod1);
 		if(l->addable < INDEXED) {
@@ -347,7 +347,7 @@ cgenrel(Node *n, Node *nn, int inrel)
 			regfree(&nod);
 		} else
 			gopcode(OFUNC, Z, Z, l);
-		if(REGARG >= 0)
+		if(REGARG >= 0 && !debug['X'])
 			if(o != reg[REGARG])
 				reg[REGARG]--;
 		if(nn != Z) {
