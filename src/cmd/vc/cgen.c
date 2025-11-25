@@ -300,7 +300,8 @@ cgen(Node *n, Node *nn)
 
 			return;
 		}
-		o = reg[REGARG];
+		if(REGARG >= 0 && !debug['X'])
+  		  o = reg[REGARG];
 		gargs(r, &nod, &nod1);
 		if(l->addable < INDEXED) {
 			reglcgen(&nod, l, Z);
@@ -308,7 +309,7 @@ cgen(Node *n, Node *nn)
 			regfree(&nod);
 		} else
 			gopcode(OFUNC, Z, Z, l);
-		if(REGARG)
+		if(REGARG && !debug['X'])
 			if(o != reg[REGARG])
 				reg[REGARG]--;
 		if(nn != Z) {
