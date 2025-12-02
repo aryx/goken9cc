@@ -1,3 +1,5 @@
+TEXT    _main(SB), $0
+	CALL main(SB)
 
 TEXT    panic(SB), $0
         // syscall: exit(0)

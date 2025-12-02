@@ -1,5 +1,5 @@
 
-TEXT _start(SB), $0
+TEXT _main(SB), $0
 #ifdef arm_
 	MOVW $setR12(SB), R12
 #endif

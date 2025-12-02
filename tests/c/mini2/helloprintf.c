@@ -1,8 +1,6 @@
 //TODO: merge once iar is fixed to handle .7 objects
 #ifndef arm64
-#ifndef arm_
 #pragma lib "libprint.a"
-#endif
 #endif
 
 #include "minilibc.h"
