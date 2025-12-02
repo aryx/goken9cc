@@ -30,7 +30,13 @@ test:V:
            mk 'objtype='$arch
            qemu-$arch ./helloprintf.exe
         }
-
+	echo arm_
+	mk clean
+	mk helloprintf_arm_.exe
+	qemu-arm ./helloprintf_arm_.exe
+	mk clean
+	mk helloprintf_arm_nofloat_no64.exe
+	./helloprintf_arm_nofloat_no64.exe
 
 # useful when troubleshooting issues to just
 # first get rid of float/64 bits instructions and see if everything
@@ -40,7 +46,7 @@ helloprintf_nofloat_no64.exe: helloprintf.c
    $CC_ $CC_FLAGS -c rune.c
    $CC_ $CC_FLAGS -c print_nofloat_no64.c
    $CC_ $CC_FLAGS -c helloprintf.c
-   $AS_ -c linux_$objtype.s
+   $AS_ $CC_FLAGS -c linux_$objtype.s
    #iar rc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
    $LD_ -L. -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
 
