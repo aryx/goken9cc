@@ -3,12 +3,10 @@ TOP=../../..
 <$TOP/mkfiles/$objtype/mkfile
 
 all:V: helloprintf.exe
-
-test:V: all
-	./helloprintf.exe
-
 clean:V:
 	rm -f *.[5678ijv] *.exe *.a
+test_one:V: all
+	./helloprintf.exe
 
 CC_FLAGS=-D$objtype
 
@@ -22,6 +20,17 @@ helloprintf.exe: helloprintf.c
    $AS_ -c linux_$objtype.s
    iar rc libprint.a linux_$objtype.$O_ print.$O_ float.$O_ misc.$O_
    $LD_ -L. -o $target -E main helloprintf.$O_
+
+#TODO: arm arm_ arm64 mips 386 riscv
+ARCHS=amd64
+test:V:
+        for (arch in $ARCHS) {
+           echo $arch
+           mk clean
+           mk 'objtype='$arch
+           qemu-$arch ./helloprintf.exe
+        }
+
 
 # useful when troubleshooting issues to just
 # first get rid of float/64 bits instructions and see if everything

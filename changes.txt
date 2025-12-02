@@ -3,11 +3,11 @@
 * TODO
 - SEMI add lex/yacc (generators)
 - SEMI fully working arm32 and arm64 (float, can cross compile principia softwarica)
-- SEMI hello_linux_riscv.exe
+- SEMI hello_linux_riscv.exe and exit_linux_riscv.exe
 - continue reorg code with SRC/ with symlinks to mimic old org.
 - bootstrappable (can compile itself)
 
-* 0.1 (Q4 2025) (acid, arm/mips emulator (5i/vi), mips va/vc/vl v1, riscv ia/ic/il v1?)
+* 0.1 (Q4 2025) (acid v0, arm/mips emulator (5i/vi), mips va/vc/vl v1, riscv ia/ic/il v0?)
 
 ** toolchain
 - import orginal acid debugger from 9-cc (derived from plan9)
@@ -26,8 +26,6 @@
 - multi-arch testing thanks to qemu (see tests/s/mini/)
 - docker build and test working for both amd64 and arm64
 
-** dev infra
-
 ** build infra
 - support and use "#9/..." paths like in plan9port instead of needing
   special env vars like YACCPAR or RCMAIN (kept for compatibility reasons)
@@ -36,9 +34,7 @@
   or golang specific code in the toolchain (defined when building GO/
   but undefined otherwise)
 
-** internals
-
-* Beta (Q3 2025) (arm64 7a/7c/7l v0, riscv ia/ic/il v0, arm64 linux/macos build, arm32 linux run v0, mk/rc, utilities v0, typesetting v0)
+* Beta (Q3 2025) (arm64 7a/7c/7l v1, riscv ia/ic/il v0, arm64 linux/macos build, arm32 linux run v0, mk/rc, utilities v0, typesetting v0)
 
 ** toolchain
 - adapt to goken 7a/7c/7l 
@@ -134,8 +130,6 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 + PE for Windows
 
 + DWARF for gdb
-
-*** assembler
 
 *** C compilers
 

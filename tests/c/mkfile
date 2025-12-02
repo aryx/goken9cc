@@ -1,7 +1,6 @@
 TOP=../..
 <$TOP/mkconfig
 
-#TODO: mini2, but pb on arm64
-DIRS=mini
+DIRS=mini mini2
 
 <$TOP/mkfiles/mkdirs

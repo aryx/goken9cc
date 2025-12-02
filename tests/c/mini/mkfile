@@ -14,7 +14,6 @@ test_one:V: all
 
 #TODO? 'iar rc'? in principia we use 'iar vu'
 #old: $LD_ -X to require NOSPLIT for all linked code, especially in $stem.6
-# but not needed anymore
 helloc.exe: helloc.c
    $CC_ -D$objtype -c $prereq
    $AS_ -D$objtype -c start_$objtype.s
@@ -25,11 +24,11 @@ helloc.exe: helloc.c
 
 #TODO: 386 riscv
 ARCHS=amd64 arm arm64 mips
-#alt: build 5.helloc 8.helloc
 test:V:
         for (arch in $ARCHS) {
            echo $arch
            mk clean
+           #alt: build 5.helloc 8.helloc
            mk 'objtype='$arch
            qemu-$arch ./helloc.exe
         }
