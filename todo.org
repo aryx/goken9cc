@@ -13,7 +13,7 @@
 *** RELAX remove dead code like maxbecome/frame in linkers that was used for Alef
 tail-call opti
 
-*** devdraw from plan9port to goken? can draw ? can port
+*** LATER devdraw from plan9port to goken? can draw ? can port
 more stuff to unix? doomplan9?
 
 maybe most of Graphics.nw can be tested on Linux?
@@ -50,11 +50,6 @@ but better wait to avoid diff.rc to show big diffs
 
 * Last
 
-*** SEMI port acid/ so can use it to dump the arm64/arm_ binaries!
-and see the disassembled code.
-right now objdump and llvm-dump and gdb do not work :(
-(strace does at least)
-
 *** RELAX move dirs in goken/, use GOROOT/ in Makefile instead of ../
 
 *** RELAX reorg src/ dirs in goken, imitate principia, do the actual move
@@ -72,23 +67,12 @@ tests/c/mini2/ ?
 
 *** FUN try to use 6prof and 6cov
 
-*** ------------------------------------------------
-
-*** ---------------------------------------------------------------
-
 *** add workflow to check it compiles on macos
 can't run tests, but at least can check we can compile
 most of goken (including utilties)
 
 *** nix.yml with testing also mk/rc build side, and macos/linux
 # was waiting for mk/rc to be added in goken itself, and it is now!
-
-*** FUN Debuggers.nw, try understand acid? and libmach? and add in goken?
-there is a 9-cc/acid/ !
-so it might be portable!
-update: chatGPT says it actually can't debug live process :( or can just inspect
-its state
-maybe still useful though ...
 
 * Components
 
@@ -146,13 +130,120 @@ and xix mk
 
 ** Arch
 
+*** arm64, 7a/7c/7l
+
+**** still? 7l: make iar handle .7 objects so can use it for tests/c/mini2/
+and restore it in mk test!
+or fix the automagic lib thing; right now lots of symbols
+are undefined
+
+
+**** goken: get tests/c/mini2/ working for arm64
+weird DWORD error on findnull in misc.c
+(actually generate error because last function processed; 
+the issue is probably not caused by findnull.
+use 7c -S to see which function is generating those DWORD
+
+**** add commits from 9front after initial import
+lots of fixes from cinap probably worth taking
+
+commit b29d5ac7b1f713e41285ad4b2ce1b23313d8088e
+Author: cinap_lenrek <cinap_lenrek@felloff.net>
+Date:   Mon Apr 8 13:45:49 2019 +0200
+
+    add arm64 c compiler and assembler (thanks charles forsyth)
+    
+    this is the the initial sync of charles forsyths plan9 c
+    compiler suite from http://bitbucket.org/plan9-from-bell-labs/9-cc
+    at changeset version 54:65fb8bb56c59
+
+**** 7c: restore typeswitch and neednewvlongcode stuff from cc.h and pgen.c
+in 9-cc
+
+useful?
+
+**** get objdump to work on helloc_arm64.exe/helloc_arm_.exe too
+what special thing we need to add in the elf binary?
+it works for the arm32 binary with 5l but not 5l_
+
+
+*** mips
+
+**** helloprintf for mips
+
+**** try vi on hello_plan9_mips.exe
+error "can't read 4 bytes of symbol table"
+
+**** can use acid to disassemble mips generated code and see it works?
+as I can't use objdump
+
+
 *** riscv 
 
 riscv and plan9!
 https://riscv.org/news/2020/10/a-plan-9-c-compiler-for-rv32gc-and-rv64gc/
 also xv6-riscv?
 
+**** riscv: hello_linux_riscv.exe (and test with qemu-riscv32)
+
+***** hello_linux_riscv32.S for binutils to see the diff
+with the one I'm generating
+
+***** exit_linux_riscv64.s ? better?
+
+**** riscv: RELAX add also libmach code for i arch (riscv)
+in 9front? in miller original tgz? in 9cc?
+
+xinferno has it
+
+try hello_linux_riscv.exe ?
+try qemu to load it?
+try acid on it?
+
+
 ** Debugger
+
+*** SEMI port acid/ so can use it to dump the arm64/arm_ binaries!
+and see the disassembled code.
+right now objdump and llvm-dump and gdb do not work :(
+(strace does at least)
+
+
+*** FUN Debuggers.nw, try understand acid? and libmach? and add in goken?
+there is a 9-cc/acid/ !
+so it might be portable!
+update: chatGPT says it actually can't debug live process :( or can just inspect
+its state
+maybe still useful though ...
+
+
+*** acid fixes
+# seems to work on 386, amd64, and arm_ hello_xxx binaries
+arm64? 7db.c does not work?
+
+**** RELAX acid can't load hello_plan9_mips.exe
+because I didn't add v.c and vdb.c yet! (and vobj.c and vcodas.c)
+
+**** acid can't decode file header for hello_linux_arm64.exe
+and exit_linux_...
+
+**** acid can't decode file header for hello_linux_arm.exe
+and exit_linux_...
+
+note that it can decode hello_linux_arm_.exe
+
+weird because libmach relies on 5l/5.out.h, not 5l_/
+
+***** merge 5l/ 5l_/ 5.out.h
+because used then in libmach!
+
+**** weird take long time to load on helloprintf_arm_.exe
+and can't find any symbol except a weird "rue" ???
+
+note that the program has an illegal instruction at runtime,
+maybe this is the cause?
+
+**** weird, acid can't show symbols on helloc_arm_.exe
 
 *** port also db to goken
 seems to be defined in plan9port
@@ -253,6 +344,20 @@ and lp and tr2post
 
 ** Test infra
 
+*** use 5i/vi in mk test and in CI to run some hello_plan9_xxx programs?
+
+*** testinfra: try make golang work for arm32? use armhf gcc and
+compile the whole golang source tree and run the tests?
+=> good regression test infra at least
+see GO/all-arm and GO/tests/run-arm 
+
+it compiles code with gcc (arm64), and we could adjust to arm-linux-gnueabihf-gcc
+but I don't think it's the problem because then we get this error
+at compile-time and don't even reach the testing part:
+
+<epoch>: internal compiler error: betypeinit failed
+
+
 *** LATER: try to compile plan9 with goken9cc!!!
 
 *** LATER: try to compile goken with goken9cc!!!
@@ -267,6 +372,10 @@ start use jsonnet?
 start multi GOOS and GOARCH in CI? in Docker can try all combinations?
 
 ** Build infra
+
+*** switch to GOHOST and GOTARGET instead of GOARCH?
+or GOARCHHOST, GOARCHTARGET, GOOSTARGET ?
+
 
 *** RELAX goken/mkfiles/386/mkfile
 and try to compile goken with -m32
@@ -325,6 +434,21 @@ needed?
 take the one from Leroy for compcert?
 
 ** Dev infra
+
+*** devinfra: RELAX fix all gcc warnings in goken show when running 'mk'
+
+*** devinfra: RELAX remove use of --allow-multiple-definition, fix the code!
+avoid bad surprise?
+
+still segfault when using p = gtext ... for 7l ?
+
+commit removal of allow-multiple-def in arm64/mkfile?
+fixed all multiple-defs issue in goken?
+
+can detect the ugly 'stdin' Binit in sed.c that
+was fixed in inferno-os but caused some segfaults?
+because stdin already defined elsewhere in goken lib9?
+
 
 *** less: .gitignore inspired from DELETED/.hgignore
 
