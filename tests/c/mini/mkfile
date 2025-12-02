@@ -1,14 +1,11 @@
 # can use $CC_ -S to see the assembly code
-
 TOP=../../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 all:V: helloc.exe
-
 clean:V:
         rm -f *.[5678ijv] *.exe *.a
-
 test_one:V: all
         ./helloc.exe
 
@@ -22,6 +19,18 @@ helloc.exe: helloc.c
    iar rc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
    $LD_ -L. -o $target -E _start helloc.$O_
 
+#alt: 5l_ -H7 -L. -o $target -E _start helloc.5 xwrite_arm.5 xexit_arm.5 start_arm.5
+# when iar is not working
+#alt: could factorize with previous rule but would need some start_arm_.s
+# symlink to start_arm.s
+helloc_arm_.exe: helloc.c
+   5c_ -Darm_ -c helloc.c
+   5a_ -Darm_ -c xwrite_arm.s
+   5a_ -Darm_ -c xexit_arm.s
+   5a_ -Darm_ -c start_arm.s
+   iar rc libmini.a start_arm.5 xwrite_arm.5 xexit_arm.5
+   5l_ -H7 -L. -o $target -E _start helloc.5
+
 #TODO: 386 riscv
 ARCHS=amd64 arm arm64 mips
 test:V:
@@ -32,14 +41,7 @@ test:V:
            mk 'objtype='$arch
            qemu-$arch ./helloc.exe
         }
-
-
-#alt: 5l_ -H7 -L. -o $target -E _start helloc.5 xwrite_arm.5 xexit_arm.5 start_arm.5
-# when iar is not working
-helloc_arm_.exe: helloc.c
-   5c_ -Darm_ -c helloc.c
-   5a_ -Darm_ -c xwrite_arm.s
-   5a_ -Darm_ -c xexit_arm.s
-   5a_ -Darm_ -c start_arm.s
-   iar grc libmini.a start_arm.5 xwrite_arm.5 xexit_arm.5
-   5l_ -H7 -L. -o $target -E _start helloc.5
+	echo arm_
+	mk clean
+	mk helloc_arm_.exe
+	qemu-arm ./helloc_arm_.exe
