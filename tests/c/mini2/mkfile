@@ -16,10 +16,12 @@ helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c rune.c
    $CC_ $CPP_FLAGS -c vlrt.c
    $CC_ $CPP_FLAGS -c print.c
+   #$CC_ $CPP_FLAGS -c print_nofloat_no64.c
    $CC_ $CPP_FLAGS -c float.c
+   #$CC_ $CPP_FLAGS -c float_nope.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
-   iar rc libprint.a linux_$objtype.$O_ print.$O_ float.$O_ vlrt.$O_ misc.$O_
+   iar rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_ misc.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm arm64 mips 386 riscv
@@ -46,16 +48,6 @@ helloprintf_nofloat_no64.exe: helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
    #iar rc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
    $LD_ -L. -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
-
-#TODO: does not work yet, weird findnull: DWORD linker errors
-helloprintf_arm64.exe: helloprintf.c misc.c rune.c print.c float.c
-   $CC_ $CPP_FLAGS -c misc.c
-   $CC_ $CPP_FLAGS -c rune.c
-   $CC_ $CPP_FLAGS -c print.c
-   $CC_ $CPP_FLAGS -c float.c
-   $CC_ $CPP_FLAGS -c helloprintf.c
-   $AS_ -c linux_$objtype.s
-   $LD_ -H7 -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print.$O_ float.$O_ misc.$O_
 
 helloprintf_arm_nofloat_no64.exe: helloprintf.c
    5c_ -Darm_ -c misc.c

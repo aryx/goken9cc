@@ -2,7 +2,7 @@
 
 ** Overview
 
-# fix float/64bits ops arm32 and arm64 tests/c/mini2,
+# fix float/64bits ops SEMI arm32 and arm64 tests/c/mini2,
 # make it work on principia code (arm and x86)! (add wasm later) and bootstrap itself!!!
 # produce from hello.{s,c} binaries for SEMI (old) macos (amd64 TODO arm64), (386) windows
 # reLPize {Assembler,Linker,Compiler,Libcore}.nw and release (and maybe also {Debugger,Profiler}.nw) "principia-toolchain"!
@@ -10,7 +10,7 @@
 
 ** Later
 
-*** RELAX remove dead code like maxbecome/frame in linkers that was used for Alef
+*** LATER remove dead code like maxbecome/frame in linkers that was used for Alef
 tail-call opti
 
 *** LATER devdraw from plan9port to goken? can draw ? can port
@@ -131,18 +131,6 @@ and xix mk
 ** Arch
 
 *** arm64, 7a/7c/7l
-
-**** still? 7l: make iar handle .7 objects so can use it for tests/c/mini2/
-and restore it in mk test!
-or fix the automagic lib thing; right now lots of symbols
-are undefined
-
-
-**** goken: get tests/c/mini2/ working for arm64
-weird DWORD error on findnull in misc.c
-(actually generate error because last function processed; 
-the issue is probably not caused by findnull.
-use 7c -S to see which function is generating those DWORD
 
 **** add commits from 9front after initial import
 lots of fixes from cinap probably worth taking
