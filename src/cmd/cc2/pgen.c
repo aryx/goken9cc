@@ -42,10 +42,12 @@ argsize(void)
 		switch(t->etype) {
 		case TVOID:
 			break;
+#ifdef GOLANG
 		case TDOT:
 			yyerror("function takes ... without textflag NOSPLIT");
 			s += 64;
 			break;
+#endif
 		default:
 			s = align(s, t, Aarg1);
 			s = align(s, t, Aarg2);
