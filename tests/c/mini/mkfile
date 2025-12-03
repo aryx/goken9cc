@@ -11,6 +11,7 @@ test_one:V: all
 
 #TODO? 'iar rc'? in principia we use 'iar vu'
 #old: $LD_ -X to require NOSPLIT for all linked code, especially in $stem.6
+#alt: iar rc libmini.a *.$O_   below
 helloc.exe: helloc.c
    $CC_ -D$objtype -c $prereq
    $AS_ -D$objtype -c start_$objtype.s
@@ -41,6 +42,7 @@ test:V:
            mk 'objtype='$arch
            qemu-$arch ./helloc.exe
         }
+	#alt: special if in for loop above
 	echo arm_
 	mk clean
 	mk helloc_arm_.exe

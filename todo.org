@@ -132,7 +132,7 @@ and xix mk
 
 *** arm (not arm_)
 
-**** less: run mk objtype=arm test_one in c/mini2/ too, remove NOSPLIT check
+**** ctests//mini2: run mk objtype=arm test_one in c/mini2/ too, remove NOSPLIT check
 by using ifdef
 
 but then with 5l requires sfloat in vlop.s, then sfloat2 in softfloat.c
@@ -141,7 +141,7 @@ and more stuff
 
 *** arm64, 7a/7c/7l
 
-**** less: tests/c/mini2/ does not work on arm64 even with basic helloprintf.c
+**** tests/c/mini2/ does not work on arm64 even with basic helloprintf.c
 that calls test()
 
 if you use strace you see it's completely wrong! calling 
@@ -183,10 +183,9 @@ useful?
 what special thing we need to add in the elf binary?
 it works for the arm32 binary with 5l but not 5l_
 
-
 *** mips
 
-**** less: run mk objtype=mips test_one in c/mini2/
+**** tests/c/mini2: run mk objtype=mips test_one in c/mini2/
 need extend minilibc.h to state uintptr for mips arch
 and also need a linux_mips.s
 
@@ -200,17 +199,19 @@ as I can't use objdump
 
 
 *** riscv 
+#riscv and plan9!
+# https://riscv.org/news/2020/10/a-plan-9-c-compiler-for-rv32gc-and-rv64gc/
+# also xv6-riscv?
 
-riscv and plan9!
-https://riscv.org/news/2020/10/a-plan-9-c-compiler-for-rv32gc-and-rv64gc/
-also xv6-riscv?
+**** exit_linux_riscv.exe currently segfault
+
+***** exit_linux_riscv64.s ? better?
+
 
 **** riscv: hello_linux_riscv.exe (and test with qemu-riscv32)
 
 ***** hello_linux_riscv32.S for binutils to see the diff
 with the one I'm generating
-
-***** exit_linux_riscv64.s ? better?
 
 **** riscv: RELAX add also libmach code for i arch (riscv)
 in 9front? in miller original tgz? in 9cc?
