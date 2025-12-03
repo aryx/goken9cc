@@ -107,3 +107,6 @@ extern void	panic(int32);
 extern void write(uint32 fd, char* buf, /*size_t*/ int count);
 extern void exit(uint32);
 void*	·getcallerpc(void*);
+
+// helloprintf.c
+void test(void);
