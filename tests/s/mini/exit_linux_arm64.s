@@ -1,5 +1,5 @@
 // run and then run 'echo $?' in your terminal
-// and check you get 42!
+// and check that you get 42!
 
 // this program does not require any .data segment
 // so it should be simpler to assemble/link/run
@@ -12,6 +12,7 @@ TEXT _start(SB), $0
     SVC    $0
     MOV    $12, R0
 
+//alt:
 //TEXT _start(SB), 0, $0
 //    ADR mydata, R1       // load address of .data
 //    MOV (R1), R0         // read first word
@@ -22,6 +23,7 @@ TEXT _start(SB), $0
 //    WORD $42
 //    WORD $43
 
+//alt:
 //TEXT _start(SB), 0, $0
 //    MOV msg(SB), R0
 //    MOV $93, R8           // exit

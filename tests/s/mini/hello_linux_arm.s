@@ -3,7 +3,10 @@
 // -------------------------------------------
 TEXT _start(SB), $0
 
-	//setR12 ??
+	// There is no need for MOVW $setR12(SB), R12 because msg+0(SB)
+        // will be the first data and so will be at the same address than
+        // setR12 and so MOVW $msg(SB), R1 below will be converted
+        // by 5l (or 5l_) in an instruction not relying on R12.
 
         /* write(1, msg, len) */
 	MOVW    $1, R0              /* fd = 1 (stdout) */
@@ -20,4 +23,3 @@ TEXT _start(SB), $0
 GLOBL   msg(SB), $13
 DATA    msg+0(SB)/8, $"Hello, w"
 DATA    msg+8(SB)/5, $"orld\n"
-

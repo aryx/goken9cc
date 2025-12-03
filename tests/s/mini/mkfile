@@ -1,54 +1,55 @@
 # add -v to some linker command to debug
 
-# those archs are supported by qemu-user-binfmt in docker GHA
-HELLOLINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
-  hello_linux_arm.exe  hello_linux_arm64.exe hello_linux_arm_.exe \
-#TODO: those one unfortunately not, because qemu-mips32sn is used instead
-# of qemu-mips which is weird so have to handle them separately
-#hello_linux_mips.exe
-#hello_linux_riscv.exe
-
+LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
+          hello_linux_arm.exe hello_linux_arm64.exe hello_linux_arm_.exe \
+          hello_linux_mips.exe
+#TODO: hello_linux_riscv.exe (segfault right now)
 EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe \
-  exit_linux_riscv.exe exit_linux_mips.exe
+              exit_linux_riscv.exe exit_linux_mips.exe
 
 PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
+#TODO: hello_xv6_386.exe hello_xv6_riscv.exe
+XV6BINS=
+
+#TODO: hello_macos_arm64.exe
 MACOSBINS=hello_macos_amd64.exe
+#TODO: hello_windows_386.exe hello_windows_amd64.exe
+WINDOWSBINS=
 
-all:V: $HELLOLINUXBINS $EXITLINUXBINS $PLAN9BINS $MACOSBINS \
-   hello_linux_mips.exe
+all:V: $LINUXBINS $EXITLINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 
-# part of mk test CI regression check in Dockerfile and GHA
-# (requires dpkg --add-architecture i386 for _386.exe to run
-#  or qemu-user and qemu-user-binfmt)
+# This target is part of mk test CI regression check in Dockerfile and GHA
+# (it requires dpkg --add-architecture i386 for _386.exe to run
+#  or qemu-user and qemu-user-binfmt).
+# Most archs are supported by qemu-user-binfmt in docker GHA, and so
+# one can use simply ./$i below to run the test, but unfortunately for mips
+# we need some special code because qemu-mips32sn is used instead
+# of qemu-mips which is weird so we have to force the use of qemu-mips.
 # TODO: cmp with "Hello world" string
 # TODO: run $EXITLINUXBINS and expect exit code to be 42
 test:V: all
-      for (i in $HELLOLINUXBINS) {
+      for (i in $LINUXBINS) {
          echo $i
-	 ./$i
+	 if (~ $arch xxxx_)
+	   qemu-mips ./hello_linux_mips.exe
+	 if not
+	    ./$i
       }
-      echo hello_linux_mips.exe
-      qemu-mips ./hello_linux_mips.exe
 
 clean:V:
 	rm -f *.[5678iv] *.exe
 
-
-# Linux x86
+#Linux
 # old: -X to avoid the golang specific stuff and -d to disable dynamic linking
 hello_linux_amd64.exe: hello_linux_amd64.s
    6a -c $prereq
    6l -o $target -E _start hello_linux_amd64.6
-
 hello_linux_386.exe: hello_linux_386.s
    8a -c $prereq
    8l -o $target -E _start hello_linux_386.8
-
-# Linux
 hello_linux_riscv.exe: hello_linux_riscv.s
    ia -c $prereq
    il -o $target -E _start hello_linux_riscv.i
-
 hello_linux_mips.exe: hello_linux_mips.s
    va -c $prereq
    vl -o $target -E _start hello_linux_mips.v
@@ -64,11 +65,9 @@ hello_macos_amd64.exe: hello_macos_amd64.s
 hello_plan9_386.exe: hello_plan9_386.s
    8a -c $prereq
    8l -o $target -H 2 -E _main hello_plan9_386.8
-
 hello_plan9_arm.exe: hello_plan9_arm.s
    5a -c $prereq
    5l -o $target -H 2 -E _main hello_plan9_arm.5
-
 # actually no need -X; va/vc/vl are new and were not "go-ized"
 # actually -X would print the assembly on stdout in vl ...
 hello_plan9_mips.exe: hello_plan9_mips.s
@@ -80,6 +79,16 @@ hello_linux_arm.exe: hello_linux_arm.s
    5a -c $prereq
    5l -o $target -E _start hello_linux_arm.5
 
+# Alternative arm
+hello_linux_arm_.exe: hello_linux_arm.s
+   5a_ -c $prereq
+   5l_ -H7 -o $target -E _start hello_linux_arm.5
+
+# -H 7 this time
+hello_linux_arm64.exe: hello_linux_arm64.s
+   7a -c $prereq
+   7l -o $target -H7 -E _start hello_linux_arm64.7
+
 %.exe: %.s
    5a -c $prereq
    5l -o $target -E _start $stem.5
@@ -88,24 +97,13 @@ hello_linux_arm.exe: hello_linux_arm.s
    5a_ -c $prereq
    5l_ -H7 -o $target -E _start $stem.5
 
-# -H 7 this time
-hello_linux_arm64.exe: hello_linux_arm64.s
-   7a -c $prereq
-   7l -o $target -H7 -E _start hello_linux_arm64.7
 
 exit_linux_arm64.exe: exit_linux_arm64.s
    7a -c $prereq
    7l -o $target -H7 -E _start exit_linux_arm64.7
-
-# Alternative arm
-hello_linux_arm_.exe: hello_linux_arm.s
-   5a_ -c $prereq
-   5l_ -H7 -o $target -E _start hello_linux_arm.5
-
-exit_linux_riscv.exe: exit_linux_riscv.s
-   ia -c $prereq
-   il -o $target -E _start exit_linux_riscv.i
-
 exit_linux_mips.exe: exit_linux_mips.s
    va -c $prereq
    vl -o $target -E _start exit_linux_mips.v
+exit_linux_riscv.exe: exit_linux_riscv.s
+   ia -c $prereq
+   il -o $target -E _start exit_linux_riscv.i
