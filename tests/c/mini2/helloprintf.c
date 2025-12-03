@@ -12,14 +12,22 @@ void main() {
   printf("Hello %s%s: %x\n", "Wor", "ld", 42);
   printf("Hello %s%s: %d\n", "Wor", "ld", 42);
   printf("Hello World: %d\n", 42);
-  // TODO: cause "Illegal instruction" with 5l_
-  //TODO: printf("Hello World: %f\n", 0);
-  //TODO: printf("Hello World: %f\n", 0.3333);
+
+
+  printf("%f\n", NaN());
+  printf("%f\n", 2.0); 
+  // TODO: 2.0 is 2.000001 in arm but correctly 2 in amd64
+  // TODO: 0.0 is incorrect too in arm, so is 0.333, lots of pbs
+  printf("Hello World: %f\n", 0.0);
+  printf("Hello World: %f\n", 3.0);
+
+  test();
+
   exit(0);
 }
 
 // just to see the generated assembly code when using 5c/6c/7c/... -S
-void test() {
+void test_hello() {
   write(1, "test\n", 5);
   exit(42);
 }

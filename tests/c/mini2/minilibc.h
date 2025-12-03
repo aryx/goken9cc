@@ -103,6 +103,7 @@ extern int32 findnull(byte*);
 // float.c
 extern bool	isInf(float64 f, int32 sign);
 extern bool	isNaN(float64 f);
+extern float64 NaN(void);
 
 // linux_$objtype.s
 extern void	panic(int32);
@@ -111,4 +112,7 @@ extern void exit(uint32);
 void*	·getcallerpc(void*);
 
 // helloprintf.c
+void test_hello(void);
+
+// test.c
 void test(void);
