@@ -89,14 +89,6 @@ hello_linux_arm64.exe: hello_linux_arm64.s
    7a -c $prereq
    7l -o $target -H7 -E _start hello_linux_arm64.7
 
-%.exe: %.s
-   5a -c $prereq
-   5l -o $target -E _start $stem.5
-
-%_.exe: %.s
-   5a_ -c $prereq
-   5l_ -H7 -o $target -E _start $stem.5
-
 
 exit_linux_arm64.exe: exit_linux_arm64.s
    7a -c $prereq
@@ -107,3 +99,11 @@ exit_linux_mips.exe: exit_linux_mips.s
 exit_linux_riscv.exe: exit_linux_riscv.s
    ia -c $prereq
    il -o $target -E _start exit_linux_riscv.i
+
+%.exe: %.s
+   5a -c $prereq
+   5l -o $target -E _start $stem.5
+
+%_.exe: %.s
+   5a_ -c $prereq
+   5l_ -H7 -o $target -E _start $stem.5
