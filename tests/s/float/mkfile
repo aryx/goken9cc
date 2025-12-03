@@ -1,0 +1,9 @@
+all:V: float_arm_.exe
+
+%.exe: %.s
+   5a -c $prereq
+   5l -o $target -E _start $stem.5
+
+%_.exe: %.s
+   5a_ -c $prereq
+   5l_ -H7 -o $target -E _start $stem.5
