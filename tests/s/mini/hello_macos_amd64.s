@@ -8,6 +8,7 @@ TEXT    _start(SB), $0
         ADDQ    $16, SP
         CALL    exit(SB)
 
+// Not OK (has nothing to do with tokens :) ) =~ panic
 TEXT	notok(SB), $0
 	MOVL	$0xf1, BP
 	MOVQ	BP, (BP)
@@ -22,7 +23,7 @@ TEXT    write(SB), $0
 	MOVL	16(SP), DX		// arg 3 count
 	MOVL	$(0x2000000+4), AX	// syscall entry
 	SYSCALL
-	JCC	2(PC)
+	JCC	2(PC) // will JMP + 2 so to RET if everything is fine?
 	CALL	notok(SB)
 	RET
 

@@ -2,13 +2,13 @@
 // main procedure
 // -------------------------------------------
 
-//old: 0 below was '7' before for NOPROF | DUPOK | NOSPLIT
-// and NOSPLIT was what matters to tell 6l to not do go-specific stack
+//old: 0 below was '7' before, to encode NOPROF | DUPOK | NOSPLIT
+// and NOSPLIT was what mattered to tell 6l to not do go-specific stack
 // stuff
 //update: I have now added some ifdef GOLANG in 6l so don't need it anymore
 //we use _start and not main to avoid triggering Go-specific stuff in 6l
 //update: can also now use 6l -X to disable the go-specific stuff
-//update2: now disabled by default thx to #ifdef GOLANG
+// (but now most stuff is disabled by default thx to #ifdef GOLANG)
 TEXT    _start+0(SB), 0, $0
 
         // Allocate space for return address (CALL pushes return addr)

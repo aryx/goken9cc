@@ -3,10 +3,11 @@
 // -------------------------------------------
 TEXT _start(SB), $0
 
-	// There is no need for MOVW $setR12(SB), R12 because msg+0(SB)
+	// There is no need for MOVW $setR12(SB), R12 like in the
+        // traditional ARM _main function, because msg+0(SB) below
         // will be the first data and so will be at the same address than
         // setR12 and so MOVW $msg(SB), R1 below will be converted
-        // by 5l (or 5l_) in an instruction not relying on R12.
+        // by 5l (or 5l_) in a machine instruction not relying on R12.
 
         /* write(1, msg, len) */
 	MOVW    $1, R0              /* fd = 1 (stdout) */

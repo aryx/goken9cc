@@ -1,16 +1,16 @@
 // same than principia/ROOT/tests/s/hello_386.s
-// but for goken need to use 8l -H2
+// but for goken we need to use 8l -H 2 in the mkfile
 
 TEXT	_main(SB), $20
 
 	// pwrite(1, "hello world\n", 12, 00);
 	MOVL	$1,AX
-	MOVL	AX,4(SP)
+	MOVL	AX,4(SP) // 4(SP) because 0(SP) will be for return address?
 	MOVL	$msg(SB),AX
 	MOVL	AX,8(SP)
 	MOVL	$12,AX
 	MOVL	AX,12(SP)
-	MOVL	$0,16(SP)
+	MOVL	$0,16(SP) // a 00 vlong requires 8 bytes
 	MOVL	$0,20(SP)
 
 	MOVL $9, AX

@@ -4,7 +4,7 @@
 TEXT _main(SB), $20
 	// very important instruction! vl assumes R30 is set correctly so that
         // $hello(SB) below is translated in using R30 and some offset.
-        // see also libc/mips/main9.s
+        // see also principia/libc/mips/main9.s
 	MOVW	$setR30(SB), R30
         /* prepare the system call PWRITE(1,&hello,12, 00) */
 	MOVW	$1,R1

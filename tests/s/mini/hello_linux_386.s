@@ -1,4 +1,4 @@
-// see hello_linux_amd64.s for more information
+// See hello_linux_amd64.s for more information
 
 // -------------------------------------------
 // main procedure
