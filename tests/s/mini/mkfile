@@ -30,7 +30,7 @@ all:V: $LINUXBINS $EXITLINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 test:V: all
       for (i in $LINUXBINS) {
          echo $i
-	 if (~ $arch xxxx_)
+	 if (~ $arch mips)
 	   qemu-mips ./hello_linux_mips.exe
 	 if not
 	    ./$i
