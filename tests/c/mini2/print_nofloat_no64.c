@@ -138,9 +138,6 @@ vprintf(int8 *s, byte *arg)
 		write(fd, lp, p-lp);
 }
 
-
-// need NOSPLIT otherwise 5l will complain because func uses '...' arg
-#pragma textflag 7
 void
 printf(int8 *s, ...)
 {

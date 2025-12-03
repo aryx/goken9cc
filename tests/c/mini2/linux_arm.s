@@ -1,9 +1,12 @@
-
+//---------------------------------
+// Entry and exit point
+//---------------------------------
 TEXT _main(SB), $0
 #ifdef arm_
 	MOVW $setR12(SB), R12
 #endif
 	BL main(SB)
+	BL exit(SB) // should not be reached
 
 
 TEXT    exit+0(SB), $0
@@ -15,6 +18,10 @@ TEXT    exit+0(SB), $0
         MOVW    $1, R7          // syscall number 1 = sys_exit
         SWI     $0
 	RET // never reached
+
+//---------------------------------
+// Basic functions
+//---------------------------------
 
 TEXT    panic+0(SB), $0
 #ifdef arm_
@@ -44,45 +51,26 @@ TEXT write+0(SB), $0
         SWI     $0
 	RET
 
+// pad's own debug function (was used for tracking float/vlong
+// functions to implement first, see commented code further below
+// using 'BL debug(SB)')
+TEXT 	debug+0(SB), $0
+	MOVW R0, R1
+	//alt: call write
+	MOVW $1, R0
+	MOVW $4, R2
+	MOVW    $4, R7
+	SWI     $0
+	RET
+
 // from 9front/.../libc/arm/getcallerpc.s
+// $-4 to prevent autosize stack adjust
 TEXT ·getcallerpc(SB), $-4
 	MOVW	0(R13), R0
 	RET
 
 //TODO: see GO/.../runtime/arm/asm.s and copy the code there
-// or principia/.../libc/arm/
-
-
-//---------------------------------
-// from pkg/runtime/arm/vlop.s needed only for 5l, not 5l_
-//---------------------------------
-
-TEXT	_sfloat(SB), 7, $64 // 4 arg + 14*4 saved regs + cpsr
-	RET
-
-// trampoline for _sfloat2. passes LR as arg0 and
-// saves registers R0-R13 and CPSR on the stack. R0-R12 and CPSR flags can
-// be changed by _sfloat2.
-//TEXT	_sfloat(SB), 7, $64 // 4 arg + 14*4 saved regs + cpsr
-//	MOVW	R14, 4(R13)
-//	MOVW	R0, 8(R13)
-//	MOVW	$12(R13), R0
-//	MOVM.IA.W	[R1-R12], (R0)
-//	MOVW	$68(R13), R1 // correct for frame size
-//	MOVW	R1, 60(R13)
-//	WORD	$0xe10f1000 // mrs r1, cpsr
-//	MOVW	R1, 64(R13)
-//	BL	_sfloat2(SB)
-//	MOVW	R0, 0(R13)
-//	MOVW	64(R13), R1
-//	WORD	$0xe128f001	// msr cpsr_f, r1
-//	MOVW	$12(R13), R0
-//	MOVM.IA.W	(R0), [R1-R12]
-//	MOVW	8(R13), R0
-//	RET
-			
-
-
+// or in principia/.../libc/arm/
 
 //---------------------------------
 // from principia/libc/arm/div.s
@@ -90,6 +78,8 @@ TEXT	_sfloat(SB), 7, $64 // 4 arg + 14*4 saved regs + cpsr
 
 // no arm instructions for those operations so must be
 // provided as "builtins"
+
+//old:
 //TEXT 	_div+0(SB), 7, $0
 //	RET
 //TEXT 	_divu+0(SB), 7, $0
@@ -228,16 +218,7 @@ out:
 //---------------------------------
 // 64bits ("very long" or vl) operations
 //---------------------------------
-// see also vlrt.c!
-
-TEXT 	debug+0(SB), $0
-	MOVW R0, R1
-	//alt: call write
-	MOVW $1, R0
-	MOVW $4, R2
-	MOVW    $4, R7
-	SWI     $0
-	RET
+// see now vlrt.c!
 
 //// signed int to vlong
 //TEXT 	_si2v+0(SB), 7, $0
@@ -330,3 +311,29 @@ TEXT 	debug+0(SB), $0
 
 //TEXT 	_sfloat+0(SB), $0
 //	RET
+
+//---------------------------------
+// from pkg/runtime/arm/vlop.s (needed only for 5l, not 5l_)
+//---------------------------------
+
+// trampoline for _sfloat2. passes LR as arg0 and
+// saves registers R0-R13 and CPSR on the stack. R0-R12 and CPSR flags can
+// be changed by _sfloat2.
+//TEXT	_sfloat(SB), 7, $64 // 4 arg + 14*4 saved regs + cpsr
+//	MOVW	R14, 4(R13)
+//	MOVW	R0, 8(R13)
+//	MOVW	$12(R13), R0
+//	MOVM.IA.W	[R1-R12], (R0)
+//	MOVW	$68(R13), R1 // correct for frame size
+//	MOVW	R1, 60(R13)
+//	WORD	$0xe10f1000 // mrs r1, cpsr
+//	MOVW	R1, 64(R13)
+//	BL	_sfloat2(SB)
+//	MOVW	R0, 0(R13)
+//	MOVW	64(R13), R1
+//	WORD	$0xe128f001	// msr cpsr_f, r1
+//	MOVW	$12(R13), R0
+//	MOVM.IA.W	(R0), [R1-R12]
+//	MOVW	8(R13), R0
+//	RET
+

@@ -1,4 +1,3 @@
-
 TEXT _main+0(SB), $0
 	MOV    $setSB(SB), R28
 	BL main+0(SB)

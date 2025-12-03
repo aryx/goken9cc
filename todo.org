@@ -10,7 +10,7 @@
 
 ** Later
 
-*** LATER remove dead code like maxbecome/frame in linkers that was used for Alef
+*** LATER RELAX remove dead code like maxbecome/frame in linkers that was used for Alef
 tail-call opti
 
 *** LATER devdraw from plan9port to goken? can draw ? can port
@@ -54,16 +54,6 @@ but better wait to avoid diff.rc to show big diffs
 
 *** RELAX reorg src/ dirs in goken, imitate principia, do the actual move
 and use SRC/ symlinks
-
-*** plan9 and goken
-
-**** try tests/c/hello_plan9_arm.exe from .c!
-mini libc
-
-**** try tests/c/hello_plan9_mips.exe from .c!
-mini libc
-
-tests/c/mini2/ ?
 
 *** FUN try to use 6prof and 6cov
 
@@ -132,7 +122,7 @@ and xix mk
 
 *** arm (not arm_)
 
-**** ctests//mini2: run mk objtype=arm test_one in c/mini2/ too, remove NOSPLIT check
+**** tests/c/mini2: run mk objtype=arm test_one in c/mini2/ too, remove NOSPLIT check
 by using ifdef
 
 but then with 5l requires sfloat in vlop.s, then sfloat2 in softfloat.c
@@ -222,6 +212,56 @@ try hello_linux_riscv.exe ?
 try qemu to load it?
 try acid on it?
 
+** OSes
+
+*** plan9 and goken
+
+**** try tests/c/hello_plan9_arm.exe from .c!
+mini libc
+
+**** try tests/c/hello_plan9_mips.exe from .c!
+mini libc
+
+tests/c/mini2/ ?
+
+*** make goken compile on Windows 386
+
+**** make part of goken compile on windows
+until 6g at least; even though sad that get runtime error when running 6g
+
+***** fix weird compilation error in windows lib9/ that if you type make again
+then it works the second time
+
+**** hello_windows_x86.s
+no simple sys.s like for darwin and linux :(
+no interrupt and simple syscalls. Have to use this
+stdcall complex thing and kernel32.dll and maybe complex setup
+
+**** hello_windows_x86.c
+try make hello.c that link with a few sys.s for windows and link for windows
+maybe remove *.go in runtime/ and see if can build a runtime.a that
+I can then use then to link a simple hello.c calling print.c
+
+try rt0.8 and then 8l but then linking errors so missing stuff
+
+**** try to fix 6g on Windows? still betypeinit error?
+
+**** window.yml: try install mingw from windows-latest GHA job as experiment
+so later can try to compile goken9cc in CI!
+
+imitate some of the stuff in semgrep/.../build-windows-x86
+
+*** less: make goken compile and run on macOS arm64
+
+**** make goken compile on macOS arm64
+GOOS=darwin GOARCH=amd64
+
+**** try nix.yml macos-latest? need set GOARCH maybe?
+
+**** macos.yml: try running generated binaries on macos-12 and use Rosetta 2 to
+emulate x86_64 ?
+need sign it first?
+
 
 ** Debugger
 
@@ -281,6 +321,7 @@ see also DELETED/misc/arm/ and the use of adb and maybe android emulator
 alt: take them from latest go repo and hope it's backward compatible?
 
 ** Rest
+
 *** goken/generators
 
 **** RELAX LPize yaccpar too, and yaccpars
@@ -290,7 +331,6 @@ and sync in goken and principia
 good though to also work with bison; it reports more bugs
 than plan9 yacc and it's good to be compatible, just like
 getting kencc to compile with gcc so easier to bootstrap.
-
 
 *** goken/utilities/
 
@@ -398,47 +438,8 @@ start multi GOOS and GOARCH in CI? in Docker can try all combinations?
 *** switch to GOHOST and GOTARGET instead of GOARCH?
 or GOARCHHOST, GOARCHTARGET, GOOSTARGET ?
 
-
 *** RELAX goken/mkfiles/386/mkfile
 and try to compile goken with -m32
-
-*** make goken compile on Windows 386
-
-**** make part of goken compile on windows
-until 6g at least; even though sad that get runtime error when running 6g
-
-***** fix weird compilation error in windows lib9/ that if you type make again
-then it works the second time
-
-**** hello_windows_x86.s
-no simple sys.s like for darwin and linux :(
-no interrupt and simple syscalls. Have to use this
-stdcall complex thing and kernel32.dll and maybe complex setup
-
-**** hello_windows_x86.c
-try make hello.c that link with a few sys.s for windows and link for windows
-maybe remove *.go in runtime/ and see if can build a runtime.a that
-I can then use then to link a simple hello.c calling print.c
-
-try rt0.8 and then 8l but then linking errors so missing stuff
-
-**** try to fix 6g on Windows? still betypeinit error?
-
-**** window.yml: try install mingw from windows-latest GHA job as experiment
-so later can try to compile goken9cc in CI!
-
-imitate some of the stuff in semgrep/.../build-windows-x86
-
-*** less: make goken compile and run on macOS arm64
-
-**** make goken compile on macOS arm64
-GOOS=darwin GOARCH=amd64
-
-**** try nix.yml macos-latest? need set GOARCH maybe?
-
-**** macos.yml: try running generated binaries on macos-12 and use Rosetta 2 to
-emulate x86_64 ?
-need sign it first?
 
 *** still? switch from bison to yacc? so can work on plan9!
 anyway I get bad errors about yerr.h that we could fix by switching to regular yacc!

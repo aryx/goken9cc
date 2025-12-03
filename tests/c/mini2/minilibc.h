@@ -52,6 +52,8 @@ typedef int32		intptr;
 //#define	char			XXchar / / /
 #define	short			XXshort / / /
 //#define	int			XXint / / /
+// use of 'long' is especially bad as old C code assumes long
+// to be 32 bits whereas on (recent) 64 bits arch thet are 64 bits!
 #define	long			XXlong / / /
 #define	float			XXfloat / / /
 #define	double			XXdouble / / /
@@ -95,7 +97,7 @@ extern void printf(char *s, ...);
 //#pragma	varargck	type	"s"	uint8*
 //#pragma	varargck	type	"S"	String
 
-// misc.c (used in print
+// misc.c (used in print.c)
 extern int32 findnull(byte*);
 
 // float.c

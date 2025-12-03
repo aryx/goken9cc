@@ -11,14 +11,15 @@ test_one:V: all
 CPP_FLAGS=-D$objtype
 
 # can use -v for verbose mode to help debug
+#LATER: add rune.$O_ in libprint.a? and use functions from it?
 helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c misc.c
    $CC_ $CPP_FLAGS -c rune.c
    $CC_ $CPP_FLAGS -c vlrt.c
    $CC_ $CPP_FLAGS -c print.c
-   #$CC_ $CPP_FLAGS -c print_nofloat_no64.c
+   #alt: $CC_ $CPP_FLAGS -c print_nofloat_no64.c
    $CC_ $CPP_FLAGS -c float.c
-   #$CC_ $CPP_FLAGS -c float_nope.c
+   #alt: $CC_ $CPP_FLAGS -c float_nope.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
    iar rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_ misc.$O_
@@ -37,12 +38,11 @@ test:V:
 	      qemu-$arch ./helloprintf.exe
         }
 
-# useful when troubleshooting issues to just
-# first get rid of float/64 bits instructions and see if everything
+# useful when troubleshooting issues to just get rid of the use of iar and
+# get rid of float/64 bits instructions and see if everything
 # else works at least
 helloprintf_nofloat_no64.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c misc.c
-   $CC_ $CPP_FLAGS -c rune.c
    $CC_ $CPP_FLAGS -c print_nofloat_no64.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s

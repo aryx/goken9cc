@@ -4,7 +4,7 @@
 
 // code copy-pasted from GO/src/pkg/runtime/
 
-//#include "runtime.h"
+//old: #include "runtime.h"
 #include "minilibc.h"
 
 static	uint64	uvnan		= 0x7FF0000000000001ULL;

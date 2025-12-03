@@ -4,8 +4,8 @@
 
 // code copy-pasted from GO/src/pkg/runtime/
 
-//#include "runtime.h"
-//#include "type.h"
+//old: #include "runtime.h"
+//old: #include "type.h"
 #include "minilibc.h"
 
 static int32 fd = 1;
@@ -18,8 +18,6 @@ void	·printint(int64);
 void	·printuint(uint64);
 void	·printhex(uint64);
 
-void prints(int8 *s);
-
 static void vprintf(int8*, byte*);
 
 void
@@ -28,8 +26,11 @@ prints(int8 *s)
 	write(fd, s, findnull((byte*)s));
 }
 
-//?? for NOSPLIT | DUPOK | NOPROF?
-#pragma textflag 7
+//old: #pragma textflag 7
+// for NOSPLIT | DUPOK | NOPROF that was needed for functions
+// taking '...' as argument, but not needed for 5c_ and for
+// the other compilers now that I've added some ifdef GOLANG
+// around certain checks
 void
 printf(int8 *s, ...)
 {
@@ -155,8 +156,6 @@ vprintf(int8 *s, byte *arg)
 		write(fd, lp, p-lp);
 
 }
-
-#pragma textflag 7
 
 void
 ·printbool(bool v)
@@ -294,12 +293,14 @@ void
 	·printhex((uint64)p);
 }
 
+// unused for now
 void
 ·printsp(void)
 {
 	write(fd, " ", 1);
 }
 
+// unused for now
 void
 ·printnl(void)
 {
