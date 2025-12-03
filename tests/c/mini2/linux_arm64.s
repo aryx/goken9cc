@@ -1,4 +1,9 @@
 
+TEXT _main+0(SB), $0
+	MOV    $setSB(SB), R28
+	BL main+0(SB)
+
+
 TEXT    exit+0(SB), $0
     // syscall: exit(0)
     //MOV    0(FP), R0          // status = 0
