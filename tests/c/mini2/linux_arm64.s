@@ -10,9 +10,9 @@ TEXT    exit+0(SB), $0
     RETURN // never reached
 
 TEXT write+0(SB), $0        // NOSPLIT | DUPOK | NOPROF
-    //MOV fd+8(FP), R0
-    MOV buf+16(FP), R1
-    MOV count+24(FP), R2
+    //MOV fd+0(FP), R0
+    MOV buf+8(FP), R1
+    MOV count+16(FP), R2
     MOV $64, R8         // syscall number: write
     SVC $0
     RETURN

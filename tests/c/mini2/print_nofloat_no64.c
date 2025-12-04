@@ -37,11 +37,15 @@ prints(int8 *s)
 	write(fd, s, findnull((byte*)s));
 }
 
+// for arm64 that does not handle local buf like in printhex below
+// and generate a DWORD illegal $buf-100(SP) linking error
+byte buf[100];
+
 void
 ·printhex(uint32 v)
 {
 	static int8 *dig = "0123456789abcdef";
-	byte buf[100];
+	//byte buf[100];
 	int32 i;
 
 	i=nelem(buf);
@@ -63,7 +67,7 @@ void
 void
 ·printuint(uint32 v)
 {
-	byte buf[100];
+	//byte buf[100];
 	int32 i;
 
 	for(i=nelem(buf)-1; i>0; i--) {
