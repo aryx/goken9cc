@@ -7,23 +7,23 @@
 - continue reorg code with SRC/ with symlinks to mimic old org.
 - bootstrappable (can compile itself)
 
-* 0.1 (Q4 2025) (acid v0, arm/mips emulator (5i/vi), mips va/vc/vl v1, riscv ia/ic/il v0?)
+* 0.1 (Q4 2025) (mips va/vc/vl v1, arm/mips emulator (5i/vi), riscv ia/ic/il v0? acid v0)
 
 ** toolchain
+- mips: generate ELF-Linux binaries (can test with qemu-mips)
+- support for arm64, riscv, and mips in libmach (imported
+  respectively from 9front, inferno-os, and 9-cc).
+- import arm and mips emulator 5i/vi from principia (derived from plan9)
 - import orginal acid debugger from 9-cc (derived from plan9)
   useful for disassembling (especially because objdump and
   gdb fails on some of the goken9cc generated binaries) and binary
   exploration
-- support for arm64, riscv, and mips in libmach (imported
-  respectively from 9front, inferno-os, and 9-cc).
-- mips: generate ELF-Linux binaries (can test with qemu-mips)
-- import arm and mips emulator 5i/vi from principia (derived from plan9)
 
 ** lib9
 - import open.c/_p9dir.c from plan9port which fixed ls/du/tar bugs
 
 ** test infra
-- multi-arch testing thanks to qemu (see tests/s/mini/)
+- multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)
 - docker build and test working for both amd64 and arm64
 
 ** build infra
@@ -34,12 +34,16 @@
   or golang specific code in the toolchain (defined when building GO/
   but undefined otherwise)
 
+** internals
+- convert long -> int32 for 64bits machine and gcc/clang portability
+  for 5a_/5c_/5l_, va/vc/vl, ia/ic/il, 7a/7c/7l
+
 * Beta (Q3 2025) (arm64 7a/7c/7l v1, riscv ia/ic/il v0, arm64 linux/macos build, arm32 linux run v0, mk/rc, utilities v0, typesetting v0)
 
 ** toolchain
 - adapt to goken 7a/7c/7l 
   (working hello_linux_arm64.exe and helloc.exe on my thelio astra)
-- adapt to goken ia/ic/il (but not tested)
+- adapt to goken ia/ic/il (but not tested and actually still fail in Q4)
 - adapt 5a/5c/5l to generate valid arm32 Linux binaries (EABI)
   (working hello_linux_arm.exe, helloc.exe, and helloprintf.exe also
    on my thelio astra which can run both arm64 and arm32 binaries)
