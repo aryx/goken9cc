@@ -5,9 +5,9 @@
 #define	V_MAGIC		_MAGIC(0, 16)		/* mips 3000 BE */
 #define	P_MAGIC		_MAGIC(0, 24)		/* mips 3000 LE */
 
-long	OFFSET;
+int32	OFFSET;
 /*
-long	BADOFFSET	=	-1;
+int32	BADOFFSET	=	-1;
 
 		if(OFFSET <= BADOFFSET && OFFSET+4 > BADOFFSET)\
 			abort();\
@@ -89,13 +89,13 @@ long	BADOFFSET	=	-1;
 	}
 
 void
-cput(long l)
+cput(int32 l)
 {
 	CPUT(l);
 }
 
 void
-objput(long l)	/* emit long in byte order appropriate to object machine */
+objput(int32 l)	/* emit int32 in byte order appropriate to object machine */
 {
 	LPUT(l);
 }
@@ -107,7 +107,7 @@ objhput(short s)
 }
 
 void
-wput(long l)
+wput(int32 l)
 {
 
 	cbp[0] = l>>8;
@@ -119,7 +119,7 @@ wput(long l)
 }
 
 void
-wputl(long l)
+wputl(int32 l)
 {
 
 	cbp[0] = l;
@@ -131,13 +131,13 @@ wputl(long l)
 }
 
 void
-lput(long l)		/* emit long in big-endian byte order */
+lput(int32 l)		/* emit int32 in big-endian byte order */
 {
 	LBEPUT(l);
 }
 
 void
-lputl(long l)		/* emit long in big-endian byte order */
+lputl(int32 l)		/* emit int32 in big-endian byte order */
 {
 	LLEPUT(l);
 }
@@ -156,7 +156,7 @@ llputl(vlong v)
 	lputl(v>>32);
 }
 
-long
+int32
 entryvalue(void)
 {
 	char *a;
@@ -177,7 +177,7 @@ void
 asmb(void)
 {
 	Prog *p;
-	long t, etext;
+	int32 t, etext;
 	Optab *o;
 
 	if(debug['v'])
@@ -433,7 +433,7 @@ asmsym(void)
 }
 
 void
-putsymb(char *s, int t, long v, int ver)
+putsymb(char *s, int t, int32 v, int ver)
 {
 	int i, f;
 
@@ -482,9 +482,9 @@ putsymb(char *s, int t, long v, int ver)
 void
 asmlc(void)
 {
-	long oldpc, oldlc;
+	int32 oldpc, oldlc;
 	Prog *p;
-	long v, s;
+	int32 v, s;
 
 	oldpc = INITTEXT;
 	oldlc = 0;
@@ -560,11 +560,11 @@ asmlc(void)
 }
 
 void
-datblk(long s, long n, int str)
+datblk(int32 s, int32 n, int str)
 {
 	Prog *p;
 	char *cast;
-	long l, fl, j, d;
+	int32 l, fl, j, d;
 	int i, c;
 
 	memset(buf.dbuf, 0, n+100);

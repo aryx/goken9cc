@@ -17,16 +17,16 @@ typedef	struct	Dep	Dep;
 
 struct	Dep
 {
-	ulong	ireg;
-	ulong	freg;
-	ulong	cc;
+	uint32	ireg;
+	uint32	freg;
+	uint32	cc;
 };
 struct	Sch
 {
 	Prog	p;
 	Dep	set;
 	Dep	used;
-	long	soffset;
+	int32	soffset;
 	char	size;
 	char	nop;
 	char	comp;
@@ -218,7 +218,7 @@ void
 regsused(Sch *s, Prog *realp)
 {
 	int c, ar, ad, ld, sz;
-	ulong m;
+	uint32 m;
 	Prog *p;
 
 	p = &s->p;
@@ -574,7 +574,7 @@ regsused(Sch *s, Prog *realp)
 int
 depend(Sch *sa, Sch *sb)
 {
-	ulong x;
+	uint32 x;
 
 	if(sa->set.ireg & (sb->set.ireg|sb->used.ireg))
 		return 1;

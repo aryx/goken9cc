@@ -6,7 +6,7 @@ dodata(void)
 	int i, t;
 	Sym *s;
 	Prog *p, *p1;
-	long orig, orig1, v;
+	int32 orig, orig1, v;
 
 	if(debug['v'])
 		Bprint(&bso, "%5.2f dodata\n", cputime());
@@ -338,7 +338,7 @@ loop:
 void
 patch(void)
 {
-	long c, vexit;
+	int32 c, vexit;
 	Prog *p, *q;
 	Sym *s;
 	int a;
@@ -401,7 +401,7 @@ void
 mkfwd(void)
 {
 	Prog *p;
-	long dwn[LOG], cnt[LOG], i;
+	int32 dwn[LOG], cnt[LOG], i;
 	Prog *lst[LOG];
 
 	for(i=0; i<LOG; i++) {
@@ -449,10 +449,10 @@ brloop(Prog *p)
 	return P;
 }
 
-long
+int32
 atolwhex(char *s)
 {
-	long n;
+	int32 n;
 	int f;
 
 	n = 0;
@@ -489,10 +489,10 @@ atolwhex(char *s)
 	return n;
 }
 
-long
-rnd(long v, long r)
+int32
+rnd(int32 v, int32 r)
 {
-	long c;
+	int32 c;
 
 	if(r <= 0)
 		return v;
