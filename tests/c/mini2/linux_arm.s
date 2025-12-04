@@ -309,8 +309,16 @@ out:
 // Float operations
 //---------------------------------
 
-//TEXT 	_sfloat+0(SB), $0
-//	RET
+TEXT 	_sfloat+0(SB), $0
+	MOVW    $1, R0
+        MOVW    $msg_sfloat(SB), R1
+        MOVW    $8, R2
+        MOVW    $4, R7
+        SWI     $0
+	RET
+
+GLOBL   msg_sfloat(SB), $8
+DATA    msg_sfloat+0(SB)/8, $"sfloat\n\n"
 
 //---------------------------------
 // from pkg/runtime/arm/vlop.s (needed only for 5l, not 5l_)
