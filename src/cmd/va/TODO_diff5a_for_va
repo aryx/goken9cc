@@ -13,37 +13,7 @@
 +#define	ungetc	ccungetc
 +
 
- typedef	struct	Io	Io;
-@@ -29,7 +66,7 @@ struct	Sym
- {
- 	Sym*	link;
- 	char*	macro;
--	long	value;
-+	int32	value;
- 	ushort	type;
- 	char	*name;
- 	char	sym;
-@@ -61,7 +98,7 @@ EXTERN	struct
- struct	Gen
- {
- 	Sym*	sym;
--	long	offset;
-+	int32	offset;
- 	short	type;
- 	short	reg;
- 	short	name;
-@@ -73,8 +110,8 @@ struct	Hist
- {
- 	Hist*	link;
- 	char*	name;
--	long	line;
--	long	offset;
-+	int32	line;
-+	int32	offset;
- };
- #define	H	((Hist*)0)
- 
-@@ -90,26 +127,27 @@ enum
+@@ -90,18 +127,19 @@ enum
  
  EXTERN	char	debug[256];
  EXTERN	Sym*	hash[NHASH];
@@ -56,30 +26,18 @@
  EXTERN	char*	hunk;
  EXTERN	Io*	ionext;
  EXTERN	Io*	iostack;
--EXTERN	long	lineno;
-+EXTERN	int32	lineno;
- EXTERN	int	nerrors;
--EXTERN	long	nhunk;
-+EXTERN	int32	nhunk;
- EXTERN	int	ninclude;
- EXTERN	char*	outfile;
  EXTERN	int	pass;
  EXTERN	char*	pathname;
--EXTERN	long	pc;
-+EXTERN	int32	pc;
  EXTERN	int	peekc;
 +EXTERN	int32	stmtline;
  EXTERN	int	sym;
  EXTERN	int	thechar;
  EXTERN	char*	thestring;
--EXTERN	long	thunk;
-+EXTERN	int32	thunk;
- EXTERN	Biobuf	obuf;
  
 diff -u -p -b -B -r -x .semantic.cache -x .depend -x CVS -x .hg -x .svn -x .git -x _darcs /home/pad/x9cc/5a/a.y /home/pad/goken/src/cmd/5a/a.y
 --- /home/pad/x9cc/5a/a.y	2024-04-14 13:22:05.703834695 +0200
 +++ /home/pad/goken/src/cmd/5a/a.y	2025-06-19 16:02:55.139261617 +0200
-@@ -1,10 +1,12 @@
+@@ -1,6 +1,8 @@
 +
  %{
 +#include <stdio.h>	/* if we don't, bison will, and a.h re-#defines getc */
@@ -87,11 +45,6 @@ diff -u -p -b -B -r -x .semantic.cache -x .depend -x CVS -x .hg -x .svn -x .git 
  %}
  %union
  {
- 	Sym	*sym;
--	long	lval;
-+	int32	lval;
- 	double	dval;
- 	char	sval[8];
  	Gen	gen;
 @@ -32,7 +63,11 @@
  %type	<gen>	imm ximm name oreg ireg nireg ioreg imsr
@@ -184,15 +137,10 @@ diff -u -p -b -B -r -x .semantic.cache -x .depend -x CVS -x .hg -x .svn -x .git 
 @@ -417,2 +472,2 @@ cinit(void)
  	}
  
-@@ -465,7 +520,7 @@ zname(char *n, int t, int s)
+@@ -465,3 +520,3 @@ zname(char *n, int t, int s)
  void
  zaddr(Gen *a, int s)
  {
--	long l;
-+	int32 l;
- 	int i;
- 	char *n;
- 	Ieee e;
 @@ -603,9 +658,9 @@ jackpot:
  	Bputc(&obuf, a);
  	Bputc(&obuf, scond);
