@@ -12,6 +12,15 @@ int fact(int n) {
     else { return n * fact (n - 1); }
 }
 
+int fact_iter(int n) {
+    int acc = 1;
+    int i;
+    for (i = n; i > 0; i--) {
+        acc = acc * i;
+    }
+    return acc;
+}
+
 void main() {
   printf("Hello World: %t\n", true);
   printf("Hello World: %x\n", 42);
@@ -20,6 +29,7 @@ void main() {
   test();
   test_hello();
   printf("fact(5) = %d\n", fact(5));
+  printf("fact_iter(5) = %d\n", fact_iter(5));
   exit(0);
 }
 

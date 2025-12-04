@@ -100,9 +100,9 @@ extern bool	isNaN(float64 f);
 extern float64 NaN(void);
 
 // linux_$objtype.s
-extern void	panic(int32);
-extern void write(uint32 fd, char* buf, /*size_t*/ int count);
-extern void exit(uint32);
+extern void	panic(int);
+extern void write(int fd, char* buf, /*size_t*/ int count);
+extern void exit(int);
 void*	·getcallerpc(void*);
 
 // helloprintf.c

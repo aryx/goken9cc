@@ -22,6 +22,9 @@ helloprintf.exe: helloprintf.c
 #TODO: arm arm64 386 riscv
 #TODO: arm: works for the bool and hexa but not for 42; segfault
 #TODO: mips: gives weird output, 'false' instead of 'true'
+#TODO: arm64: illegal combination DWORD $buf-100(SP)
+#       and when use global buf, get segfault
+
 ARCHS=amd64 arm_ mips
 test:V:
         for (arch in $ARCHS) {
