@@ -78,7 +78,7 @@
 ** toolchain
 - add mips toolchain va/vl/vc from https://bitbucket.org/plan9-from-bell-labs/9-cc.git
   and adapt it to goken; tested va/vl with vi from principia on hello_plan9_mips.s
-- add arm64 toolchain 7a/7l/7c from https://github.com/inferno-os/inferno-os
+- add arm64 toolchain 7a/7l/7c from 9-cc
   (not tested though)
 - add riscv toolchain ia/il/ic from https://github.com/inferno-os/inferno-os
   (not tested though)
