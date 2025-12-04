@@ -10,8 +10,6 @@ test_one:V: all
 
 CPP_FLAGS=-D$objtype
 
-#%.$O_: %.c
-
 # can use -v for verbose mode to help debug
 helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c test.c
