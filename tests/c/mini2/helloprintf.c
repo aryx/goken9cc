@@ -16,6 +16,7 @@ void main() {
 
   printf("%f\n", NaN());
   printf("%f\n", 2.0); 
+  printf("%f\n", 2.2); 
   // TODO: 2.0 is 2.000001 in arm but correctly 2 in amd64
   // TODO: 0.0 is incorrect too in arm, so is 0.333, lots of pbs
   printf("Hello World: %f\n", 0.0);

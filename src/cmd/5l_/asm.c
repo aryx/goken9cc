@@ -597,7 +597,7 @@ datblk(long s, long n, int str)
 void
 asmout(Prog *p, Optab *o)
 {
-	long o1, o2, o3, o4, o5, o6, v;
+	int32 o1, o2, o3, o4, o5, o6, v;
 	int r, rf, rt, rt2;
 	Sym *s;
 
@@ -1351,25 +1351,25 @@ PP = p;
 		break;
 	case 4:
 		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux\t%P\n", v, o1, p);
+			Bprint(&bso, " %.8lux: %.8ux\t%P\n", v, o1, p);
 		lputl(o1);
 		break;
 	case 8:
 		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux%P\n", v, o1, o2, p);
+			Bprint(&bso, " %.8lux: %.8ux %.8ux%P\n", v, o1, o2, p);
 		lputl(o1);
 		lputl(o2);
 		break;
 	case 12:
 		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux%P\n", v, o1, o2, o3, p);
+			Bprint(&bso, " %.8lux: %.8ux %.8ux %.8ux%P\n", v, o1, o2, o3, p);
 		lputl(o1);
 		lputl(o2);
 		lputl(o3);
 		break;
 	case 16:
 		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux %.8lux%P\n",
+			Bprint(&bso, " %.8lux: %.8ux %.8ux %.8ux %.8ux%P\n",
 				v, o1, o2, o3, o4, p);
 		lputl(o1);
 		lputl(o2);
@@ -1378,7 +1378,7 @@ PP = p;
 		break;
 	case 20:
 		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux %.8lux %.8lux%P\n",
+			Bprint(&bso, " %.8lux: %.8ux %.8ux %.8ux %.8ux %.8ux%P\n",
 				v, o1, o2, o3, o4, o5, p);
 		lputl(o1);
 		lputl(o2);
@@ -1388,7 +1388,7 @@ PP = p;
 		break;
 	case 24:
 		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux %.8lux %.8lux %.8lux%P\n",
+			Bprint(&bso, " %.8lux: %.8ux %.8ux %.8ux %.8ux %.8ux %.8ux%P\n",
 				v, o1, o2, o3, o4, o5, o6, p);
 		lputl(o1);
 		lputl(o2);
