@@ -131,25 +131,8 @@ and more stuff
 
 *** arm64, 7a/7c/7l
 
-**** tests/c/mini2/ does not work on arm64 even with basic helloprintf.c
-that calls test()
-
-if you use strace you see it's completely wrong! calling 
- write(1, 0x5, 4195588) ????
-weird because tests/c/mini/ works fine with arm64 and looks similar
-
-**** goken: get tests/c/mini2/ working for arm64, DWORD error
-weird DWORD error on findnull in misc.c
-(actually generate error because last function processed; 
-the issue is probably not caused by findnull.
-use 7c -S to see which function is generating those DWORD
-
-DWORD $buf-100(SP)
-  because of byte buf[100];  and some operation around
-  it
-
-try make minimal test case and put in tests/c/mini/helloc.c instead
-
+**** fix tests/c/mini2/, first segfault and then restore the
+local byte buf[100] in print_nofloat.c
 
 **** add commits from 9front after initial import
 lots of fixes from cinap probably worth taking

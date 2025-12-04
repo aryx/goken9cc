@@ -74,6 +74,7 @@ enum
 
 // print.c
 extern void printf(char *s, ...);
+extern void debug(char *s);
 //void ·printpc(void *p);
 //for printf typechecker?
 //#pragma	varargck	argpos	printf	1

@@ -19,11 +19,21 @@ findnull(byte *s)
 	return l;
 }
 
+void debug(char* s) {
+#ifdef DEBUG
+    write(2, s, findnull((byte*)s));
+    write(2, "\n", 1);
+#endif
+}
+
+
 static int32 fd = 1;
 
 void
 ·printbool(bool v)
 {
+    debug("PRINTBOOL");
+
 	if(v) {
 		write(fd, "true", 4);
 		return;
@@ -34,6 +44,8 @@ void
 void
 prints(int8 *s)
 {
+    debug("PRINTS");
+
 	write(fd, s, findnull((byte*)s));
 }
 
@@ -48,6 +60,8 @@ void
 	//byte buf[100];
 	int32 i;
 
+    debug("PRINTHEX");
+
 	i=nelem(buf);
 	for(; v>0; v/=16)
 		buf[--i] = dig[v%16];
@@ -61,6 +75,8 @@ void
 void
 ·printpointer(void *p)
 {
+    debug("PRINTPOINTER");
+
 	·printhex((uint32)p);
 }
 
@@ -69,6 +85,8 @@ void
 {
 	//byte buf[100];
 	int32 i;
+
+    debug("PRINTUINT");
 
 	for(i=nelem(buf)-1; i>0; i--) {
 		buf[i] = v%10 + '0';
@@ -82,6 +100,8 @@ void
 void
 ·printint(int32 v)
 {
+    debug("PRINTINT");
+
 	if(v < 0) {
 		write(fd, "-", 1);
 		v = -v;
@@ -93,6 +113,8 @@ void
 static byte*
 vrnd(byte *p, int32 x)
 {
+    debug("VRND");
+
 	if((uint32)(uintptr)p&(x-1))
 		p += x - ((uint32)(uintptr)p&(x-1));
 	return p;
@@ -105,6 +127,8 @@ vprintf(int8 *s, byte *arg)
 {
 	int8 *p, *lp;
 	byte *narg;
+
+    debug("VPRINTF");
 
 	lp = p = s;
 	for(; *p; p++) {
@@ -159,6 +183,7 @@ void
 printf(int8 *s, ...)
 {
 	byte *arg;
+    debug("PRINTF");
 
 	arg = (byte*)(&s+1);
 	vprintf(s, arg);

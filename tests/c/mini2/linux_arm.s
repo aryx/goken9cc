@@ -46,8 +46,8 @@ TEXT write+0(SB), $0
 
 // pad's own debug function (was used for tracking float/vlong
 // functions to implement first, see commented code further below
-// using 'BL debug(SB)')
-TEXT 	debug+0(SB), $0
+// using 'BL debug_(SB)')
+TEXT 	debug_+0(SB), $0
 	MOVW R0, R1
 	//alt: call write
 	MOVW $1, R0

@@ -8,7 +8,8 @@ clean:V:
 test_one:V: all
 	./helloprintf.exe
 
-CPP_FLAGS=-D$objtype
+#config: set -DDEBUG if needed
+CPP_FLAGS=-D$objtype # -DDEBUG
 
 # can use -v for verbose mode to help debug
 helloprintf.exe: helloprintf.c
