@@ -31,39 +31,39 @@
 #define	LSL0_32	(2<<13)
 #define	LSL0_64	(3<<13)
 
-static long	opbrr(int);
-static long	opbra(int);
-static long	oshrr(int, int, int);
-static long	olhrr(int, int, int);
-static long	olsr12u(long, long, int, int);
-static long	olsr9s(long, long, int, int);
-static long	opimm(int);
+static int32	opbrr(int);
+static int32	opbra(int);
+static int32	oshrr(int, int, int);
+static int32	olhrr(int, int, int);
+static int32	olsr12u(int32, int32, int, int);
+static int32	olsr9s(int32, int32, int, int);
+static int32	opimm(int);
 static vlong	brdist(Prog*, int, int, int);
-static long	opbfm(int, int, int, int, int);
-static long	opextr(int, long, int, int, int);
-static long	opbit(int);
-static long	op0(int);
-static long	opstr12(int);
-static long	opstr9(int);
-static long	opldr9(int);
-static long	opxrrr(int);
-static long	olsxrr(int, int, int, int);
-static long	oprrr(int);
-static long	opirr(int);
-static long	opldr12(int);
-static long	opldrpp(int);
-static long	opload(int);
-static long	opstore(int);
-static long	omovlit(int, Prog*, Adr*, int);
+static int32	opbfm(int, int, int, int, int);
+static int32	opextr(int, int32, int, int, int);
+static int32	opbit(int);
+static int32	op0(int);
+static int32	opstr12(int);
+static int32	opstr9(int);
+static int32	opldr9(int);
+static int32	opxrrr(int);
+static int32	olsxrr(int, int, int, int);
+static int32	oprrr(int);
+static int32	opirr(int);
+static int32	opldr12(int);
+static int32	opldrpp(int);
+static int32	opload(int);
+static int32	opstore(int);
+static int32	omovlit(int, Prog*, Adr*, int);
 static int	movesize(int);
-static long	oaddi(long, long, int, int);
+static int32	oaddi(int32, int32, int, int);
 
 /*
  * valid pstate field values, and value to use in instruction
  */
 static struct{
-	ulong	a;
-	ulong	b;
+	uint32	a;
+	uint32	b;
 } pstatefield[] = {
 D_SPSel,		(0<<16) | (4<<12) | (5<<5),
 D_DAIFSet,	(3<<16) | (4<<12) | (6<<5),
@@ -73,8 +73,8 @@ D_DAIFClr,	(3<<16) | (4<<12) | (7<<5),
 void
 asmout(Prog *p, Optab *o)
 {
-	long o1, o2, o3, o4, o5, v, hi;
-	ulong u;
+	int32 o1, o2, o3, o4, o5, v, hi;
+	uint32 u;
 	vlong d;
 	int r, s, rf, rt, ra, nzcv, cond, i, as;
 	Mask *mask;
@@ -915,7 +915,7 @@ asmout(Prog *p, Optab *o)
  * also op Rn -> Rt
  * also Rm*Rn op Ra -> Rd
  */
-static long
+static int32
 oprrr(int a)
 {
 	switch(a) {
@@ -1159,7 +1159,7 @@ oprrr(int a)
  * imm -> Rd
  * imm op Rn -> Rd
  */
-static long
+static int32
 opirr(int a)
 {
 	switch(a){
@@ -1261,7 +1261,7 @@ opirr(int a)
  */
 #define	OPBIT(x)	(1<<30 | 0<<29 | 0xD6<<21 | 0<<16 | (x)<<10)
 
-static long
+static int32
 opbit(int a)
 {
 	switch(a){
@@ -1285,7 +1285,7 @@ opbit(int a)
 /*
  * add/subtract extended register
  */
-static long
+static int32
 opxrrr(int a)
 {
 	switch(a) {
@@ -1308,7 +1308,7 @@ opxrrr(int a)
 	return 0;
 }
 
-static long
+static int32
 opimm(int a)
 {
 	switch(a){
@@ -1356,7 +1356,7 @@ brdist(Prog *p, int preshift, int flen, int shift)
 /*
  * pc-relative branches
  */
-static long
+static int32
 opbra(int a)
 {
 	switch(a) {
@@ -1384,7 +1384,7 @@ opbra(int a)
 	return 0;
 }
 
-static long
+static int32
 opbrr(int a)
 {
 	switch(a){
@@ -1397,7 +1397,7 @@ opbrr(int a)
 	return 0;
 }
 
-static long
+static int32
 op0(int a)
 {
 	switch(a){
@@ -1418,7 +1418,7 @@ op0(int a)
 /*
  * register offset
  */
-static long
+static int32
 opload(int a)
 {
 	switch(a){
@@ -1445,7 +1445,7 @@ opload(int a)
 	return 0;
 }
 
-static long
+static int32
 opstore(int a)
 {
 	switch(a){
@@ -1479,8 +1479,8 @@ opstore(int a)
  *	these produce 64-bit values (when there's an option)
  */
 
-static long
-olsr12u(long o, long v, int b, int r)
+static int32
+olsr12u(int32 o, int32 v, int b, int r)
 {
 	if(v < 0 || v >= (1<<12))
 		diag("offset out of range: %ld\n%P", v, curp);
@@ -1490,7 +1490,7 @@ olsr12u(long o, long v, int b, int r)
 	return o;
 }
 
-static long
+static int32
 opldr12(int a)
 {
 	switch(a){
@@ -1508,7 +1508,7 @@ opldr12(int a)
 	return 0;
 }
 
-static long
+static int32
 opstr12(int a)
 {
 	return LD2STR(opldr12(a));
@@ -1518,8 +1518,8 @@ opstr12(int a)
  * load/store register (unscaled immediate) C3.3.12
  */
 
-static long
-olsr9s(long o, long v, int b, int r)
+static int32
+olsr9s(int32 o, int32 v, int b, int r)
 {
 	if(v < -256 || v > 255)
 		diag("offset out of range: %ld\n%P", v, curp);
@@ -1529,7 +1529,7 @@ olsr9s(long o, long v, int b, int r)
 	return o;
 }
 
-static long
+static int32
 opldr9(int a)
 {
 	switch(a){
@@ -1547,13 +1547,13 @@ opldr9(int a)
 	return 0;
 }
 
-static long
+static int32
 opstr9(int a)
 {
 	return LD2STR(opldr9(a));
 }
 
-static long
+static int32
 opldrpp(int a)
 {
 	switch(a){
@@ -1572,15 +1572,15 @@ opldrpp(int a)
 /*
  * load/store register (extended register)
  */
-static long
+static int32
 olsxrr(int a, int b, int c, int d)
 {
 	diag("need load/store extended register\n%P", curp);
 	return -1;
 }
 
-static long
-oaddi(long o1, long v, int r, int rt)
+static int32
+oaddi(int32 o1, int32 v, int r, int rt)
 {
 	if((v & 0xFFF000) != 0){
 		v >>= 12;
@@ -1593,10 +1593,10 @@ oaddi(long o1, long v, int r, int rt)
 /*
  * load a a literal value into dr
  */
-static long
+static int32
 omovlit(int as, Prog *p, Adr *a, int dr)
 {	
-	long v, o1;
+	int32 v, o1;
 	int w, fp;
 
 	if(p->cond == nil){	/* not in literal pool */
@@ -1641,10 +1641,10 @@ fprint(2, "omovlit add %lld (%#llux)\n", instoffset, instoffset);
 	return o1;
 }
 
-static long
+static int32
 opbfm(int a, int r, int s, int rf, int rt)
 {
-	long o, c;
+	int32 o, c;
 
 	o = opirr(a);
 	if((o & (1<<31)) == 0)
@@ -1661,10 +1661,10 @@ opbfm(int a, int r, int s, int rf, int rt)
 	return o;
 }
 
-static long
-opextr(int a, long v, int rn, int rm, int rt)
+static int32
+opextr(int a, int32 v, int rn, int rm, int rt)
 {
-	long o, c;
+	int32 o, c;
 
 	o = opirr(a);
 	c = (o & (1<<31)) != 0? 63: 31;

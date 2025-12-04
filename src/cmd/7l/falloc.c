@@ -41,7 +41,7 @@ realloc(void *p, usize n)
 }
 
 void
-setmalloctag(void *v, ulong pc)
+setmalloctag(void *v, uint32 pc)
 {
 	USED(v);
 	USED(pc);

@@ -3,13 +3,13 @@
 #define	BIT(n)	((uvlong)1<<(n))
 
 static struct {
-	ulong	start;
-	ulong	size;
+	uint32	start;
+	uint32	size;
 } pool;
 
 static void		checkpool(Prog*, int);
 static void 	flushpool(Prog*, int);
-static int	ispcdisp(long);
+static int	ispcdisp(int32);
 
 static Optab *badop;
 static Oprang	oprange[ALAST];
@@ -21,7 +21,7 @@ span(void)
 	Sym *setext, *s;
 	Optab *o;
 	int m, bflag, i;
-	long c, otxt, v;
+	int32 c, otxt, v;
 
 	if(debug['v'])
 		Bprint(&bso, "%5.2f span\n", cputime());
@@ -290,7 +290,7 @@ relinv(int a)
 	return a;
 }
 
-long
+int32
 regoff(Adr *a)
 {
 
@@ -300,7 +300,7 @@ regoff(Adr *a)
 }
 
 static int
-ispcdisp(long v)
+ispcdisp(int32 v)
 {
 	/* pc-relative addressing will reach? */
 	return v >= -0xfffff && v <= 0xfffff && (v&3) == 0;

@@ -37,8 +37,8 @@ struct	Auto
 
 struct	Count
 {
-	long	count;
-	long	outof;
+	int32	count;
+	int32	outof;
 };
 
 enum
@@ -96,7 +96,7 @@ EXTERN	Prog	undefp;
 #define	UP	(&undefp)
 
 int	Sconv(Fmt*);
-void	addhist(long, int);
+void	addhist(int32, int);
 void	addlib(char*);
 void	addlibpath(char*);
 void	addlibroot(void);
@@ -104,7 +104,7 @@ vlong	atolwhex(char*);
 Prog*	brchain(Prog*);
 Prog*	brloop(Prog*);
 void	cflush(void);
-void	ckoff(Sym*, long);
+void	ckoff(Sym*, int32);
 void	collapsefrog(Sym*);
 void	cput(int);
 void	diag(char*, ...);
@@ -113,23 +113,23 @@ double	cputime(void);
 void	dodata(void);
 void	export(void);
 int	fileexists(char*);
-int	find1(long, int);
+int	find1(int32, int);
 char*	findlib(char*);
 char*	findlib(char*);
 void	follow(void);
 void	gethunk(void);
-long	hunkspace(void);
+int32	hunkspace(void);
 uchar*	readsome(int, uchar*, uchar*, uchar*, int);
 void* halloc(usize);
 void	histtoauto(void);
 double	ieeedtod(Ieee*);
-long	ieeedtof(Ieee*);
+int32	ieeedtof(Ieee*);
 void	import(void);
 int	isobjfile(char*);
 void	loadlib(void);
 Sym*	lookup(char*, int);
 void	mkfwd(void);
-void*	mysbrk(ulong);
+void*	mysbrk(uint32);
 void	nopstat(char*, Count*);
 void	objfile(char*);
 void	patch(void);
@@ -138,7 +138,7 @@ Prog*	prg(void);
 void	readundefs(char*, int);
 uchar*	readsome(int, uchar*, uchar*, uchar*, int);
 void	readundefs(char*, int);
-vlong	rnd(vlong, long);
+vlong	rnd(vlong, int32);
 void	strnput(char*, int);
 void	undef(void);
 void	undefsym(Sym*);

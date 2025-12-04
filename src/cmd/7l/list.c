@@ -90,7 +90,7 @@ Dconv(Fmt *fp)
 	char str[STRINGSZ];
 	char *op;
 	Adr *a;
-	long v;
+	int32 v;
 	static char *extop[] = {".UB", ".UH", ".UW", ".UX", ".SB", ".SH", ".SW", ".SX"};
 
 	a = va_arg(fp->args, Adr*);

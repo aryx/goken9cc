@@ -242,7 +242,7 @@ int
 zaddr(uchar *p, Adr *a, Sym *h[])
 {
 	int i, c;
-	long l;
+	int32 l;
 	Sym *s;
 	Auto *u;
 
@@ -364,14 +364,14 @@ isnegoff(Prog *p)
 }
 
 void
-ldobj(fdt f, long c, char *pn)
+ldobj(fdt f, int32 c, char *pn)
 {
 	vlong ipc;
 	Prog *p, *t;
 	uchar *bloc, *bsize, *stop;
 	Sym *h[NSYM], *s, *di;
 	int v, o, r, skip;
-	ulong sig;
+	uint32 sig;
 	static int files;
 	static char **filen;
 	char **nfilen;
@@ -788,7 +788,7 @@ void
 doprof1(void)
 {
 	Sym *s;
-	long n;
+	int32 n;
 	Prog *p, *q;
 
 	if(debug['v'])

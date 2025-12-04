@@ -40,13 +40,13 @@ struct	Prog
 	Adr	to;
 	union
 	{
-		long	u0regused;
+		int32	u0regused;
 		Prog*	u0forwd;
 	} u0;
 	Prog*	cond;
 	Prog*	link;
 	vlong	pc;
-	long	line;
+	int32	line;
 	uchar	mark;
 	ushort	optab;
 	ushort	as;
@@ -65,7 +65,7 @@ struct	Sym
 	uchar	subtype;
 	ushort	file;
 	vlong	value;
-	long	sig;
+	int32	sig;
 	Sym*	link;
 };
 
@@ -200,27 +200,27 @@ enum
 	PCSZ=	8,	/* size of PC */
 };
 
-EXTERN	long	HEADR;			/* length of header */
+EXTERN	int32	HEADR;			/* length of header */
 EXTERN	int	HEADTYPE;		/* type of header */
-EXTERN	long	INITDAT;		/* data location */
-EXTERN	long	INITRND;		/* data round above text location */
-EXTERN	long	INITTEXT;		/* text location */
-EXTERN	long	INITTEXTP;		/* text location (physical) */
+EXTERN	int32	INITDAT;		/* data location */
+EXTERN	int32	INITRND;		/* data round above text location */
+EXTERN	int32	INITTEXT;		/* text location */
+EXTERN	int32	INITTEXTP;		/* text location (physical) */
 EXTERN	char*	INITENTRY;		/* entry point */
-EXTERN	long	autosize;
+EXTERN	int32	autosize;
 EXTERN	Biobuf	bso;
-EXTERN	long	bsssize;
+EXTERN	int32	bsssize;
 EXTERN	Auto*	curauto;
 EXTERN	Auto*	curhist;
 EXTERN	Prog*	curp;
 EXTERN	Prog*	curtext;
 EXTERN	Prog*	datap;
-EXTERN	long	datsize;
+EXTERN	int32	datsize;
 EXTERN	Prog*	etextp;
 EXTERN	Prog*	firstp;
 EXTERN	char*	noname;
 EXTERN	Prog*	lastp;
-EXTERN	long	lcsize;
+EXTERN	int32	lcsize;
 EXTERN	char	literal[32];
 EXTERN	int	nerrors;
 EXTERN	vlong	instoffset;
@@ -228,7 +228,7 @@ EXTERN	Opcross	opcross[8];
 EXTERN	char*	outfile;
 EXTERN	vlong	pc;
 EXTERN	uchar	repop[ALAST];
-EXTERN	long	symsize;
+EXTERN	int32	symsize;
 EXTERN	Prog*	textp;
 EXTERN	vlong	textsize;
 EXTERN	int	version;
@@ -261,18 +261,18 @@ void	buildrep(int, int);
 int	chipfloat(Ieee*);
 int	cmp(int, int);
 int	compound(Prog*);
-void	datblk(long, long, int);
+void	datblk(int32, int32, int);
 void	doprof1(void);
 void	doprof2(void);
-void	dynreloc(Sym*, long, int);
+void	dynreloc(Sym*, int32, int);
 vlong	entryvalue(void);
 int	isnop(Prog*);
-void	ldobj(int, long, char*);
+void	ldobj(int, int32, char*);
 void	listinit(void);
 void	llput(vlong);
 void	llputl(vlong);
-void	lput(long);
-void	lputl(long);
+void	lput(int32);
+void	lputl(int32);
 int	movcon(vlong);
 void	names(void);
 void	nocache(Prog*);
@@ -281,11 +281,11 @@ vlong	offsetshift(vlong, int);
 Optab*	oplook(Prog*);
 int	pseudo(Prog*);
 void	putsymb(char*, int, vlong, int);
-long	regoff(Adr*);
+int32	regoff(Adr*);
 int	relinv(int);
 void	span(void);
-void	wput(long);
-void	wputl(long);
+void	wput(int32);
+void	wputl(int32);
 void	noops(void);
 Mask*	findmask(uvlong);
 

@@ -45,7 +45,7 @@ void
 loadlib(void)
 {
 	int i;
-	long h;
+	int32 h;
 	Sym *s;
 
 loop:
@@ -65,7 +65,7 @@ loop:
 void
 objfile(char *file)
 {
-	long off, esym, cnt, l;
+	int32 off, esym, cnt, l;
 	int f, work;
 	Sym *s;
 	char magbuf[SARMAG];
@@ -306,7 +306,7 @@ addlib(char *obj)
 }
 
 void
-addhist(long line, int type)
+addhist(int32 line, int type)
 {
 	Auto *u;
 	Sym *s;
@@ -403,7 +403,7 @@ lookup(char *symb, int v)
 {
 	Sym *s;
 	char *p;
-	long h;
+	int32 h;
 	int c, l;
 
 	h = v;
@@ -432,7 +432,7 @@ lookup(char *symb, int v)
 }
 
 int
-find1(long l, int c)
+find1(int32 l, int c)
 {
 	char *p;
 	int i;
@@ -444,11 +444,11 @@ find1(long l, int c)
 	return 0;
 }
 
-long
+int32
 ieeedtof(Ieee *ieeep)
 {
 	int exp;
-	long v;
+	int32 v;
 
 	if(ieeep->h == 0)
 		return 0;

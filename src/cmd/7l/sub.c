@@ -51,7 +51,7 @@ Sconv(Fmt *fp)
 
 	a = va_arg(fp->args, char*);
 	p = str;
-	for(i=0; i<sizeof(long); i++) {
+	for(i=0; i<sizeof(int32); i++) {
 		c = a[i] & 0xff;
 		if(c >= 'a' && c <= 'z' ||
 		   c >= 'A' && c <= 'Z' ||
@@ -158,9 +158,9 @@ atolwhex(char *s)
 }
 
 vlong
-rnd(vlong v, long r)
+rnd(vlong v, int32 r)
 {
-	long c;
+	int32 c;
 
 	if(r <= 0)
 		return v;
@@ -205,7 +205,7 @@ void
 gethunk(void)
 {
 	char *h;
-	long nh;
+	int32 nh;
 
 	nh = NHUNK;
 	if(tothunk >= 5L*NHUNK) {
@@ -224,7 +224,7 @@ gethunk(void)
 	tothunk += nh;
 }
 
-long
+int32
 hunkspace(void)
 {
 	return tothunk;

@@ -1,6 +1,6 @@
 #include	"l.h"
 
-long	OFFSET;
+int32	OFFSET;
 
 #define PADDR(a)	((a) & ~0xfffffffff0000000ull)
 
@@ -33,7 +33,7 @@ void
 asmb(void)
 {
 	Prog *p;
-	long magic, t, etext;
+	int32 magic, t, etext;
 	vlong vl;
 	Optab *o;
 
@@ -182,7 +182,7 @@ asmb(void)
 }
 
 void
-wput(long l)
+wput(int32 l)
 {
 
 	cbp[0] = l>>8;
@@ -194,7 +194,7 @@ wput(long l)
 }
 
 void
-wputl(long l)
+wputl(int32 l)
 {
 
 	cbp[0] = l;
@@ -206,7 +206,7 @@ wputl(long l)
 }
 
 void
-lput(long l)
+lput(int32 l)
 {
 
 	cbp[0] = l>>24;
@@ -220,7 +220,7 @@ lput(long l)
 }
 
 void
-lputl(long l)
+lputl(int32 l)
 {
 
 	cbp[3] = l>>24;
@@ -374,9 +374,9 @@ putsymb(char *s, int t, vlong v, int ver)
 void
 asmlc(void)
 {
-	long oldpc, oldlc;
+	int32 oldpc, oldlc;
 	Prog *p;
-	long v, s;
+	int32 v, s;
 
 	oldpc = INITTEXT;
 	oldlc = 0;
@@ -452,12 +452,12 @@ asmlc(void)
 }
 
 void
-datblk(long s, long n, int str)
+datblk(int32 s, int32 n, int str)
 {
 	Sym *v;
 	Prog *p;
 	char *cast;
-	long a, l, fl, j;
+	int32 a, l, fl, j;
 	vlong d;
 	int i, c;
 

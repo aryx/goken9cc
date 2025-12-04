@@ -16,7 +16,7 @@ struct Reloc
 	int n;
 	int t;
 	uchar *m;
-	ulong *a;
+	uint32 *a;
 };
 
 Reloc rels;
@@ -26,26 +26,26 @@ grow(Reloc *r)
 {
 	int t;
 	uchar *m, *nm;
-	ulong *a, *na;
+	uint32 *a, *na;
 
 	t = r->t;
 	r->t += 64;
 	m = r->m;
 	a = r->a;
 	r->m = nm = malloc(r->t*sizeof(uchar));
-	r->a = na = malloc(r->t*sizeof(ulong));
+	r->a = na = malloc(r->t*sizeof(uint32));
 	memmove(nm, m, t*sizeof(uchar));
-	memmove(na, a, t*sizeof(ulong));
+	memmove(na, a, t*sizeof(uint32));
 	free(m);
 	free(a);
 }
 
 void
-dynreloc(Sym *s, long v, int abs)
+dynreloc(Sym *s, int32 v, int abs)
 {
 	int i, k, n;
 	uchar *m;
-	ulong *a;
+	uint32 *a;
 	Reloc *r;
 
 	if(v&3)
@@ -93,7 +93,7 @@ asmdyn(void)
 {
 	int i, n, t, c;
 	Sym *s;
-	ulong la, ra, *a;
+	uint32 la, ra, *a;
 	vlong off;
 	uchar *m;
 	Reloc *r;

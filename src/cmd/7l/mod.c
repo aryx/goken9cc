@@ -80,7 +80,7 @@ import(void)
 }
 
 void
-ckoff(Sym *s, long v)
+ckoff(Sym *s, int32 v)
 {
 	if(v < 0 || v >= 1<<Roffset)
 		diag("relocation offset %ld for %s out of range", v, s->name);
@@ -148,13 +148,13 @@ export(void)
 		Bprint(&bso, "EXPORT: %s sig=%lux t=%d\n", s->name, s->sig, s->type);
 
 		/* signature */
-		p = newdata(et, off, sizeof(long), D_EXTERN);
-		off += sizeof(long);
+		p = newdata(et, off, sizeof(int32), D_EXTERN);
+		off += sizeof(int32);
 		p->to.offset = s->sig;
 
 		/* address */
-		p = newdata(et, off, sizeof(long), D_EXTERN);
-		off += sizeof(long);
+		p = newdata(et, off, sizeof(int32), D_EXTERN);
+		off += sizeof(int32);
 		p->to.name = D_EXTERN;
 		p->to.sym = s;
 
@@ -176,8 +176,8 @@ export(void)
 		}
 
 		/* name */
-		p = newdata(et, off, sizeof(long), D_EXTERN);
-		off += sizeof(long);
+		p = newdata(et, off, sizeof(int32), D_EXTERN);
+		off += sizeof(int32);
 		p->to.name = D_STATIC;
 		p->to.sym = str;
 		p->to.offset = sv-n;
@@ -191,8 +191,8 @@ export(void)
 	}
 
 	for(i = 0; i < 3; i++){
-		newdata(et, off, sizeof(long), D_EXTERN);
-		off += sizeof(long);
+		newdata(et, off, sizeof(int32), D_EXTERN);
+		off += sizeof(int32);
 	}
 	et->value = off;
 	if(sv == 0)
