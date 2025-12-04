@@ -477,7 +477,7 @@ void
 zaddr(Gen *a, int s)
 {
 	vlong v;
-	long l;
+	int32 l;
 	int i;
 	char *n;
 	Ieee e;
