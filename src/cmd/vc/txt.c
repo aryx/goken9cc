@@ -141,7 +141,7 @@ nextpc(void)
 void
 gargs(Node *n, Node *tn1, Node *tn2)
 {
-	long regs;
+	int32 regs;
 	Node fnxargs[20], *fnxp;
 
 	regs = cursafe;
@@ -216,7 +216,7 @@ garg1(Node *n, Node *tn1, Node *tn2, int f, Node **fnxp)
 }
 
 Node*
-nodconst(long v)
+nodconst(int32 v)
 {
 	constnode.vconst = v;
 	return &constnode;
@@ -448,7 +448,7 @@ raddr(Node *n, Prog *p)
 void
 naddr(Node *n, Adr *a)
 {
-	long v;
+	int32 v;
 
 	a->type = D_NONE;
 	if(n == Z)
@@ -1333,7 +1333,7 @@ gbranch(int o)
 }
 
 void
-patch(Prog *op, long pc)
+patch(Prog *op, int32 pc)
 {
 
 	op->to.offset = pc;
@@ -1375,7 +1375,7 @@ sconst(Node *n)
 }
 
 int
-sval(long v)
+sval(int32 v)
 {
 	if(v >= -32766L && v < 32766L)
 		return 1;
@@ -1385,7 +1385,7 @@ sval(long v)
 int32
 exreg(Type *t)
 {
-	long o;
+	int32 o;
 
 	if(typechlp[t->etype]) {
 		if(exregoffset <= 16)
