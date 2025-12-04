@@ -1,6 +1,6 @@
 #include "gc.h"
 
-static long ncast64[];
+static int32 ncast64[];
 
 //TODO: trick for ic and jc (32 ad 64 bits riscv)
 //extern void ccmain(int, char**);
@@ -139,7 +139,7 @@ ginit(void)
 	if(thechar == 'i'){
 		com64init();
 	}else{
-		memmove(ncast, ncast64, NTYPE*sizeof(long));
+		memmove(ncast, ncast64, NTYPE*sizeof(int32));
 	}
 
 	for(i=0; i<nelem(reg); i++) {
@@ -203,7 +203,7 @@ nextpc(void)
 void
 gargs(Node *n, Node *tn1, Node *tn2)
 {
-	long regs;
+	int32 regs;
 	Node fnxargs[20], *fnxp;
 
 	regs = cursafe;
@@ -281,13 +281,13 @@ Node*
 nodgconst(vlong v, Type *t)
 {
 	if(!typev[t->etype])
-		return nodconst((long)v);
+		return nodconst((int32)v);
 	vconstnode.vconst = v;
 	return &vconstnode;
 }
 
 Node*
-nodconst(long v)
+nodconst(int32 v)
 {
 	constnode.vconst = v;
 	return &constnode;
@@ -505,7 +505,7 @@ raddr(Node *n, Prog *p)
 void
 naddr(Node *n, Adr *a)
 {
-	long v;
+	int32 v;
 
 	a->type = D_NONE;
 	if(n == Z)
@@ -574,7 +574,7 @@ naddr(Node *n, Adr *a)
 			a->type = D_FCONST;
 			a->dval = n->fconst;
 		} else {
-			v = (long)n->vconst;
+			v = (int32)n->vconst;
 			if(thechar == 'j' && (vlong)v != n->vconst) {
 				a->type = D_VCONST;
 				*(vlong*)a->sval = n->vconst;
@@ -1337,7 +1337,7 @@ gbranch(int o)
 }
 
 void
-patch(Prog *op, long pc)
+patch(Prog *op, int32 pc)
 {
 
 	op->to.offset = pc;
@@ -1379,7 +1379,7 @@ sconst(Node *n)
 }
 
 int
-sval(long v)
+sval(int32 v)
 {
 	if(v >= -32766L && v < 32766L)
 		return 1;
@@ -1389,7 +1389,7 @@ sval(long v)
 int32
 exreg(Type *t)
 {
-	long o;
+	int32 o;
 
 	if(typechlp[t->etype]) {
 		if(exregoffset <= REGTMP)
@@ -1456,7 +1456,7 @@ int32	ncast[NTYPE] =
 	0,				/* [TENUM] */
 };
 
-static long ncast64[NTYPE] =
+static int32 ncast64[NTYPE] =
 {
 	0,				/* [TXXX] */
 	BCHAR|BUCHAR,			/* [TCHAR] */

@@ -1,7 +1,7 @@
 #include "gc.h"
 
 void
-swit1(C1 *q, int nc, long def, Node *n)
+swit1(C1 *q, int nc, int32 def, Node *n)
 {
 	Node tn;
 	
@@ -14,7 +14,7 @@ swit1(C1 *q, int nc, long def, Node *n)
 }
 
 void
-swit2(C1 *q, int nc, long def, Node *n, Node *tn)
+swit2(C1 *q, int nc, int32 def, Node *n, Node *tn)
 {
 	C1 *r;
 	int i;
@@ -54,7 +54,7 @@ void
 bitload(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 {
 	int sh;
-	long v;
+	int32 v;
 	Node *l;
 
 	/*
@@ -92,7 +92,7 @@ bitload(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 void
 bitstore(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 {
-	long v;
+	int32 v;
 	Node nod, *l;
 	int sh;
 
@@ -125,7 +125,7 @@ bitstore(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 int32
 outstring(char *s, int32 n)
 {
-	long r;
+	int32 r;
 
 	if(suppress)
 		return nstring;
@@ -152,7 +152,7 @@ mulcon(Node *n, Node *nn)
 {
 	Node *l, *r, nod1, nod2;
 	Multab *m;
-	long v;
+	int32 v;
 	int o;
 	char code[sizeof(m->code)+2], *p;
 
@@ -241,7 +241,7 @@ loop:
 void
 sextern(Sym *s, Node *a, int32 o, int32 w)
 {
-	long e, lw;
+	int32 e, lw;
 
 	for(e=0; e<w; e+=NSNAME) {
 		lw = NSNAME;
@@ -446,7 +446,7 @@ void
 zname(Biobuf *b, Sym *s, int t)
 {
 	char *n, bf[7];
-	ulong sig;
+	uint32 sig;
 
 	n = s->name;
 	if(debug['T'] && t == D_EXTERN && s->sig != SIGDONE && s->type != types[TENUM] && s != symrathole){
@@ -473,7 +473,7 @@ zname(Biobuf *b, Sym *s, int t)
 char*
 zaddr(char *bp, Adr *a, int s)
 {
-	long l;
+	int32 l;
 	Ieee e;
 
 	bp[0] = a->type;
@@ -503,13 +503,13 @@ zaddr(char *bp, Adr *a, int s)
 		break;
 
 	case D_VCONST:
-		l = *(long*)a->sval;
+		l = *(int32*)a->sval;
 		bp[0] = l;
 		bp[1] = l>>8;
 		bp[2] = l>>16;
 		bp[3] = l>>24;
 		bp += 4;
-		l = *((long*)a->sval + 1);
+		l = *((int32*)a->sval + 1);
 		bp[0] = l;
 		bp[1] = l>>8;
 		bp[2] = l>>16;
@@ -544,7 +544,7 @@ zaddr(char *bp, Adr *a, int s)
 int32
 align(int32 i, Type *t, int op)
 {
-	long o;
+	int32 o;
 	Type *v;
 	int w;
 	int linksave;
