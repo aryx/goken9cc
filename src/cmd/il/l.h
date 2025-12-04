@@ -28,7 +28,7 @@ struct	Adr
 {
 	union
 	{
-		long	u0offset;
+		int32	u0offset;
 		char*	u0sval;
 		Ieee*	u0ieee;
 		vlong*	u0vval;
@@ -58,13 +58,13 @@ struct	Prog
 	Adr	to;
 	union
 	{
-		long	u0regused;
+		int32	u0regused;
 		Prog*	u0forwd;
 	} u0;
 	Prog*	cond;
 	Prog*	link;
-	long	pc;
-	long	line;
+	int32	pc;
+	int32	line;
 	uchar	mark;
 	uchar	optab;
 	char	as;
@@ -81,15 +81,15 @@ struct	Sym
 	short	become;
 	short	frame;
 	ushort	file;
-	long	value;
-	long	sig;
+	int32	value;
+	int32	sig;
 	Sym*	link;
 };
 struct	Autom
 {
 	Sym*	asym;
 	Auto*	link;
-	long	aoffset;
+	int32	aoffset;
 	short	type;
 };
 struct	Optab
@@ -111,8 +111,8 @@ struct	Oprang
 };
 struct	Count
 {
-	long	count;
-	long	outof;
+	int32	count;
+	int32	outof;
 };
 
 enum
@@ -197,16 +197,16 @@ EXTERN union
 #define	cbuf	u.obuf
 #define	xbuf	u.ibuf
 
-EXTERN	long	HEADR;			/* length of header */
+EXTERN	int32	HEADR;			/* length of header */
 EXTERN	int	HEADTYPE;		/* type of header */
 EXTERN	xlong	INITDAT;		/* data location */
 EXTERN	xlong	INITRND;		/* data round above text location */
 EXTERN	xlong	INITTEXT;		/* text location */
 EXTERN	xlong	INITTEXTP;		/* text location (physical) */
 EXTERN	char*	INITENTRY;		/* entry point */
-EXTERN	long	autosize;
+EXTERN	int32	autosize;
 EXTERN	Biobuf	bso;
-EXTERN	long	bsssize;
+EXTERN	int32	bsssize;
 EXTERN	int	cbc;
 EXTERN	uchar*	cbp;
 EXTERN	int	cout;
@@ -215,7 +215,7 @@ EXTERN	Auto*	curhist;
 EXTERN	Prog*	curp;
 EXTERN	Prog*	curtext;
 EXTERN	Prog*	datap;
-EXTERN	long	datsize;
+EXTERN	int32	datsize;
 EXTERN	char	debug[128];
 EXTERN	Prog*	etextp;
 EXTERN	Prog*	firstp;
@@ -236,23 +236,23 @@ EXTERN	char	inuxi2[2];
 EXTERN	char	inuxi4[4];
 EXTERN	char	inuxi8[8];
 EXTERN	Prog*	lastp;
-EXTERN	long	lcsize;
+EXTERN	int32	lcsize;
 EXTERN	char	literal[32];
 EXTERN	int	nerrors;
-EXTERN	long	nhunk;
+EXTERN	int32	nhunk;
 EXTERN	Prog	nopalign;
-EXTERN	long	instoffset;
+EXTERN	int32	instoffset;
 EXTERN	vlong	instoffx;
 EXTERN	Opcross	opcross[10];
 EXTERN	Oprang	oprange[ALAST];
 EXTERN	char*	outfile;
-EXTERN	long	pc;
+EXTERN	int32	pc;
 EXTERN	int	ptrsize;
 EXTERN	uchar	repop[ALAST];
-EXTERN	long	symsize;
+EXTERN	int32	symsize;
 EXTERN	Prog*	textp;
-EXTERN	long	textsize;
-EXTERN	long	thunk;
+EXTERN	int32	textsize;
+EXTERN	int32	thunk;
 EXTERN	int	version;
 EXTERN	char	xcmp[32][32];
 EXTERN	Prog	zprg;
@@ -287,7 +287,7 @@ int	Nconv(Fmt*);
 int	Pconv(Fmt*);
 int	Sconv(Fmt*);
 int	aclass(Adr*);
-void	addhist(long, int);
+void	addhist(int32, int);
 void	append(Prog*, Prog*);
 void	asmb(void);
 int	asmcompressed(Prog*, Optab*, int, int);
@@ -302,7 +302,7 @@ void	cflush(void);
 int	cmp(int, int);
 int	compound(Prog*);
 double	cputime(void);
-void	datblk(long, long, int);
+void	datblk(int32, int32, int);
 void	diag(char*, ...);
 void	dodata(void);
 void	doprof1(void);
@@ -310,41 +310,41 @@ void	doprof2(void);
 vlong	entryvalue(void);
 void	errorexit(void);
 void	exchange(Prog*);
-int	find1(long, int);
+int	find1(int32, int);
 void	follow(void);
 void	gethunk(void);
 void	histtoauto(void);
 double	ieeedtod(Ieee*);
-long	ieeedtof(Ieee*);
+int32	ieeedtof(Ieee*);
 int	isnop(Prog*);
-void	ldobj(int, long, char*);
+void	ldobj(int, int32, char*);
 void	loadlib(void);
 void	listinit(void);
 Sym*	lookup(char*, int);
 void	cput(int);
 void	llput(vlong);
 void	llputl(vlong);
-void	lput(long);
-void	lputl(long);
-void	bput(long);
+void	lput(int32);
+void	lputl(int32);
+void	bput(int32);
 void	mkfwd(void);
-void*	mysbrk(ulong);
+void*	mysbrk(uint32);
 void	names(void);
 void	nocache(Prog*);
 void	noops(void);
 void	nuxiinit(void);
 void	objfile(char*);
 int	ocmp(void*, void*);
-long	opirr(int);
+int32	opirr(int);
 Optab*	oplook(Prog*);
-long	oprrr(int);
+int32	oprrr(int);
 void	patch(void);
 void	prasm(Prog*);
 void	prepend(Prog*, Prog*);
 Prog*	prg(void);
 int	pseudo(Prog*);
 void	putsymb(char*, int, vlong, int);
-long	regoff(Adr*);
+int32	regoff(Adr*);
 int		classreg(Adr*);
 int	relinv(int);
 int relrev(int);
@@ -353,9 +353,9 @@ void	span(void);
 void	strnput(char*, int);
 void	undef(void);
 int	vconshift(vlong);
-void	wput(long);
-void	wputl(long);
-void	xdefine(char*, int, long);
+void	wput(int32);
+void	wputl(int32);
+void	xdefine(char*, int, int32);
 void	xfol(Prog*);
 void	xfol(Prog*);
 void	nopstat(char*, Count*);

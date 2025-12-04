@@ -6,7 +6,7 @@ dodata(void)
 	int i, t;
 	Sym *s;
 	Prog *p, *p1;
-	long orig, orig1, v;
+	int32 orig, orig1, v;
 	int odd;
 	long long vv;
 
@@ -158,7 +158,7 @@ dodata(void)
 					else
 						vv >>= v - 12;
 					p->from.type = D_CONST;
-					p->from.offset = (long)vv & ~0xFFF;
+					p->from.offset = (int32)vv & ~0xFFF;
 					p1 = prg();
 					p1->line = p->line;
 					p1->to = p->to;
@@ -398,7 +398,7 @@ loop:
 void
 patch(void)
 {
-	long c, vexit;
+	int32 c, vexit;
 	Prog *p, *q;
 	Sym *s;
 	int a;
@@ -461,7 +461,7 @@ void
 mkfwd(void)
 {
 	Prog *p;
-	long dwn[LOG], cnt[LOG], i;
+	int32 dwn[LOG], cnt[LOG], i;
 	Prog *lst[LOG];
 
 	for(i=0; i<LOG; i++) {
@@ -568,7 +568,7 @@ int
 vconshift(vlong constant)
 {
 	vlong orig;
-	long w;
+	int32 w;
 	int shift;
 
 	orig = constant;
@@ -583,7 +583,7 @@ vconshift(vlong constant)
 		shift++;
 		constant >>= 1;
 	}
-	w = (long)constant;
+	w = (int32)constant;
 	constant = shift > 12? (vlong)w << shift - 12 : (vlong)w >> 12 - shift;
 	if(constant != orig)
 		return -1;

@@ -1,6 +1,6 @@
 #include	"l.h"
 
-long	OFFSET;
+int32	OFFSET;
 
 xlong
 entryvalue(void)
@@ -23,7 +23,7 @@ void
 asmb(void)
 {
 	Prog *p;
-	long t, etext;
+	int32 t, etext;
 	Optab *o;
 
 	if(debug['v'])
@@ -178,7 +178,7 @@ cput(int c)
 }
 
 void
-wput(long l)
+wput(int32 l)
 {
 
 	cbp[0] = l>>8;
@@ -190,7 +190,7 @@ wput(long l)
 }
 
 void
-wputl(long l)
+wputl(int32 l)
 {
 
 	cbp[0] = l;
@@ -202,7 +202,7 @@ wputl(long l)
 }
 
 void
-lput(long l)
+lput(int32 l)
 {
 
 	cbp[0] = l>>24;
@@ -216,7 +216,7 @@ lput(long l)
 }
 
 void
-lputl(long l)
+lputl(int32 l)
 {
 
 	cbp[3] = l>>24;
@@ -388,9 +388,9 @@ putsymb(char *s, int t, vlong v, int ver)
 void
 asmlc(void)
 {
-	long oldpc, oldlc;
+	int32 oldpc, oldlc;
 	Prog *p;
-	long v, s;
+	int32 v, s;
 
 	oldpc = 0;
 	oldlc = 0;
@@ -466,12 +466,12 @@ asmlc(void)
 }
 
 void
-datblk(long s, long n, int str)
+datblk(int32 s, int32 n, int str)
 {
 	Prog *p;
 	char *cast;
 	vlong d;
-	long l, fl, j;
+	int32 l, fl, j;
 	int i, c;
 
 	memset(buf.dbuf, 0, n+100);
@@ -632,7 +632,7 @@ int
 asmout(Prog *p, Optab *o, int aflag)
 {
 	vlong vv;
-	long o1, o2, o3, v;
+	int32 o1, o2, o3, v;
 	int r;
 
 	o1 = 0;
@@ -789,7 +789,7 @@ asmout(Prog *p, Optab *o, int aflag)
 		v = regoff(&p->to);
 		if(thechar == 'j'){
 			vv = v + INITDAT + BIG - INITTEXT - pc;
-			v = (long)vv;
+			v = (int32)vv;
 			if(v != vv || (v&~0x7FF) == 0x7FFFF800)
 				diag("address out of range\n%P", p);
 		}else
@@ -805,7 +805,7 @@ asmout(Prog *p, Optab *o, int aflag)
 		v = regoff(&p->from);
 		if(thechar == 'j'){
 			vv = v + INITDAT + BIG - INITTEXT - pc;
-			v = (long)vv;
+			v = (int32)vv;
 			if(v != vv || (v&~0x7FF) == 0x7FFFF800)
 				diag("address out of range\n%P", p);
 		}else
@@ -872,7 +872,7 @@ asmout(Prog *p, Optab *o, int aflag)
 			v = p->cond->pc;
 		if(thechar == 'j'){
 			vv = v + INITTEXT;
-			v = (long)vv;
+			v = (int32)vv;
 			if(v != vv || (v&~0x7FF) == 0x7FFFF800)
 				diag("branch out of range\n%P", p);
 		}else
@@ -892,7 +892,7 @@ asmout(Prog *p, Optab *o, int aflag)
 	case 20:	/* lui/auipc I1,D; addi I0; D */
 		if(thechar == 'j'){
 			vv = regoff(&p->from) + instoffx - (pc + INITTEXT);
-			v = (long)vv;
+			v = (int32)vv;
 			if(v != vv || (v&~0x7FF) == 0x7FFFF800)
 				diag("address %llux out of range\n%P", regoff(&p->from) + instoffx, p);
 		}else{
@@ -914,7 +914,7 @@ asmout(Prog *p, Optab *o, int aflag)
 			vv <<= 12 - v;
 		else
 			vv >>= v - 12;
-		o1 = OP_U(p->to.reg, (long)vv);
+		o1 = OP_U(p->to.reg, (int32)vv);
 		if (v > 12)
 			o2 = OP_FI(1, p->to.reg, p->to.reg, v - 12);	/* slli */
 		else
