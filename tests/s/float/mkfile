@@ -1,4 +1,4 @@
-all:V: float_arm_.exe
+all:V: float_arm_.exe float_arm.exe
 
 %.exe: %.s
    5a -c $prereq

@@ -198,7 +198,7 @@ struct
 {
 	char	*name;
 	ushort	type;
-	ulong	value;
+	uint32	value;
 } itab[] =
 {
 	"SP",		LSP,	D_AUTO,
@@ -839,7 +839,7 @@ zname(char *n, int t, int s)
 void
 zaddr(Gen *a, int s)
 {
-	long l;
+	int32 l;
 	int i;
 	char *n;
 	Ieee e;

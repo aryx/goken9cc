@@ -6,6 +6,7 @@
 #include <bio.h>
 #include "../7l/7.out.h"
 
+//goken: use of int32 instead of long
 //goken: old: typedef vlong int64;
 
 #ifndef	EXTERN
@@ -35,7 +36,7 @@ struct	Sym
 {
 	Sym*	link;
 	char*	macro;
-	long	value;
+	int32	value;
 	ushort	type;
 	char	*name;
 	char	sym;
@@ -81,8 +82,8 @@ struct	Hist
 {
 	Hist*	link;
 	char*	name;
-	long	line;
-	long	offset;
+	int32	line;
+	int32	offset;
 };
 #define	H	((Hist*)0)
 
@@ -107,9 +108,9 @@ EXTERN  char** include;
 EXTERN	Io*	iofree;
 EXTERN	Io*	ionext;
 EXTERN	Io*	iostack;
-EXTERN	long	lineno;
+EXTERN	int32	lineno;
 EXTERN	int	nerrors;
-EXTERN	long	nhunk;
+EXTERN	int32	nhunk;
 EXTERN	int	ninclude;
 
 //goken: new
@@ -120,17 +121,16 @@ EXTERN	Gen	nullgen;
 EXTERN	char*	outfile;
 EXTERN	int	pass;
 EXTERN	char*	pathname;
-EXTERN	long	pc;
+EXTERN	int32	pc;
 EXTERN	int	peekc;
 EXTERN	int	sym;
 //goken: EXTERN	char	symb[NSYMB];
 EXTERN  char* symb;
 EXTERN	int	thechar;
 EXTERN	char*	thestring;
-EXTERN	long	thunk;
+EXTERN	int32	thunk;
 EXTERN	Biobuf	obuf;
 
-//goken: use of int32 instead of long in a few protos below
 void*	alloc(int32);
 void*	allocn(void*, int32, int32);
 
