@@ -4,7 +4,7 @@
 %union
 {
 	Sym	*sym;
-	long	lval;
+	int32	lval;
 	double	dval;
 	char	sval[8];
 	Gen	gen;
