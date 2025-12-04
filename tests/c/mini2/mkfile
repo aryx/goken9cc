@@ -21,6 +21,7 @@ helloprintf.exe: helloprintf.c
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm arm64 386 riscv
+#TODO: arm_: works, but if use -DDEBUG then segfault and weird output
 #TODO: arm: works for the bool and hexa but not for 42; segfault
 #TODO: mips: gives weird output, 'false' instead of 'true'
 #TODO: arm64: illegal combination DWORD $buf-100(SP)
