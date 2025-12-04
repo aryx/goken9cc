@@ -79,16 +79,6 @@ TEXT ·getcallerpc(SB), $-4
 // no arm instructions for those operations so must be
 // provided as "builtins"
 
-//old:
-//TEXT 	_div+0(SB), 7, $0
-//	RET
-//TEXT 	_divu+0(SB), 7, $0
-//	RET
-//TEXT 	_mod+0(SB), 7, $0
-//	RET
-//TEXT 	_modu+0(SB), 7, $0
-//	RET
-
 Q	= 0
 N	= 1
 D	= 2
@@ -219,91 +209,6 @@ out:
 // 64bits ("very long" or vl) operations
 //---------------------------------
 // see now vlrt.c!
-
-//// signed int to vlong
-//TEXT 	_si2v+0(SB), 7, $0
-//DATA    si2v(SB)/4, $"si2v"
-//	MOVW $si2v(SB), R0
-//	BL debug(SB)
-//	RET
-//
-//// unsigned int to vlong
-//TEXT 	_ui2v+0(SB), 7, $0
-//DATA    ui2v(SB)/4, $"ui2v"
-//	MOVW $ui2v(SB), R0
-//	BL debug(SB)
-//	RET
-//
-//GLOBL   si2v(SB), $4
-//GLOBL   ui2v(SB), $4
-//
-//TEXT 	_modvu+0(SB), 7, $0
-//DATA    mdvu(SB)/4, $"mdvu"
-//	MOVW $mdvu(SB), R0
-//	BL debug(SB)
-//	RET
-//TEXT 	_divvu+0(SB), 7, $0
-//DATA    dvvu(SB)/4, $"dvvu"
-//	MOVW $dvvu(SB), R0
-//	BL debug(SB)
-//	RET
-//
-//GLOBL   mdvu(SB), $4
-//GLOBL   dvvu(SB), $4
-//
-//TEXT 	_addv+0(SB), 7, $0
-//DATA    addv(SB)/4, $"addv"
-//	MOVW $addv(SB), R0
-//	BL debug(SB)
-//	RET
-//TEXT 	_subv+0(SB), 7, $0
-//DATA    subv(SB)/4, $"subv"
-//	MOVW $subv(SB), R0
-//	BL debug(SB)
-//	RET
-//
-//GLOBL   addv(SB), $4
-//GLOBL   subv(SB), $4
-//
-//
-////TEXT 	_v2si+0(SB), 7, $0
-////	RET
-////TEXT 	_v2sl+0(SB), 7, $0
-////	RET
-//TEXT 	_v2uc+0(SB), 7, $0
-//	RET
-//TEXT 	_v2ul+0(SB), 7, $0
-//	RET
-//TEXT 	_v2ui+0(SB), 7, $0
-//	RET
-//
-//TEXT 	_p2v+0(SB), 7, $0
-//	RET
-//
-//
-//TEXT 	_andv+0(SB), 7, $0
-//	RET
-////TEXT 	_xorv+0(SB), 7, $0
-////	RET
-////TEXT 	_orv+0(SB), 7, $0
-////	RET
-//TEXT 	_eqv+0(SB), 7, $0
-//	RET
-////TEXT 	_lshv+0(SB), 7, $0
-////	RET
-//TEXT 	_rshlv+0(SB), 7, $0
-//	RET
-////
-////
-//TEXT 	_lov+0(SB), 7, $0
-//	RET
-//TEXT 	_ltv+0(SB), 7, $0
-//	RET
-//TEXT 	_vasop+0(SB), 7, $0
-//	RET
-//TEXT 	_hiv+0(SB), 7, $0
-//	RET
-
 
 //---------------------------------
 // Float operations
