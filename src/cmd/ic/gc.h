@@ -9,6 +9,7 @@
 #define	SZ_SHORT	2
 #define	SZ_INT		4
 #define	SZ_LONG		4
+// what about riscv64?
 #define	SZ_IND		4
 #define	SZ_FLOAT	4
 #define	SZ_VLONG	8

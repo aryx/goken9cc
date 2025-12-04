@@ -8,6 +8,7 @@
 #define	SZ_CHAR		1
 #define	SZ_SHORT	2
 #define	SZ_INT		4
+// unusual! gcc on arm64 considers a long to be 8 bytes
 #define	SZ_LONG		4
 #define	SZ_IND		8
 #define	SZ_FLOAT	4
