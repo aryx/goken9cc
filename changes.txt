@@ -7,7 +7,7 @@
 - continue reorg code with SRC/ with symlinks to mimic old org.
 - bootstrappable (can compile itself)
 
-* 0.1 (Q4 2025) (mips va/vc/vl v1, arm/mips emulator (5i/vi), riscv ia/ic/il v0? acid v0)
+* 0.1 (Q4 2025) (mips va/vc/vl v1, float?, arm/mips emulator (5i/vi), riscv ia/ic/il v0? acid v0)
 
 ** toolchain
 - mips: generate ELF-Linux binaries (can test with qemu-mips)
@@ -21,6 +21,7 @@
 
 ** lib9
 - import open.c/_p9dir.c from plan9port which fixed ls/du/tar bugs
+  (still some bugs though)
 
 ** test infra
 - multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)
