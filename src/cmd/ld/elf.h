@@ -79,19 +79,19 @@ enum {
 	Sexec = 4,
 };
 
-typedef void (*Putl)(long);
+typedef void (*Putl)(int32);
 
 void	elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl));
-void	elf32phdr(void (*putl)(long), ulong type, ulong off, ulong vaddr,
-	ulong paddr, ulong filesz, ulong memsz, ulong prots, ulong align);
-void	elf32shdr(void (*putl)(long), ulong name, ulong type, ulong flags,
-	ulong vaddr, ulong off, ulong sectsz, ulong link, ulong addnl,
-	ulong align, ulong entsz);
+void	elf32phdr(void (*putl)(int32), uint32 type, uint32 off, uint32 vaddr,
+	uint32 paddr, uint32 filesz, uint32 memsz, uint32 prots, uint32 align);
+void	elf32shdr(void (*putl)(int32), uint32 name, uint32 type, uint32 flags,
+	uint32 vaddr, uint32 off, uint32 sectsz, uint32 link, uint32 addnl,
+	uint32 align, uint32 entsz);
 
 void	elf64(int mach, int bo, int addpsects, void (*putpsects)(Putl));
-void	elf64phdr(void (*putl)(long), void (*putll)(vlong), ulong type,
+void	elf64phdr(void (*putl)(int32), void (*putll)(vlong), uint32 type,
 	uvlong off, uvlong vaddr, uvlong paddr, uvlong filesz, uvlong memsz,
-	ulong prots, uvlong align);
-void	elf64shdr(void (*putl)(long), void (*putll)(vlong), ulong name,
-	ulong type, uvlong flags, uvlong vaddr, uvlong off, uvlong sectsz,
-	ulong link, ulong addnl, uvlong align, uvlong entsz);
+	uint32 prots, uvlong align);
+void	elf64shdr(void (*putl)(int32), void (*putll)(vlong), uint32 name,
+	uint32 type, uvlong flags, uvlong vaddr, uvlong off, uvlong sectsz,
+	uint32 link, uint32 addnl, uvlong align, uvlong entsz);
