@@ -1,12 +1,12 @@
 #include "l.h"
 
-static long thumboprr(int);
-static long thumboprrr(int, int);
-static long thumbopirr(int , int);
-static long thumbopri(int);
-static long thumbophh(int);
-static long thumbopbra(int);
-static long thumbopmv(int, int);
+static int32 thumboprr(int);
+static int32 thumboprrr(int, int);
+static int32 thumbopirr(int , int);
+static int32 thumbopri(int);
+static int32 thumbophh(int);
+static int32 thumbopbra(int);
+static int32 thumbopmv(int, int);
 static void lowreg(Prog *, int);
 static void mult(Prog *, int, int);
 static void numr(Prog *, int, int, int);
@@ -498,7 +498,7 @@ brextra(Prog *p)
 
 #define high(r)	((r)>=8)
 
-static long
+static int32
 mv(Prog *p, int r, int off)
 {
 	int v, o;
@@ -522,7 +522,7 @@ mv(Prog *p, int r, int off)
 }
 
 static void
-mvcon(Prog *p, int r, int c, long *o1, long *o2)
+mvcon(Prog *p, int r, int c, int32 *o1, int32 *o2)
 {
 	int op = 0, n = 0;
 
@@ -563,7 +563,7 @@ mvcon(Prog *p, int r, int c, long *o1, long *o2)
 	}
 }
 
-static long
+static int32
 mvlh(int rs, int rd)
 {
 	int o = 0x46<<8;
@@ -646,14 +646,14 @@ thumbbuildop()
 void
 thumbasmout(Prog *p, Optab *o)
 {
-	long o1, o2, o3, o4, o5, o6, o7, v;
+	int32 o1, o2, o3, o4, o5, o6, o7, v;
 	int r, rf, rt;
 
 	rf = p->from.reg;
 	rt = p->to.reg;
 	r = p->reg;
 	o1 = o2 = o3 = o4 = o5 = o6 = o7 = 0;
-if(debug['P']) print("%ulx: %P	type %d %d\n", (ulong)(p->pc), p, o->type, p->align);
+if(debug['P']) print("%ulx: %P	type %d %d\n", (uint32)(p->pc), p, o->type, p->align);
 	opcount[o->type] += o->size;
 	switch(o->type) {
 	default:
@@ -661,7 +661,7 @@ if(debug['P']) print("%ulx: %P	type %d %d\n", (ulong)(p->pc), p, o->type, p->ali
 		prasm(p);
 		break;
 	case 0:		/* pseudo ops */
-if(debug['G']) print("%ulx: %s: thumb\n", (ulong)(p->pc), p->from.sym->name);
+if(debug['G']) print("%ulx: %s: thumb\n", (uint32)(p->pc), p->from.sym->name);
 		break;
 	case 1:		/* op R, -, R or op R, R, - */
 		o1 = thumboprr(p->as);
@@ -1212,7 +1212,7 @@ if(debug['G']) print("%ulx: %s: thumb\n", (ulong)(p->pc), p->from.sym->name);
 	}
 }
 
-static long
+static int32
 thumboprr(int a)
 {
 	switch(a) {
@@ -1237,7 +1237,7 @@ thumboprr(int a)
 	return 0;
 }
 
-static long
+static int32
 thumbopirr(int a, int ld)
 {
 	if(ld)
@@ -1252,7 +1252,7 @@ thumbopirr(int a, int ld)
 	return 0;
 }
 	
-static long
+static int32
 thumboprrr(int a, int ld)
 {
 	if(ld){
@@ -1278,7 +1278,7 @@ thumboprrr(int a, int ld)
 	return 0;
 }
 
-static long
+static int32
 thumbopri(int a)
 {
 	switch(a) {
@@ -1295,7 +1295,7 @@ thumbopri(int a)
 	return 0;
 }
 
-static long
+static int32
 thumbophh(int a)
 {
 	switch(a) {
@@ -1308,7 +1308,7 @@ thumbophh(int a)
 	return 0;
 }
 
-static long
+static int32
 thumbopbra(int a)
 {
 	switch(a) {
@@ -1334,7 +1334,7 @@ thumbopbra(int a)
 	return 0;
 }
 
-static long
+static int32
 thumbopmv(int a, int ld)
 {
 	switch(a) {

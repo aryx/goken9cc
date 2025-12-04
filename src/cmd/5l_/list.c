@@ -118,7 +118,7 @@ Dconv(Fmt *fp)
 	char str[STRINGSZ];
 	char *op;
 	Adr *a;
-	long v;
+	int32 v;
 
 	a = va_arg(fp->args, Adr*);
 	switch(a->type) {
@@ -297,7 +297,7 @@ Sconv(Fmt *fp)
 
 	a = va_arg(fp->args, char*);
 	p = str;
-	for(i=0; i<sizeof(long); i++) {
+	for(i=0; i<sizeof(int32); i++) {
 		c = a[i] & 0xff;
 		if(c >= 'a' && c <= 'z' ||
 		   c >= 'A' && c <= 'Z' ||

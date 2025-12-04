@@ -324,7 +324,7 @@ void
 loadlib(void)
 {
 	int i;
-	long h;
+	int32 h;
 	Sym *s;
 
 loop:
@@ -356,7 +356,7 @@ errorexit(void)
 void
 objfile(char *file)
 {
-	long off, esym, cnt, l;
+	int32 off, esym, cnt, l;
 	int f, work;
 	Sym *s;
 	char magbuf[SARMAG];
@@ -653,7 +653,7 @@ addlib(char *obj)
 }
 
 void
-addhist(long line, int type)
+addhist(int32 line, int type)
 {
 	Auto *u;
 	Sym *s;
@@ -754,14 +754,14 @@ readsome(int f, uchar *buf, uchar *good, uchar *stop, int max)
 }
 
 void
-ldobj(fdt f, long c, char *pn)
+ldobj(fdt f, int32 c, char *pn)
 {
-	long ipc;
+	int32 ipc;
 	Prog *p, *t;
 	uchar *bloc, *bsize, *stop;
 	Sym *h[NSYM], *s, *di;
 	int v, o, r, skip;
-	ulong sig;
+	uint32 sig;
 	static int files;
 	static char **filen;
 	char **nfilen;
@@ -1132,7 +1132,7 @@ lookup(char *symb, int v)
 {
 	Sym *s;
 	char *p;
-	long h;
+	int32 h;
 	int c, l;
 
 	h = v;
@@ -1183,7 +1183,7 @@ void
 gethunk(void)
 {
 	char *h;
-	long nh;
+	int32 nh;
 
 	nh = NHUNK;
 	if(thunk >= 5L*NHUNK) {
@@ -1205,7 +1205,7 @@ void
 doprof1(void)
 {
 	Sym *s;
-	long n;
+	int32 n;
 	Prog *p, *q;
 
 	if(debug['v'])
@@ -1483,7 +1483,7 @@ nuxiinit(void)
 }
 
 int
-find1(long l, int c)
+find1(int32 l, int c)
 {
 	char *p;
 	int i;
@@ -1495,11 +1495,11 @@ find1(long l, int c)
 	return 0;
 }
 
-long
+int32
 ieeedtof(Ieee *ieeep)
 {
 	int exp;
-	long v;
+	int32 v;
 
 	if(ieeep->h == 0)
 		return 0;
