@@ -7,6 +7,11 @@
 
 #include "minilibc.h"
 
+int fact(int n) {
+    if (n == 0) { return 1; }
+    else { return n * fact (n - 1); }
+}
+
 void main() {
   printf("Hello World: %t\n", true);
   printf("Hello World: %x\n", 42);
@@ -14,6 +19,7 @@ void main() {
   printf("Hello World: %d\n", 42);
   test();
   test_hello();
+  printf("fact(5) = %d\n", fact(5));
   exit(0);
 }
 

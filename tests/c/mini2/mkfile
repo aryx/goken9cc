@@ -20,9 +20,8 @@ helloprintf.exe: helloprintf.c
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm arm64 386 riscv
-#TODO: mips: gives weird output, 'false' instead of 'true', 0x00 instead of
-#            0x2a, and then '*' instead of 42
 #TODO: arm: works for the bool and hexa but not for 42; segfault
+#TODO: mips: gives weird output, 'false' instead of 'true'
 ARCHS=amd64 arm_ mips
 test:V:
         for (arch in $ARCHS) {
