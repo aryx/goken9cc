@@ -27,6 +27,10 @@ helloprintf.exe: helloprintf.c
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm arm64 mips 386 riscv
+#TODO: mips: gives weird output, 'false' instead of 'true', 0x00 instead of
+#            0x2a, and then '*' instead of 42
+#TODO: arm_: weird float output, 2.00001 instead of 2.0000, and very bad
+#            output for 2.2
 ARCHS=amd64 arm_
 test:V:
         for (arch in $ARCHS) {
