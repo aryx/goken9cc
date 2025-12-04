@@ -38,13 +38,13 @@ regopt(Prog *p)
 	Reg *r, *r1, *r2;
 	Prog *p1;
 	int i, z;
-	long initpc, val, npc;
-	ulong vreg;
+	int32 initpc, val, npc;
+	uint32 vreg;
 	Bits bit;
 	struct
 	{
-		long	m;
-		long	c;
+		int32	m;
+		int32	c;
 		Reg*	p;
 	} log5[6], *lp;
 
@@ -553,7 +553,7 @@ mkvar(Adr *a, int docon)
 {
 	Var *v;
 	int i, t, n, et, z;
-	long o;
+	int32 o;
 	Bits bit;
 	Sym *s;
 
@@ -703,8 +703,8 @@ prop(Reg *r, Bits ref, Bits cal)
  *	such a node is a loop head.
  *	recursively, all preds with a greater rpo number are in the loop
  */
-long
-postorder(Reg *r, Reg **rpo2r, long n)
+int32
+postorder(Reg *r, Reg **rpo2r, int32 n)
 {
 	Reg *r1;
 
@@ -720,10 +720,10 @@ postorder(Reg *r, Reg **rpo2r, long n)
 	return n;
 }
 
-long
-rpolca(long *idom, long rpo1, long rpo2)
+int32
+rpolca(int32 *idom, int32 rpo1, int32 rpo2)
 {
-	long t;
+	int32 t;
 
 	if(rpo1 == -1)
 		return rpo2;
@@ -744,7 +744,7 @@ rpolca(long *idom, long rpo1, long rpo2)
 }
 
 int
-doms(long *idom, long r, long s)
+doms(int32 *idom, int32 r, int32 s)
 {
 	while(s > r)
 		s = idom[s];
@@ -752,9 +752,9 @@ doms(long *idom, long r, long s)
 }
 
 int
-loophead(long *idom, Reg *r)
+loophead(int32 *idom, Reg *r)
 {
-	long src;
+	int32 src;
 
 	src = r->rpo;
 	if(r->p1 != R && doms(idom, src, r->p1->rpo))
@@ -766,7 +766,7 @@ loophead(long *idom, Reg *r)
 }
 
 void
-loopmark(Reg **rpo2r, long head, Reg *r)
+loopmark(Reg **rpo2r, int32 head, Reg *r)
 {
 	if(r->rpo < head || r->active == head)
 		return;
@@ -779,14 +779,14 @@ loopmark(Reg **rpo2r, long head, Reg *r)
 }
 
 void
-loopit(Reg *r, long nr)
+loopit(Reg *r, int32 nr)
 {
 	Reg *r1;
-	long i, d, me;
+	int32 i, d, me;
 
 	if(nr > maxnr) {
 		rpo2r = alloc(nr * sizeof(Reg*));
-		idom = alloc(nr * sizeof(long));
+		idom = alloc(nr * sizeof(int32));
 		maxnr = nr;
 	}
 
@@ -849,8 +849,8 @@ synch(Reg *r, Bits dif)
 	}
 }
 
-ulong
-allreg(ulong b, Rgn *r)
+uint32
+allreg(uint32 b, Rgn *r)
 {
 	Var *v;
 	int i;
@@ -899,7 +899,7 @@ paint1(Reg *r, int bn)
 	Reg *r1;
 	Prog *p;
 	int z;
-	ulong bb;
+	uint32 bb;
 
 	z = bn/32;
 	bb = 1L<<(bn%32);
@@ -970,12 +970,12 @@ paint1(Reg *r, int bn)
 	}
 }
 
-ulong
+uint32
 paint2(Reg *r, int bn)
 {
 	Reg *r1;
 	int z;
-	ulong bb, vreg;
+	uint32 bb, vreg;
 
 	z = bn/32;
 	bb = 1L << (bn%32);
@@ -1022,12 +1022,12 @@ paint2(Reg *r, int bn)
 }
 
 void
-paint3(Reg *r, int bn, long rb, int rn)
+paint3(Reg *r, int bn, int32 rb, int rn)
 {
 	Reg *r1;
 	Prog *p;
 	int z;
-	ulong bb;
+	uint32 bb;
 
 	z = bn/32;
 	bb = 1L << (bn%32);
@@ -1113,7 +1113,7 @@ addreg(Adr *a, int rn)
  *	...	...
  *	10	R10
  */
-long
+int32
 RtoB(int r)
 {
 
@@ -1123,7 +1123,7 @@ RtoB(int r)
 }
 
 int
-BtoR(long b)
+BtoR(int32 b)
 {
 	b &= 0x01fcL;	// excluded R9 and R10 for extern registers
 	if(b == 0)
@@ -1138,7 +1138,7 @@ BtoR(long b)
  *	...	...
  *	23	F7
  */
-long
+int32
 FtoB(int f)
 {
 
@@ -1148,7 +1148,7 @@ FtoB(int f)
 }
 
 int
-BtoF(long b)
+BtoF(int32 b)
 {
 
 	b &= 0xfc0000L;
