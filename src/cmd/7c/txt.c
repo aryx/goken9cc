@@ -165,7 +165,7 @@ nextpc(void)
 void
 gargs(Node *n, Node *tn1, Node *tn2)
 {
-	long regs;
+	int32 regs;
 	Node fnxargs[20], *fnxp;
 
 	regs = cursafe;
@@ -243,13 +243,13 @@ Node*
 nodgconst(vlong v, Type *t)
 {
 	if(!typev[t->etype])
-		return nodconst((long)v);
+		return nodconst((int32)v);
 	vconstnode.vconst = v;
 	return &vconstnode;
 }
 
 Node*
-nodconst(long v)
+nodconst(int32 v)
 {
 	constnode.vconst = v;
 	return &constnode;
@@ -458,7 +458,7 @@ raddr(Node *n, Prog *p)
 void
 naddr(Node *n, Adr *a)
 {
-	long v;
+	int32 v;
 
 	a->type = D_NONE;
 	if(n == Z)
@@ -1161,7 +1161,7 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 		p->as = a;
 		naddr(f1, &p->from);
 		if(f1->op == OCONST && p->from.offset < 0){
-			if(a == ACMPW && (ulong)p->from.offset != 0x80000000UL) {
+			if(a == ACMPW && (uint32)p->from.offset != 0x80000000UL) {
 				p->as = ACMNW;
 				p->from.offset = -p->from.offset;
 			}else if(a == ACMP && p->from.offset != 0x8000000000000000LL){
@@ -1260,7 +1260,7 @@ gbranch(int o)
 }
 
 void
-patch(Prog *op, long pc)
+patch(Prog *op, int32 pc)
 {
 
 	op->to.offset = pc;
@@ -1319,7 +1319,7 @@ isaddcon(vlong v)
 }
 
 int
-sval(long v)
+sval(int32 v)
 {
 	return isaddcon(v) || isaddcon(-v);
 }
@@ -1342,7 +1342,7 @@ usableoffset(Node *n, vlong o, Node *v)
 int32
 exreg(Type *t)
 {
-	long o;
+	int32 o;
 
 	if(typechlpv[t->etype]) {
 		if(exregoffset <= REGEXT-2)
