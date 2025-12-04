@@ -5,14 +5,13 @@
 #pragma lib "libprint.a"
 //#endif
 
-#include "minilibc.h"
+#include "../mini2/minilibc.h"
 
 void main() {
   printf("Hello World: %t\n", true);
   printf("Hello World: %x\n", 42);
   printf("Hello %s%s: %d\n", "Wor", "ld", 42);
   printf("Hello World: %d\n", 42);
-  test();
   test_hello();
   exit(0);
 }

@@ -2,9 +2,22 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Same as ./print.c but without int64 and float stuff
+// Same as ../float/print.c but without int64 and float stuff
 
 #include "minilibc.h"
+
+// find the position of the terminating null byte ('\0') in a string
+int32
+findnull(byte *s)
+{
+	int32 l;
+
+	if(s == nil)
+		return 0;
+	for(l=0; s[l]!=0; l++)
+		;
+	return l;
+}
 
 static int32 fd = 1;
 

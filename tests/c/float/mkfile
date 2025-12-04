@@ -1,0 +1,38 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+all:V: helloprintf.exe
+clean:V:
+	rm -f *.[5678ijv] *.exe *.a
+test_one:V: all
+	./helloprintf.exe
+
+CPP_FLAGS=-D$objtype
+
+# can use -v for verbose mode to help debug
+#LATER: add rune.$O_ in libprint.a? and use functions from it?
+helloprintf.exe: helloprintf.c
+   #$CC_ $CPP_FLAGS -c rune.c
+   $CC_ $CPP_FLAGS -c vlrt.c
+   $CC_ $CPP_FLAGS -c print.c
+   $CC_ $CPP_FLAGS -c float.c
+   $CC_ $CPP_FLAGS -c helloprintf.c
+   $AS_ $CPP_FLAGS -c linux_$objtype.s
+   iar rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_
+   $LD_ -L. -o $target -E _main helloprintf.$O_
+
+#TODO: arm arm64 mips 386 riscv
+#TODO: arm_: weird float output, 2.00001 instead of 2.0000, and very bad
+#            output for 2.2
+ARCHS=amd64 arm_
+test:V:
+        for (arch in $ARCHS) {
+           echo $arch
+           mk clean
+           mk 'objtype='$arch
+	   if (~ $arch arm_)
+	      qemu-armhf ./helloprintf.exe
+           if not
+	      qemu-$arch ./helloprintf.exe
+        }

@@ -1,18 +1,21 @@
-// if iar is not working for your arch you might want to
-// uncomment the ifndef below to prevent the linker to
-// load and link libprint.a like in ../mini/
-//#ifndef arm64
 #pragma lib "libprint.a"
-//#endif
-
-#include "minilibc.h"
+#include "../mini2/minilibc.h"
 
 void main() {
   printf("Hello World: %t\n", true);
   printf("Hello World: %x\n", 42);
   printf("Hello %s%s: %d\n", "Wor", "ld", 42);
   printf("Hello World: %d\n", 42);
-  test();
+
+
+  printf("%f\n", NaN());
+  printf("%f\n", 2.0); 
+  printf("%f\n", 2.2); 
+  // TODO: 2.0 is 2.000001 in arm but correctly 2 in amd64
+  // TODO: 0.0 is incorrect too in arm, so is 0.333 ... lots of pbs
+  printf("Hello World: %f\n", 0.0);
+  printf("Hello World: %f\n", 3.0);
+
   test_hello();
   exit(0);
 }

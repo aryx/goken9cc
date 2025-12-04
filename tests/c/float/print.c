@@ -6,7 +6,21 @@
 
 //old: #include "runtime.h"
 //old: #include "type.h"
-#include "minilibc.h"
+#include "../mini2/minilibc.h"
+
+// find the position of the terminating null byte ('\0') in a string
+int32
+findnull(byte *s)
+{
+	int32 l;
+
+	if(s == nil)
+		return 0;
+	for(l=0; s[l]!=0; l++)
+		;
+	return l;
+}
+
 
 static int32 fd = 1;
 

@@ -1,6 +1,6 @@
 TOP=../..
 <$TOP/mkconfig
 
-DIRS=mini mini2
+DIRS=mini mini2 vlong float
 
 <$TOP/mkfiles/mkdirs

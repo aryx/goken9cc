@@ -10,28 +10,22 @@ test_one:V: all
 
 CPP_FLAGS=-D$objtype
 
+#%.$O_: %.c
+
 # can use -v for verbose mode to help debug
-#LATER: add rune.$O_ in libprint.a? and use functions from it?
 helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c test.c
-   $CC_ $CPP_FLAGS -c misc.c
-   #$CC_ $CPP_FLAGS -c rune.c
-   $CC_ $CPP_FLAGS -c vlrt.c
-   $CC_ $CPP_FLAGS -c print.c
-   #alt: $CC_ $CPP_FLAGS -c print_nofloat_no64.c
-   $CC_ $CPP_FLAGS -c float.c
-   #alt: $CC_ $CPP_FLAGS -c float_nope.c
+   $CC_ $CPP_FLAGS -c print_nofloat_no64.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
-   iar rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_ misc.$O_ test.$O_
+   iar rc libprint.a linux_$objtype.$O_ print*.$O_ test.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
-#TODO: arm arm64 mips 386 riscv
+#TODO: arm arm64 386 riscv
 #TODO: mips: gives weird output, 'false' instead of 'true', 0x00 instead of
 #            0x2a, and then '*' instead of 42
-#TODO: arm_: weird float output, 2.00001 instead of 2.0000, and very bad
-#            output for 2.2
-ARCHS=amd64 arm_
+#TODO: arm: works for the bool and hexa but not for 42; segfault
+ARCHS=amd64 arm_ mips
 test:V:
         for (arch in $ARCHS) {
            echo $arch
@@ -47,16 +41,14 @@ test:V:
 # get rid of float/64 bits instructions and see if everything
 # else works at least
 helloprintf_nofloat_no64.exe: helloprintf.c
-   $CC_ $CPP_FLAGS -c misc.c
    $CC_ $CPP_FLAGS -c print_nofloat_no64.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
-   #iar rc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
-   $LD_ -L. -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print_nofloat_no64.$O_ misc.$O_
+   #iar rc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_
+   $LD_ -L. -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print_nofloat_no64.$O_
 
 helloprintf_arm_nofloat_no64.exe: helloprintf.c
-   5c_ -Darm_ -c misc.c
    5c_ -Darm_ -c print_nofloat_no64.c
    5c_ -Darm_ -c helloprintf.c
    5a_ -Darm_ -c linux_arm.s
-   5l_ -H7 -o $target -E _start helloprintf.5 linux_arm.5 print_nofloat_no64.5 misc.5
+   5l_ -H7 -o $target -E _start helloprintf.5 linux_arm.5 print_nofloat_no64.5
