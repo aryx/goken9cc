@@ -15,7 +15,7 @@ CPP_FLAGS=-D$objtype
 helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c test.c
    $CC_ $CPP_FLAGS -c misc.c
-   $CC_ $CPP_FLAGS -c rune.c
+   #$CC_ $CPP_FLAGS -c rune.c
    $CC_ $CPP_FLAGS -c vlrt.c
    $CC_ $CPP_FLAGS -c print.c
    #alt: $CC_ $CPP_FLAGS -c print_nofloat_no64.c

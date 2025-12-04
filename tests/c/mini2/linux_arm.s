@@ -344,4 +344,3 @@ DATA    msg_sfloat+0(SB)/8, $"sfloat\n\n"
 //	MOVM.IA.W	(R0), [R1-R12]
 //	MOVW	8(R13), R0
 //	RET
-

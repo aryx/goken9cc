@@ -1,10 +1,14 @@
 // very-long run-time (vlrt) support
+// copy pasted from principia/lib_core/libc/arm/vlrt.c
 
-typedef unsigned long   ulong;
 typedef unsigned int    uint;
 typedef unsigned short  ushort;
 typedef unsigned char   uchar;
 typedef signed char schar;
+// note that 'long' is considered 32bits by all plan9 C compilers
+// independently of the arch (which differs from gcc/clang, but
+// this code is compiled by 5c/vc/... not gcc/clang as the rest of goken)
+typedef unsigned long   ulong;
 
 #define SIGN(n) (1UL<<(n-1))
 
