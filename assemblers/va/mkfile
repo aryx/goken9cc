@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
@@ -10,7 +10,7 @@ OFILES=\
 	lex.$O\
 
 HFILES=\
-	../vl/v.out.h\
+	$TOP/linkers/vl/v.out.h\
 	y.tab.h\
 	a.h\
 
@@ -20,9 +20,4 @@ YFLAGS=-D1 -d
 
 <$TOP/mkfiles/mkone
 
-lex.$O:	../cc/macbody ../cc/lexbody
-
-#$ROOT/$OBJDIR/lib/libcc.a:
-#	cd ../cc
-#	mk $MKFLAGS install
-#	mk $MKFLAGS clean
+lex.$O:	$TOP/src/cmd/cc/macbody $TOP/src/cmd/cc/lexbody

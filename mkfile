@@ -14,7 +14,7 @@ DIRS=\
   src/cmd/7l src/cmd/7a src/cmd/7c \
   src/cmd/8l src/cmd/8a src/cmd/8c \
   src/cmd/6l src/cmd/6a src/cmd/6c \
-  src/cmd/va src/cmd/vl src/cmd/vc machines/vi \
+  assemblers/va linkers/vl compilers/vc machines/vi \
   src/cmd/ia src/cmd/il src/cmd/ic \
   src/cmd/prof src/cmd/cov \
   debuggers/acid \

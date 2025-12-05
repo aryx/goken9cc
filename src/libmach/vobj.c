@@ -4,7 +4,7 @@
 #include <lib9.h>
 #include <bio.h>
 #include <mach.h>
-#include "../cmd/vl/v.out.h"
+#include "../../linkers/vl/v.out.h"
 #include "obj.h"
 
 typedef struct Addr	Addr;

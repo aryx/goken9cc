@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
@@ -17,18 +17,18 @@ OFILES=\
         \
 	pgen.$O\
 	pswt.$O\
-	../vl/enam.$O\
+	$TOP/linkers/vl/enam.$O\
 
 HFILES=\
 	gc.h\
-	../vl/v.out.h\
-	../cc/cc.h\
+	$TOP/linkers/vl/v.out.h\
+	$TOP/src/cmd/cc/cc.h\
 
 LIB=\
-	../cc/cc.a\
+	$TOP/src/cmd/cc/cc.a\
 
 <$TOP/mkfiles/mkone
 
 # see 7c/mkfile for more info
-p%.$O: ../cc2/p%.c
-	$CC $CFLAGS ../cc2/p$stem.c
+p%.$O: $TOP/src/cmd/cc2/p%.c
+	$CC $CFLAGS $TOP/src/cmd/cc2/p$stem.c
