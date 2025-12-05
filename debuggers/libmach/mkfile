@@ -1,0 +1,33 @@
+#                                              -*-makefile-*-
+<../mkconfig
+
+LIB=libmach.a
+OFILES=\
+        5.$O\
+	6.$O\
+	8.$O\
+	5db.$O\
+	8db.$O\
+	5obj.$O\
+	6obj.$O\
+	8obj.$O\
+	obj.$O\
+	map.$O\
+	swap.$O\
+	sym.$O\
+	access.$O\
+	machdata.$O\
+	setmach.$O\
+	executable.$O\
+
+HFILES=\
+	$ROOT/include/mach.h\
+	$ROOT/include/a.out.h\
+	bootexec.h\
+	elf.h\
+	ureg5.h\
+	ureg6.h\
+	ureg8.h\
+
+<$ROOT/mkfiles/mksyslib-$SHELLTYPE
+CFLAGS= $CFLAGS -I..
