@@ -5,6 +5,17 @@
 #define	CPP	"/bin/cpp"
 #endif
 
+int
+systemtype(int sys)
+{
+	return sys&Plan9;
+}
+int
+pathchar(void)
+{
+	return '/';
+}
+
 /*
  * known debug flags
  *	-a		acid declaration output
@@ -97,56 +108,56 @@ main(int argc, char *argv[])
 		print("usage: %cc [-options] files\n", thechar);
 		errorexit();
 	}
-	if(argc > 1 && systemtype(Windows)){
-		print("can't compile multiple files on windows\n");
-		errorexit();
-	}
-	if(argc > 1 && !systemtype(Windows)) {
-		nproc = 1;
-		/*
-		 * if we're writing acid to standard output, don't compile
-		 * concurrently, to avoid interleaving output.
-		 */
-		if(((!debug['a'] && !debug['Z']) || debug['n']) &&
-		    (p = getenv("NPROC")) != nil)
-			nproc = atol(p);	/* */
-		c = 0;
-		nout = 0;
-		for(;;) {
-			while(nout < nproc && argc > 0) {
-				i = myfork();
-				if(i < 0) {
-					i = mywait(&status);
-					if(i < 0) {
-						print("cannot create a process\n");
-						errorexit();
-					}
-					if(status)
-						c++;
-					nout--;
-					continue;
-				}
-				if(i == 0) {
-					fprint(2, "%s:\n", *argv);
-					if (compile(*argv, defs, ndef))
-						errorexit();
-					exits(0);
-				}
-				nout++;
-				argc--;
-				argv++;
-			}
-			i = mywait(&status);
-			if(i < 0) {
-				if(c)
-					errorexit();
-				exits(0);
-			}
-			if(status)
-				c++;
-			nout--;
-		}
-	}
+	//if(argc > 1 && systemtype(Windows)){
+	//	print("can't compile multiple files on windows\n");
+	//	errorexit();
+	//}
+	//if(argc > 1 && !systemtype(Windows)) {
+	//	nproc = 1;
+	//	/*
+	//	 * if we're writing acid to standard output, don't compile
+	//	 * concurrently, to avoid interleaving output.
+	//	 */
+	//	if(((!debug['a'] && !debug['Z']) || debug['n']) &&
+	//	    (p = getenv("NPROC")) != nil)
+	//		nproc = atol(p);	/* */
+	//	c = 0;
+	//	nout = 0;
+	//	for(;;) {
+	//		while(nout < nproc && argc > 0) {
+	//			i = myfork();
+	//			if(i < 0) {
+	//				i = mywait(&status);
+	//				if(i < 0) {
+	//					print("cannot create a process\n");
+	//					errorexit();
+	//				}
+	//				if(status)
+	//					c++;
+	//				nout--;
+	//				continue;
+	//			}
+	//			if(i == 0) {
+	//				fprint(2, "%s:\n", *argv);
+	//				if (compile(*argv, defs, ndef))
+	//					errorexit();
+	//				exits(0);
+	//			}
+	//			nout++;
+	//			argc--;
+	//			argv++;
+	//		}
+	//		i = mywait(&status);
+	//		if(i < 0) {
+	//			if(c)
+	//				errorexit();
+	//			exits(0);
+	//		}
+	//		if(status)
+	//			c++;
+	//		nout--;
+	//	}
+	//}
 
 	if(argc == 0)
 		c = compile("stdin", defs, ndef);
@@ -210,14 +221,15 @@ compile(char *file, char **defs, int ndef)
 	 * if we're writing acid to standard output, don't keep scratching
 	 * outbuf.
 	 */
-	if((debug['a'] || debug['Z']) && !debug['n']) {
-		if (first) {
-			outfile = 0;
-			Binit(&outbuf, mydup(1, -1), OWRITE);
-			mydup(2, 1);
-		}
-	} else {
-		c = mycreat(outfile, 0664);
+	//if((debug['a'] || debug['Z']) && !debug['n']) {
+	//	if (first) {
+	//		outfile = 0;
+	//		Binit(&outbuf, mydup(1, -1), OWRITE);
+	//		mydup(2, 1);
+	//	}
+	//} else 
+        {
+		c = create(outfile, OWRITE, 0664);
 		if(c < 0) {
 			diag(Z, "cannot open %s - %r", outfile);
 			outfile = 0;
@@ -230,57 +242,60 @@ compile(char *file, char **defs, int ndef)
 
 	/* Use an ANSI preprocessor */
 	if(debug['p']) {
-		if(systemtype(Windows)) {
-			diag(Z, "-p option not supported on windows");
-			errorexit();
-		}
-		if(myaccess(file) < 0) {
-			diag(Z, "%s does not exist", file);
-			errorexit();
-		}
-		if(mypipe(fd) < 0) {
-			diag(Z, "pipe failed");
-			errorexit();
-		}
-		switch(myfork()) {
-		case -1:
-			diag(Z, "fork failed");
-			errorexit();
-		case 0:
-			close(fd[0]);
-			mydup(fd[1], 1);
-			close(fd[1]);
-			av = alloc((3 + ndef + ninclude + 2) * sizeof *av);
-			av[0] = CPP;
-			i = 1;
-			if(debug['.'])
-				av[i++] = strdup("-.");
-			/* 1999 ANSI C requires recognising // comments */
-			av[i++] = strdup("-+");
-			for(c = 0; c < ndef; c++) {
-				sprint(opt, "-D%s", defs[c]);
-				av[i++] = strdup(opt);
-			}
-			for(c = 0; c < ninclude; c++) {
-				sprint(opt, "-I%s", include[c]);
-				av[i++] = strdup(opt);
-			}
-			if(strcmp(file, "stdin") != 0)
-				av[i++] = file;
-			av[i] = 0;
-			if(debug['p'] > 1) {
-				for(c = 0; c < i; c++)
-					fprint(2, "%s ", av[c]);
-				fprint(2, "\n");
-			}
-			myexec(av[0], av);
-			fprint(2, "can't exec C preprocessor %s: %r\n", CPP);
-			errorexit();
-		default:
-			close(fd[1]);
-			newfile(file, fd[0]);
-			break;
-		}
+        diag(Z, "TODO -p option not supported anymore");
+        errorexit();
+
+		//if(systemtype(Windows)) {
+		//	diag(Z, "-p option not supported on windows");
+		//	errorexit();
+		//}
+		//if(myaccess(file) < 0) {
+		//	diag(Z, "%s does not exist", file);
+		//	errorexit();
+		//}
+		//if(mypipe(fd) < 0) {
+		//	diag(Z, "pipe failed");
+		//	errorexit();
+		//}
+		//switch(myfork()) {
+		//case -1:
+		//	diag(Z, "fork failed");
+		//	errorexit();
+		//case 0:
+		//	close(fd[0]);
+		//	mydup(fd[1], 1);
+		//	close(fd[1]);
+		//	av = alloc((3 + ndef + ninclude + 2) * sizeof *av);
+		//	av[0] = CPP;
+		//	i = 1;
+		//	if(debug['.'])
+		//		av[i++] = strdup("-.");
+		//	/* 1999 ANSI C requires recognising // comments */
+		//	av[i++] = strdup("-+");
+		//	for(c = 0; c < ndef; c++) {
+		//		sprint(opt, "-D%s", defs[c]);
+		//		av[i++] = strdup(opt);
+		//	}
+		//	for(c = 0; c < ninclude; c++) {
+		//		sprint(opt, "-I%s", include[c]);
+		//		av[i++] = strdup(opt);
+		//	}
+		//	if(strcmp(file, "stdin") != 0)
+		//		av[i++] = file;
+		//	av[i] = 0;
+		//	if(debug['p'] > 1) {
+		//		for(c = 0; c < i; c++)
+		//			fprint(2, "%s ", av[c]);
+		//		fprint(2, "\n");
+		//	}
+		//	myexec(av[0], av);
+		//	fprint(2, "can't exec C preprocessor %s: %r\n", CPP);
+		//	errorexit();
+		//default:
+		//	close(fd[1]);
+		//	newfile(file, fd[0]);
+		//	break;
+		//}
 	} else {
 		if(strcmp(file, "stdin") == 0)
 			newfile(file, 0);
@@ -1243,9 +1258,9 @@ cinit(void)
 	dclstack = D;
 
 	pathname = allocn(pathname, 0, 100);
-	if(mygetwd(pathname, 99) == 0) {
+	if(getwd(pathname, 99) == 0) {
 		pathname = allocn(pathname, 100, 900);
-		if(mygetwd(pathname, 999) == 0)
+		if(getwd(pathname, 999) == 0)
 			strcpy(pathname, "/???");
 	}
 
