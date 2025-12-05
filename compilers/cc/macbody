@@ -845,7 +845,7 @@ gethunk(void)
 	nh = NHUNK;
 	if(thunk >= 10L*NHUNK)
 		nh = 10L*NHUNK;
-	h = (char*)mysbrk(nh);
+	h = (char*)sbrk(nh);
 	if(h == (char*)-1) {
 		yyerror("out of memory");
 		errorexit();

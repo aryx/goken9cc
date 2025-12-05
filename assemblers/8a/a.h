@@ -1,6 +1,6 @@
 #include <lib9.h>
 #include <bio.h>
-#include "../8c/8.out.h"
+#include "../../linkers/8l/8.out.h"
 
 
 #ifndef	EXTERN
@@ -182,13 +182,5 @@ enum	/* keep in synch with ../cc/cc.h */
 	Unix	= 1<<1,
 	Windows	= 1<<2
 };
-int	mywait(int*);
-int	mycreat(char*, int);
 int	systemtype(int);
 int	pathchar(void);
-char*	mygetwd(char*, int);
-int	myexec(char*, char*[]);
-int	mydup(int, int);
-int	myfork(void);
-int	mypipe(int*);
-void*	mysbrk(ulong);

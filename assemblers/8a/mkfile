@@ -1,30 +1,23 @@
-#                                              -*-makefile-*-
-<../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=8a
+LDLIBS=-lbio -l9 -lm
 
 OFILES=\
 	y.tab.$O\
 	lex.$O\
 
 HFILES=\
-	../8c/8.out.h\
+	$TOP/linkers/8l/8.out.h\
 	y.tab.h\
 	a.h\
 
 YFILES=a.y\
 
-LIBS=cc bio 9		# order is important
-
-BIN=$ROOT/$OBJDIR/bin
-
-<$ROOT/mkfiles/mkone-$SHELLTYPE
-
 YFLAGS=-D1 -d
 
-lex.$O:	../cc/macbody ../cc/lexbody
+<$TOP/mkfiles/mkone
 
-$ROOT/$OBJDIR/lib/libcc.a:
-	cd ../cc
-	mk $MKFLAGS install
-	mk $MKFLAGS clean
+lex.$O:	$TOP/compilers/cc/macbody $TOP/compilers/cc/lexbody
