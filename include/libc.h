@@ -291,8 +291,11 @@ struct Dir {
 	/* file data */
 	Qid	qid;	/* unique id from server */
 	ulong	mode;	/* permissions */
+
 	ulong	atime;	/* last read time */
+    //TODO: second granularity not enough! need subsecond! (nanosecond ideal)
 	ulong	mtime;	/* last write time */
+
 	vlong	length;	/* file length */
 	char	*name;	/* last element of path */
 	char	*uid;	/* owner name */
