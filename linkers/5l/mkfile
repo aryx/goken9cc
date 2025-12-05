@@ -1,7 +1,9 @@
-#                                              -*-makefile-*-
-<../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
-TARG=5l
+TARG=5l__
+LDLIBS=-lbio -l9 -lm
 
 OFILES=\
 	asm.$O\
@@ -12,21 +14,18 @@ OFILES=\
 	pass.$O\
 	span.$O\
 	enam.$O\
-	$TARGMODEL.$O\
+
+#	$TARGMODEL.$O\
 
 
-HFILES=\
-	l.h\
-	../5c/5.out.h\
-	${ROOT}/include/ar.h\
+HFILES=	l.h 5.out.h $TOP/include/ar.h
 
-LIBS=bio 9			# order is important
+<$TOP/mkfiles/mkone
 
+CLEANFILES=enam.c
+enam.c: 5.out.h
+	sh mkenam
 
-BIN=$ROOT/$OBJDIR/bin
-
-<$ROOT/mkfiles/mkone-$SHELLTYPE
-
-enam.$O:	../5c/enam.c
-	$CC $CFLAGS ../5c/enam.c
+#enam.$O:	../5c/enam.c
+#	$CC $CFLAGS ../5c/enam.c
 

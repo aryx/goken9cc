@@ -15,6 +15,15 @@ char**	libdir;
 int	nlibdir	= 0;
 static	int	maxlibdir = 0;
 
+int
+fileexists(char *s)
+{
+	uchar dirbuf[400];
+
+	/* it's fine if stat result doesn't fit in dirbuf, since even then the file exists */
+	return stat(s, dirbuf, sizeof(dirbuf)) >= 0;
+}
+
 /*
  *	-H0				no header
  *	-H1 -T0x10005000 -R4		is aif for risc os
@@ -1225,7 +1234,7 @@ gethunk(void)
 		if(thunk >= 25L*NHUNK)
 			nh = 25L*NHUNK;
 	}
-	h = mysbrk(nh);
+	h = sbrk(nh);
 	if(h == (char*)-1) {
 		diag("out of memory");
 		errorexit();
