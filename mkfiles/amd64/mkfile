@@ -13,3 +13,4 @@ O_=6
 CC_=6c
 LD_=6l
 AS_=6a
+AR_=ar_

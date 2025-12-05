@@ -19,7 +19,7 @@ helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c float.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
-   iar rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_
+   $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm arm64 mips 386 riscv

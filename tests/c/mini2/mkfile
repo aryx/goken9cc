@@ -17,7 +17,7 @@ helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c print_nofloat_no64.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
-   iar rc libprint.a linux_$objtype.$O_ print*.$O_ test.$O_
+   $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ test.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm arm64 386 riscv
@@ -39,14 +39,14 @@ test:V:
 	      qemu-$arch ./helloprintf.exe
         }
 
-# useful when troubleshooting issues to just get rid of the use of iar and
+# useful when troubleshooting issues to just get rid of the use of ar and
 # get rid of float/64 bits instructions and see if everything
 # else works at least
 helloprintf_nofloat_no64.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c print_nofloat_no64.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
-   #iar rc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_
+   #$AR_ rc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_
    $LD_ -L. -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print_nofloat_no64.$O_
 
 helloprintf_arm_nofloat_no64.exe: helloprintf.c

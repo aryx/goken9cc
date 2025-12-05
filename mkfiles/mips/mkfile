@@ -13,3 +13,4 @@ O_=v
 CC_=vc
 LD_=vl
 AS_=va
+AR_=ar_

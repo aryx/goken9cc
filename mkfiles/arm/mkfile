@@ -13,3 +13,4 @@ O_=5
 CC_=5c
 LD_=5l
 AS_=5a
+AR_=ar_

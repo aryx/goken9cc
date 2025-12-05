@@ -13,3 +13,4 @@ O_=7
 CC_=7c
 LD_=7l
 AS_=7a
+AR_=ar_
