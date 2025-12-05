@@ -49,11 +49,6 @@ but better wait to avoid diff.rc to show big diffs
 
 * Last
 
-*** RELAX move dirs in goken/, use GOROOT/ in Makefile instead of ../
-
-*** RELAX reorg src/ dirs in goken, imitate principia, do the actual move
-and use SRC/ symlinks
-
 *** FUN try to use 6prof and 6cov
 
 *** add workflow to check it compiles on macos
@@ -102,7 +97,7 @@ update: better now that I made it work with 5l_ ?
 
 ** mk/rc
 
-*** mk: use subseconf mkmtime granularity
+*** mk: use subsecond mkmtime granularity
 
 *** rc
 
