@@ -315,6 +315,9 @@ rcopy(char **to, Resub *match, int n)
   }
 }
 
+//TODO: the precision is at the second granularity which is 
+// not enough on fast machines that can compile many files in one
+// second. On those machines we need sub-second mtime granularity!
 ulong
 mkmtime(char *name, bool _force)
 {
@@ -326,6 +329,8 @@ mkmtime(char *name, bool _force)
     return 0;
   t = buf->mtime;
   free(buf);
+  //if (name != nil)
+  //    print("mkmtime: %s, time = %d", name, t);
   return t;
 }
 

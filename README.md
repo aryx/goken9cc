@@ -12,12 +12,12 @@ the simplicity, elegance, and efficiency of the original Plan 9 tools.
 ## Features
 
 - **Portable:**
-  It can *build* on Linux, macOS, and Windows (TODO and Plan 9) using gcc or clang (TODO or a boostrapped version of itself)
+  It can *build* on Linux, macOS, and Windows (TODO and Plan 9 and xv6) using gcc or clang (TODO or a boostrapped version of itself)
 - **Multi-OS support:** 
-  Build C programs that can *run* on Linux, macOS (only old macOS for now), TODO Windows, and Plan 9
+  Build C programs that can *run* on Linux, macOS (only old macOS for now), TODO Windows, Plan 9, and TODO xv6
 - **Multi-architecture support:**
   Build C programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
-  arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures (TODO and Wasm)
+  arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures (TODO Wasm)
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
   (e.g., you can build from a Linux 386 machine a binary for amd64 macOS)
