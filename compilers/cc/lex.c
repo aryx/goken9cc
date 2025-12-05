@@ -445,7 +445,7 @@ enum
 	Numflt		= 1<<4,
 };
 
-long
+int
 yylex(void)
 {
 	vlong vv;

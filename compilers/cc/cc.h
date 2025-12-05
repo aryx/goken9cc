@@ -565,7 +565,7 @@ long	escchar(long, int, int);
 Sym*	slookup(char*);
 void	syminit(Sym*);
 void	unget(int);
-long	yylex(void);
+int	yylex(void);
 int	Lconv(Fmt*);
 int	Tconv(Fmt*);
 int	FNconv(Fmt*);
