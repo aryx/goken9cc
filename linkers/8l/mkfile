@@ -1,31 +1,34 @@
-#                                              -*-makefile-*-
-<../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
-TARG=8l
+TARG=8l__
+LDLIBS=-lbio -l9 -lm
 
 OFILES=\
 	asm.$O\
+	list.$O\
 	obj.$O\
 	optab.$O\
 	pass.$O\
 	span.$O\
-	list.$O\
 	enam.$O\
-        compat.$O\
         elf.$O\
-	$TARGMODEL.$O\
 
-HFILES=\
-	l.h\
-	../8c/8.out.h\
-	${ROOT}/libmach/ar.h\
+#        compat.$O\
+#	$TARGMODEL.$O\
 
-LIBS=bio 9			# order is important
-
-BIN=$ROOT/$OBJDIR/bin
-
-<$ROOT/mkfiles/mkone-$SHELLTYPE
+HFILES= l.h 8.out.h  $TOP/include/ar.h
 
 
-enam.$O:	../8c/enam.c
-	$CC $CFLAGS ../8c/enam.c
+<$TOP/mkfiles/mkone
+
+CLEANFILES=enam.c
+enam.c: 8.out.h
+	sh mkenam
+
+#%.$O:	../lk/%.c
+#	$CC $CFLAGS ../lk/$stem.c
+
+#enam.$O:	../8c/enam.c
+#	$CC $CFLAGS ../8c/enam.c
