@@ -1,6 +1,6 @@
 #include <lib9.h>
 #include <bio.h>
-#include "../5c/5.out.h"
+#include "../../linkers/5l/5.out.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -126,7 +126,7 @@ void	newfile(char*, int);
 Sym*	slookup(char*);
 Sym*	lookup(void);
 void	syminit(Sym*);
-long	yylex(void);
+int	yylex(void);
 int	getc(void);
 int	getnsc(void);
 void	unget(int);

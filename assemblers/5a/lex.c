@@ -3,6 +3,17 @@
 #include "y.tab.h"
 #include <ctype.h>
 
+int
+systemtype(int sys)
+{
+	return sys&Plan9;
+}
+int
+pathchar(void)
+{
+	return '/';
+}
+
 void
 main(int argc, char *argv[])
 {
@@ -45,49 +56,49 @@ main(int argc, char *argv[])
 		print("usage: %ca [-options] file.s\n", thechar);
 		errorexit();
 	}
-	if(argc > 1 && systemtype(Windows)){
-		print("can't assemble multiple files on windows\n");
-		errorexit();
-	}
-	if(argc > 1 && !systemtype(Windows)) {
-		nproc = 1;
-		if(p = getenv("NPROC"))
-			nproc = atol(p);	/* */
-		c = 0;
-		nout = 0;
-		for(;;) {
-			while(nout < nproc && argc > 0) {
-				i = myfork();
-				if(i < 0) {
-					i = mywait(&status);
-					if(i < 0)
-						errorexit();
-					if(status)
-						c++;
-					nout--;
-					continue;
-				}
-				if(i == 0) {
-					print("%s:\n", *argv);
-					if(assemble(*argv))
-						errorexit();
-					exits(0);
-				}
-				nout++;
-				argc--;
-				argv++;
-			}
-			i = mywait(&status);
-			if(i < 0) {
-				if(c)
-					errorexit();
-				exits(0);
-			}
-			if(status)
-				c++;
-			nout--;
-		}
-	}
+	//if(argc > 1 && systemtype(Windows)){
+	//	print("can't assemble multiple files on windows\n");
+	//	errorexit();
+	//}
+	//if(argc > 1 && !systemtype(Windows)) {
+	//	nproc = 1;
+	//	if(p = getenv("NPROC"))
+	//		nproc = atol(p);	/* */
+	//	c = 0;
+	//	nout = 0;
+	//	for(;;) {
+	//		while(nout < nproc && argc > 0) {
+	//			i = myfork();
+	//			if(i < 0) {
+	//				i = mywait(&status);
+	//				if(i < 0)
+	//					errorexit();
+	//				if(status)
+	//					c++;
+	//				nout--;
+	//				continue;
+	//			}
+	//			if(i == 0) {
+	//				print("%s:\n", *argv);
+	//				if(assemble(*argv))
+	//					errorexit();
+	//				exits(0);
+	//			}
+	//			nout++;
+	//			argc--;
+	//			argv++;
+	//		}
+	//		i = mywait(&status);
+	//		if(i < 0) {
+	//			if(c)
+	//				errorexit();
+	//			exits(0);
+	//		}
+	//		if(status)
+	//			c++;
+	//		nout--;
+	//	}
+	//}
 	if(assemble(argv[0]))
 		errorexit();
 	exits(0);
@@ -130,7 +141,7 @@ assemble(char *file)
 		}
 	}
 
-	of = mycreat(outfile, 0664);
+	of = create(outfile, OWRITE, 0664);
 	if(of < 0) {
 		yyerror("%ca: cannot create %s", thechar, outfile);
 		errorexit();
@@ -417,9 +428,9 @@ cinit(void)
 	}
 
 	pathname = allocn(pathname, 0, 100);
-	if(mygetwd(pathname, 99) == 0) {
+	if(getwd(pathname, 99) == 0) {
 		pathname = allocn(pathname, 100, 900);
-		if(mygetwd(pathname, 999) == 0)
+		if(getwd(pathname, 999) == 0)
 			strcpy(pathname, "/???");
 	}
 }
@@ -685,5 +696,5 @@ outhist(void)
 	}
 }
 
-#include "../cc/lexbody"
-#include "../cc/macbody"
+#include "../../compilers/cc/lexbody"
+#include "../../compilers/cc/macbody"
