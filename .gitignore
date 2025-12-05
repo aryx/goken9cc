@@ -52,8 +52,10 @@ y.output
 /src/cmd/6l/enam.c
 /src/cmd/7l/enam.c
 /src/cmd/8l/enam.c
-/linkers/vl/enam.c
 /src/cmd/il/enam.c
+
+/linkers/8l/enam.c
+/linkers/vl/enam.c
 
 /src/cmd/6a/6a
 /src/cmd/6c/6c
