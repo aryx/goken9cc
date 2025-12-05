@@ -197,7 +197,7 @@ lookup(void)
 	return s;
 }
 
-long
+int
 yylex(void)
 {
 	int c, c1;

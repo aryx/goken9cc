@@ -12,6 +12,7 @@ DIRS=\
   src/cmd/5l src/cmd/5a src/cmd/5c machines/5i \
   src/cmd/5l_ src/cmd/5a_ src/cmd/5c_ \
   src/cmd/7l src/cmd/7a src/cmd/7c \
+  assemblers/8a \
   src/cmd/8l src/cmd/8a src/cmd/8c \
   src/cmd/6l src/cmd/6a src/cmd/6c \
   assemblers/va linkers/vl compilers/vc machines/vi \

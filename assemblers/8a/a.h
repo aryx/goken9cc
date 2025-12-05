@@ -138,7 +138,7 @@ void	newfile(char*, int);
 Sym*	slookup(char*);
 Sym*	lookup(void);
 void	syminit(Sym*);
-long	yylex(void);
+int	yylex(void);
 int	getc(void);
 int	getnsc(void);
 void	unget(int);
