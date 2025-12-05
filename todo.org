@@ -10,9 +10,6 @@
 
 ** Later
 
-*** LATER RELAX remove dead code like maxbecome/frame in linkers that was used for Alef
-tail-call opti
-
 *** LATER devdraw from plan9port to goken? can draw ? can port
 more stuff to unix? doomplan9?
 
@@ -39,6 +36,9 @@ update: with 5a_/5c_/5l_ working pretty good, maybe don't have
 alt: unless found bugs in plan9 toolchain and go towards merging with goken
 codebase instead
 
+*** LATER RELAX remove dead code like maxbecome/frame in linkers that was used for Alef
+tail-call opti
+
 *** LATER relax factorize in other linker ld.h like 7l
 from l.h -> ld.h factorized
 also 7l/{mod,pass,pobj,subr}.c can be moved to ../ld/
@@ -46,7 +46,6 @@ and factorize with other linkers
 update: better ../lk/
 
 but better wait to avoid diff.rc to show big diffs
-
 
 * Last
 
@@ -103,6 +102,8 @@ update: better now that I made it work with 5l_ ?
 
 ** mk/rc
 
+*** mk: use subseconf mkmtime granularity
+
 *** rc
 
 **** regsub_ in Plan9.c and Posix.c
@@ -117,6 +118,24 @@ so don't need to switch back and forth between kencc/goken mk
 and xix mk
 
 ** libs
+
+*** libcore
+
+**** add subsecond granularity in Dir in libc.h ? mtime2 ?
+need use POSIX timespec
+
+chatGPT:
+#if defined(__APPLE__)
+    // macOS / BSD use st_mtimespec
+    struct timespec ts = st.st_mtimespec;
+#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
+    // POSIX.1-2008 high-resolution timestamp fields
+    struct timespec ts = st.st_mtim;
+#else
+    // fallback: no subsecond timestamps available
+    struct timespec ts = { st.st_mtime, 0 };
+#endif
+    printf("mtime: %ld.%09ld\n", (long)ts.tv_sec, ts.tv_nsec);
 
 ** Arch
 
