@@ -45,8 +45,8 @@ hello_linux_amd64.exe: hello_linux_amd64.s
    6a -c $prereq
    6l -o $target -E _start hello_linux_amd64.6
 hello_linux_386.exe: hello_linux_386.s
-   8a -c $prereq
-   8l -o $target -E _start hello_linux_386.8
+   8a_ -c $prereq
+   8l_ -o $target -E _start hello_linux_386.8
 hello_linux_riscv.exe: hello_linux_riscv.s
    ia -c $prereq
    il -o $target -E _start hello_linux_riscv.i
@@ -63,8 +63,8 @@ hello_macos_amd64.exe: hello_macos_amd64.s
 # Plan9
 # -H 2 this time and -E _main
 hello_plan9_386.exe: hello_plan9_386.s
-   8a -c $prereq
-   8l -o $target -H 2 -E _main hello_plan9_386.8
+   8a_ -c $prereq
+   8l_ -o $target -H 2 -E _main hello_plan9_386.8
 hello_plan9_arm.exe: hello_plan9_arm.s
    5a -c $prereq
    5l -o $target -H 2 -E _main hello_plan9_arm.5
