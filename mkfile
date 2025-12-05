@@ -8,7 +8,7 @@ DIRS=\
   generators/lex/liblex/ generators \
   mk rc \
   src/cmd/nm src/cmd/ar \
-  src/cmd/cc \
+  compilers/cc src/cmd/cc \
   assemblers/5a linkers/5l compilers/5c   machines/5i \
   src/cmd/5l src/cmd/5a src/cmd/5c \
   src/cmd/5l_ src/cmd/5a_ src/cmd/5c_ \
