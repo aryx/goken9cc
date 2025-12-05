@@ -1,35 +1,35 @@
-#                                              -*-makefile-*-
-<../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
-LIB=libcc.a
+LIB=cc.a
 
 OFILES=\
+	y.tab.$O\
+	lex.$O\
+	mac.$O\
+	dcl.$O\
 	acid.$O\
+	pickle.$O\
 	bits.$O\
 	com.$O\
 	com64.$O\
-	$TARGMODEL.$O\
-	dcl.$O\
-	dpchk.$O\
-	funct.$O\
-	lex.$O\
-	mac.$O\
-	mpatof.$O\
-	pickle.$O\
 	scon.$O\
+	funct.$O\
 	sub.$O\
-	y.tab.$O\
+	dpchk.$O\
 	omachcap.$O\
- 
-HFILES=cc.h\
-	y.tab.h\
- 
-YFILES=cc.y\
+        \
+	mpatof.$O\
 
-<$ROOT/mkfiles/mksyslib-$SHELLTYPE
+#	$TARGMODEL.$O\
 
+HFILES=cc.h y.tab.h
 
-mac.$O: macbody
+YFILES=cc.y
 
-lex.$O:	lex.c
-	$CC $CFLAGS '-DCPP="/bin/cpp"' lex.c
+<$TOP/mkfiles/mklib
+
+#mac.$O: macbody
+#lex.$O:	lex.c
+#	$CC $CFLAGS '-DCPP="/bin/cpp"' lex.c
