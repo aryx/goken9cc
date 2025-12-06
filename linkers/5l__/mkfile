@@ -28,8 +28,8 @@ CFLAGS= $CFLAGS -I.
 enam.c: 5.out.h
 	sh mkenam
 
-%.$O:	../../src/cmd/ld/%.c
-	$CC $CFLAGS ../../src/cmd/ld/$stem.c
+%.$O:	../lk/%.c
+	$CC $CFLAGS ../lk/$stem.c
 
 #	$TARGMODEL.$O\
 #enam.$O:	../5c/enam.c
