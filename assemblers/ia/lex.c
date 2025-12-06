@@ -675,5 +675,5 @@ outhist(void)
 	}
 }
 
-#include "../cc/lexbody"
-#include "../cc/macbody"
+#include "../../src/cmd/cc/lexbody"
+#include "../../src/cmd/cc/macbody"

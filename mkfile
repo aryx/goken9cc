@@ -18,7 +18,7 @@ DIRS=\
   src/cmd/8l src/cmd/8a src/cmd/8c \
   src/cmd/6l src/cmd/6a src/cmd/6c \
   assemblers/va linkers/vl compilers/vc   machines/vi \
-  src/cmd/ia src/cmd/il src/cmd/ic \
+  assemblers/ia linkers/il compilers/ic \
   src/cmd/prof src/cmd/cov \
   debuggers/acid \
   utilities typesetting \

@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
@@ -17,12 +17,7 @@ OFILES=\
 	enam.$O\
 	elf.$O\
 
-#	$TARGMODEL.$O\
-
-HFILES=\
-	l.h\
-	i.out.h\
-	../ld/elf.h\
+HFILES=	l.h i.out.h ../lk/elf.h
 
 CLEANFILES=enam.c
 
@@ -31,11 +26,12 @@ CLEANFILES=enam.c
 enam.c: i.out.h
 	sh mkenam
 
+elf.$O:	../lk/elf.c
+	$CC $CFLAGS ../lk/elf.c
+
+#	$TARGMODEL.$O\
 #enam.$O:	../ic/enam.c
 #	$CC $CFLAGS ../ic/enam.c
-elf.$O:	../ld/elf.c
-	$CC $CFLAGS ../ld/elf.c
-
 #$TARGMODEL.$O:	../ld/$TARGMODEL.c
 #	$CC $CFLAGS ../ld/$TARGMODEL.c
 

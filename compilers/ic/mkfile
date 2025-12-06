@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
@@ -18,27 +18,22 @@ OFILES=\
         \
 	pgen.$O\
 	pswt.$O\
-	../il/enam.$O\
+	$TOP/linkers/il/enam.$O\
 
-#	lex.$O\
+HFILES=	gc.h $TOP/linkers/il/i.out.h $TOP/src/cmd/cc/cc.h
 
-HFILES=\
-	gc.h\
-	../il/i.out.h\
-	../cc/cc.h\
-
-LIB=../cc/cc.a
+LIB=$TOP/src/cmd/cc/cc.a
 
 <$TOP/mkfiles/mkone
 
 # see 7c/mkfile for more info
-p%.$O: ../cc2/p%.c
-	$CC $CFLAGS ../cc2/p$stem.c
+p%.$O: $TOP/src/cmd/cc2/p%.c
+	$CC $CFLAGS $TOP/src/cmd/cc2/p$stem.c
 
+#	lex.$O\
 #TODO: trick for ic and jc
 #lex.$O: ../cc/lex.c ../cc/y.tab.h
 #	$CC -Dmain'='ccmain $CFLAGS ../cc/lex.c
-
 #$ROOT/$OBJDIR/lib/libcc.a:
 #	cd ../cc
 #	mk $MKFLAGS install

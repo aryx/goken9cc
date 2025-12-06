@@ -1,5 +1,5 @@
-#include	"../cc/cc.h"
-#include	"../il/i.out.h"
+#include	"../../src/cmd/cc/cc.h"
+#include	"../../linkers/il/i.out.h"
 
 /*
  * zc/riscv

@@ -2,7 +2,7 @@
 #include	<libc.h>
 #include	<bio.h>
 #include	"i.out.h"
-#include	"../ld/elf.h"
+#include	"../lk/elf.h"
 
 //TODO? factorize with new ld/ld.h
 #ifndef	EXTERN
