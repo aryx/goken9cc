@@ -66,8 +66,8 @@ hello_plan9_386.exe: hello_plan9_386.s
    8a_ -c $prereq
    8l_ -o $target -H 2 -E _main hello_plan9_386.8
 hello_plan9_arm.exe: hello_plan9_arm.s
-   5a -c $prereq
-   5l -o $target -H 2 -E _main hello_plan9_arm.5
+   5a_ -c $prereq
+   5l_ -o $target -H 2 -E _main hello_plan9_arm.5
 # actually no need -X; va/vc/vl are new and were not "go-ized"
 # actually -X would print the assembly on stdout in vl ...
 hello_plan9_mips.exe: hello_plan9_mips.s
@@ -76,8 +76,8 @@ hello_plan9_mips.exe: hello_plan9_mips.s
 
 # Linux arm
 hello_linux_arm.exe: hello_linux_arm.s
-   5a -c $prereq
-   5l -o $target -E _start hello_linux_arm.5
+   5a_ -c $prereq
+   5l_ -o $target -E _start hello_linux_arm.5
 
 # Alternative arm
 hello_linux_arm_.exe: hello_linux_arm.s
@@ -101,8 +101,8 @@ exit_linux_riscv.exe: exit_linux_riscv.s
    il -o $target -E _start exit_linux_riscv.i
 
 %.exe: %.s
-   5a -c $prereq
-   5l -o $target -E _start $stem.5
+   5a_ -c $prereq
+   5l_ -o $target -E _start $stem.5
 
 %_.exe: %.s
    5a__ -c $prereq
