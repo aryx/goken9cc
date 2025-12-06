@@ -29,7 +29,7 @@ HFILES=\
 	l.h\
 	../6l/6.out.h\
 	../ld/lib.h\
-	../ld/elf_.h\
+	../ld/elf.h\
 	../ld/macho.h\
 	../ld/dwarf.h\
 

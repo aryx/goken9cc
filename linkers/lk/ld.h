@@ -2,7 +2,7 @@
 #include	<bio.h>
 
 //old:
-// #include	"../ld/elf.h" (now elf_.h)
+// #include	"../ld/elf.h"
 // typedef vlong int64;
 typedef size_t usize;
 

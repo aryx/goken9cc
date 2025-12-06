@@ -6,7 +6,7 @@
 #include	"lib.h"
 #include	"../ld/dwarf.h"
 #include	"../ld/dwarf_defs.h"
-#include	"../ld/elf_.h"
+#include	"../ld/elf.h"
 #include	"../ld/macho.h"
 
 /*

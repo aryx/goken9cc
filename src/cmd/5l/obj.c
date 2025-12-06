@@ -34,7 +34,7 @@
 #include	"l.h"
 
 #include	"../ld/lib.h"
-#include	"../ld/elf_.h"
+#include	"../ld/elf.h"
 #include	<ar.h>
 
 char	*noname		= "<none>";

@@ -32,7 +32,7 @@
 
 #include	"l.h"
 #include	"../ld/lib.h"
-#include	"../ld/elf_.h"
+#include	"../ld/elf.h"
 #include	"../ld/dwarf.h"
 #include	"../ld/macho.h"
 #include	"../ld/pe.h"

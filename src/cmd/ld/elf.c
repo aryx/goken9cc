@@ -4,7 +4,7 @@
 
 #include	"l.h"
 #include	"lib.h"
-#include	"../ld/elf_.h"
+#include	"../ld/elf.h"
 
 /*
  * We use the 64-bit data structures on both 32- and 64-bit machines

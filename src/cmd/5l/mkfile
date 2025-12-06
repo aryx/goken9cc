@@ -29,7 +29,7 @@ OFILES=\
 HFILES=\
 	l.h\
 	../5l/5.out.h\
-	../ld/elf_.h\
+	../ld/elf.h\
 
 <$TOP/mkfiles/mkone
 
