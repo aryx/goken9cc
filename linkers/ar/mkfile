@@ -1,18 +1,16 @@
-#                                              -*-makefile-*-
-<../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=iar	# inferno archiver
+LDLIBS=-lmach_ -lbio -l9 -lm
 
 OFILES=	ar.$O\
-	$TARGMODEL.$O\
 
-HFILES=	${ROOT}/include/a.out.h\
-	${ROOT}/include/bio.h\
-	${ROOT}/include/mach.h\
+#	$TARGMODEL.$O\
 
-LIBS=mach bio 9		# libbio.a uses lib9.a so order matters.
+HFILES=	$TOP/include/bio.h $TOP/include/mach.h
 
-BIN=$ROOT/$OBJDIR/bin
+#$TOP/include/a.out.h\
 
-<$ROOT/mkfiles/mkone-$SHELLTYPE
-
+<$TOP/mkfiles/mkone

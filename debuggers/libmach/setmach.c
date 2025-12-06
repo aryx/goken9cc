@@ -31,12 +31,12 @@ Machtab	machines[] =
 		AI386,
 		&mi386,
 		&i386mach,	},
-	{	"86",				/*8086 - a peach of a machine*/
-		FI386,
-		FI386B,
-		AI8086,
-		&mi386,
-		&i386mach,	},
+//	{	"86",				/*8086 - a peach of a machine*/
+//		FI386,
+//		FI386B,
+//		AI8086,
+//		&mi386,
+//		&i386mach,	},
 	{	"arm",				/*ARM*/
 		FARM,
 		FNONE,

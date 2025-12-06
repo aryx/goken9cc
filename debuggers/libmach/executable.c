@@ -162,11 +162,11 @@ common(int fd, Fhdr *fp, ExecHdr *hp)
 	kbase = mach->kbase;
 	if ((fp->entry & kbase) == kbase) {		/* Boot image */
 		switch(fp->type) {
-		case F68020:
-			fp->type = F68020B;
-			fp->name = "68020 plan 9 boot image";
-			fp->hdrsz = 0;		/* header stripped */
-			break;
+//		case F68020:
+//			fp->type = F68020B;
+//			fp->name = "68020 plan 9 boot image";
+//			fp->hdrsz = 0;		/* header stripped */
+//			break;
 		case FI386:
 			fp->type = FI386B;
 			fp->txtaddr = sizeof(Exec);
@@ -193,12 +193,12 @@ common(int fd, Fhdr *fp, ExecHdr *hp)
 		fp->hdrsz = 0;		/* header stripped */
 		fp->dataddr = fp->txtaddr+fp->txtsz;
 	}
-	else if (fp->type == FPOWER && fp->entry == 0x3020) {
-		fp->txtaddr = fp->entry;
-		fp->name = "Power Inferno boot image";
-		fp->hdrsz = 0;		/* header stripped */
-		fp->dataddr = fp->txtaddr+fp->txtsz;
-	}
+//	else if (fp->type == FPOWER && fp->entry == 0x3020) {
+//		fp->txtaddr = fp->entry;
+//		fp->name = "Power Inferno boot image";
+//		fp->hdrsz = 0;		/* header stripped */
+//		fp->dataddr = fp->txtaddr+fp->txtsz;
+//	}
 	return 1;
 }
 

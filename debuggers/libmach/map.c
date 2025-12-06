@@ -10,7 +10,7 @@ newmap(Map *map, int n)
 {
 	int size;
 
-	size = sizeof(Map)+(n-1)*sizeof(struct segment);
+	size = sizeof(Map)+(n-1)*sizeof(Seg);
 	if (map == 0)
 		map = malloc(size);
 	else
@@ -25,7 +25,7 @@ newmap(Map *map, int n)
 }
 
 int
-setmap(Map *map, int fd, ulong b, ulong e, ulong f, char *name)
+setmap(Map *map, int fd, uvlong b, uvlong e, vlong f, char *name)
 {
 	int i;
 

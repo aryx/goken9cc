@@ -108,7 +108,7 @@ readobj(Biobuf *bp, int objtype)
 }
 
 int
-readar(Biobuf *bp, int objtype, int end, int doautos)
+readar(Biobuf *bp, int objtype, vlong end, int doautos)
 {
 	Prog p;
 

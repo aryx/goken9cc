@@ -3,8 +3,8 @@
  */
 #include <lib9.h>
 #include <bio.h>
-#include "mach.h"
-#include "../libmach/ar.h"
+#include <mach.h>
+#include <ar.h>
 
 /*
  *	The algorithm uses up to 3 temp files.  The "pivot member" is the
@@ -110,7 +110,7 @@ void	install(char*, Arfile*, Arfile*, Arfile*, int);
 void	longt(Armember*);
 int	match(int, char**);
 void	mesg(int, char*);
-char *myctime(long);	/* $TARGMODEL.c */
+//char *myctime(long);	/* $TARGMODEL.c */
 Arfile	*newtempfile(char*);
 Armember *newmember(void);
 void	objsym(Sym*, void*);
@@ -973,7 +973,7 @@ longt(Armember *bp)
 	pmode(strtoul(bp->hdr.mode, 0, 8));
 	Bprint(&bout, "%3ld/%1ld", atol(bp->hdr.uid), atol(bp->hdr.gid));
 	Bprint(&bout, "%7ld", bp->size);
-	cp = myctime(bp->date);
+	cp = ctime(bp->date);
 	Bprint(&bout, " %-12.12s %-4.4s ", cp+4, cp+24);
 }
 

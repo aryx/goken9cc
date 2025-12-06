@@ -7,6 +7,7 @@ DIRS=\
   lib_strings/libregexp lib_strings/libstring lib_strings/libflate \
   generators/lex/liblex/ generators \
   mk rc \
+  debuggers/libmach linkers/ar \
   src/cmd/nm src/cmd/ar \
   compilers/cc src/cmd/cc \
   assemblers/5a linkers/5l compilers/5c   machines/5i \

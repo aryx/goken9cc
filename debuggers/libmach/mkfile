@@ -16,13 +16,15 @@ OFILES=\
 	6obj.$O\
 	8obj.$O\
 	obj.$O\
-	map.$O\
 	swap.$O\
-	sym.$O\
-	access.$O\
-	machdata.$O\
 	setmach.$O\
 	executable.$O\
+
+#TODO:
+#	map.$O\
+#	sym.$O\
+#	access.$O\
+#	machdata.$O\
 
 HFILES=	$TOP/include/mach.h\
 	bootexec.h\
