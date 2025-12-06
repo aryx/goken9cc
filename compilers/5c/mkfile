@@ -2,7 +2,7 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-TARG=5c__
+TARG=5c_
 LDLIBS=-lbio -l9 -lm
 
 OFILES=\

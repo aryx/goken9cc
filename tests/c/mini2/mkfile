@@ -50,7 +50,7 @@ helloprintf_nofloat_no64.exe: helloprintf.c
    $LD_ -L. -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print_nofloat_no64.$O_
 
 helloprintf_arm_nofloat_no64.exe: helloprintf.c
-   5c_ -Darm_ -c print_nofloat_no64.c
-   5c_ -Darm_ -c helloprintf.c
-   5a_ -Darm_ -c linux_arm.s
-   5l_ -H7 -o $target -E _start helloprintf.5 linux_arm.5 print_nofloat_no64.5
+   5c__ -Darm_ -c print_nofloat_no64.c
+   5c__ -Darm_ -c helloprintf.c
+   5a__ -Darm_ -c linux_arm.s
+   5l__ -H7 -o $target -E _start helloprintf.5 linux_arm.5 print_nofloat_no64.5

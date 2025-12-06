@@ -25,12 +25,12 @@ helloc.exe: helloc.c
 #alt: could factorize with previous rule but would need some start_arm_.s
 # symlink to start_arm.s
 helloc_arm_.exe: helloc.c
-   5c_ -Darm_ -c helloc.c
-   5a_ -Darm_ -c xwrite_arm.s
-   5a_ -Darm_ -c xexit_arm.s
-   5a_ -Darm_ -c start_arm.s
+   5c__ -Darm_ -c helloc.c
+   5a__ -Darm_ -c xwrite_arm.s
+   5a__ -Darm_ -c xexit_arm.s
+   5a__ -Darm_ -c start_arm.s
    ar_ rc libmini.a start_arm.5 xwrite_arm.5 xexit_arm.5
-   5l_ -H7 -L. -o $target -E _start helloc.5
+   5l__ -H7 -L. -o $target -E _start helloc.5
 
 #TODO: 386 riscv
 ARCHS=amd64 arm arm64 mips

@@ -2,7 +2,7 @@
 
 # used in tests/
 O_=5
-CC_=5c_
-LD_=5l_
-AS_=5a_
+CC_=5c__
+LD_=5l__
+AS_=5a__
 AR_=ar_

@@ -81,8 +81,8 @@ hello_linux_arm.exe: hello_linux_arm.s
 
 # Alternative arm
 hello_linux_arm_.exe: hello_linux_arm.s
-   5a_ -c $prereq
-   5l_ -H7 -o $target -E _start hello_linux_arm.5
+   5a__ -c $prereq
+   5l__ -H7 -o $target -E _start hello_linux_arm.5
 
 # -H 7 this time
 hello_linux_arm64.exe: hello_linux_arm64.s
@@ -105,5 +105,5 @@ exit_linux_riscv.exe: exit_linux_riscv.s
    5l -o $target -E _start $stem.5
 
 %_.exe: %.s
-   5a_ -c $prereq
-   5l_ -H7 -o $target -E _start $stem.5
+   5a__ -c $prereq
+   5l__ -H7 -o $target -E _start $stem.5
