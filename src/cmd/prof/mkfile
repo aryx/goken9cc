@@ -8,7 +8,7 @@ TOP=../../..
 
 TARG=6prof
 # need -lmach too here
-LDLIBS=-lmach -lbio -l9 -lm
+LDLIBS=-lmach_ -lbio -l9 -lm
 
 OFILES=\
 	main.$O\

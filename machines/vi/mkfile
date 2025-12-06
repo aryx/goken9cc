@@ -3,7 +3,7 @@ TOP=../../
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=vi
-LDLIBS=-lmach -lbio -l9 -lm
+LDLIBS=-lmach_ -lbio -l9 -lm
 
 OFILES=vi.$O\
 	run.$O\

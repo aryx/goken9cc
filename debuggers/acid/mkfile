@@ -3,7 +3,7 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=acid
-LDLIBS=-lmach -lbio -lregexp -l9 -lm
+LDLIBS=-lmach_ -lbio -lregexp -l9 -lm
 
 OFILES=	main.$O\
 	y.tab.$O\
