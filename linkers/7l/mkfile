@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
@@ -29,14 +29,8 @@ OFILES=\
 
 #HOST=Posix
 
-#	$HOST.$O\
 
-HFILES=\
-	l.h\
-	7.out.h\
-	../ld/ld.h\
-	../ld/elf.h\
-
+HFILES=	l.h 7.out.h ../lk/ld.h ../lk/elf.h
 
 CLEANFILES=enam.c
 
@@ -45,17 +39,18 @@ CLEANFILES=enam.c
 enam.c: 7.out.h
 	sh mkenam
 
+%.$O:	../lk/%.c
+	$CC $CFLAGS ../lk/$stem.c
+
+#x:V:	$O.out
+#	$O.out -la -o/dev/null x.7
+
+#	$HOST.$O\
 #../7c/enam.c: ../7c/7.out.h
 #	@ { cd ../7c; mk enam.c }
 #enam.$O:	../7c/enam.c
 #	$CC $CFLAGS ../7c/enam.c
-
 #cnam.c:	l.h
 #	rc ../ld/mkcname
 
-%.$O:	../ld/%.c
-	$CC $CFLAGS ../ld/$stem.c
-
-#x:V:	$O.out
-#	$O.out -la -o/dev/null x.7
 

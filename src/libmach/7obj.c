@@ -5,7 +5,7 @@
 #include <libc.h>
 #include <bio.h>
 #include <mach.h>
-#include "../cmd/7l/7.out.h"
+#include "../../linkers/7l/7.out.h"
 #include "obj.h"
 
 typedef struct Addr	Addr;

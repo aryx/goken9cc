@@ -4,7 +4,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "../7l/7.out.h"
+#include "../../linkers/7l/7.out.h"
 
 //goken: use of int32 instead of long
 //goken: old: typedef vlong int64;

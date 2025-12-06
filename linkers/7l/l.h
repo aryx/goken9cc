@@ -1,6 +1,6 @@
-#include	"../ld/ld.h"
-#include	"7.out.h"
-#include "../ld/elf.h"
+#include "../lk/ld.h"
+#include "7.out.h"
+#include "../lk/elf.h"
 
 typedef	struct	Mask	Mask;
 typedef	struct	Optab	Optab;
