@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
@@ -17,19 +17,16 @@ OFILES=\
         \
 	pgen.$O\
 	pswt.$O\
-	../5l_/enam.$O\
+	$TOP/linkers/5l__/enam.$O\
 
-HFILES=\
-	gc.h\
-	../5l_/5.out.h\
-	../cc/cc.h\
+HFILES=	gc.h $TOP/linkers/5l__/5.out.h	$TOP/src/cmd/cc/cc.h
 
-LIB=../cc/cc.a
+LIB=../../src/cmd/cc/cc.a
 
 <$TOP/mkfiles/mkone
 
 # have to use p% to restrict to pgen/pswt and not enam
 # otherwise with just %.$O we get rule ambiguity
-p%.$O: ../cc2/p%.c
-	$CC $CFLAGS ../cc2/p$stem.c
+p%.$O: $TOP/src/cmd/cc2/p%.c
+	$CC $CFLAGS $TOP/src/cmd/cc2/p$stem.c
 

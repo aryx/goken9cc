@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "../5l_/5.out.h"
+#include "../../linkers/5l__/5.out.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern

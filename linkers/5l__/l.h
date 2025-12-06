@@ -1,8 +1,8 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
-#include	"../5l_/5.out.h"
-#include	"../ld/elf.h"
+#include	"../5l__/5.out.h"
+#include	"../lk/elf.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern

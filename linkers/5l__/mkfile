@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
@@ -17,8 +17,6 @@ OFILES=\
 	enam.$O\
 	elf.$O\
 
-#	$TARGMODEL.$O\
-
 HFILES= l.h 5.out.h $TOP/include/ar.h
 
 CLEANFILES=enam.c
@@ -30,14 +28,13 @@ CFLAGS= $CFLAGS -I.
 enam.c: 5.out.h
 	sh mkenam
 
+%.$O:	../../src/cmd/ld/%.c
+	$CC $CFLAGS ../../src/cmd/ld/$stem.c
+
+#	$TARGMODEL.$O\
 #enam.$O:	../5c/enam.c
 #	$CC $CFLAGS ../5c/enam.c
-
-%.$O:	../ld/%.c
-	$CC $CFLAGS ../ld/$stem.c
-
 #elf.$O:	../ld/elf.c
 #	$CC $CFLAGS ../ld/elf.c
-
 #$TARGMODEL.$O:	../ld/$TARGMODEL.c
 #	$CC $CFLAGS ../ld/$TARGMODEL.c

@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
@@ -8,10 +8,7 @@ OFILES=\
 	y.tab.$O\
 	lex.$O\
 
-HFILES=\
-	../5l_/5.out.h\
-	y.tab.h\
-	a.h\
+HFILES=	$TOP/linkers/5l__/5.out.h y.tab.h a.h
 
 YFILES=a.y
 
@@ -19,4 +16,4 @@ YFLAGS=-D1 -d
 
 <$TOP/mkfiles/mkone
 
-lex.$O:	../cc/macbody ../cc/lexbody
+lex.$O:	$TOP/src/cmd/cc/macbody $TOP/src/cmd/cc/lexbody
