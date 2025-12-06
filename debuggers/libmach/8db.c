@@ -1297,9 +1297,10 @@ mkinstr(Map *map, Instr *ip, ulong pc)
 	memset(ip, 0, sizeof(*ip));
 	ip->base = -1;
 	ip->index = -1;
-	if(asstype == AI8086)
-		ip->osize = 'W';
-	else {
+	//if(asstype == AI8086)
+	//	ip->osize = 'W';
+	//else
+       {
 		ip->osize = 'L';
 		ip->asize = 'E';
 	}

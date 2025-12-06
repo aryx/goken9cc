@@ -3,7 +3,7 @@
  */
 #include <lib9.h>
 #include <bio.h>
-#include "5c/5.out.h"
+#include "../../linkers/5l/5.out.h"
 #include "obj.h"
 
 typedef struct Addr	Addr;

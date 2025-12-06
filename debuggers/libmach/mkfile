@@ -1,7 +1,11 @@
-#                                              -*-makefile-*-
-<../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
-LIB=libmach.a
+LIBNAME=libmach.a
+
+#coupling: if you add a file, you probably need to extend Makefile too
+# note that there is no 6db.c because 8db.c is used to disassemble x86(_64)?
 OFILES=\
         5.$O\
 	6.$O\
@@ -20,14 +24,13 @@ OFILES=\
 	setmach.$O\
 	executable.$O\
 
-HFILES=\
-	$ROOT/include/mach.h\
-	$ROOT/include/a.out.h\
+HFILES=	$TOP/include/mach.h\
 	bootexec.h\
 	elf.h\
 	ureg5.h\
 	ureg6.h\
-	ureg8.h\
+	ureg8.h
 
-<$ROOT/mkfiles/mksyslib-$SHELLTYPE
-CFLAGS= $CFLAGS -I..
+#	$TOP/include/a.out.h\
+
+<$TOP/mkfiles/mksyslib
