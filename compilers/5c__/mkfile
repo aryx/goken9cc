@@ -27,6 +27,6 @@ LIB=../../src/cmd/cc/cc.a
 
 # have to use p% to restrict to pgen/pswt and not enam
 # otherwise with just %.$O we get rule ambiguity
-p%.$O: $TOP/src/cmd/cc2/p%.c
-	$CC $CFLAGS $TOP/src/cmd/cc2/p$stem.c
+p%.$O: $TOP/src/cmd/cc/p%.c
+	$CC $CFLAGS $TOP/src/cmd/cc/p$stem.c
 

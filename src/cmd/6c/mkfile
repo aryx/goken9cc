@@ -32,5 +32,5 @@ LIB=\
 <$TOP/mkfiles/mkone
 
 # see 7c/mkfile for more info
-p%.$O: ../cc2/p%.c
-	$CC $CFLAGS ../cc2/p$stem.c
+p%.$O: ../cc/p%.c
+	$CC $CFLAGS ../cc/p$stem.c

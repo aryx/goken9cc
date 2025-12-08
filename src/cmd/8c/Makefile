@@ -33,5 +33,5 @@ LIB=\
 
 include ../../Make.ccmd
 
-%.$O: ../cc2/%.c
-	$(HOST_CC) $(HOST_CFLAGS) -c -I. -o $@ ../cc2/$*.c
+%.$O: ../cc/%.c
+	$(HOST_CC) $(HOST_CFLAGS) -c -I. -o $@ ../cc/$*.c

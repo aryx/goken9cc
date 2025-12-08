@@ -27,8 +27,8 @@ LIB=$TOP/src/cmd/cc/cc.a
 <$TOP/mkfiles/mkone
 
 # see 7c/mkfile for more info
-p%.$O: $TOP/src/cmd/cc2/p%.c
-	$CC $CFLAGS $TOP/src/cmd/cc2/p$stem.c
+p%.$O: $TOP/src/cmd/cc/p%.c
+	$CC $CFLAGS $TOP/src/cmd/cc/p$stem.c
 
 #	lex.$O\
 #TODO: trick for ic and jc
