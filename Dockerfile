@@ -19,20 +19,23 @@ COPY . .
 
 RUN ./configure
 
-# This actually builds also 'rc', which is called by 'mk', and 'ed'
-# which is used by the mkenam script run during the build
+# The build-mk.sh script below actually builds also:
+# - 'rc', which is called by 'mk'
+# - 'ed', which is used by the mkenam script run during the build
 RUN ./scripts/build-mk.sh
 RUN ./scripts/promote-mk.sh
 
 # coupling: env.sh
 ENV PATH="/src/bin:${PATH}"
 ENV MKSHELL="/src/bin/rc"
+# mk can leverage multiple processors when NPROC > 1
 ARG NPROC
 ENV NPROC=${NPROC}
 # just to cleanup the artifacts of build-mk.sh (which already
 # does some cleaning but better safe than sorry).
 RUN mk nuke
 
+# Let's build goken (using mk/rc built in the previous step)
 RUN mk
 RUN mk install
 
@@ -50,10 +53,11 @@ FROM build AS test
 # RUN apt install gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
 
 # qemu-user-binfmt allows to execute binaries directly without
-# prepending qemu-xxx before
+# prepending qemu-xxx before (but does not always work unfortunately).
 RUN apt-get install -y qemu-user qemu-user-binfmt
 
 ENV GOOS="linux"
 ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
+
 # Run tests
 RUN mk test

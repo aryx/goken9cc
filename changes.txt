@@ -10,6 +10,10 @@
 * 0.1 (Q4 2025) (mips va/vc/vl v1, float?, arm/mips emulator (5i/vi), riscv ia/ic/il v0? acid v0)
 
 ** toolchain
+- import also 8a/8c/8l, 5a/5c/5l, cc, ar, and libmach from my kencc fork
+  https://github.com/aryx/fork-kencc put in assemblers/, linkers/, compilers/
+  as they are known to work on principia's code and I got tired of trying
+  to make the golang-origin toolchains working (which are still in src/cmd).
 - mips: generate ELF-Linux binaries (can test with qemu-mips)
 - support for arm64, riscv, and mips in libmach (imported
   respectively from 9front, inferno-os, and 9-cc).
@@ -26,6 +30,7 @@
 ** test infra
 - multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)
 - docker build and test working for both amd64 and arm64
+- more C tests in tests/c/{float,vlong}
 
 ** build infra
 - support and use "#9/..." paths like in plan9port instead of needing
@@ -38,6 +43,8 @@
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability
   for 5a_/5c_/5l_, va/vc/vl, ia/ic/il, 7a/7c/7l
+- move the different toolchains (ix, vx, ...)in assemblers/, linkers/,
+  and compilers/ (and kept the golang-origin one in src/cmd/)
 
 * Beta (Q3 2025) (arm64 7a/7c/7l v1, riscv ia/ic/il v0, arm64 linux/macos build, arm32 linux run v0, mk/rc, utilities v0, typesetting v0)
 

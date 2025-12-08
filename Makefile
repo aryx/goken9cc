@@ -44,7 +44,7 @@ hellogotest:
 	cd tests; make; ./hello_go.exe; ./hello_unicode.exe; ./hello_goroutine.exe
 
 ###############################################################################
-# Developer targets
+# Pad's targets
 ###############################################################################
 
 # See https://github.com/aryx/codemap and https://github.com/aryx/fork-efuns
