@@ -24,6 +24,10 @@ static	int	mulptr;
 static	Malg	malgs[]	=
 {
 	{0, 100},
+    // the use of -1 below requires -fsigned-char on arm64 otherwise
+    // this will be converted to 255 by gcc and will lead to
+    // bad runtime behavior and the failure to compile certain files with 8c
+    // such as tests/c/misc/bad_mul.c
 	{-1, 1, 100},
 	{-9, -5, -3, 3, 5, 9, 100},
 	{6, 10, 12, 18, 20, 24, 36, 40, 72, 100},

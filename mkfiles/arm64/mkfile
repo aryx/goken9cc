@@ -2,7 +2,10 @@
 
 #TODO: principia: alt: CC=6c LD=6l O=6 AS=6a
 #alt: CC=quietgcc -c LD=quietgcc AS=quietgcc O=o
-CC=gcc -Wno-cpp --std=gnu89 -c
+# see https://abstractexpr.com/2023/04/30/the-anomaly-of-the-char-type-in-c/
+# for the need of -fsigned-char on arm64! otherwise compilers/8c/mul.c
+# will be buggy
+CC=gcc -Wno-cpp --std=gnu89 -c -fsigned-char
 #TODO: ugly, should instead fix those multiple defs and fix use of EXTERN
 LD=gcc -Wl,--allow-multiple-definition
 AS=gcc
