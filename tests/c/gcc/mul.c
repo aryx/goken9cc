@@ -72,19 +72,26 @@ mulparam(ulong m, Mparam *mp)
 	long u;
 	ulong t;
     print("mulparam %d\n", m);
+    for (i = 0; i < 10; i++) {
+        printf("%d ", malgs[1].vals[i]);
+    }
 
 
 	bc = bq = 10;
 	bi = bn = bo = bs = bt = 0;
 	for(i = 0; i < nelem(malgs); i++) {
-		for(p = malgs[i].vals, j = 0; (o = p[j]) < 100; j++) {
-         print("j = %d, o = %d\n", j, o);
+        print("i = %d\n", i);
+        p = malgs[i].vals, j = 0;
+        print("o = %d\n", o);
+
+		for(; (o = p[j]) < 100; j++) {
+         print(" j = %d, o = %d\n", j, o);
 		for(s = 0; s < 2; s++) {
 			c = 10;
 			q = 10;
 
-            print("X: i=%d,j=%d,s=%d, u=%d, t=%d\n", i, j, s, u, t);
-            print("Y: m=%d,o=%d\n", m, o);
+            print("  X: i=%d,j=%d,s=%d, u=%d, t=%d\n", i, j, s, u, t);
+            print("  Y: m=%d,o=%d\n", m, o);
 
 			u = m - o;
 			if(u == 0)
@@ -97,7 +104,7 @@ mulparam(ulong m, Mparam *mp)
 			}
 			n = lowbit(u);
 			t = (ulong)u >> n;
-            print("i=%d,j=%d,s=%d,u=%d,t=%d\n\n", i, j, s, u, t);
+            print("  i=%d,j=%d,s=%d,u=%d,t=%d\n\n", i, j, s, u, t);
 			switch(i) {
 			case 0:
 				if(t == 1) {
