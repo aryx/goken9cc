@@ -15,6 +15,7 @@
 [5678ovij].out
 _testmain.go
 o.*
+a.out
 
 # yacc files
 y.tab.[ch]
