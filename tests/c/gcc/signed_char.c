@@ -1,7 +1,11 @@
-// from compilers/8c/mul.c
-// the compilation of this file with gcc on arm64 leads to some weird
+// code copy pasted from compilers/8c/mul.c originally
+
+// The compilation of this file with gcc on arm64 leads to some weird
 // runtime behavior with the wrong value returned compared to
-// compiling the same file with gcc on amd64 with gcc -m32.
+// compiling the same file with gcc on amd64 with gcc.
+// This is because 'char' behaves differently on arm64!! Insane!
+// See https://abstractexpr.com/2023/04/30/the-anomaly-of-the-char-type-in-c/
+// for more info.
 
 //#include "gc.h"
 #include <stdio.h>
@@ -10,12 +14,12 @@ typedef unsigned long ulong;
 #define nelem(x)    (sizeof(x)/sizeof((x)[0]))
 
 
-
 typedef struct	Malg	Malg;
 typedef struct	Mparam	Mparam;
 
 struct	Malg
 {
+    // 'char' is different in arm64! (unless you use gcc -fsigned-char)
 	char	vals[10];
 };
 
@@ -35,6 +39,10 @@ static	int	mulptr;
 static	Malg	malgs[]	=
 {
 	{0, 100},
+    // -1 is actually converted to 255 on arm64 because arm64 and arm32
+    // use unsigned for char by default (arghhh)
+    // which leads to bad behavior later, so use -fsigned-char with gcc!!!
+    // otherwise this code will behave differently on amd64 vs arm64
 	{-1, 1, 100},
 	{-9, -5, -3, 3, 5, 9, 100},
 	{6, 10, 12, 18, 20, 24, 36, 40, 72, 100},
