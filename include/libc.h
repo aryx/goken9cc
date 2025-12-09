@@ -455,8 +455,8 @@ extern	int	        p9waitpid(void);
  * malloc (provided by system <stdlib.h>)
  *
 extern	void*	malloc(ulong);
+void free(void *_Nullable ptr);
  */
-// free?
 
 extern void* mallocz(unsigned long n, bool clr);
 
@@ -647,6 +647,9 @@ extern	void	abort(void);
 //******************************************************************************
 // Misc
 //******************************************************************************
+
+// #include <assert.h>
+// void assert(scalar expression)
 
 /*
  * one-of-a-kind
