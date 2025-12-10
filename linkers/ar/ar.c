@@ -813,6 +813,9 @@ rl(int fd)
 	struct ar_hdr a;
 	long len;
 
+	//if(vflag)
+	//	Bprint(&bout, "%s: rl()\n");
+
 	Binit(&b, fd, OWRITE);
 	Bseek(&b,seek(fd,0,1), 0);
 

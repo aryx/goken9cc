@@ -39,6 +39,7 @@
 - started to add GODYNLINK and GOLANG #ifdefs to guard optional
   or golang specific code in the toolchain (defined when building GO/
   but undefined otherwise)
+- use -fsigned-char on arm64 to get portable code
 
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability
