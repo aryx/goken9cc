@@ -18,7 +18,8 @@ sprint(char *buf, char *fmt, ...)
 	 * optimizes the test away.  casting to uintptr works around this bug.
 	 */
 	if((uintptr)buf+len < (uintptr)buf)
-		len = -(uintptr)buf-1;
+		len = (uint)-(uintptr)buf-1;
+    //print("sprint: len = %d\n", len);
 
 	va_start(args, fmt);
 	n = vsnprint(buf, len, fmt, args);
