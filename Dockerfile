@@ -67,7 +67,7 @@ RUN mk test
 ###############################################################################
 FROM build AS principia
 
-RUN apt-get install -y git
+RUN apt-get install -y --no-install-recommends git
 
 RUN git clone https://github.com/aryx/principia-softwarica /principia
 
