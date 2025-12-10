@@ -24,6 +24,8 @@ build-docker:
 	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc --target build .
 build-docker-test: 
 	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc-test --target test .
+build-docker-principia: 
+	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc-principia --target principia .
 
 # Golang regression testing
 build-gosrc:

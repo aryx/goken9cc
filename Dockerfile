@@ -61,3 +61,35 @@ ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
 
 # Run tests
 RUN mk test
+
+###############################################################################
+# Stage3: Test on amd64/arm64 using the 386/arm plan9 toolchain (8c/5c)
+###############################################################################
+FROM build AS principia
+
+RUN apt-get install -y git
+
+RUN git clone https://github.com/aryx/principia-softwarica /principia
+
+# 9base for rc (TODO: delete once we can have a working rc in goken?)
+#RUN apt-get install -y 9base
+
+ENV GOOS="linux"
+ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
+
+WORKDIR /principia
+
+# override the default env.sh as we already setup PATH above and
+# we want to use goken, not kencc
+RUN echo > env.sh
+
+#coupling: https://github.com/aryx/principia-softwarica/blob/master/Dockerfile
+# 386
+RUN cp mkconfig.pc mkconfig
+RUN . ./env.sh && mk
+#TODO: && mk kernel
+
+# arm
+RUN cp mkconfig.pi mkconfig
+RUN . ./env.sh && mk
+#TODO: && mk kernel
