@@ -34,10 +34,10 @@ typedef	Rune	TRune;	/* target system type */
 #define	MASK(n)		(SIGN(n)|(SIGN(n)-1))
 
 #define	BITS	5
-#define	NVAR	(BITS*sizeof(ulong)*8)
+#define	NVAR	(BITS*sizeof(uint32)*8)
 struct	Bits
 {
-	ulong	b[BITS];
+	uint32	b[BITS];
 };
 
 struct	Node

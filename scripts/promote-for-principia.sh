@@ -12,14 +12,10 @@ fi
 . ./mkconfig
 set -x
 
-# let's focus on principia for raspberry pi for now (arm32)
-cp ROOT/$GOARCH/bin/5c_ bin/5c
-cp ROOT/$GOARCH/bin/5a_ bin/5a
-cp ROOT/$GOARCH/bin/5l_ bin/5l
-rm -f ROOT/$GOARCH/bin/5[acl]_
-rm -f ROOT/$GOARCH/bin/5[acl]
-
-cp ROOT/$GOARCH/bin/iar bin/iar
+cp ROOT/$GOARCH/bin/8c_ bin/8c
+cp ROOT/$GOARCH/bin/8a_ bin/8a
+cp ROOT/$GOARCH/bin/8l_ bin/8l
+cp ROOT/$GOARCH/bin/ar_ bin/iar
 cp ROOT/$GOARCH/bin/yacc bin/iyacc
 
 # still? for libc/9sys/

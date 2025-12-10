@@ -9,7 +9,10 @@ CFLAGS_EXTRA=-DUnix
 LDLIBS=-lbio -lstring -l9 -lm
 
 # we skip 'cp' as mk install will lead to a "Text file busy" error
-TARG=cat touch mkdir mv rm chmod chgrp mtime wc du ls
+# we skip ls, mv, and they are breaking current usage or buggy
+# (mv seems to not work)
+#TODO: mv ls
+TARG=cat touch mkdir rm chmod chgrp mtime wc du
 
 <$TOP/mkfiles/mkmany
 #<$TOP/mkfiles/mkmanyauto
