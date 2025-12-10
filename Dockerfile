@@ -67,7 +67,8 @@ RUN mk test
 ###############################################################################
 FROM build AS principia
 
-RUN apt-get install -y --no-install-recommends git
+#TODO? wanted --no-install-recommends but then git does not work so well
+RUN apt-get install -y git
 
 RUN git clone https://github.com/aryx/principia-softwarica /principia
 
