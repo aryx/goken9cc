@@ -2,21 +2,22 @@
 
 ** Overview
 
-# fix float/64bits ops SEMI arm32 and arm64 tests/c/mini2,
-# make it work on principia code (arm and x86)! (add wasm later) and bootstrap itself!!!
+# fix float/64bits ops arm32 and arm64 tests/c/mini2
+# add wasm arch later and bootstrap itself!!!
 # produce from hello.{s,c} binaries for SEMI (old) macos (amd64 TODO arm64), (386) windows
 # reLPize {Assembler,Linker,Compiler,Libcore}.nw and release (and maybe also {Debugger,Profiler}.nw) "principia-toolchain"!
 # => simpler alt to gcc/clang for cross compiling C code! (ex: xv6-{x86,arm,riscv}!)
 
 ** Later
 
+*** LATER LONG try to boostrap itself; can compile 5c with 5c?
+need full libc and ELF in 5c/5l working for big C project, not just helloprintf.c
+
 *** LATER devdraw from plan9port to goken? can draw ? can port
 more stuff to unix? doomplan9?
 
 maybe most of Graphics.nw can be tested on Linux?
 at least testdraw.c ?
-
-*** LATER LONG try to boostrap itself; can compile 6a with 6c?
 
 *** LATER SEMI try to unify all the kencc/inferno/plan9 before lpize (5a/5c/5l) again
 diff5a diff5c diff5l are quite small across kencc/inferno/plan9 and goken
@@ -60,9 +61,9 @@ most of goken (including utilties)
 
 * Components
 
-** ARM toolchain : 5a_/5c_/5l_
+** ARM (kencc-imported) toolchain: 5a/5c/5l
 
-*** test infra! run hello_plan9_arm.exe on raspeberry pi2 via qemu?
+*** test infra! run hello_plan9_arm.exe on raspberry pi2 via qemu?
 need port principia to raspberry pi2 first then!
 
 *** LATER factorize ld.a lib? imitate what I've done in principia?
@@ -74,7 +75,33 @@ easier when will have test infra via qemu-system-arm
 update: easier when goken 5a_/5c_/5l_ can work on linux
 and can compile itself on linux => that's a good test suite
 
-** golang ARM toolchain : 5a/5c/5l
+** hybrid ARM toolchain : 5a__/5c__/5l__
+
+*** last
+
+**** diff 5l kencc vs 5l__ goken in obj.c
+-	case AMOVDF:
+-		if(!vfp || p->from.type != D_FCONST)
+-			goto casedef;
+-		p->as = AMOVF;
+-		/* fall through */
+ 	case AMOVF:
+ 		if(skip)
+ 			goto casedef;
+@@ -1225,7 +1191,7 @@ gethunk(void)
+
+also hintabsize set correctly? also need dbuf[1] fix?
+
+**** vfp set in 5l__ ? need -f ? for floating?
+
+**** try use different VFP instructions for floats?
+MOVF → VLDR/VMOV.F32/F64 + literal pool or immediate load).
+something that my Ampere Altra can run?
+
+look softfloat.c of 5l ? look 9front? more recent float instructions?
+
+
+** golang ARM toolchain : 5a_/5c_/5l_
 
 *** still? can't use 5c on principia libc code, weird!!!
 wait.c:33 unknown type 15 in zaddr
@@ -88,8 +115,6 @@ but got segfault now :( even worse than before
 update: better now that I made it work with 5l_ ?
 
 ** C compilers: 5c/6c/8c
-
-*** SEMI make it work on principia code!
 
 ** assemblers: 5a/6a/8a
 
@@ -416,13 +441,7 @@ at compile-time and don't even reach the testing part:
 
 <epoch>: internal compiler error: betypeinit failed
 
-
-*** LATER: try to compile plan9 with goken9cc!!!
-
 *** LATER: try to compile goken with goken9cc!!!
-
-*** LATER add basic regression tests to goken9cc
-and keep all the go stuff which is a great testcase for 6c itself :)
 
 *** More workflows! build_amd64_linux.yaml, build_amd64_windows
 and test_xxx too ? alla semgrep workflows
