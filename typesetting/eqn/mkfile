@@ -34,7 +34,7 @@ OFILES=main.$O\
 
 YFILES=eqn.y
 
-YACC=$TOP/generators/yacc/o.yacc
+YACC=$TOP/generators/yacc/o.out
 
 HFILES=e.h y.tab.h
 
