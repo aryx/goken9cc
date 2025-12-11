@@ -293,8 +293,12 @@ struct Dir {
 	ulong	mode;	/* permissions */
 
 	ulong	atime;	/* last read time */
-    //TODO: second granularity not enough! need subsecond! (nanosecond ideal)
 	ulong	mtime;	/* last write time */
+    // mtime second granularity above is not enough for mk! need subsecond!
+    // Note that 'float' precision is not enough and we need 'double' here
+    // as in 2025 mtime = seconds since 1970 EPOCH will be a huge number
+    // that would get truncated if using a 'float'.
+    double   mtime_;
 
 	vlong	length;	/* file length */
 	char	*name;	/* last element of path */

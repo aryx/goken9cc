@@ -122,8 +122,6 @@ update: better now that I made it work with 5l_ ?
 
 ** mk/rc
 
-*** mk: use subsecond mkmtime granularity
-
 *** rc
 
 **** regsub_ in Plan9.c and Posix.c
@@ -140,22 +138,6 @@ and xix mk
 ** libs
 
 *** libcore
-
-**** add subsecond granularity in Dir in libc.h ? mtime2 ?
-need use POSIX timespec
-
-chatGPT:
-#if defined(__APPLE__)
-    // macOS / BSD use st_mtimespec
-    struct timespec ts = st.st_mtimespec;
-#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
-    // POSIX.1-2008 high-resolution timestamp fields
-    struct timespec ts = st.st_mtim;
-#else
-    // fallback: no subsecond timestamps available
-    struct timespec ts = { st.st_mtime, 0 };
-#endif
-    printf("mtime: %ld.%09ld\n", (long)ts.tv_sec, ts.tv_nsec);
 
 ** Arch
 

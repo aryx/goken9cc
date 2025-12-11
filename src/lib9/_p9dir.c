@@ -1,6 +1,7 @@
 #include <u.h>
 #define NOPLAN9DEFINES
 #include <libc.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -111,7 +112,10 @@ _p9dir(struct stat *lst, struct stat *st, char *name, Dir *d, char **str, char *
 	static struct group *g;
 	static struct passwd *p;
 	static int gid, uid;
-	int sz, fd;
+	int sz;
+    fdt fd;
+    // for subsecond mtime granularity
+    struct timespec ts;
 
 	fd = -1;
 	USED(fd);
@@ -187,9 +191,9 @@ _p9dir(struct stat *lst, struct stat *st, char *name, Dir *d, char **str, char *
 	}
 
 	if(d){
-		d->type = 'M';
+		d->type = 'M'; // ??
 
-		d->muid = "";
+		d->muid = ""; // ??
 		d->qid.path = st->st_ino;
 		/*
 		 * do not include st->st_dev in path, because
@@ -206,6 +210,22 @@ _p9dir(struct stat *lst, struct stat *st, char *name, Dir *d, char **str, char *
 		d->mode = st->st_mode&0777;
 		d->atime = st->st_atime;
 		d->mtime = st->st_mtime;
+
+        // subsecond mtime granularity
+// thx chatGPT:
+#if defined(__APPLE__)
+        // macOS / BSD use st_mtimespec
+        ts = st->t_mtimespec;
+#elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
+        // POSIX.1-2008 high-resolution timestamp fields
+        ts = st->st_mtim;
+#else
+        // fallback: no subsecond timestamps available
+        ts = { st->st_mtime, 0 };
+#endif
+        d->mtime_ = ts.tv_sec + ((double)ts.tv_nsec / 1000000000.0);
+
+
 		d->length = st->st_size;
 
 		if(S_ISLNK(lst->st_mode)){	/* yes, lst not st */
