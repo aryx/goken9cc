@@ -3,9 +3,9 @@
 ** Overview
 
 # fix float/64bits ops arm32 and arm64 tests/c/mini2
-# add wasm arch later and bootstrap itself!!!
 # produce from hello.{s,c} binaries for SEMI (old) macos (amd64 TODO arm64), (386) windows
 # reLPize {Assembler,Linker,Compiler,Libcore}.nw and release (and maybe also {Debugger,Profiler}.nw) "principia-toolchain"!
+# add wasm arch later and bootstrap itself!!!
 # => simpler alt to gcc/clang for cross compiling C code! (ex: xv6-{x86,arm,riscv}!)
 
 ** Later

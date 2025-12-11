@@ -1,0 +1,10 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=mtime_float
+LDLIBS=-l9 -lm
+
+OFILES=mtime_float.$O
+
+<$TOP/mkfiles/mkone
