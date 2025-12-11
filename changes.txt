@@ -6,19 +6,20 @@
 - TODO revert the changes to va/vc/vl, ia/ic/il, 7a/7c/7l and switch
   from golang cc/ to kencc-imported cc/
 - TODO switch acid, and 5i/vi from libmach_ to libmach
+
 - continue reorg code with SRC/ with symlinks to mimic old org.
 - bootstrappable (can compile itself)
 
-* 0.1 (Q4 2025) (compile principia, mips va/vc/vl v1, float v0, arm/mips emulator (5i/vi), riscv ia/ic/il v0? acid v0)
+* 0.1 (Q4 2025) (compile principia, mips va/vc/vl v1, float v0, arm/mips emulator (5i/vi), riscv ia/ic/il v0, acid v0)
 
 ** toolchain
 - import also 8a/8c/8l, 5a/5c/5l, cc, ar, and libmach from my kencc fork
   https://github.com/aryx/fork-kencc put in assemblers/, linkers/, compilers/
-  as they are known to work on principia's code and I got tired of trying
+  as they are known to work on principia code and I got tired of trying
   to make the golang-origin toolchains working (which are still in src/cmd).
 - fix the imported 8a/8c/8l, ar, etc. by changing a few long -> int32
-  (cc/bits.c, x.out.h ieee float), use -fsigned-char, so it can compile
-  principia softwarica from my arm64 machine
+  (cc/bits.c, x.out.h ieee float), and use -fsigned-char so it can compile
+  principia softwarica from my arm64 machine!
 - mips: generate ELF-Linux binaries (can test with qemu-mips)
 - support for arm64, riscv, and mips in libmach (imported
   respectively from 9front, inferno-os, and 9-cc).
@@ -32,6 +33,8 @@
 ** lib9
 - import open.c/_p9dir.c from plan9port which fixed ls/du/tar bugs
   (still some bugs though)
+- use nanosecond granularity to new Dir->mtime_ field and fix mk to use this
+  new more precise time to avoid useless recompilation
 
 ** test infra
 - multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)
@@ -53,7 +56,7 @@
   for 5a_/5c_/5l_, va/vc/vl, ia/ic/il, 7a/7c/7l
 - convert a few long -> int32 for the kencc imported 5a/5c/6l, 8a/8c/8l
   (but very few; just in cc/bits.c and x.out.h)
-- move the different toolchains (ix, vx, ...)in assemblers/, linkers/,
+- move the different toolchains (ix, vx, ...) in assemblers/, linkers/,
   and compilers/ (and kept the golang-origin one in src/cmd/)
 
 * Beta (Q3 2025) (arm64 7a/7c/7l v1, riscv ia/ic/il v0, arm64 linux/macos build, arm32 linux run v0, mk/rc, utilities v0, typesetting v0)
