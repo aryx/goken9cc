@@ -221,7 +221,8 @@ _p9dir(struct stat *lst, struct stat *st, char *name, Dir *d, char **str, char *
         ts = st->st_mtim;
 #else
         // fallback: no subsecond timestamps available
-        ts = { st->st_mtime, 0 };
+        ts.tv_sec = st->st_mtime;
+        ts.tv_nsec = 0;
 #endif
         d->mtime_ = ts.tv_sec + ((double)ts.tv_nsec / 1000000000.0);
 
