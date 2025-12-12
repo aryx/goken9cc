@@ -47,7 +47,10 @@ struct	Node
 	void*	label;
 	long	pc;
 	int	reg;
-	long	xoffset;
+    //old: was 'long', but important to use int32
+    // see tests/c/misc/minus_one_index.c bug otherwise on 64 bits machine
+    // where long is using 8 bytes and overflow will require different numbers.
+	int32	xoffset;
 	double	fconst;		/* fp constant */
 	vlong	vconst;		/* non fp const */
 	char*	cstring;	/* character string */

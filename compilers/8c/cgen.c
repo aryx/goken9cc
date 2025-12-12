@@ -1140,8 +1140,9 @@ reglcgen(Node *t, Node *n, Node *nn)
 			v = r->vconst;
 			r->vconst = 0;
 			lcgen(n, t);
+            // can overflow and it's ok
 			t->xoffset += v;
-        print("XXX, %ld\n",t->xoffset);
+            //print("XXX, %d\n",t->xoffset);
 			r->vconst = v;
 			regind(t, n);
 			return;

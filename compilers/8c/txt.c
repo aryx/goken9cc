@@ -1372,9 +1372,11 @@ gpseudo(int a, Sym *s, Node *n)
 int
 sconst(Node *n)
 {
-	long v;
+	int32 v;
 
 	if(n->op == OCONST && !typefd[n->type->etype]) {
+        // can be converted from big number to negative one
+        // as downcast vlong to int32
 		v = n->vconst;
 		if(v >= -32766L && v < 32766L)
 			return 1;

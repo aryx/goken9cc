@@ -4,11 +4,10 @@ void foo() {
     // 8c -S should generate some
     // MOVB	$0,-1(DX)
     // for the instruction above but because of some long vs int32
-    // bug it can also generate
+    // bug in cc/ and 8c/ it was generating:
     // MOVL	DX,AX
 	// ADDL	$4294967295,AX
     // MOVB	$0,(AX)
-
 
     s[-1] = 0;
 }
