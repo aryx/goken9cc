@@ -1141,6 +1141,7 @@ reglcgen(Node *t, Node *n, Node *nn)
 			r->vconst = 0;
 			lcgen(n, t);
 			t->xoffset += v;
+        print("XXX, %ld\n",t->xoffset);
 			r->vconst = v;
 			regind(t, n);
 			return;
