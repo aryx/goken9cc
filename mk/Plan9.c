@@ -210,9 +210,9 @@ dirtime(char *dir, char *path)
                     mtime = 1;
                 snprint(buf, sizeof buf, "%s%s", path,
                     d[i].name);
-                if(symlook(buf, S_TIME, 0) == nil)
+                if(symlook(buf, S_TIME, nil) == nil)
                     symlook(strdup(buf), S_TIME,
-                        (void*)mtime)->u.value = mtime;
+                        (void*)mtime)->u.time = mtime;
             }
             free(d);
         }
@@ -248,7 +248,7 @@ bulkmtime(char *dir)
 }
 /*e: function [[bulkmtime]] */
 /*s: function [[mkmtime]] */
-ulong
+double
 mkmtime(char *name, bool force)
 {
     Dir *d;
@@ -284,7 +284,7 @@ mkmtime(char *name, bool force)
     //TODO
     //TODO bulkmtime(ss);
     //TODO if(!force){
-    //TODO     sym = symlook(name, S_TIME, 0);
+    //TODO     sym = symlook(name, S_TIME, nil);
     //TODO     if(sym)
     //TODO         return sym->u.value;
     //TODO     return 0;

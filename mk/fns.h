@@ -66,10 +66,10 @@ Node*	graph(char*);
 void	nrep(void);
 
 // file.c
-ulong	timeof(char*, bool);
+double	timeof(char*, bool);
 void	timeinit(char*);
 void	touch(char*);
-ulong	mkmtime(char*, bool);
+double	mkmtime(char*, bool);
 void	delete(char*);
 
 // match.c
