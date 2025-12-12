@@ -19,7 +19,7 @@ typedef struct {
 		Ehdr ehdr;			/* in elf.h */
 		Machhdr machhdr;	/* macho.h */
 	} e;
-	long dummy;		/* padding to ensure extra long */
+	int32 dummy;		/* padding to ensure extra int32 */
 } ExecHdr;
 
 static	int	common(int, Fhdr*, ExecHdr*);
@@ -27,22 +27,22 @@ static	int	machdotout(int, Fhdr*, ExecHdr*);
 static	int	elfdotout(int, Fhdr*, ExecHdr*);
 static	int	armdotout(int, Fhdr*, ExecHdr*);
 static	void	setsym(Fhdr*, vlong, int32, vlong, int32, vlong, int32);
-static	void	setdata(Fhdr*, long, long, long, long);
-static	void	settext(Fhdr*, long, long, long, long);
-static	void	hswal(long*, int, long(*)(long));
-static	long	_round(long, long);
+static	void	setdata(Fhdr*, int32, int32, int32, int32);
+static	void	settext(Fhdr*, int32, int32, int32, int32);
+static	void	hswal(int32*, int, int32(*)(int32));
+static	int32	_round(int32, int32);
 
 /*
  *	definition of per-executable file type structures
  */
 
 typedef struct Exectable{
-	long	magic;			/* big-endian magic number of file */
+	int32	magic;			/* big-endian magic number of file */
 	char	*name;			/* executable identifier */
 	int	type;			/* Internal code */
 	Mach	*mach;			/* Per-machine data */
-	ulong	hsize;			/* header size */
-	long	(*swal)(long);		/* beswal or leswal */
+	uint32	hsize;			/* header size */
+	int32	(*swal)(int32);		/* beswal or leswal */
 	int	(*hparse)(int, Fhdr*, ExecHdr*);
 } ExecTable;
 
@@ -105,7 +105,7 @@ crackhdr(int fd, Fhdr *fp)
 			//if(mp->magic == V_MAGIC)
 			//	mp = couldbe4k(mp);
 
-			hswal((long *) &d, sizeof(d.e)/sizeof(long), mp->swal);
+			hswal((int32 *) &d, sizeof(d.e)/sizeof(int32), mp->swal);
 			fp->type = mp->type;
 			fp->name = mp->name;
 			fp->hdrsz = mp->hsize;		/* zero on bootables */
@@ -123,7 +123,7 @@ crackhdr(int fd, Fhdr *fp)
  * Convert header to canonical form
  */
 static void
-hswal(long *lp, int n, long (*swap) (long))
+hswal(int32 *lp, int n, int32 (*swap) (int32))
 {
 	while (n--) {
 		*lp = (*swap) (*lp);
@@ -136,7 +136,7 @@ hswal(long *lp, int n, long (*swap) (long))
 static int
 adotout(int fd, Fhdr *fp, ExecHdr *hp)
 {
-	long pgsize;
+	int32 pgsize;
 
 	USED(fd);
 	pgsize = mach->pgsize;
@@ -156,7 +156,7 @@ adotout(int fd, Fhdr *fp, ExecHdr *hp)
 static int
 common(int fd, Fhdr *fp, ExecHdr *hp)
 {
-	long kbase;
+	int32 kbase;
 
 	adotout(fd, fp, hp);
 	kbase = mach->kbase;
@@ -230,7 +230,7 @@ elfdotout(int fd, Fhdr *fp, ExecHdr *hp)
 
 	Ehdr *ep;
 	Shdr *es, *txt, *init, *s;
-	long addr, size, offset, bsize;
+	int32 addr, size, offset, bsize;
 
 	ep = &hp->e.ehdr;
 	fp->magic = ELF_MAG;
@@ -554,7 +554,7 @@ bad:
 static int
 armdotout(int fd, Fhdr *fp, ExecHdr *hp)
 {
-	long kbase;
+	int32 kbase;
 
 	USED(fd);
 	settext(fp, hp->e.exec.entry, sizeof(Exec), hp->e.exec.text, sizeof(Exec));
@@ -572,7 +572,7 @@ armdotout(int fd, Fhdr *fp, ExecHdr *hp)
 }
 
 static void
-settext(Fhdr *fp, long e, long a, long s, long off)
+settext(Fhdr *fp, int32 e, int32 a, int32 s, int32 off)
 {
 	fp->txtaddr = a;
 	fp->entry = e;
@@ -580,7 +580,7 @@ settext(Fhdr *fp, long e, long a, long s, long off)
 	fp->txtoff = off;
 }
 static void
-setdata(Fhdr *fp, long a, long s, long off, long bss)
+setdata(Fhdr *fp, int32 a, int32 s, int32 off, int32 bss)
 {
 	fp->dataddr = a;
 	fp->datsz = s;
@@ -606,10 +606,10 @@ setsym(Fhdr *fp, vlong symoff, int32 symsz, vlong sppcoff, int32 sppcsz, vlong l
 }
 
 
-static long
-_round(long a, long b)
+static int32
+_round(int32 a, int32 b)
 {
-	long w;
+	int32 w;
 
 	w = (a/b)*b;
 	if (a!=w)
