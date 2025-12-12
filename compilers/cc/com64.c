@@ -609,7 +609,7 @@ vlong
 convvtox(vlong c, int et)
 {
 	int n;
-    vlong oldc = c;
+    //vlong oldc = c;
 
 	n = 8 * ewidth[et];
 	c &= MASK(n);
@@ -617,7 +617,7 @@ convvtox(vlong c, int et)
 		if(c & SIGN(n))
 			c |= ~MASK(n);
 
-    print("before = %lld, after = %lld, for type = %d, with ewidth = %d, typeu = %d\n", 
-          oldc, c, et, ewidth[et], typeu[et]);
+    //print("before = %lld, after = %lld, for type = %d, with ewidth = %d, typeu = %d\n", 
+    //      oldc, c, et, ewidth[et], typeu[et]);
 	return c;
 }
