@@ -1,12 +1,13 @@
 TOP=..
 <$TOP/mkconfig
 
-DIRS=archive byte calc compare files misc pipe text time
+DIRS=archive byte calc compare files misc pipe text time kernel
 
 <$TOP/mkfiles/mkdirs
 
 # ------------------------------------------------------------------------------
 
+#TODO: LPize calc/hoc/ and add it below
 #TODO? pwd.c echo.c
 SRC_VIEWS=\
   files/cat.c files/ls.c \
@@ -25,7 +26,7 @@ SRC_VIEWS=\
   archive/tar/tar.c \
   archive/gzip/gzip.h archive/gzip/gzip.c archive/gzip/gunzip.c \
   archive/zip/zip.h archive/zip/zip.c archive/zip/unzip.c \
-  calc/dc.c calc/bc.y \
+  calc/misc/dc.c calc/misc/bc.y \
   text/misc/sort.c text/misc/uniq.c text/misc/join.c \
   text/misc/tr.c text/misc/ed.c \ text/misc/sed.c \
   text/grep/main.c text/grep/grep.h text/grep/sub.c text/grep/grep.y \

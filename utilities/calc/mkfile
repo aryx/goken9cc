@@ -1,6 +1,6 @@
 TOP=../..
 <$TOP/mkconfig
 
-DIRS=misc
+DIRS=misc hoc
 
 <$TOP/mkfiles/mkdirs
