@@ -324,7 +324,7 @@ see also DELETED/misc/arm/ and the use of adb and maybe android emulator
 *** still? rerun the mkdefs, mksyscall, ... to generate the updated zxxx?
 alt: take them from latest go repo and hope it's backward compatible?
 
-** Rest
+** Rest (generators, utilities, typesetting)
 
 *** goken/generators
 
@@ -354,6 +354,15 @@ tar cvf and xvf seems to work; maybe tvf has bugs
 ***** make tar and gunzip tar tvfz work on goken
 
 ***** make zip/unzip work on goken
+
+***** awk: segfault
+test: 
+cd principia/kernel/COMPILE/bcm
+export objtype=arm
+export O=5
+rc ../port/mkdevlist pi
+rc ../port/mkbootrules pi
+
 
 *** fix bugs in goken progs
 
@@ -469,7 +478,6 @@ fixed all multiple-defs issue in goken?
 can detect the ugly 'stdin' Binit in sed.c that
 was fixed in inferno-os but caused some segfaults?
 because stdin already defined elsewhere in goken lib9?
-
 
 *** less: .gitignore inspired from DELETED/.hgignore
 

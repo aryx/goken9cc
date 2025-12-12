@@ -6,7 +6,8 @@ TOP=../../..
 # -lm just for a few math functions
 LDLIBS=-l9 -lm
 
-TARG=awk
+#TODO: has some segfault hence the _buggy suffix
+TARG=awk_buggy
 OFILES=re.$O\
 	lex.$O\
 	main.$O\

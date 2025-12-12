@@ -1,0 +1,13 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LDLIBS=-lbio -l9 -lm
+
+TARG=dc bc
+
+<$TOP/mkfiles/mkmany
+
+bc.c: bc.y
+      $YACC -d bc.y
+      mv y.tab.c bc.c

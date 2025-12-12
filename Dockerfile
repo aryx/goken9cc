@@ -72,9 +72,6 @@ RUN apt-get install -y git
 
 RUN git clone https://github.com/aryx/principia-softwarica /principia
 
-# 9base for rc (TODO: delete once we can have a working rc in goken?)
-#RUN apt-get install -y 9base
-
 ENV GOOS="linux"
 ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
 
