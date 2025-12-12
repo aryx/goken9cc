@@ -5,6 +5,7 @@ TOP=../..
 LDLIBS=-lbio -l9 -lm
 
 #TODO: could use mkmany but need sed to be in PATH in Dockerfile?
-TARG=dd split xd
+#TODO: dd seems to not work for mk disk in principia so let's skip
+TARG=split xd
 
 <$TOP/mkfiles/mkmany

@@ -2,8 +2,8 @@ TOP=../..
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-lbio -l9 -lm
+LDLIBS=-lmach -lbio -l9 -lm
 
-TARG=data2s
+TARG=data2s ksize
 
 <$TOP/mkfiles/mkmany

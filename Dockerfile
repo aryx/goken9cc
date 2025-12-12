@@ -84,10 +84,8 @@ RUN echo > env.sh
 #coupling: https://github.com/aryx/principia-softwarica/blob/master/Dockerfile
 # 386
 RUN cp mkconfig.pc mkconfig
-RUN . ./env.sh && mk
-#TODO: && mk kernel
+RUN . ./env.sh && mk && mk kernel
 
 # arm
 RUN cp mkconfig.pi mkconfig
-RUN . ./env.sh && mk
-#TODO: && mk kernel
+RUN . ./env.sh && mk && mk kernel
