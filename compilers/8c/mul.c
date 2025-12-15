@@ -10,7 +10,7 @@ struct	Malg
 
 struct	Mparam
 {
-	ulong	value;
+	uint32	value;
 	char	alg;
 	char	neg;
 	char	shift;
@@ -38,10 +38,10 @@ static	Malg	malgs[]	=
  * return position of lowest 1
  */
 int
-lowbit(ulong v)
+lowbit(uint32 v)
 {
 	int s, i;
-	ulong m;
+	uint32 m;
 
 	s = 0;
 	m = 0xFFFFFFFFUL;
@@ -71,13 +71,13 @@ genmuladd(Node *d, Node *s, int m, Node *a)
 }
 
 void
-mulparam(ulong m, Mparam *mp)
+mulparam(uint32 m, Mparam *mp)
 {
 	int c, i, j, n, o, q, s;
 	int bc, bi, bn, bo, bq, bs, bt;
 	char *p;
-	long u;
-	ulong t;
+	int32 u;
+	uint32 t;
 
 	bc = bq = 10;
 	bi = bn = bo = bs = bt = 0;
@@ -96,7 +96,7 @@ mulparam(ulong m, Mparam *mp)
 				u = -u;
 			}
 			n = lowbit(u);
-			t = (ulong)u >> n;
+			t = (uint32)u >> n;
 			switch(i) {
 			case 0:
 				if(t == 1) {
@@ -295,9 +295,9 @@ m2(int a)
 void
 shiftit(Type *t, Node *s, Node *d)
 {
-	long c;
+	int32 c;
 
-	c = (long)s->vconst & 31;
+	c = (int32)s->vconst & 31;
 	switch(c) {
 	case 0:
 		break;
@@ -310,7 +310,7 @@ shiftit(Type *t, Node *s, Node *d)
 }
 
 static int
-mulgen1(ulong v, Node *n)
+mulgen1(uint32 v, Node *n)
 {
 	int i, o;
 	Mparam *p;

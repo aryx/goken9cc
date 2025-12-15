@@ -1,7 +1,7 @@
 #include "gc.h"
 
 void
-swit1(C1 *q, int nc, long def, Node *n)
+swit1(C1 *q, int nc, int32 def, Node *n)
 {
 	C1 *r;
 	int i;
@@ -40,7 +40,7 @@ void
 bitload(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 {
 	int sh;
-	long v;
+	int32 v;
 	Node *l;
 
 	/*
@@ -78,7 +78,7 @@ bitload(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 void
 bitstore(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 {
-	long v;
+	int32 v;
 	Node nod;
 	int sh;
 
@@ -102,10 +102,10 @@ bitstore(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 	regfree(n3);
 }
 
-long
-outstring(char *s, long n)
+int32
+outstring(char *s, int32 n)
 {
-	long r;
+	int32 r;
 
 	if(suppress)
 		return nstring;
@@ -128,7 +128,7 @@ outstring(char *s, long n)
 }
 
 void
-gextern(Sym *s, Node *a, long o, long w)
+gextern(Sym *s, Node *a, int32 o, int32 w)
 {
 	if(a->op == OCONST && typev[a->type->etype]) {
 		gpseudo(ADATA, s, lo64(a));
@@ -331,7 +331,7 @@ void
 zname(Biobuf *b, Sym *s, int t)
 {
 	char *n;
-	ulong sig;
+	uint32 sig;
 
 	if(debug['T'] && t == D_EXTERN && s->sig != SIGDONE && s->type != types[TENUM] && s != symrathole){
 		sig = sign(s);
@@ -360,7 +360,7 @@ zname(Biobuf *b, Sym *s, int t)
 void
 zaddr(Biobuf *b, Adr *a, int s)
 {
-	long l;
+	int32 l;
 	int i, t;
 	char *n;
 	Ieee e;
@@ -426,10 +426,10 @@ zaddr(Biobuf *b, Adr *a, int s)
 		Bputc(b, a->type);
 }
 
-long
-align(long i, Type *t, int op)
+int32
+align(int32 i, Type *t, int op)
 {
-	long o;
+	int32 o;
 	Type *v;
 	int w;
 
@@ -492,8 +492,8 @@ align(long i, Type *t, int op)
 	return o;
 }
 
-long
-maxround(long max, long v)
+int32
+maxround(int32 max, int32 v)
 {
 	v = round(v, SZ_LONG);
 	if(v > max)

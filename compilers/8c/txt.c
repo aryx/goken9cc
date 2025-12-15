@@ -145,7 +145,7 @@ nextpc(void)
 void
 gargs(Node *n, Node *tn1, Node *tn2)
 {
-	long regs;
+	int32 regs;
 	Node fnxargs[20], *fnxp;
 
 	regs = cursafe;
@@ -234,7 +234,7 @@ garg1(Node *n, Node *tn1, Node *tn2, int f, Node **fnxp)
 }
 
 Node*
-nodconst(long v)
+nodconst(int32 v)
 {
 	constnode.vconst = v;
 	return &constnode;
@@ -445,7 +445,7 @@ regind(Node *n, Node *nn)
 void
 naddr(Node *n, Adr *a)
 {
-	long v;
+	int32 v;
 
 	a->type = D_NONE;
 	if(n == Z)
@@ -858,7 +858,7 @@ gmove(Node *f, Node *t)
 		return;
 
 /*
- * float to ulong
+ * float to uint32
  */
 	case CASE(	TDOUBLE,	TULONG):
 	case CASE(	TFLOAT,	TULONG):
@@ -873,7 +873,7 @@ gmove(Node *f, Node *t)
 		return;
 
 /*
- * ulong to float
+ * uint32 to float
  */
 	case CASE(	TULONG,	TDOUBLE):
 	case CASE(	TULONG,	TFLOAT):
@@ -935,7 +935,7 @@ void
 doindex(Node *n)
 {
 	Node nod, nod1;
-	long v;
+	int32 v;
 
 if(debug['Y'])
 prtree(n, "index");
@@ -1346,7 +1346,7 @@ gbranch(int o)
 }
 
 void
-patch(Prog *op, long pc)
+patch(Prog *op, int32 pc)
 {
 
 	op->to.offset = pc;
@@ -1384,7 +1384,7 @@ sconst(Node *n)
 	return 0;
 }
 
-long
+int32
 exreg(Type *t)
 {
 
@@ -1423,7 +1423,7 @@ schar	ewidth[NTYPE] =
 	-1,		/*[TUNION]*/
 	SZ_INT,		/*[TENUM]*/
 };
-long	ncast[NTYPE] =
+int32	ncast[NTYPE] =
 {
 	0,				/*[TXXX]*/
 	BCHAR|BUCHAR,			/*[TCHAR]*/

@@ -11,7 +11,7 @@
 #define	T32	TN(32)
 
 int
-multiplier(ulong d, int p, uvlong *mp)
+multiplier(uint32 d, int p, uvlong *mp)
 {
 	int l;
 	uvlong mlo, mhi, tlo, thi;
@@ -37,7 +37,7 @@ multiplier(ulong d, int p, uvlong *mp)
 }
 
 int
-sdiv(ulong d, ulong *mp, int *sp)
+sdiv(uint32 d, uint32 *mp, int *sp)
 {
 	int s;
 	uvlong m;
@@ -52,7 +52,7 @@ sdiv(ulong d, ulong *mp, int *sp)
 }
 
 int
-udiv(ulong d, ulong *mp, int *sp, int *pp)
+udiv(uint32 d, uint32 *mp, int *sp, int *pp)
 {
 	int p, s;
 	uvlong m;
@@ -83,14 +83,14 @@ void
 sdivgen(Node *l, Node *r, Node *ax, Node *dx)
 {
 	int a, s;
-	ulong m;
+	uint32 m;
 	vlong c;
 
 	c = r->vconst;
 	if(c < 0)
 		c = -c;
 	a = sdiv(c, &m, &s);
-//print("a=%d i=%ld s=%d m=%lux\n", a, (long)r->vconst, s, m);
+   //print("a=%d i=%d s=%d m=%lux\n", a, (int32)r->vconst, s, m);
 	gins(AMOVL, nodconst(m), ax);
 	gins(AIMULL, l, Z);
 	gins(AMOVL, l, ax);
@@ -107,11 +107,11 @@ void
 udivgen(Node *l, Node *r, Node *ax, Node *dx)
 {
 	int a, s, t;
-	ulong m;
+	uint32 m;
 	Node nod;
 
 	a = udiv(r->vconst, &m, &s, &t);
-//print("a=%ud i=%ld p=%d s=%d m=%lux\n", a, (long)r->vconst, t, s, m);
+//print("a=%ud i=%d p=%d s=%d m=%lux\n", a, (int32)r->vconst, t, s, m);
 	if(t != 0) {
 		gins(AMOVL, l, ax);
 		gins(ASHRL, nodconst(t), ax);
@@ -154,7 +154,7 @@ sext(Node *d, Node *s, Node *l)
 }
 
 void
-sdiv2(long c, int v, Node *l, Node *n)
+sdiv2(int32 c, int v, Node *l, Node *n)
 {
 	Node nod;
 
@@ -176,7 +176,7 @@ sdiv2(long c, int v, Node *l, Node *n)
 }
 
 void
-smod2(long c, int v, Node *l, Node *n)
+smod2(int32 c, int v, Node *l, Node *n)
 {
 	Node nod;
 
