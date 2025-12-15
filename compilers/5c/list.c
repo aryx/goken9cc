@@ -28,7 +28,7 @@ Bconv(Fmt *fp)
 		if(str[0])
 			strcat(str, " ");
 		if(var[i].sym == S) {
-			snprint(ss, sizeof(ss), "$%ld", var[i].offset);
+			snprint(ss, sizeof(ss), "$%d", var[i].offset);
 			s = ss;
 		} else
 			s = var[i].sym->name;
@@ -169,7 +169,7 @@ Dconv(Fmt *fp)
 		break;
 
 	case D_BRANCH:
-		snprint(str, sizeof(str), "%ld(PC)", a->offset-pc);
+		snprint(str, sizeof(str), "%d(PC)", a->offset-pc);
 		break;
 
 	case D_FCONST:
@@ -271,7 +271,7 @@ Nconv(Fmt *fp)
 	a = va_arg(fp->args, Adr*);
 	s = a->sym;
 	if(s == S) {
-		snprint(str, sizeof(str), "%ld", a->offset);
+		snprint(str, sizeof(str), "%d", a->offset);
 		goto out;
 	}
 	switch(a->name) {
@@ -280,23 +280,23 @@ Nconv(Fmt *fp)
 		break;
 
 	case D_NONE:
-		snprint(str, sizeof(str), "%ld", a->offset);
+		snprint(str, sizeof(str), "%d", a->offset);
 		break;
 
 	case D_EXTERN:
-		snprint(str, sizeof(str), "%s+%ld(SB)", s->name, a->offset);
+		snprint(str, sizeof(str), "%s+%d(SB)", s->name, a->offset);
 		break;
 
 	case D_STATIC:
-		snprint(str, sizeof(str), "%s<>+%ld(SB)", s->name, a->offset);
+		snprint(str, sizeof(str), "%s<>+%d(SB)", s->name, a->offset);
 		break;
 
 	case D_AUTO:
-		snprint(str, sizeof(str), "%s-%ld(SP)", s->name, -a->offset);
+		snprint(str, sizeof(str), "%s-%d(SP)", s->name, -a->offset);
 		break;
 
 	case D_PARAM:
-		snprint(str, sizeof(str), "%s+%ld(FP)", s->name, a->offset);
+		snprint(str, sizeof(str), "%s+%d(FP)", s->name, a->offset);
 		break;
 	}
 out:

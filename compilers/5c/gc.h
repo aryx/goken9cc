@@ -31,7 +31,8 @@ typedef	struct	Rgn	Rgn;
 
 struct	Adr
 {
-	long	offset;
+    //old: was long
+	int32	offset;
 	double	dval;
 	char	sval[NSNAME];
 	Ieee	ieee;
