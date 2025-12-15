@@ -9,8 +9,7 @@ cgen(Node *n, Node *nn)
 	Prog *p1;
 	Node nod, nod1, nod2, nod3, nod4;
 	int o, hardleft;
-	int32 v;
-    int32 curs;
+	long v, curs;
 	vlong c;
 
 	if(debug['g']) {
@@ -1028,7 +1027,7 @@ cgen(Node *n, Node *nn)
 			diag(n, "DOT and no offset");
 			break;
 		}
-		nod.xoffset += (int32)r->vconst;
+		nod.xoffset += (long)r->vconst;
 		nod.type = n->type;
 		cgen(&nod, nn);
 		break;
@@ -1130,7 +1129,7 @@ void
 reglcgen(Node *t, Node *n, Node *nn)
 {
 	Node *r;
-	int32 v;
+	long v;
 
 	regialloc(t, n, nn);
 	if(n->op == OIND) {
@@ -1216,7 +1215,7 @@ boolgen(Node *n, int true, Node *nn)
 	int o;
 	Prog *p1, *p2;
 	Node *l, *r, nod, nod1;
-	int32 curs;
+	long curs;
 
 	if(debug['g']) {
 		prtree(nn, "boolgen lhs");
@@ -1428,7 +1427,7 @@ boolgen(Node *n, int true, Node *nn)
 }
 
 void
-sugen(Node *n, Node *nn, int32 w)
+sugen(Node *n, Node *nn, long w)
 {
 	Prog *p1;
 	Node nod0, nod1, nod2, nod3, nod4, *h, *l, *r;
@@ -1499,7 +1498,7 @@ sugen(Node *n, Node *nn, int32 w)
 			diag(n, "DOT and no offset");
 			break;
 		}
-		nod1.xoffset += (int32)r->vconst;
+		nod1.xoffset += (long)r->vconst;
 		nod1.type = n->type;
 		sugen(&nod1, nn, w);
 		break;

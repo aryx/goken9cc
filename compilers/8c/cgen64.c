@@ -24,22 +24,22 @@ vaddr(Node *n, int a)
 	return 0;
 }
 
-int32
+long
 hi64v(Node *n)
 {
 	if(align(0, types[TCHAR], Aarg1))	/* isbigendian */
-		return (int32)(n->vconst) & ~0L;
+		return (long)(n->vconst) & ~0L;
 	else
-		return (int32)((uvlong)n->vconst>>32) & ~0L;
+		return (long)((uvlong)n->vconst>>32) & ~0L;
 }
 
-int32
+long
 lo64v(Node *n)
 {
 	if(align(0, types[TCHAR], Aarg1))	/* isbigendian */
-		return (int32)((uvlong)n->vconst>>32) & ~0L;
+		return (long)((uvlong)n->vconst>>32) & ~0L;
 	else
-		return (int32)(n->vconst) & ~0L;
+		return (long)(n->vconst) & ~0L;
 }
 
 Node *
