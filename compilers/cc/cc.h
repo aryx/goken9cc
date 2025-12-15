@@ -755,8 +755,8 @@ long	outstring(char*, long);
 long	outlstring(TRune*, long);
 void	xcom(Node*);
 long	exreg(Type*);
-long	align(long, Type*, int);
-long	maxround(long, long);
+int32	align(int32, Type*, int);
+int32	maxround(int32, int32);
 
 extern	schar	ewidth[];
 

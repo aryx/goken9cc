@@ -461,7 +461,7 @@ void
 zname(Biobuf *b, Sym *s, int t)
 {
 	char *n, bf[7];
-	ulong sig;
+	uint32 sig;
 
 	n = s->name;
 	if(debug['T'] && t == D_EXTERN && s->sig != SIGDONE && s->type != types[TENUM] && s != symrathole){
@@ -488,7 +488,7 @@ zname(Biobuf *b, Sym *s, int t)
 char*
 zaddr(char *bp, Adr *a, int s)
 {
-	long l;
+	int32 l;
 	Ieee e;
 
 	bp[0] = a->type;
@@ -542,10 +542,10 @@ zaddr(char *bp, Adr *a, int s)
 	return bp;
 }
 
-long
-align(long i, Type *t, int op)
+int32
+align(int32 i, Type *t, int op)
 {
-	long o;
+	int32 o;
 	Type *v;
 	int w;
 
@@ -609,8 +609,8 @@ align(long i, Type *t, int op)
 	return o;
 }
 
-long
-maxround(long max, long v)
+int32
+maxround(int32 max, int32 v)
 {
 	v = round(v, SZ_LONG);
 	if(v > max)
