@@ -1,5 +1,10 @@
 #include "gc.h"
 
+int	Bputc_(Biobuf* b, int x) {
+    print("%x ", (uint8) x);
+    Bputc(b, x);
+}
+
 void
 swit1(C1 *q, int nc, long def, Node *n)
 {
@@ -401,17 +406,24 @@ zaddr(Biobuf *b, Adr *a, int s)
 	if(t & T_SYM)		/* implies sym */
 		Bputc(b, s);
 	if(t & T_FCONST) {
+        union {
+            double d;
+            unsigned long long u;
+        } x;
+        x.d = a->dval;
+
+        print("%e 0x%016llux\n", x.d, x.u);
 		ieeedtod(&e, a->dval);
 		l = e.l;
-		Bputc(b, l);
-		Bputc(b, l>>8);
-		Bputc(b, l>>16);
-		Bputc(b, l>>24);
+		Bputc_(b, l);
+		Bputc_(b, l>>8);
+		Bputc_(b, l>>16);
+		Bputc_(b, l>>24);
 		l = e.h;
-		Bputc(b, l);
-		Bputc(b, l>>8);
-		Bputc(b, l>>16);
-		Bputc(b, l>>24);
+		Bputc_(b, l);
+		Bputc_(b, l>>8);
+		Bputc_(b, l>>16);
+		Bputc_(b, l>>24);
 		return;
 	}
 	if(t & T_SCONST) {
