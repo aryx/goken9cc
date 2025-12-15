@@ -125,7 +125,11 @@ Dconv(Fmt *fp)
 		break;
 
 	case D_FCONST:
-		snprint(str, sizeof(str), "$(%.17e)", a->dval);
+        //old: snprint(str, sizeof(str), "$(%.17e)", a->dval);
+        // but can lead to different display on 64 vs 32 bits arch
+        // even though the number if the same, so simpler to
+        // display full precision
+        snprint(str, sizeof(str), "$(%e)", a->dval);
 		break;
 
 	case D_SCONST:

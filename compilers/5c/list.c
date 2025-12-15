@@ -173,7 +173,8 @@ Dconv(Fmt *fp)
 		break;
 
 	case D_FCONST:
-		snprint(str, sizeof(str), "$%.17e", a->dval);
+		//old: snprint(str, sizeof(str), "$%.17e", a->dval);
+        snprint(str, sizeof(str), "$%e", a->dval);
 		break;
 
 	case D_SCONST:
