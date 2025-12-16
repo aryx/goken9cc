@@ -3,15 +3,15 @@
 #include <libc.h>
 #include "fmtdef.h"
 
-static ulong
-umuldiv(ulong a, ulong b, ulong c)
+static uint32
+umuldiv(uint32 a, uint32 b, uint32 c)
 {
 	double d;
 
 	d = ((double)a * (double)b) / (double)c;
 	if(d >= 4294967295.)
 		d = 4294967295.;
-	return (ulong)d;
+	return (uint32)d;
 }
 
 /*
@@ -29,13 +29,13 @@ umuldiv(ulong a, ulong b, ulong c)
  */
 enum
 {
-	Nbits	= 28,				/* bits safely represented in a ulong */
+	Nbits	= 28,				/* bits safely represented in a uint32 */
 	Nmant	= 53,				/* bits of precision required */
 	Prec	= (Nmant+Nbits+1)/Nbits,	/* words of Nbits each to represent mantissa */
 	Sigbit	= 1<<(Prec*Nbits-Nmant),	/* first significant bit of Prec-th word */
 	Ndig	= 1500,
-	One	= (ulong)(1<<Nbits),
-	Half	= (ulong)(One>>1),
+	One	= (uint32)(1<<Nbits),
+	Half	= (uint32)(One>>1),
 	Maxe	= 310,
 
 	Fsign	= 1<<0,		/* found - */
@@ -53,8 +53,8 @@ enum
 };
 
 static	int	xcmp(char*, char*);
-static	int	fpcmp(char*, ulong*);
-static	void	frnorm(ulong*);
+static	int	fpcmp(char*, uint32*);
+static	void	frnorm(uint32*);
 static	void	divascii(char*, int*, int*, int*);
 static	void	mulascii(char*, int*, int*, int*);
 
@@ -70,7 +70,7 @@ double
 fmtstrtod(const char *as, char **aas)
 {
 	int na, ex, dp, bp, c, i, flag, state;
-	ulong low[Prec], hig[Prec], mid[Prec];
+	uint32 low[Prec], hig[Prec], mid[Prec];
 	double d;
 	char *s, a[Ndig];
 
@@ -310,7 +310,7 @@ out:
 }
 
 static void
-frnorm(ulong *f)
+frnorm(uint32 *f)
 {
 	int i, c;
 
@@ -324,9 +324,9 @@ frnorm(ulong *f)
 }
 
 static int
-fpcmp(char *a, ulong* f)
+fpcmp(char *a, uint32* f)
 {
-	ulong tf[Prec];
+	uint32 tf[Prec];
 	int i, d, c;
 
 	for(i=0; i<Prec; i++)
