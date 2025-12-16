@@ -1,7 +1,8 @@
 #include "gc.h"
 
+// to help debug mismatch output
 int	Bputc_(Biobuf* b, int x) {
-    print("%x ", (uint8) x);
+    //print("%x ", (uint8) x);
     Bputc(b, x);
 }
 
@@ -406,13 +407,15 @@ zaddr(Biobuf *b, Adr *a, int s)
 	if(t & T_SYM)		/* implies sym */
 		Bputc(b, s);
 	if(t & T_FCONST) {
-        union {
-            double d;
-            unsigned long long u;
-        } x;
-        x.d = a->dval;
+        //useful to debug mismatch between float representation
+        // (see tests/c/misc/f_1_e_126.c)
+        //union {
+        //    double d;
+        //   unsigned long long u;
+        //} x;
+        //x.d = a->dval;
+        //print("%e 0x%016llux\n", x.d, x.u);
 
-        print("%e 0x%016llux\n", x.d, x.u);
 		ieeedtod(&e, a->dval);
 		l = e.l;
 		Bputc_(b, l);
