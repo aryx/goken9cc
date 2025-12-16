@@ -309,7 +309,7 @@ EXTERN	int32	autosize;
 EXTERN	Biobuf	bso;
 EXTERN	int	cbc;
 EXTERN	uchar*	cbp;
-EXTERN	int	cout;
+extern int	cout; // defined in lib.c
 EXTERN	Auto*	curauto;
 EXTERN	Auto*	curhist;
 EXTERN	Prog*	curp;

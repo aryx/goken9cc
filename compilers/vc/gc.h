@@ -146,7 +146,7 @@ EXTERN	int	mnstring;
 EXTERN	int	retok;
 
 EXTERN	Multab	multab[20];
-EXTERN	int	hintabsize;
+extern	int	hintabsize; // defined in mul.c
 EXTERN	Node*	nodrat;
 EXTERN	Node*	nodret;
 EXTERN	Node*	nodsafe;

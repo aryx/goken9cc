@@ -6,7 +6,7 @@
 #include "acid.h"
 #include "y.tab.h"
 
-char	*argv0;
+//char	*argv0;
 char *acidlib;
 static Biobuf	bioout;
 static char	prog[128];

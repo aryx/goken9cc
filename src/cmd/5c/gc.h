@@ -181,7 +181,6 @@ EXTERN	int32	maxargsafe;
 EXTERN	int	mnstring;
 EXTERN	Multab	multab[20];
 EXTERN	int	retok;
-EXTERN	int	hintabsize;
 EXTERN	Node*	nodrat;
 EXTERN	Node*	nodret;
 EXTERN	Node*	nodsafe;
@@ -198,6 +197,8 @@ EXTERN	char	reg[NREG+NFREG];
 EXTERN	int32	exregoffset;
 EXTERN	int32	exfregoffset;
 EXTERN	int	suppress;
+
+extern	int	hintabsize; // defined in mul.c
 
 #define	BLOAD(r)	band(bnot(r->refbehind), r->refahead)
 #define	BSTORE(r)	band(bnot(r->calbehind), r->calahead)

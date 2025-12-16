@@ -218,7 +218,7 @@ EXTERN	Prog*	datap;
 EXTERN	int32	datsize;
 EXTERN	Prog*	etextp;
 EXTERN	Prog*	firstp;
-EXTERN	char*	noname;
+extern	char*	noname; // defined in pobj.c
 EXTERN	Prog*	lastp;
 EXTERN	int32	lcsize;
 EXTERN	char	literal[32];

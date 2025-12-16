@@ -6,7 +6,7 @@
 #   so that the compilation of tests/c/misc/f_1_e_126.c leads to same code
 # - the --std=gnu89 otherwise can't compile with recent defaults for gcc/clang
 CC=gcc -m32 -mfpmath=sse -sse2  -Wno-cpp --std=gnu89 -c
-LD=gcc -Wl,--allow-multiple-definition
+LD=gcc
 AS=gcc
 O=o
 

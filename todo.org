@@ -465,23 +465,9 @@ take the one from Leroy for compcert?
 
 *** devinfra: RELAX fix all gcc warnings in goken show when running 'mk'
 
-*** devinfra: RELAX remove use of --allow-multiple-definition, fix the code!
-avoid bad surprise?
-
-still segfault when using p = gtext ... for 7l ?
-
-commit removal of allow-multiple-def in arm64/mkfile?
-fixed all multiple-defs issue in goken?
-
-can detect the ugly 'stdin' Binit in sed.c that
-was fixed in inferno-os but caused some segfaults?
-because stdin already defined elsewhere in goken lib9?
-
 *** less: .gitignore inspired from DELETED/.hgignore
 
-*** LATER betterfix the hack I put (e.g., -Wl,--allow-multiple-definition)
-
-**** fix some EXTERN to avoid -Wl,--allow-multiple-definition
+*** LATER betterfix the hack I put
 
 **** fix gc/yerrxxx.h hack and yerr.h loadsys issue
 and restore the syntax/ from the testsuite and other few tests

@@ -34,8 +34,8 @@
 #include	"../ld/lib.h"
 #include	"../ld/elf.h"
 
-char *elfstrdat;
-int elfstrsize;
+//char *elfstrdat;
+//int elfstrsize;
 int maxelfstr;
 
 void genasmsym(void (*put)(char*, int, vlong, vlong, int, Sym*));

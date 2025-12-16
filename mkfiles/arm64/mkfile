@@ -1,15 +1,17 @@
 <$TOP/mkfiles/mkfile.proto
 
-#TODO: principia: alt: CC=6c LD=6l O=6 AS=6a
-#alt: CC=quietgcc -c LD=quietgcc AS=quietgcc O=o
-# see https://abstractexpr.com/2023/04/30/the-anomaly-of-the-char-type-in-c/
-# for the need of -fsigned-char on arm64! otherwise compilers/8c/mul.c
-# will be buggy
-CC=gcc -Wno-cpp --std=gnu89 -c -fsigned-char
-#TODO: ugly, should instead fix those multiple defs and fix use of EXTERN
-LD=gcc -Wl,--allow-multiple-definition
+# flags explanations:
+# - the -signed-char is needed otherwise compilers/8c/mul.c will be buggy
+#   see https://abstractexpr.com/2023/04/30/the-anomaly-of-the-char-type-in-c/
+# - the --std=gnu89 is needed because recent gcc have too many warnings
+#   by default that prevents to compile goken
+# - the -Wno-cpp to avoid certain errors
+#alt: CC=quietgcc -c ...
+CC=gcc -c --std=gnu89 -Wno-cpp -fsigned-char
+LD=gcc
 AS=gcc
 O=o
+#LATER: principia: alt: CC=6c LD=6l O=6 AS=6a
 
 # used in tests/
 O_=7

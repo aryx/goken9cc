@@ -54,6 +54,7 @@ case "$GOHOSTOS" in
 	;;
     *)
        #TODO: ugly, should instead fix those multiple defs and fix use of EXTERN
+       #update: I think it has been fixed so we can probably remove it
        GCCDFLAGS=-Wl,--allow-multiple-definition
         ;;
 esac

@@ -211,8 +211,8 @@ Extern		int text;
 Extern		int trace;
 Extern 		int sysdbg;
 Extern 		int calltree;
-Extern		Inst itab[];
-Extern		Inst ispec[];
+extern		Inst itab[]; // defined in vi.c
+extern		Inst ispec[]; // defined in special.c
 Extern		Icache icache;
 Extern		Tlb tlb;
 Extern		int count;

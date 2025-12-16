@@ -1,10 +1,7 @@
 <$TOP/mkfiles/mkfile.proto
 
-#TODO: principia: alt: CC=6c LD=6l O=6 AS=6a
-#alt: CC=quietgcc -c LD=quietgcc AS=quietgcc O=o
 CC=gcc -Wno-cpp --std=gnu89 -c
-#TODO: ugly, should instead fix those multiple defs and fix use of EXTERN
-LD=gcc -Wl,--allow-multiple-definition
+LD=gcc
 AS=gcc
 O=o
 
