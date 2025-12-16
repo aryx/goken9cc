@@ -50,6 +50,14 @@ but better wait to avoid diff.rc to show big diffs
 
 * Last
 
+*** RELAX look for sizeof(long) and fixed all of them!
+
+
+*** RELAX remove sprint()! switch to sprint_DANGEROUS, then
+maybe macro using sizeof() ? SPRINT() ? or use snprint and
+pass length each time, safer
+
+
 *** FUN try to use 6prof and 6cov
 
 *** add workflow to check it compiles on macos
@@ -444,9 +452,6 @@ start multi GOOS and GOARCH in CI? in Docker can try all combinations?
 
 *** switch to GOHOST and GOTARGET instead of GOARCH?
 or GOARCHHOST, GOARCHTARGET, GOOSTARGET ?
-
-*** RELAX goken/mkfiles/386/mkfile
-and try to compile goken with -m32
 
 *** still? switch from bison to yacc? so can work on plan9!
 anyway I get bad errors about yerr.h that we could fix by switching to regular yacc!

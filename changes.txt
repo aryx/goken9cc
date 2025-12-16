@@ -10,16 +10,22 @@
 - continue reorg code with SRC/ with symlinks to mimic old org.
 - bootstrappable (can compile itself)
 
-* 0.1 (Q4 2025) (compile principia, mips va/vc/vl v1, float v0, arm/mips emulator (5i/vi), riscv ia/ic/il v0, acid v0)
+* 0.1 (Q4 2025) (compile and run principia pc/pi, mips va/vc/vl v1, float v0, arm/mips emulator (5i/vi), riscv ia/ic/il v0, acid v0)
 
 ** toolchain
 - import also 8a/8c/8l, 5a/5c/5l, cc, ar, and libmach from my kencc fork
   https://github.com/aryx/fork-kencc put in assemblers/, linkers/, compilers/
   as they are known to work on principia code and I got tired of trying
   to make the golang-origin toolchains working (which are still in src/cmd).
-- fix the imported 8a/8c/8l, ar, etc. by changing a few long -> int32
+- fix the imported 8a/8c/8l, ar, etc. by changing a few long->int32
   (cc/bits.c, x.out.h ieee float), and use -fsigned-char so it can compile
   principia softwarica from my arm64 machine!
+- fix more 8c/5c long->int32 (Node xoffset, Adr offset, ieeedtod, pswt switch sort),
+   %ld->%d, %.17e->%e (misleading as display different but binary equal),
+  compare .8 produced by goken vs kencc using '-m32 -mfpmath=sse -sse2'
+  (for tests/c/misc/f_1_e_126.c)
+  and fix mismatches enough so that mostly same .8 and can run principia pc
+  and pi targets!!!
 - mips: generate ELF-Linux binaries (can test with qemu-mips)
 - support for arm64, riscv, and mips in libmach (imported
   respectively from 9front, inferno-os, and 9-cc).
@@ -35,6 +41,7 @@
   (still some bugs though)
 - use nanosecond granularity to new Dir->mtime_ field and fix mk to use this
   new more precise time to avoid useless recompilation
+- a few long->int32 in strtod.c (but no impact on principia I think)
 
 ** test infra
 - multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)
@@ -50,6 +57,7 @@
   or golang specific code in the toolchain (defined when building GO/
   but undefined otherwise)
 - use -fsigned-char on arm64 to get portable code
+- use 
 
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability
@@ -58,6 +66,10 @@
   (but very few; just in cc/bits.c and x.out.h)
 - move the different toolchains (ix, vx, ...) in assemblers/, linkers/,
   and compilers/ (and kept the golang-origin one in src/cmd/)
+
+** utilities
+- add utilities/calc/hoc from principia useful to compile the principia kernel
+- add utilities/kernel/{data2s,ksize}.c useful to compile the principia kernel
 
 * Beta (Q3 2025) (arm64 7a/7c/7l v1, riscv ia/ic/il v0, arm64 linux/macos build, arm32 linux run v0, mk/rc, utilities v0, typesetting v0)
 
