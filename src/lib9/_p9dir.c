@@ -215,7 +215,7 @@ _p9dir(struct stat *lst, struct stat *st, char *name, Dir *d, char **str, char *
 // thx chatGPT:
 #if defined(__APPLE__)
         // macOS / BSD use st_mtimespec
-        ts = st->t_mtimespec;
+        ts = st->st_mtimespec;
 #elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
         // POSIX.1-2008 high-resolution timestamp fields
         ts = st->st_mtim;
