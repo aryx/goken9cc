@@ -60,13 +60,6 @@ pass length each time, safer
 
 *** FUN try to use 6prof and 6cov
 
-*** add workflow to check it compiles on macos
-can't run tests, but at least can check we can compile
-most of goken (including utilties)
-
-*** nix.yml with testing also mk/rc build side, and macos/linux
-# was waiting for mk/rc to be added in goken itself, and it is now!
-
 * Components
 
 ** ARM (kencc-imported) toolchain: 5a/5c/5l

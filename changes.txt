@@ -10,7 +10,7 @@
 - continue reorg code with SRC/ with symlinks to mimic old org.
 - bootstrappable (can compile itself)
 
-* 0.1 (Q4 2025) (compile and run principia pc/pi, mips va/vc/vl v1, float v0, arm/mips emulator (5i/vi), riscv ia/ic/il v0, acid v0)
+* 0.1 (Q4 2025) (compile and run principia pc/pi, mips va/vc/vl v1, riscv ia/ic/il v0, float v0, arm/mips emulator (5i/vi), acid v0)
 
 ** toolchain
 - import also 8a/8c/8l, 5a/5c/5l, cc, ar, and libmach from my kencc fork
@@ -47,7 +47,8 @@
 - multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)
 - docker build and test working for both amd64 and arm64
 - more C tests in tests/c/{float,vlong}
-- use principia as a big regression test in docker
+- use principia as a big regression test in docker, and use goken to compile
+  all of principia including the kernels for the pi and pc targets
 
 ** build infra
 - support and use "#9/..." paths like in plan9port instead of needing
@@ -56,12 +57,15 @@
 - started to add GODYNLINK and GOLANG #ifdefs to guard optional
   or golang specific code in the toolchain (defined when building GO/
   but undefined otherwise)
-- use -fsigned-char on arm64 to get portable code
-- use 
+- use gcc -fsigned-char on arm64 to get portable code
+- use gcc -fpmath=sse -sse2 on i386 to get portable code and same float behavior
+  on 32bits vs 64bits machine
 
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability
   for 5a_/5c_/5l_, va/vc/vl, ia/ic/il, 7a/7c/7l
+  TODO: undo and do the minimum like I did for 5c/8c enough to compile/run
+  principia
 - convert a few long -> int32 for the kencc imported 5a/5c/6l, 8a/8c/8l
   (but very few; just in cc/bits.c and x.out.h)
 - move the different toolchains (ix, vx, ...) in assemblers/, linkers/,
