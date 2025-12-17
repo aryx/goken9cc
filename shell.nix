@@ -14,7 +14,8 @@ let
 pkgs.mkShell {
   packages = with pkgs; [
     # usually installed by default but does not hurt to add
-    gcc glibc binutils gnumake bash bison ed
+    gcc binutils gnumake bash bison ed
+    # old: 'glibc' but then does not work on macOS?
     
     # Optional utilities for development/debugging, ex: 'which'
     # Implicit utilities and libs installed by default in nix
