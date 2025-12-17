@@ -214,13 +214,13 @@ main(int argc, char *argv[])
 			INITRND = 1024;
 		break;
 	case 7:	/* elf executable */
-		//HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
-		//if(INITTEXT == -1)
-		//	INITTEXT = 4096+HEADR;
-		//if(INITDAT == -1)
-		//	INITDAT = 0;
-		//if(INITRND == -1)
-		//	INITRND = 4;
+		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+		if(INITTEXT == -1)
+			INITTEXT = 4096+HEADR;
+		if(INITDAT == -1)
+			INITDAT = 0;
+		if(INITRND == -1)
+			INITRND = 4;
 		break;
 	}
 	if (INITTEXTP == -1)

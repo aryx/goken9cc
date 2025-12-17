@@ -215,6 +215,10 @@ asmb(void)
 		lputl(0xe3300000);		/* nop */
 		lputl(0xe3300000);		/* nop */
 		break;
+	case 7:	/* elf */
+		debug['S'] = 1;			/* symbol table */
+		elf32(ARM, ELFDATA2LSB, 0, nil);
+		break;
 	}
 	cflush();
 	if(debug['c']){

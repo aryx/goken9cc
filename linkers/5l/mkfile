@@ -13,10 +13,9 @@ OFILES=\
 	optab.$O\
 	pass.$O\
 	span.$O\
+	\
 	enam.$O\
-
-#	$TARGMODEL.$O\
-
+	elf.$O\
 
 HFILES=	l.h 5.out.h $TOP/include/ar.h
 
@@ -25,7 +24,8 @@ HFILES=	l.h 5.out.h $TOP/include/ar.h
 CLEANFILES=enam.c
 enam.c: 5.out.h
 	sh mkenam
-
 #enam.$O:	../5c/enam.c
 #	$CC $CFLAGS ../5c/enam.c
 
+%.$O:	../lk/%.c
+	$CC $CFLAGS ../lk/$stem.c

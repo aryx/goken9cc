@@ -45,12 +45,6 @@ realloc(void *p, ulong n)
 	return 0;
 }
 
-void*
-mysbrk(ulong size)
-{
-	return sbrk(size);
-}
-
 void
 setmalloctag(void*, ulong)
 {
