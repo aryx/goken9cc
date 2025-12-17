@@ -1,9 +1,10 @@
 # add -v to some linker command to debug
 
-LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe hello_linux_386_.exe \
-          hello_linux_arm.exe hello_linux_arm64.exe hello_linux_arm_.exe \
-          hello_linux_mips.exe
 #TODO: hello_linux_riscv.exe (segfault right now)
+LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
+          hello_linux_arm.exe hello_linux_arm64.exe \
+          hello_linux_mips.exe \
+           hello_linux_386_.exe hello_linux_arm_.exe hello_linux_arm__.exe
 EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe exit_linux_arm_.exe \
               exit_linux_riscv.exe exit_linux_mips.exe
 
@@ -41,21 +42,24 @@ clean:V:
 
 #Linux
 # old: -X to avoid the golang specific stuff and -d to disable dynamic linking
-hello_linux_amd64.exe: hello_linux_amd64.s
-   6a -c $prereq
-   6l -o $target -E _start hello_linux_amd64.6
 hello_linux_386.exe: hello_linux_386.s
    8a -c $prereq
    8l -H7 -o $target -E _start hello_linux_386.8
 hello_linux_386_.exe: hello_linux_386_.s
    8a_ -c $prereq
    8l_ -o $target -E _start hello_linux_386_.8
+hello_linux_amd64.exe: hello_linux_amd64.s
+   6a -c $prereq
+   6l -o $target -E _start hello_linux_amd64.6
 hello_linux_arm.exe: hello_linux_arm.s
-   5a_ -c $prereq
-   5l_ -o $target -E _start hello_linux_arm.5
+   5a -c $prereq
+   5l -H7 -o $target -E _start hello_linux_arm.5
 hello_linux_arm_.exe: hello_linux_arm_.s
+   5a_ -c $prereq
+   5l_ -o $target -E _start hello_linux_arm_.5
+hello_linux_arm__.exe: hello_linux_arm__.s
    5a__ -c $prereq
-   5l__ -H7 -o $target -E _start hello_linux_arm_.5
+   5l__ -H7 -o $target -E _start hello_linux_arm__.5
 hello_linux_arm64.exe: hello_linux_arm64.s
    7a -c $prereq
    7l -H7 -o $target -E _start hello_linux_arm64.7

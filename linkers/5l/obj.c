@@ -155,9 +155,6 @@ main(int argc, char *argv[])
 			HEADTYPE = 2;
 	}
 	switch(HEADTYPE) {
-	default:
-		diag("unknown -H option");
-		errorexit();
 	case 0:	/* no header */
 	case 6:	/* no header, padded segments */
 		HEADR = 0L;
@@ -216,12 +213,15 @@ main(int argc, char *argv[])
 	case 7:	/* elf executable */
 		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
 		if(INITTEXT == -1)
-			INITTEXT = 4096+HEADR;
+			INITTEXT = 0x8000 + HEADR;
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)
-			INITRND = 4;
+			INITRND = 4096;
 		break;
+	default:
+		diag("unknown -H option");
+		errorexit();
 	}
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;

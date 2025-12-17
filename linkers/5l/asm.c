@@ -80,7 +80,6 @@ asmb(void)
 	case 1:
 	case 2:
 	case 5:
-	case 7:
 		OFFSET = HEADR+textsize;
 		seek(cout, OFFSET, 0);
 		break;
@@ -89,6 +88,15 @@ asmb(void)
 		OFFSET = rnd(HEADR+textsize, 4096);
 		seek(cout, OFFSET, 0);
 		break;
+	case 7:
+        //goken: ELF Linux constrains that virtual
+        // address modulo page must match file offset modulo
+        // page, so simpler to start data at a page boundary
+        //coupling: must match the code generating the ELF
+        // section and ELF program header in elf.c
+		OFFSET = rnd(HEADR+textsize, INITRND);
+		seek(cout, OFFSET, SEEK__START);
+ 		break;
 	}
 	if(dlm){
 		char buf[8];
