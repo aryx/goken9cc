@@ -11,8 +11,8 @@ AS=gcc
 O=o
 
 # used in tests/
-O_=6
-CC_=6c
-LD_=6l
-AS_=6a
-AR_=ar_
+O_=8
+CC_=8c
+LD_=8l
+AS_=8a
+AR_=iar

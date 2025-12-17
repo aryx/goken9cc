@@ -24,11 +24,11 @@ helloc.exe: helloc.c
 # when ar_ is not working
 #alt: could factorize with previous rule but would need some start_arm_.s
 # symlink to start_arm.s
-helloc_arm_.exe: helloc.c
-   5c__ -Darm_ -c helloc.c
-   5a__ -Darm_ -c xwrite_arm.s
-   5a__ -Darm_ -c xexit_arm.s
-   5a__ -Darm_ -c start_arm.s
+helloc_arm__.exe: helloc.c
+   5c__ -Darm__ -c helloc.c
+   5a__ -Darm__ -c xwrite_arm.s
+   5a__ -Darm__ -c xexit_arm.s
+   5a__ -Darm__ -c start_arm.s
    ar_ rc libmini.a start_arm.5 xwrite_arm.5 xexit_arm.5
    5l__ -H7 -L. -o $target -E _start helloc.5
 
@@ -43,7 +43,7 @@ test:V:
            qemu-$arch ./helloc.exe
         }
 	#alt: special if in for loop above
-	echo arm_
+	echo arm__
 	mk clean
-	mk helloc_arm_.exe
-	qemu-arm ./helloc_arm_.exe
+	mk helloc_arm__.exe
+	qemu-arm ./helloc_arm__.exe
