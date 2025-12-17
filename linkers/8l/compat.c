@@ -3,7 +3,6 @@
 /*
  * fake malloc
  */
-/*
 void*
 malloc(ulong n)
 {
@@ -55,4 +54,3 @@ setmalloctag(void *v, ulong pc)
 {
 	USED(v, pc);
 }
-*/

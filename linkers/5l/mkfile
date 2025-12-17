@@ -17,6 +17,8 @@ OFILES=\
 	enam.$O\
 	elf.$O\
 
+#old: compat.$O or $TARGMODEL.$O
+
 HFILES=	l.h 5.out.h $TOP/include/ar.h
 
 <$TOP/mkfiles/mkone

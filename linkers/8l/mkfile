@@ -12,11 +12,11 @@ OFILES=\
 	optab.$O\
 	pass.$O\
 	span.$O\
+        \
 	enam.$O\
         elf.$O\
 
-#        compat.$O\
-#	$TARGMODEL.$O\
+#old: compat.$O or $TARGMODEL.$O
 
 HFILES= l.h 8.out.h  $TOP/include/ar.h
 
@@ -27,6 +27,9 @@ CLEANFILES=enam.c
 enam.c: 8.out.h
 	sh mkenam
 
+#I added the elf.c/elf.h symlinks instead of reusing
+# ../lk/elf.$O to mimic plan9/ code that has those files
+# only for 8l
 #%.$O:	../lk/%.c
 #	$CC $CFLAGS ../lk/$stem.c
 

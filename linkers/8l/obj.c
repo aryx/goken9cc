@@ -1193,7 +1193,7 @@ lookup(char *symb, int v)
 	nhunk -= sizeof(Sym);
 	hunk += sizeof(Sym);
 
-	s->name = malloc(l);
+	s->name = malloc(l + 1); // +1 for \0 ?
 	memmove(s->name, symb, l);
 
 	s->link = hash[h];
