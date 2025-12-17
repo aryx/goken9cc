@@ -1,4 +1,4 @@
-# Build goken9cc via Nix on Linux (and MacOS)
+# Build goken9cc via Nix on Linux and MacOS.
 # See also shell.nix at the root of the project.
 
 name: nix
@@ -35,6 +35,8 @@ jobs:
             export PATH=$PATH:`pwd`/bin
             export MKSHELL=`pwd`/bin/rc
             mk nuke
+            mk
+            mk install
           '
 
 #old:
