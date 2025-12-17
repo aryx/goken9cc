@@ -1,4 +1,4 @@
-# Build goken9cc via Nix on Linux (and MacOS??)
+# Build goken9cc via Nix on Linux (and MacOS)
 # See also shell.nix at the root of the project.
 
 name: nix
@@ -15,7 +15,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          #- macos-latest
+          - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -29,9 +29,12 @@ jobs:
         run: |
           #coupling: Dockerfile
           nix-shell --run '
-            cd GO/
-            ./all.bash
-            cd ..
-            export PATH=$PATH:`pwd`/bin
-            make hellogotest
+            ./configure
           '
+
+#old:
+#            cd GO/
+#            ./all.bash
+#            cd ..
+#            export PATH=$PATH:`pwd`/bin
+#            make hellogotest

@@ -1,6 +1,6 @@
 # Setup a dev environment for goken9cc using Nix.
 # Run 'nix-shell --pure' from the root of the project to get a dev environment
-# ready to compile/test/run goken from Linux or macOS (TODO: on amd64 or arm64).
+# ready to compile/test/run goken from Linux or macOS (on amd64 or arm64).
 # See also .github/workflows/nix.yml for its use in Github Actions (GHA).
 # See also Dockerfile.
 # See also my xix project and its shell.nix for more info about Nix.
