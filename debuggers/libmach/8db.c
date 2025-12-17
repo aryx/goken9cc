@@ -8,12 +8,12 @@
 
 static	char	*i386excep(Map*, Rgetter);
 
-static	int	i386trace(Map*, ulong, ulong, ulong, Tracer);
-static	ulong	i386frame(Map*, ulong, ulong, ulong, ulong);
-static	int	i386foll(Map*, ulong, Rgetter, ulong*);
-static	int	i386inst(Map*, ulong, char, char*, int);
-static	int	i386das(Map*, ulong, char*, int);
-static	int	i386instlen(Map*, ulong);
+static	int	i386trace(Map*, uvlong, uvlong, uvlong, Tracer);
+static	uvlong	i386frame(Map*, uvlong, uvlong, uvlong, uvlong);
+static	int	i386foll(Map*, uvlong, Rgetter, uvlong*);
+static	int	i386inst(Map*, uvlong, char, char*, int);
+static	int	i386das(Map*, uvlong, char*, int);
+static	int	i386instlen(Map*, uvlong);
 
 static	char	STARTSYM[] =	"_main";
 static	char	PROFSYM[] =	"_mainp";
@@ -95,7 +95,7 @@ i386excep(Map *map, Rgetter rget)
 }
 
 static int
-i386trace(Map *map, ulong pc, ulong sp, ulong link, Tracer trace)
+i386trace(Map *map, uvlong pc, uvlong sp, uvlong link, Tracer trace)
 {
 	int i;
 	ulong osp;
@@ -133,8 +133,8 @@ i386trace(Map *map, ulong pc, ulong sp, ulong link, Tracer trace)
 	return i;
 }
 
-static ulong
-i386frame(Map *map, ulong addr, ulong pc, ulong sp, ulong link)
+static uvlong
+i386frame(Map *map, uvlong addr, uvlong pc, uvlong sp, uvlong link)
 {
 	Symbol s, f;
 
@@ -1727,7 +1727,7 @@ prinstr(Instr *ip, char *fmt)
 }
 
 static int
-i386inst(Map *map, ulong pc, char modifier, char *buf, int n)
+i386inst(Map *map, uvlong pc, char modifier, char *buf, int n)
 {
 	Instr	instr;
 	Optable *op;
@@ -1746,7 +1746,7 @@ i386inst(Map *map, ulong pc, char modifier, char *buf, int n)
 }
 
 static int
-i386das(Map *map, ulong pc, char *buf, int n)
+i386das(Map *map, uvlong pc, char *buf, int n)
 {
 	Instr	instr;
 	int i;
@@ -1766,7 +1766,7 @@ i386das(Map *map, ulong pc, char *buf, int n)
 }
 
 static int
-i386instlen(Map *map, ulong pc)
+i386instlen(Map *map, uvlong pc)
 {
 	Instr i;
 
@@ -1776,7 +1776,7 @@ i386instlen(Map *map, ulong pc)
 }
 
 static int
-i386foll(Map *map, ulong pc, Rgetter rget, ulong *foll)
+i386foll(Map *map, uvlong pc, Rgetter rget, uvlong *foll)
 {
 	Instr i;
 	Optable *op;

@@ -4,8 +4,8 @@
 #include	"mach.h"
 
 #include	"elf.h"
-typedef u32int uint32;
-typedef int int32;
+//typedef u32int uint32;
+//typedef int int32;
 #include	"macho.h"
 
 /*
@@ -29,7 +29,7 @@ static	int	armdotout(int, Fhdr*, ExecHdr*);
 static	void	setsym(Fhdr*, vlong, int32, vlong, int32, vlong, int32);
 static	void	setdata(Fhdr*, int32, int32, int32, int32);
 static	void	settext(Fhdr*, int32, int32, int32, int32);
-static	void	hswal(int32*, int, int32(*)(int32));
+static	void	hswal(uint32*, int, uint32(*)(uint32));
 static	int32	_round(int32, int32);
 
 /*
@@ -42,7 +42,7 @@ typedef struct Exectable{
 	int	type;			/* Internal code */
 	Mach	*mach;			/* Per-machine data */
 	uint32	hsize;			/* header size */
-	int32	(*swal)(int32);		/* beswal or leswal */
+	uint32	(*swal)(uint32);		/* beswal or leswal */
 	int	(*hparse)(int, Fhdr*, ExecHdr*);
 } ExecTable;
 
@@ -105,7 +105,7 @@ crackhdr(int fd, Fhdr *fp)
 			//if(mp->magic == V_MAGIC)
 			//	mp = couldbe4k(mp);
 
-			hswal((int32 *) &d, sizeof(d.e)/sizeof(int32), mp->swal);
+			hswal((uint32 *) &d, sizeof(d.e)/sizeof(int32), mp->swal);
 			fp->type = mp->type;
 			fp->name = mp->name;
 			fp->hdrsz = mp->hsize;		/* zero on bootables */
@@ -123,7 +123,7 @@ crackhdr(int fd, Fhdr *fp)
  * Convert header to canonical form
  */
 static void
-hswal(int32 *lp, int n, int32 (*swap) (int32))
+hswal(uint32 *lp, int n, uint32 (*swap) (uint32))
 {
 	while (n--) {
 		*lp = (*swap) (*lp);

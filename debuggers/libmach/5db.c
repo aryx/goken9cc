@@ -50,10 +50,10 @@ static	char	FRAMENAME[] = ".frame";
  */
 
 extern	char	*armexcep(Map*, Rgetter);
-static	int	armfoll(Map*, ulong, Rgetter, ulong*);
-static	int	arminst(Map*, ulong, char, char*, int);
-static	int	armdas(Map*, ulong, char*, int);
-static	int	arminstlen(Map*, ulong);
+static	int	armfoll(Map*, uvlong, Rgetter, uvlong*);
+static	int	arminst(Map*, uvlong, char, char*, int);
+static	int	armdas(Map*, uvlong, char*, int);
+static	int	arminstlen(Map*, uvlong);
 
 /*
  *	Debugger interface
@@ -1009,14 +1009,14 @@ printins(Map *map, ulong pc, char *buf, int n)
 }
 
 static int
-arminst(Map *map, ulong pc, char modifier, char *buf, int n)
+arminst(Map *map, uvlong pc, char modifier, char *buf, int n)
 {
 	USED(modifier);
 	return printins(map, pc, buf, n);
 }
 
 static int
-armdas(Map *map, ulong pc, char *buf, int n)
+armdas(Map *map, uvlong pc, char *buf, int n)
 {
 	Instr i;
 
@@ -1031,7 +1031,7 @@ armdas(Map *map, ulong pc, char *buf, int n)
 }
 
 static int
-arminstlen(Map *map, ulong pc)
+arminstlen(Map *map, uvlong pc)
 {
 	Instr i;
 
@@ -1041,7 +1041,7 @@ arminstlen(Map *map, ulong pc)
 }
 
 static int
-armfoll(Map *map, ulong pc, Rgetter rget, ulong *foll)
+armfoll(Map *map, uvlong pc, Rgetter rget, uvlong *foll)
 {
 	ulong d;
 	Instr i;

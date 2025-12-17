@@ -61,6 +61,9 @@
 - use gcc -fsigned-char on arm64 to get portable code
 - use gcc -fpmath=sse -sse2 on i386 to get portable code and same float behavior
   on 32bits vs 64bits machine
+- remove the need for -Wl,--allow-multiple-definition
+- fix the code so it can build with clang on macOS
+
 
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability

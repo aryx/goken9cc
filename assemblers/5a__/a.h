@@ -160,3 +160,5 @@ void	yyerror(char*, ...);
 int	yyparse(void);
 void	setinclude(char*);
 int	assemble(char*);
+
+void	ensuresymb(int32);
