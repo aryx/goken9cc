@@ -225,10 +225,10 @@ main(int argc, char *argv[])
 		if(debug['v'])
 			Bprint(&bso, "HEADR = 0x%ld\n", HEADR);
 		break;
-	case 5:	/* elf executable */
+	case 7:	/* elf executable */
 		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
 		if(INITTEXT == -1)
-			INITTEXT = 0x80100020L;
+			INITTEXT = 0x08048000+HEADR;
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)

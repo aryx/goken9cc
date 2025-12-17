@@ -1,5 +1,7 @@
 #include	"l.h"
 
+long	OFFSET;
+
 #define	Dbufslop	100
 
 long
@@ -98,7 +100,9 @@ asmb(void)
 		Bprint(&bso, "%5.2f asmb\n", cputime());
 	Bflush(&bso);
 
-	seek(cout, HEADR, 0);
+	OFFSET = HEADR;
+	seek(cout, OFFSET, 0);
+
 	pc = INITTEXT;
 	curp = firstp;
 	for(p = firstp; p != P; p = p->link) {
@@ -144,13 +148,21 @@ asmb(void)
 		seek(cout, textsize+HEADR, 0);
 		break;
 	case 2:
-	case 5:
 		seek(cout, HEADR+textsize, 0);
 		break;
 	case 3:
 	case 4:
 		seek(cout, HEADR+rnd(textsize, INITRND), 0);
 		break;
+	case 7:
+        //goken: ELF Linux constrains that virtual
+        // address modulo page must match file offset modulo
+        // page, so simpler to start data at a page boundary
+        //coupling: must match the code generating the ELF
+        // section and ELF program header in elf.c
+		OFFSET = rnd(HEADR+textsize, INITRND);
+		seek(cout, OFFSET, SEEK__START);
+ 		break;
 	}
 
 	if(debug['v'])
@@ -187,7 +199,7 @@ asmb(void)
 			seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
 			break;
 		case 2:
-		case 5:
+		case 7:
 			seek(cout, HEADR+textsize+datsize, 0);
 			break;
 		case 3:
@@ -347,7 +359,7 @@ asmb(void)
 		wputl(0x003E);			/* reloc table offset */
 		wputl(0x0000);			/* overlay number */
 		break;
-	case 5:
+	case 7:
 		elf32(I386, ELFDATA2LSB, 0, nil);
 		break;
 	}
