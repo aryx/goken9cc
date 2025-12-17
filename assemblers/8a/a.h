@@ -1,4 +1,5 @@
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "../../linkers/8l/8.out.h"
 
