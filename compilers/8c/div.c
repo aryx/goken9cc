@@ -22,7 +22,7 @@ multiplier(ulong d, int p, uvlong *mp)
 		mhi = (((TN(l) + 1 - d) << 32) / d) + T32;
 	else
 		mhi = (TN(32 + l) + TN(32 + l - p)) / d;
-	//assert(mlo < mhi);
+	assert(mlo < mhi);
 	while(l > 0) {
 		tlo = mlo >> 1;
 		thi = mhi >> 1;
@@ -69,7 +69,7 @@ udiv(ulong d, ulong *mp, int *sp, int *pp)
 	*mp = m;
 	*pp = p;
 	if(m >= T32) {
-		//assert(p == 0);
+		assert(p == 0);
 		*sp = s - 1;
 		return 1;
 	}
