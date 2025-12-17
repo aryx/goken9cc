@@ -54,7 +54,7 @@ case "$OS" in
         ;;
     Darwin)
         GOOS=darwin
-        YACC=byacc
+        YACC=yacc
         ;;
     *)
         echo "Unsupported OS: $OS" >&2
