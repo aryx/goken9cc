@@ -30,6 +30,8 @@ jobs:
           #coupling: Dockerfile
           nix-shell --run '
             ./configure
+            ./scripts/build-mk.sh
+            ./scripts/promote-mk.sh
           '
 
 #old:
