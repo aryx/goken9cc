@@ -334,7 +334,7 @@ void	nocache(Prog*);
 void	noops(void);
 void	nuxiinit(void);
 void	objfile(char*);
-int	ocmp(void*, void*);
+int	ocmp(const void*, const void*);
 int32	opirr(int);
 Optab*	oplook(Prog*);
 int32	oprrr(int);

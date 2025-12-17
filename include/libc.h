@@ -186,6 +186,7 @@ extern	double	fmod(double, double);
 /* extern	double	modf(double, double*); <math.h> */
 
 extern  int isInf(double, int);
+extern  int isNaN(double);
 extern	double	frexp(double, int*);
 extern	double	p9pow10(int);
 

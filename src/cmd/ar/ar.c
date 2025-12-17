@@ -184,7 +184,7 @@ void	usage(void);
 void	wrerr(void);
 void	wrsym(Biobuf*, long, Arsymref*);
 
-void	rcmd(char*, int, char**);		/* command processing */
+void	rcmd_(char*, int, char**);		/* command processing */
 void	dcmd(char*, int, char**);
 void	xcmd(char*, int, char**);
 void	tcmd(char*, int, char**);
@@ -220,7 +220,7 @@ main(int argc, char *argv[])
 		case 'o':	oflag = 1;	break;
 		case 'p':	setcom(pcmd);	break;
 		case 'q':	setcom(qcmd);	break;
-		case 'r':	setcom(rcmd);	break;
+		case 'r':	setcom(rcmd_);	break;
 		case 't':	setcom(tcmd);	break;
 		case 'u':	uflag = 1;	break;
 		case 'v':	vflag = 1;	break;
@@ -249,7 +249,7 @@ main(int argc, char *argv[])
 			fprint(2, "iar: one of [%s] must be specified\n", man);
 			usage();
 		}
-		setcom(rcmd);
+		setcom(rcmd_);
 	}
 	cp = argv[2];
 	argc -= 3;
@@ -283,8 +283,9 @@ setcom(void (*fun)(char *, int, char**))
 /*
  *	perform the 'r' and 'u' commands
  */
+//old: was rcmd but conflict with unistd.h func on macos
 void
-rcmd(char *arname, int count, char **files)
+rcmd_(char *arname, int count, char **files)
 {
 	int fd;
 	int i;

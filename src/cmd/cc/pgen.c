@@ -30,6 +30,9 @@
 
 #include "gc.h"
 
+Prog*	gtext(Sym*, int32);
+void	cas(void);
+
 vlong
 argsize(void)
 {
