@@ -1,5 +1,16 @@
 * Big plan
 
+** TODO changes.txt
+- SEMI fully working arm32 and arm64 mini2/
+- SEMI hello_linux_riscv.exe and exit_linux_riscv.exe
+- TODO revert the changes to va/vc/vl, ia/ic/il, 7a/7c/7l and switch
+  from golang cc/ to kencc-imported cc/
+- TODO switch acid, and 5i/vi from libmach_ to libmach
+
+- continue reorg code with SRC/ with symlinks to mimic old org.
+- bootstrappable (can compile itself)
+
+
 ** Overview
 
 # fix float/64bits ops arm32 and arm64 tests/c/mini2
@@ -255,18 +266,6 @@ try rt0.8 and then 8l but then linking errors so missing stuff
 so later can try to compile goken9cc in CI!
 
 imitate some of the stuff in semgrep/.../build-windows-x86
-
-*** less: make goken compile and run on macOS arm64
-
-**** make goken compile on macOS arm64
-GOOS=darwin GOARCH=amd64
-
-**** try nix.yml macos-latest? need set GOARCH maybe?
-
-**** macos.yml: try running generated binaries on macos-12 and use Rosetta 2 to
-emulate x86_64 ?
-need sign it first?
-
 
 ** Debugger
 

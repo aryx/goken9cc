@@ -1,16 +1,6 @@
 # -*- org -*-
 
-* TODO
-- SEMI fully working arm32 and arm64 mini2/
-- SEMI hello_linux_riscv.exe and exit_linux_riscv.exe
-- TODO revert the changes to va/vc/vl, ia/ic/il, 7a/7c/7l and switch
-  from golang cc/ to kencc-imported cc/
-- TODO switch acid, and 5i/vi from libmach_ to libmach
-
-- continue reorg code with SRC/ with symlinks to mimic old org.
-- bootstrappable (can compile itself)
-
-* 0.1 (Q4 2025) (compile and run principia pc/pi, mips va/vc/vl v1, riscv ia/ic/il v0, float v0, arm/mips emulator (5i/vi), acid v0)
+* 0.1 (Q4 2025) (compile and run principia pc/pi, mips va/vc/vl v1, riscv ia/ic/il v0, float v0, arm/mips emulator (5i/vi) v0, acid v0)
 
 ** toolchain
 - import also 8a/8c/8l, 5a/5c/5l, cc, ar, and libmach from my kencc fork
@@ -24,8 +14,8 @@
    %ld->%d, %.17e->%e (misleading as display different but binary equal),
   compare .8 produced by goken vs kencc using '-m32 -mfpmath=sse -sse2'
   (for tests/c/misc/f_1_e_126.c)
-  and fix mismatches enough so that mostly same .8 and can run principia pc
-  and pi targets!!!
+  and fix mismatches enough so that mostly same .8 
+  => can run principia pc and pi targets!!!
 - mips: generate ELF-Linux binaries (can test with qemu-mips)
 - support for arm64, riscv, and mips in libmach (imported
   respectively from 9front, inferno-os, and 9-cc).
@@ -42,14 +32,16 @@
 - use nanosecond granularity to new Dir->mtime_ field and fix mk to use this
   new more precise time to avoid useless recompilation
 - a few long->int32 in strtod.c (but no impact on principia I think)
-- added lib9/fileexists.c
+- added lib9/fileexists.c to factorize code between linkers and make
+  the code more portable
 
 ** test infra
 - multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)
 - docker build and test working for both amd64 and arm64
 - more C tests in tests/c/{float,vlong}
 - use principia as a big regression test in docker, and use goken to compile
-  all of principia including the kernels for the pi and pc targets
+  all of principia including the kernels for the pi and pc targets!!
+- resume shell.nix and nix.yml GHA for Linux and macOS CI checks
 
 ** build infra
 - support and use "#9/..." paths like in plan9port instead of needing
@@ -71,7 +63,7 @@
   TODO: undo and do the minimum like I did for 5c/8c enough to compile/run
   principia
 - convert a few long -> int32 for the kencc imported 5a/5c/6l, 8a/8c/8l
-  (but very few; just in cc/bits.c and x.out.h)
+  (but very few; just in cc/bits.c, x.out.h, and a few other places)
 - move the different toolchains (ix, vx, ...) in assemblers/, linkers/,
   and compilers/ (and kept the golang-origin one in src/cmd/)
 
@@ -98,7 +90,7 @@
   adapting improvements from kencc and plan9port
 - add also ed source code from principia softwarica so no need external 'ed' and
   build-mk.sh now build mk, rc, and 'ed'
-- adapt to build on arm64 linux and arm64 macos
+- adapt to build on arm64 linux and arm64 macos (partial)
 
 ** internals
 - reorg code with all Go related stuff under GO/ (GOSRC/, GOMISC/, GOTEST/)
@@ -140,7 +132,7 @@
 - add Dockerfile.gosrc and docker.yml GHA (Github Action) CI checks,
   and Dockerfile.alpine (just build, no run; does not run unfortunately)
   and Dockerfile.mksrc (just C toolchain)
-- add shell.nix and nix.yml GHA for Linux CI checks (TODO: macOS)
+- add shell.nix and nix.yml GHA for Linux CI checks (but not macOS yet)
 - add basic 'make test' and new tests/s/ and tests/c/
 
 ** build
