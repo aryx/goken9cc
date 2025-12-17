@@ -2,7 +2,7 @@
 // Entry and exit point
 //---------------------------------
 TEXT _main(SB), $0
-#ifdef arm_
+#ifndef arm_
 	MOVW $setR12(SB), R12
 #endif
 	BL main(SB)
@@ -11,8 +11,6 @@ TEXT _main(SB), $0
 
 TEXT    exit+0(SB), $0
 #ifdef arm_
-	//with 5c_, the first arg is already passed via R0
-#else
         MOVW    status+0(FP), R0
 #endif
         MOVW    $1, R7          // syscall number 1 = sys_exit
@@ -25,7 +23,6 @@ TEXT    exit+0(SB), $0
 
 TEXT    panic+0(SB), $0
 #ifdef arm_
-#else
         MOVW    status+0(FP), R0
 #endif
         MOVW    $1, R7          // syscall number 1 = sys_exit
@@ -42,7 +39,6 @@ TEXT    abort+0(SB), $0
 
 TEXT write+0(SB), $0
 #ifdef arm_
-#else
         MOVW    fd+0(FP), R0
 #endif
         MOVW    buf+4(FP), R1
@@ -65,9 +61,9 @@ TEXT 	debug+0(SB), $0
 
 // from 9front/.../libc/arm/getcallerpc.s
 // $-4 to prevent autosize stack adjust
-TEXT ·getcallerpc(SB), $-4
-	MOVW	0(R13), R0
-	RET
+//TEXT ·getcallerpc(SB), $-4
+//	MOVW	0(R13), R0
+//	RET
 
 //TODO: see GO/.../runtime/arm/asm.s and copy the code there
 // or in principia/.../libc/arm/

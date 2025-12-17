@@ -22,16 +22,16 @@ helloprintf.exe: helloprintf.c
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
-#TODO: arm arm64 mips 386 riscv
-#TODO: arm_: weird float output, 2.00001 instead of 2.0000, and very bad
+#TODO: arm_ arm64 mips 386 riscv
+#TODO: arm__: weird float output, 2.00001 instead of 2.0000, and very bad
 #            output for 2.2
-ARCHS=amd64 arm_
+ARCHS=amd64 arm arm__
 test:V:
         for (arch in $ARCHS) {
            echo $arch
            mk clean
            mk 'objtype='$arch
-	   if (~ $arch arm_)
+	   if (~ $arch arm__)
 	      qemu-armhf ./helloprintf.exe
            if not
 	      qemu-$arch ./helloprintf.exe
