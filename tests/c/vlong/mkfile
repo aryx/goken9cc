@@ -19,15 +19,15 @@ helloprintf.exe: helloprintf.c
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ vlrt.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
-#TODO: arm arm64 mips 386 riscv
+#TODO: arm_ arm64 mips 386 riscv
 #TODO: mips: give weird result, 0x00 and '*' instead of 42
-ARCHS=amd64 arm_ mips
+ARCHS=amd64 arm arm__ mips
 test:V:
         for (arch in $ARCHS) {
            echo $arch
            mk clean
            mk 'objtype='$arch
-	   if (~ $arch arm_)
+	   if (~ $arch arm__)
 	      qemu-armhf ./helloprintf.exe
            if not
 	      qemu-$arch ./helloprintf.exe
