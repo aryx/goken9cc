@@ -54,6 +54,7 @@ case "$OS" in
         ;;
     Darwin)
         GOOS=darwin
+	#old: was byacc, but does not work on nix
         YACC=yacc
         ;;
     *)

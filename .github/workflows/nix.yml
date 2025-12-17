@@ -32,6 +32,9 @@ jobs:
             ./configure
             ./scripts/build-mk.sh
             ./scripts/promote-mk.sh
+            export PATH=$PATH:`pwd`/bin
+            export MKSHELL=`pwd`/bin/rc
+            mk nuke
           '
 
 #old:

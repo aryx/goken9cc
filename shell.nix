@@ -15,6 +15,7 @@ pkgs.mkShell {
   packages = with pkgs; [
     # usually installed by default but does not hurt to add
     gcc binutils gnumake bash bison
+    # alt: byacc instead of bison
     # old: 'glibc' but then does not work on macOS?
     
     # Optional utilities for development/debugging, ex: 'which'
