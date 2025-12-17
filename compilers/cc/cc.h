@@ -1,6 +1,10 @@
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include <ctype.h>
+
+//TODO: to restore?
+//#pragma	lib	"../cc/cc.a$O"
 
 #ifndef	EXTERN
 #define EXTERN	extern
@@ -528,17 +532,8 @@ extern	ulong	thash[];
 /*
  *	Inferno.c/Posix.c/Nt.c
  */
-int	mywait(int*);
-int	mycreat(char*, int);
 int	systemtype(int);
 int	pathchar(void);
-int	myaccess(char*);
-char*	mygetwd(char*, int);
-int	myexec(char*, char*[]);
-int	mydup(int, int);
-int	myfork(void);
-int	mypipe(int*);
-void*	mysbrk(ulong);
 
 /*
  *	parser

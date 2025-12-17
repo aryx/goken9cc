@@ -1,4 +1,9 @@
-#include	"cc.h"
+
+int
+myaccess(char *f)
+{
+	return access(f, AEXIST);
+}
 
 void*
 mysbrk(ulong size)
@@ -46,8 +51,7 @@ mypipe(int *fd)
 int
 systemtype(int sys)
 {
-
-	return sys&Plan9;
+	return sys & Plan9;
 }
 
 int
@@ -72,43 +76,4 @@ int
 myfork(void)
 {
 	return fork();
-}
-
-/*
- * fake mallocs
- */
-void*
-malloc(ulong n)
-{
-	return alloc(n);
-}
-
-void*
-calloc(ulong m, ulong n)
-{
-	return alloc(m*n);
-}
-
-void*
-realloc(void*, ulong)
-{
-	fprint(2, "realloc called\n");
-	abort();
-	return 0;
-}
-
-void
-free(void*)
-{
-}
-
-int
-myaccess(char *f)
-{
-	return access(f, AEXIST);
-}
-
-void
-setmalloctag(void*, ulong)
-{
 }

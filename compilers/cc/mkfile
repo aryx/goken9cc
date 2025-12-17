@@ -22,8 +22,6 @@ OFILES=\
         \
 	mpatof.$O\
 
-#	$TARGMODEL.$O\
-
 HFILES=cc.h y.tab.h
 
 YFILES=cc.y

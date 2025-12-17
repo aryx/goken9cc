@@ -913,6 +913,9 @@ caseout:
 	}
 	*cp = 0;
 	peekc = c;
+//old:
+//	yylval.dval = strtod(symb, nil);
+//	if(isInf(yylval.dval, 1) || isInf(yylval.dval, -1)) {
 	if(mpatof(symb, &yylval.dval)) {
 		yyerror("overflow in float constant");
 		yylval.dval = 0;
