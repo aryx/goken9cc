@@ -135,11 +135,13 @@ sysbind(void)
 	if(sysdbg)
 		itrace("bind(0x%lux='%s', 0x%lux='%s', 0x%lux)", name, name, old, old, flags);
 
-	n = bind(name, old, flags);
-	if(n < 0)
-		errstr(errbuf, sizeof errbuf);
-
-	reg.r[REGRET] = n;
+	//n = bind(name, old, flags);
+	//if(n < 0)
+	//	errstr(errbuf, sizeof errbuf);
+    //
+	//reg.r[REGRET] = n;
+    Bprint(bioout, "TODO bind() system call\n");
+    exits(0);
 }
 
 void
@@ -414,11 +416,13 @@ sysstat(void)
 	if(n > sizeof buf)
 		errstr(errbuf, sizeof errbuf);
 	else{	
-		n = stat(nambuf, buf, n);
-		if(n < 0)
-			errstr(errbuf, sizeof errbuf);
-		else
-			memio((char*)buf, edir, n, MemWrite);
+		//n = stat(nambuf, buf, n);
+		//if(n < 0)
+		//	errstr(errbuf, sizeof errbuf);
+		//else
+		//	memio((char*)buf, edir, n, MemWrite);
+        Bprint(bioout, "TODO stat() system call\n");
+        exits(0);
 	}
 	reg.r[REGRET] = n;
 }
@@ -464,12 +468,14 @@ sysfstat(void)
 		strcpy(errbuf, "stat buffer too big");
 		return;
 	}
-	n = fstat(fd, buf, n);
-	if(n < 0)
-		errstr(errbuf, sizeof errbuf);
-	else
-		memio((char*)buf, edir, n, MemWrite);
-	reg.r[REGRET] = n;
+	//n = fstat(fd, buf, n);
+	//if(n < 0)
+	//	errstr(errbuf, sizeof errbuf);
+	//else
+	//	memio((char*)buf, edir, n, MemWrite);
+	//reg.r[REGRET] = n;
+    Bprint(bioout, "TODO fstat() system call\n");
+    exits(0);
 }
 
 void
