@@ -63,17 +63,22 @@ but better wait to avoid diff.rc to show big diffs
 
 *** RELAX look for sizeof(long) and fixed all of them!
 
-
 *** RELAX remove sprint()! switch to sprint_DANGEROUS, then
 maybe macro using sizeof() ? SPRINT() ? or use snprint and
 pass length each time, safer
-
 
 *** FUN try to use 6prof and 6cov
 
 * Components
 
 ** ARM (kencc-imported) toolchain: 5a/5c/5l
+
+*** still pbs on tests/c/float :( like for 5l__
+weird float displayed
+
+*** less: fix 5a to accept unicode like 5a_ and 5a__
+TEXT ·getcallerpc(SB), $-4
+
 
 *** test infra! run hello_plan9_arm.exe on raspberry pi2 via qemu?
 need port principia to raspberry pi2 first then!
@@ -90,6 +95,20 @@ and can compile itself on linux => that's a good test suite
 ** hybrid ARM toolchain : 5a__/5c__/5l__
 
 *** last
+
+**** principia x goken x 5a__/5c__/5l__: pb dcl.c
+5c -FTVw -I../../include/arch/arm -I../../include/ALL dcl.c
+dcl.c:94 unknown vlong LIST
+dcl.c:94 unknown vlong COND
+
+reduce to minimal repro case? and then try kencc on it and compare
+output?
+
+better with cc_/ instead of cc/?
+
+works with goken/kencc 5c at least! 
+but then get back compilation error about floating
+point error with linker (but maybe this one can be solved by long vs int32?)
 
 **** diff 5l kencc vs 5l__ goken in obj.c
 -	case AMOVDF:
@@ -126,6 +145,15 @@ but got segfault now :( even worse than before
 
 update: better now that I made it work with 5l_ ?
 
+** other golang toolchain
+
+*** 8a_/8c_/8l_
+
+**** principia x goken x 8a_/8c_/8l_: compilation error sysfatal.c
+8c -FTVw -I../../../include/arch/386 -I../../../include/ALL sysfatal.c
+sysfatal.c:27 rounding by 0
+
+
 ** C compilers: 5c/6c/8c
 
 ** assemblers: 5a/6a/8a
@@ -153,14 +181,15 @@ and xix mk
 
 ** Arch
 
-*** arm (not arm_)
+*** arm_ (not arm__)
 
-**** tests/c/mini2: run mk objtype=arm test_one in c/mini2/ too, remove NOSPLIT check
+**** tests/c/mini2: run mk objtype=arm_ test_one in c/mini2/ too, remove NOSPLIT check
 by using ifdef
 
 but then with 5l requires sfloat in vlop.s, then sfloat2 in softfloat.c
 and more stuff
 
+*** arm (not arm_, not arm__)
 
 *** arm64, 7a/7c/7l
 
@@ -442,6 +471,9 @@ start multi GOOS and GOARCH in CI? in Docker can try all combinations?
 
 ** Build infra
 
+*** less: get rid of dependency to byacc? use the included generators/yacc/yacc.c
+
+
 *** switch to GOHOST and GOTARGET instead of GOARCH?
 or GOARCHHOST, GOARCHTARGET, GOOSTARGET ?
 
@@ -463,6 +495,12 @@ take the one from Leroy for compcert?
 ** Dev infra
 
 *** devinfra: RELAX fix all gcc warnings in goken show when running 'mk'
+
+*** can detect the ugly 'stdin' Binit in sed.c that
+was fixed in inferno-os but caused some segfaults?
+because stdin already defined elsewhere in goken lib9?
+
+it was before -Wl,--allow-multiple-def
 
 *** less: .gitignore inspired from DELETED/.hgignore
 
