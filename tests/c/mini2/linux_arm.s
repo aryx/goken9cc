@@ -2,7 +2,7 @@
 // Entry and exit point
 //---------------------------------
 TEXT _main(SB), $0
-#ifdef arm_
+#ifndef arm_
 	MOVW $setR12(SB), R12
 #endif
 	BL main(SB)
@@ -10,9 +10,8 @@ TEXT _main(SB), $0
 
 
 TEXT    exit+0(SB), $0
+	//with 5c (and 5c__), the first arg is already passed via R0
 #ifdef arm_
-	//with 5c_, the first arg is already passed via R0
-#else
         MOVW    status+0(FP), R0
 #endif
         MOVW    $1, R7          // syscall number 1 = sys_exit
@@ -25,7 +24,6 @@ TEXT    exit+0(SB), $0
 
 TEXT    panic+0(SB), $0
 #ifdef arm_
-#else
         MOVW    status+0(FP), R0
 #endif
         MOVW    $1, R7          // syscall number 1 = sys_exit
@@ -35,7 +33,6 @@ TEXT    panic+0(SB), $0
 
 TEXT write+0(SB), $0
 #ifdef arm_
-#else
         MOVW    fd+0(FP), R0
 #endif
         MOVW    buf+4(FP), R1

@@ -20,20 +20,20 @@ helloprintf.exe: helloprintf.c
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ test.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
-#TODO: arm arm64 386 riscv
-#TODO: arm_: works, but if use -DDEBUG then segfault and weird output
-#TODO: arm: works for the bool and hexa but not for 42; segfault
+#TODO: arm_ arm64 386 riscv
+#TODO: arm__: works, but if use -DDEBUG then segfault and weird output
+#TODO: arm_: works for the bool and hexa but not for 42; segfault
 #TODO: mips: gives weird output, 'false' instead of 'true'
 #TODO: arm64: illegal combination DWORD $buf-100(SP)
 #       and when use global buf, get segfault
 
-ARCHS=amd64 arm_ mips
+ARCHS=amd64 arm arm__ mips
 test:V:
         for (arch in $ARCHS) {
            echo $arch
            mk clean
            mk 'objtype='$arch
-	   if (~ $arch arm_)
+	   if (~ $arch arm__)
 	      qemu-armhf ./helloprintf.exe
            if not
 	      qemu-$arch ./helloprintf.exe
