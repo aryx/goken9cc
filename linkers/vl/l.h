@@ -299,7 +299,6 @@ void	doprof2(void);
 int32	entryvalue(void);
 void	errorexit(void);
 void	exchange(Prog*);
-int	fileexists(char*);
 int	find1(int32, int);
 char*	findlib(char*);
 void	follow(void);

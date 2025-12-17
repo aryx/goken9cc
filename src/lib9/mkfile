@@ -65,6 +65,7 @@ LIB9OFILES=\
 	cleanname.$O\
 	dirfstat.$O\
 	dirfwstat.$O\
+        fileexists.$O\
 	dirstat.$O\
 	dirwstat.$O\
 	dup.$O\

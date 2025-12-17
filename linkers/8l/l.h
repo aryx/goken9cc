@@ -320,7 +320,6 @@ void	dynreloc(Sym*, ulong, int);
 long	entryvalue(void);
 void	errorexit(void);
 void	export(void);
-int	fileexists(char*);
 int	find1(long, int);
 int	find2(long, int);
 char*	findlib(char*);

@@ -42,6 +42,7 @@
 - use nanosecond granularity to new Dir->mtime_ field and fix mk to use this
   new more precise time to avoid useless recompilation
 - a few long->int32 in strtod.c (but no impact on principia I think)
+- added lib9/fileexists.c
 
 ** test infra
 - multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)

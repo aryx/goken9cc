@@ -9,7 +9,6 @@
 #define	LIBNAMELEN	300
 
 void	addlibpath(char*);
-int	fileexists(char*);
 char*	findlib(char*);
 
 typedef	struct	Adr	Adr;
@@ -347,7 +346,6 @@ long	entryvalue(void);
 void	errorexit(void);
 void	exchange(Prog*);
 void	export(void);
-int	fileexists(char*);
 int	find1(long, int);
 char*	findlib(char*);
 void	follow(void);

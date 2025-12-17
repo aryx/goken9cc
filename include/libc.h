@@ -320,6 +320,9 @@ extern	Dir*	dirfstat(fdt);
 extern	int	dirwstat(char*, Dir*);
 extern	int	dirfwstat(fdt, Dir*);
 
+// I added this one
+bool fileexists(char* s);
+
 // ??
 extern	void	nulldir(Dir*);
 // ??

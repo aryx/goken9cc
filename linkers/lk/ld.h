@@ -112,7 +112,6 @@ void	errorexit(void);
 double	cputime(void);
 void	dodata(void);
 void	export(void);
-int	fileexists(char*);
 int	find1(int32, int);
 char*	findlib(char*);
 char*	findlib(char*);
