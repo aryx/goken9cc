@@ -7,9 +7,7 @@
   from golang cc/ to kencc-imported cc/
 - TODO switch acid, and 5i/vi from libmach_ to libmach
 
-- continue reorg code with SRC/ with symlinks to mimic old org.
 - bootstrappable (can compile itself)
-
 
 ** Overview
 
