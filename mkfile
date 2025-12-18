@@ -3,12 +3,12 @@ TOP=.
 <$TOP/mkfiles/$objtype/mkfile
 
 DIRS=\
-  lib_core/lib9 src/libbio src/libmach \
+  lib_core/lib9 lib_core/libbio \
   lib_strings/libregexp lib_strings/libstring lib_strings/libflate \
   generators/lex/liblex/ generators \
   mk rc \
   debuggers/libmach linkers/ar \
-  src/cmd/nm src/cmd/ar \
+  src/libmach src/cmd/nm src/cmd/ar \
   compilers/cc src/cmd/cc \
   assemblers/5a linkers/5l compilers/5c   machines/5i \
   src/cmd/5l src/cmd/5a src/cmd/5c \
