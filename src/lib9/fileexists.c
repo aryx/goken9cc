@@ -4,6 +4,9 @@
 
 #include <sys/stat.h>
 
+//pad: I added this file. This function was duplicated in many linkers
+// before in kencc.
+
 bool
 fileexists(char *file)
 {

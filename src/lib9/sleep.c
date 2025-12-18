@@ -1,8 +1,10 @@
 #include <u.h>
+
 #define NOPLAN9DEFINES
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sched.h>
+
 #include <libc.h>
 
 #if defined(__NetBSD__) || (defined(__OpenBSD__) && OpenBSD <= 200611)

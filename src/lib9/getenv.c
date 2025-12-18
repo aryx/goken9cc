@@ -8,8 +8,8 @@ p9getenv(char *s)
 	char *t;
 
 	t = getenv(s);
-	if(t == 0)
-		return 0;
+	if(t == nil)
+		return nil;
 	return strdup(t);
 }
 

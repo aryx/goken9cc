@@ -1,6 +1,9 @@
 #include <u.h>
 #include <libc.h>
 
+// this was added by Russ Cox in plan9port to process
+// paths using #9 or #d and expand to their "value.
+
 /*
  * I don't want too many of these,
  * but the ones we have are just too useful.

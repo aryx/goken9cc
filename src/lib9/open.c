@@ -1,9 +1,11 @@
 #define _GNU_SOURCE	/* for Linux O_DIRECT */
 #include <u.h>
+
 #include <dirent.h>
 #include <errno.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+
 #define NOPLAN9DEFINES
 #include <libc.h>
 

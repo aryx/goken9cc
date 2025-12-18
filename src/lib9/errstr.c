@@ -6,8 +6,10 @@
  */
 
 #include <u.h>
+
 #include <errno.h>
 #include <string.h>
+
 #include <libc.h>
 
 enum
@@ -78,4 +80,3 @@ werrstr(char *fmt, ...)
 	va_end(arg);
 	errstr(buf, ERRMAX);
 }
-
