@@ -50,7 +50,7 @@ LDFLAGS="-L$ROOT/$GOARCH/lib"
 #Note that because we just need to compile mk and rc, we don't need all of lib9
 # so we could reduce the list below. However, then we need to delete lib9.a
 # when compiling the rest of goken (see end of this file).
-cd $TOP/src/lib9
+cd $TOP/lib_core/lib9
 gcc $CFLAGS -DPLAN9PORT _p9dir.c -o _p9dir.o
 gcc $CFLAGS -DPLAN9PORT _exits.c -o _exits.o
 gcc $CFLAGS -DPLAN9PORT argv0.c -o argv0.o

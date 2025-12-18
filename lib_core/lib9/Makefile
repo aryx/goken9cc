@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-include ../Make.inc
+include ../../GO/Make.inc
 O:=$(HOST_O)
 
 LIB=lib9.a
@@ -108,7 +108,7 @@ HFILES=\
 	$(QUOTED_GOROOT)/include/u.h\
 	$(QUOTED_GOROOT)/include/libc.h\
 
-include ../Make.clib
+include ../../GO/Make.clib
 
 GOROOT_FINAL?=$(GOROOT)
 
