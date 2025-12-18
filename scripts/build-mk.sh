@@ -130,7 +130,7 @@ ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o dirfstat.o dirfwstat.
 cp lib9.a $TOP/ROOT/$GOARCH/lib/lib9.a
 
 
-cd $TOP/src/libbio
+cd $TOP/lib_core/libbio
 gcc $CFLAGS -c bbuffered.c
 gcc $CFLAGS -c bfildes.c
 gcc $CFLAGS -c bflush.c

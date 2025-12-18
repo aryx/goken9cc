@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-include ../Make.inc
+include ../../GO/Make.inc
 O:=$(HOST_O)
 
 LIB=libbio.a
@@ -48,4 +48,4 @@ OFILES=\
 HFILES=\
 	../../include/bio.h
 
-include ../Make.clib
+include ../../GO/Make.clib

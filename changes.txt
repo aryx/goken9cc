@@ -68,6 +68,7 @@
   (but very few; just in cc/bits.c, x.out.h, and a few other places)
 - move the different toolchains (ix, vx, ...) in assemblers/, linkers/,
   and compilers/ (and kept the golang-origin one in src/cmd/)
+- move src/lib9 to lib_core/lib9 and same for libbio
 
 ** utilities
 - add utilities/calc/hoc from principia useful to compile the principia kernel
