@@ -249,7 +249,7 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	c = p[2];
 	if(c < 0 || c > NSYM){
 		print("sym out of range: %d\n", c);
-		p[0] = ALAST+1;
+		//p[0] = ALAST+1;
 		return 0;
 	}
 	a->type = p[0];
@@ -260,14 +260,14 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 
 	if(a->reg < 0 || a->reg > NREG) {
 		print("register out of range %d\n", a->reg);
-		p[0] = ALAST+1;
+		//p[0] = ALAST+1;
 		return 0;	/*  force real diagnostic */
 	}
 
 	switch(a->type) {
 	default:
 		print("unknown type %d\n", a->type);
-		p[0] = ALAST+1;
+		//p[0] = ALAST+1;
 		return 0;	/*  force real diagnostic */
 
 	case D_NONE:

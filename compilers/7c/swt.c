@@ -474,7 +474,7 @@ zname(Biobuf *b, Sym *s, int t)
 	n = s->name;
 	if(debug['T'] && t == D_EXTERN && s->sig != SIGDONE && s->type != types[TENUM] && s != symrathole){
 		sig = sign(s);
-		bf[0] = ASIGNAME;
+		bf[0] = ASIGNAME & 0xFF;
 		bf[1] = ASIGNAME>>8;
 		bf[2] = sig;
 		bf[3] = sig>>8;
@@ -486,7 +486,7 @@ zname(Biobuf *b, Sym *s, int t)
 		s->sig = SIGDONE;
 	}
 	else{
-		bf[0] = ANAME;
+		bf[0] = ANAME & 0xFF;
 		bf[1] = ANAME>>8;
 		bf[2] = t;	/* type */
 		bf[3] = s->sym;	/* sym */
