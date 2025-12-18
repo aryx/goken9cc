@@ -254,10 +254,10 @@ char*	cnamp = cnames;		/* place where next name is to be put in */
 int	ndefout = 4;		/* number of defined symbols output */
 /*e: global ndefout */
 /*s: global tempname */
-char*	tempname;
+//char*	tempname;
 /*e: global tempname */
 /*s: global actname */
-char*	actname;
+//char*	actname;
 /*e: global actname */
 /*s: global ttempname */
 char	ttempname[] = TEMPNAME;
@@ -697,13 +697,13 @@ others(void)
             if((c = Bgetrune(finput)) != 'A')
                 Bputrune(ftable, '$');
             else { /* copy actions */
-                faction = Bopen(actname, OREAD);
+                faction = Bopen(tactname, OREAD);
                 if(faction == 0)
                     error("cannot reopen action tempfile");
                 while((c=Bgetrune(faction)) != Beof)
                     Bputrune(ftable, c);
                 Bterm(faction);
-                ZAPFILE(actname);
+                ZAPFILE(tactname);
                 c = Bgetrune(finput);
             }
         }
@@ -1410,8 +1410,8 @@ flset(Lkset *p)
 void
 cleantmp(void)
 {
-    ZAPFILE(actname);
-    ZAPFILE(tempname);
+    ZAPFILE(tactname);
+    ZAPFILE(ttempname);
 }
 /*e: function cleantmp */
 
@@ -1434,6 +1434,7 @@ usage(void)
 /*e: function usage */
 
 /*s: function setup */
+/// main -> <>
 void
 setup(int argc, char *argv[])
 {
@@ -1477,9 +1478,14 @@ setup(int argc, char *argv[])
     }ARGEND
     openup(stemc, dflag, vflag, ytab, ytabc);
 
-    ftemp = Bopen(tempname = mktemp(ttempname), OWRITE);
-    faction = Bopen(actname = mktemp(tactname), OWRITE);
-    if(ftemp == 0 || faction == 0)
+    //old: but mktemp() marked as unsafe
+    // ftemp = Bopen(tempname = mktemp(ttempname), OWRITE);
+    // faction = Bopen(actname = mktemp(tactname), OWRITE);
+    //note that mkstemp() (like mktemp) modifies in place the template
+    // so no need to use extra var tempname and actname
+    ftemp = Bfdopen(mkstemp(ttempname), OWRITE);
+    faction = Bfdopen(mkstemp(tactname), OWRITE);
+    if(ftemp == nil || faction == nil)
         error("cannot open temp file");
     if(argc < 1)
         error("no input file");
@@ -2924,7 +2930,7 @@ callopt(void)
     int i, *p, j, k, *q;
 
     /* read the arrays from tempfile and set parameters */
-    finput = Bopen(tempname, OREAD);
+    finput = Bopen(ttempname, OREAD);
     if(finput == 0)
         error("optimizer cannot open tempfile");
 
@@ -3032,7 +3038,7 @@ callopt(void)
     /* write out the output appropriate to the language */
     aoutput();
     osummary();
-    ZAPFILE(tempname);
+    ZAPFILE(ttempname);
 }
 /*e: function callopt */
 

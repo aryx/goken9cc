@@ -64,7 +64,7 @@ struct	Biobuf
 	(bp)->fid
 
 Biobuf*	Bopen(char*, int /* open flag (e.g., OWRITE) */);
-Biobuf*	Bfdopen(fdt, int);
+Biobuf*	Bfdopen(fdt, int); // not in plan9 bio.h
 
 int	Binit(Biobuf*, fdt, int);
 int	Binits(Biobuf*, fdt, int, unsigned char*, int);
