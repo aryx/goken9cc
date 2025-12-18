@@ -1478,11 +1478,11 @@ setup(int argc, char *argv[])
     }ARGEND
     openup(stemc, dflag, vflag, ytab, ytabc);
 
-    //old: but mktemp() marked as unsafe
+    //old: mktemp() is unsafe and generates gcc/clang warnings
     // ftemp = Bopen(tempname = mktemp(ttempname), OWRITE);
     // faction = Bopen(actname = mktemp(tactname), OWRITE);
     //note that mkstemp() (like mktemp) modifies in place the template
-    // so no need to use extra var tempname and actname
+    // so no need to use extra var tempname and actname like before
     ftemp = Bfdopen(mkstemp(ttempname), OWRITE);
     faction = Bfdopen(mkstemp(tactname), OWRITE);
     if(ftemp == nil || faction == nil)

@@ -8,6 +8,7 @@ maketmp(void)
 {
     static char temp[] = "/tmp/mkargXXXXXX";
 
+    //TODO: deprecated, and unsafe, use mkstemp()
     mktemp(temp);
     return temp;
 }
