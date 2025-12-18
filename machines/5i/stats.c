@@ -171,7 +171,7 @@ Prof	aprof[5000];
 int
 profcmp(const void *va, const void *vb)
 {
-    Prof *a, *b;
+    const Prof *a, *b;
 
     a = va;
     b = vb;
