@@ -336,14 +336,16 @@ extern long dirread(int fd, Dir **dp);
 // Path
 //******************************************************************************
 
-extern	int	fd2path(int, char*, int);
-
-extern	char*	cleanname(char*);
-// plan9port specific, for "#9/..." and "#d/..." paths
-extern	char*	unsharp(char*);
+// in plan9 only
+//extern	int	fd2path(int, char*, int);
 
 //PAD: why was in libc.h?? it's part of rc actually
 //old: extern	char*	searchpath(char*);
+
+extern	char*	cleanname(char*);
+
+// plan9port specific, for "#9/..." and "#d/..." paths
+extern	char*	unsharp(char*);
 
 //******************************************************************************
 // Namespaces
