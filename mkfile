@@ -3,7 +3,7 @@ TOP=.
 <$TOP/mkfiles/$objtype/mkfile
 
 DIRS=\
-  src/lib9 src/libbio src/libmach \
+  lib_core/lib9 src/libbio src/libmach \
   lib_strings/libregexp lib_strings/libstring lib_strings/libflate \
   generators/lex/liblex/ generators \
   mk rc \
