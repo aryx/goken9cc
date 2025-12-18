@@ -400,7 +400,15 @@ enum
 // Tmp files
 //******************************************************************************
 
+// defined in stdlib.h
+
+//DEPRECATED: time-of-check vs time-of-use (TOCTOU) race condition
+// use mkstemp instead
 extern	char*	mktemp(char*);
+// The modern safe one; creates the tmp file atomically with the check
+// for existence. 's' stands for secure.
+extern fdt mkstemp(char*);
+
 extern	int	opentemp(char*);
 
 //******************************************************************************
@@ -628,6 +636,11 @@ extern	char*	getgoroot(void);
 extern	char*	getgoversion(void);
 
 //******************************************************************************
+// Printing
+//******************************************************************************
+// see fmt.h and utf.h
+
+//******************************************************************************
 // Error management
 //******************************************************************************
 
@@ -686,6 +699,10 @@ extern	char*	getns(void);
 
 //??
 extern	char*	get9root(void);
+
+//******************************************************************************
+// p9xxx -> xxx
+//******************************************************************************
 
 #ifndef NOPLAN9DEFINES
 

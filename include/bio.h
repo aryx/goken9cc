@@ -63,7 +63,8 @@ struct	Biobuf
 #define	BFILDES(bp)\
 	(bp)->fid
 
-Biobuf*	Bopen(char*, int);
+Biobuf*	Bopen(char*, int /* open flag (e.g., OWRITE) */);
+Biobuf*	Bfdopen(fdt, int);
 
 int	Binit(Biobuf*, fdt, int);
 int	Binits(Biobuf*, fdt, int, unsigned char*, int);
@@ -73,7 +74,6 @@ long	Bwrite(Biobuf*, void*, long);
 vlong	Bseek(Biobuf*, vlong, int);
 
 int	Bbuffered(Biobuf*);
-Biobuf*	Bfdopen(int, int);
 int	Bfildes(Biobuf*);
 int	Bflush(Biobuf*);
 

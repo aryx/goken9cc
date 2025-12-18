@@ -99,7 +99,7 @@ Binit(Biobuf *bp, int f, int mode)
 }
 
 Biobuf*
-Bfdopen(int f, int mode)
+Bfdopen(fdt f, int mode)
 {
 	Biobuf *bp;
 
@@ -115,7 +115,7 @@ Biobuf*
 Bopen(char *name, int mode)
 {
 	Biobuf *bp;
-	int f;
+	fdt f;
 
 	switch(mode&~(ORCLOSE|OTRUNC)) {
 	default:
