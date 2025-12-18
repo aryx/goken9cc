@@ -186,6 +186,7 @@ typedef intptr_t intptr;
 typedef uint32_t u32int;
 typedef int32_t s32int;
 
+//TODO: define like Rust/Zig instead u8/u32/u64, s8/s32/s64
 typedef s8int int8;
 typedef u8int uint8;
 typedef s16int int16;

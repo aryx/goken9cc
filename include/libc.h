@@ -138,7 +138,7 @@ extern	vlong	strtoll(char*, char**, int);
 extern	uvlong	strtoull(char*, char**, int);
  */
 
-// ?? a = ?
+// ?? a = ? ascii?
 extern	int     p9atoi(char*);
 extern	long	p9atol(char*);
 extern	vlong	p9atoll(char*);
@@ -156,15 +156,15 @@ extern	double	fmtcharstod(int(*)(void*), void*);
  * provided by math.h
  *
 extern	double	pow(double, double);
-extern	double	atan2(double, double);
 extern	double	fabs(double);
-extern	double	atan(double);
 extern	double	log(double);
 extern	double	log10(double);
 extern	double	exp(double);
 extern	double	floor(double);
 extern	double	ceil(double);
-extern	double	hypot(double, double);
+extern	double	sqrt(double);
+extern	double	fmod(double, double);
+
 extern	double	sin(double);
 extern	double	cos(double);
 extern	double	tan(double);
@@ -173,8 +173,9 @@ extern	double	acos(double);
 extern	double	sinh(double);
 extern	double	cosh(double);
 extern	double	tanh(double);
-extern	double	sqrt(double);
-extern	double	fmod(double, double);
+extern	double	atan(double);
+extern	double	atan2(double, double);
+extern	double	hypot(double, double);
 
 #define	HUGE	3.4028234e38
 #define	PIO2	1.570796326794896619231e0
@@ -321,7 +322,7 @@ extern	Dir*	dirfstat(fdt);
 extern	int	dirwstat(char*, Dir*);
 extern	int	dirfwstat(fdt, Dir*);
 
-// I added this one
+//pad: I added this one, to factorize some non-portable code in linkers
 bool fileexists(char* s);
 
 // ??
@@ -342,7 +343,7 @@ extern	char*	cleanname(char*);
 extern	char*	unsharp(char*);
 
 //PAD: why was in libc.h?? it's part of rc actually
-//extern	char*	searchpath(char*);
+//old: extern	char*	searchpath(char*);
 
 //******************************************************************************
 // Namespaces
@@ -393,6 +394,7 @@ enum
 };
 
 // missing bind(), mount(), unmount() compared to plan9 libc
+// but hard to provide in unix ... plan9-specific syscalls hard to emulate
 
 //******************************************************************************
 // Tmp files
@@ -638,13 +640,20 @@ extern	char*	getgoversion(void);
 extern	int	errfmt(Fmt *f);
  */
 
-#define	ERRMAX	128	/* max length of error string */
+#define	ERRMAX	128	/* max length of error string */ // for errstr()
 
+// print human-readable error message for UNIX global errno (errno is an int)
 extern	void	perror(const char*);
 
+// Plan9 does not use an int for errors but relies instead on per-process
+// error string that can be accessed by errstr().
+// This function is bidirectional and can be used to both read and set the
+// error string depending how it's called.
 extern	int	    errstr(char*, uint);
 
+// read but does not clear the error
 extern	void	rerrstr(char*, uint);
+// set the per-process error string.
 extern	void	werrstr(char*, ...);
 
 // will internally call exits(). TODO? declare hook _sysfatal() here?

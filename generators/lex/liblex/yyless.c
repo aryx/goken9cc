@@ -19,7 +19,12 @@ yyless(int x)
     if(x>=0 && x <= yyleng)
         ptr = x + yytext;
     else
-        ptr = (char*)x;
+        //old: ptr = (char*)x;
+        // but was old lex trick to abuse x as pointer in yylex
+        // gut generates warnings with recent gcc so better to
+        // comment and error instead.
+        sysfatal("yyless invalid argument: %d", x);
+        
     while(lastch > ptr)
         yyunput(*--lastch);
     *lastch = 0;
