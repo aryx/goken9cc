@@ -59,6 +59,59 @@ but better wait to avoid diff.rc to show big diffs
 
 * Last
 
+*** continue switch to kencc code in goken
+
+**** RELAX 5l/8l: cleanup the code like I did before with the '9',
+the many dead -H xxx
+
+**** RELAX add back -X to disable opti in 5c/8c
+and try it on principia? still works?
+
+**** use cc/ from kencc/plan9 instead of cc/ from golang cc/ for mips, arm64, riscv?
+solves some of the weird behavior I get? for mips? for riscv? for arm64?
+
+*** other goken PBS:
+
+**** principia x goken x macos: compilation error "out of memory" on libsec/aes.c :(
+
+***** WAITING run qemu with mkconfig.pc on clang and macos
+
+**** principia x goken x thinkstation: pb mk nuke and bug in free() in rc
+weird pbs when running 'mk nuke'
+free(): invalid size
+
+what is causing this error? rm? mk? rc?
+seems to be pb with 'rc' because export MKSHELL=/opt/plan9/bin/rc
+fixed the issue
+
+does not have the problem in docker
+
+**** mini2 x mips: pb for boolean showing false instead of true
+can debug the code?
+use cc_/ instead of cc/ ? better?
+
+**** mini2 x arm__: -DDEBUG fails why?
+happens with arm ?
+
+**** mini2 x arm__: even with qemu-armhf I get some weird output for some floats
+like 0.3333, or 20.0 that gets output as a super high float value, weird
+
+2.2 is printed as -2.4+344/e-185
+
+try kencc on it?
+compare binary output? compare -S
+
+seems to have same pb with arm arch :(
+
+*** bug: why mk pdf in principia/linkers does not do the full
+recipe and does not mv to generate Linker-7.pdf?
+
+because mv of goken does not work :)
+fix it!
+
+#see the benefit of dogfooding and of goken easier to dogfood
+#than principia!
+
 *** RELAX look for sizeof(long) and fixed all of them!
 
 *** RELAX remove sprint()! switch to sprint_DANGEROUS, then
