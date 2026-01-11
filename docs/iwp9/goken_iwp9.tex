@@ -23,6 +23,7 @@ An abstract
 % than ken thompson! Original design with assembler doing not much
 % and machine code actually in linker, which allows to factorize/simplify
 % code. 
+%% later though Rob Pike said it was maybe a mistake.
 % I call the set of assemblers/linkers/compilers for different archs
 % kencc. In plan9 it had 386, arm, mips, ...
 % Quite small! compared to gcc/binutils, clang/llvm.
@@ -60,6 +61,7 @@ An abstract
 %   that can cross-compile archs and OSes!
 
 % - a self-supporting repo; embedded mk/rc/ed (better than inferno-os)
+%   bootstrapped (better than kencc),
 %   (and yacc?), Docker, GHA, good test suite with principia-softwarica
 %   to check regressions
 % - current state: 
