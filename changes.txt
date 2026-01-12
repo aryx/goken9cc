@@ -1,5 +1,13 @@
 # -*- org -*-
 
+* 0.2 (Q1 2025)
+
+** build infra
+- new push-docker Makefile target so padator/goken can be used in
+  Dockerfile (useful for principia to switch from kencc to goken).
+
+* -----------------------------------------------------------
+
 * 0.1 (Q4 2025) (compile and run principia pc/pi, 5a/5c/5l/8a/8c/8l v2, mips va/vc/vl v1, riscv ia/ic/il v0, float v0, arm/mips emulator (5i/vi) v0, acid v0)
 
 ** toolchain
