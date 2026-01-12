@@ -21,11 +21,19 @@ hellotest:
 
 # works for both amd64 and arm64
 build-docker:
-	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc --target build .
+	docker build --tag "padator/goken:"`uname -m` -f Dockerfile --build-arg NPROC=`nproc` --target build .
 build-docker-test: 
 	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc-test --target test .
 build-docker-principia: 
 	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc-principia --target principia .
+
+# need 'docker login -u padator' first with credentials of
+# https://hub.docker.com/r/padator/ stored in ~/.docker/config.json
+# See ocaml-light/Makefile for more info
+push-docker:
+	docker push "padator/goken:"`uname -m`
+	docker buildx imagetools create --tag padator/goken:latest padator/goken:x86_64 padator/goken:aarch64
+
 
 # Golang regression testing
 build-gosrc:

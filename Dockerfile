@@ -39,6 +39,9 @@ RUN mk nuke
 RUN mk
 RUN mk install
 
+ENV GOOS="linux"
+ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
+
 ###############################################################################
 # Stage2: Test (on amd64/arm64)
 ###############################################################################
@@ -56,9 +59,6 @@ FROM build AS test
 # prepending qemu-xxx before (but does not always work unfortunately).
 RUN apt-get install -y qemu-user qemu-user-binfmt
 
-ENV GOOS="linux"
-ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
-
 # Run tests
 RUN mk test
 
@@ -69,11 +69,7 @@ FROM build AS principia
 
 #TODO? wanted --no-install-recommends but then git does not work so well
 RUN apt-get install -y git
-
 RUN git clone https://github.com/aryx/principia-softwarica /principia
-
-ENV GOOS="linux"
-ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
 
 WORKDIR /principia
 
