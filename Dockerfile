@@ -78,15 +78,11 @@ RUN git clone https://github.com/aryx/principia-softwarica /principia
 
 WORKDIR /principia
 
-# override the default env.sh as we already setup PATH above and
-# we want to use goken, not kencc
-RUN echo > env.sh
-
 #coupling: https://github.com/aryx/principia-softwarica/blob/master/Dockerfile
 # 386
 RUN cp mkconfig.pc mkconfig
-RUN . ./env.sh && mk && mk install && mk kernel
+RUN mk && mk install && mk kernel
 
 # arm
 RUN cp mkconfig.pi mkconfig
-RUN . ./env.sh && mk && mk install && mk kernel
+RUN mk && mk install && mk kernel
