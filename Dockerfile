@@ -17,12 +17,14 @@ RUN apt-get install -y --no-install-recommends gcc libc6-dev byacc
 WORKDIR /src
 COPY . .
 
+# Small shell script to detect arch and generate ./mkconfig
 RUN ./configure
 
-# The build-mk.sh script below actually builds also:
+# The script below obviously builds 'mk' but also:
 # - 'rc', which is called by 'mk'
 # - 'ed', which is used by the mkenam script run during the build
 RUN ./scripts/build-mk.sh
+# copy ./ROOT/<arch>/bin/mk to ./bin/
 RUN ./scripts/promote-mk.sh
 
 # coupling: env.sh
@@ -70,19 +72,16 @@ RUN mk test
 ###############################################################################
 # Stage3: Test on amd64/arm64 using the 386/arm plan9 toolchain (8c/5c)
 ###############################################################################
-FROM build AS principia
 
+FROM build AS principia
 #TODO? wanted --no-install-recommends but then git does not work so well
 RUN apt-get install -y git
 RUN git clone https://github.com/aryx/principia-softwarica /principia
-
 WORKDIR /principia
-
 #coupling: https://github.com/aryx/principia-softwarica/blob/master/Dockerfile
 # 386
 RUN cp mkconfig.pc mkconfig
 RUN mk && mk install && mk kernel
-
 # arm
 RUN cp mkconfig.pi mkconfig
 RUN mk && mk install && mk kernel
