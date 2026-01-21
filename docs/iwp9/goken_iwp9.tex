@@ -1,4 +1,6 @@
 \documentclass{article}
+%CONFIG:
+%\usepackage{fullpage}
 
 \title{
 Goken9cc: The Plan 9 toolchain Reborn
@@ -12,7 +14,10 @@ yoann.padioleau@gmail.com
 \maketitle
 
 \begin{abstract}
-An abstract
+\goken is a new project attempting to unify in one repository the many
+improvements to the original \plan toolchain. The goal is to provide
+assemblers, linkers, and C compilers for modern architectures that
+can produce binaries not only for \plan but also Linux, macOS, and Windows.
 \end{abstract}
 
 \section{Introduction}
@@ -23,7 +28,9 @@ An abstract
 % than ken thompson! Original design with assembler doing not much
 % and machine code actually in linker, which allows to factorize/simplify
 % code. 
+% shift machine code generation from assembler to linker.
 %% later though Rob Pike said it was maybe a mistake.
+
 % I call the set of assemblers/linkers/compilers for different archs
 % kencc. In plan9 it had 386, arm, mips, ...
 % Quite small! compared to gcc/binutils, clang/llvm.

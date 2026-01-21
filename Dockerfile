@@ -17,7 +17,7 @@ RUN apt-get install -y --no-install-recommends gcc libc6-dev byacc
 WORKDIR /src
 COPY . .
 
-# Small shell script to detect arch and generate ./mkconfig
+# Small shell script (not GNU autoconf) to detect arch and generate ./mkconfig
 RUN ./configure
 
 # The script below obviously builds 'mk' but also:
