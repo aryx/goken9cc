@@ -5,16 +5,13 @@
 \input{../../principia/docs/latex/Packages}
 
 %alt: \input{../latex/Noweb}
-% but pb with relative path so inlined here
 \usepackage{../../principia/docs/latex/noweb}
  \noweboptions{footnotesizecode,nomargintag}
  \def\nwendcode{\endtrivlist \endgroup}
  \let\nwdocspar=\par
 \usepackage{../../principia/docs/latex/syncweb}
 
-\newif\iffinal
-\newif\ifverbose
-\newif\ifallcode
+\newif\iffinal\newif\ifverbose\newif\ifallcode
 \input{../../principia/docs/latex/Macros}
 
 \title{
@@ -59,7 +56,7 @@ a C preprocessor embedded in the C compiler to speedup compilation time,
 the support for numerous architectures (x86, Mips, ARM, Sparc, etc.),
 and the ability to easily cross compile for those architectures
 partly thanks to a clever naming scheme.
-%, and more?
+%alt:, and more?
 
 
 In \plan, each architecture is assigned a character: x86 is '8', Mips
@@ -72,38 +69,45 @@ To produce x86 binaries use instead [[8a]] and [[8l]] in the same
 directory without fear of overwriting the previous ARM object files
 as this time the object files will use the [[.8]] extension.
 % (cross compiling, now popularized by ziglang).
+% always supported by gcc, but never made easy (less needed too it's true)
 %
 In the following, I use the name {\em Kencc} to denote the set of 
 assemblers, linkers, and C compilers supporting the many
 architectures in the original \plan.
 
 Kencc has a simple and very small codebase, which made
-it very easy for other people to add more architectures.
+it very easy for other people to add support for more architectures.
 % cite article, and people did add!
 %said-later: Miller added, Forsity added
 %
 For example, the number of lines of code (LOC) of the ARM
 assembler [[5a]] is 3600, the ARM linker [[5l]] is 7500 LOC, and the
-C compiler [[5l]] with the architecture-independent code and ARM target is
-only 18500 LOC. This is incredibly small compared to
-the LOC of [[gcc]]/binutils or [[clang]]/llvm.
+C compiler [[5l]] with the architecture-independent code plus ARM-specific
+code is only 18500 LOC. The whole ARM toolchain is less than 30000 LOC in total;
+this is incredibly small compared to
+the LOC of [[gcc]]/binutils or [[clang]]/LLVM.
+% which are? only arm-xxx.c is 60000 ? and just arm-specific part,
+% See Compiler.nw, Assembler.nw, and Linker.nw to put the LOC
+% of ARM specific stuff
 
 \section{Kencc after \plan}
 
-After \plan 4th edition, Kencc continued to evolve and has been forked
+After \plan 4th edition in 2000, Kencc continued to evolve and has been forked
 many times.
 %
-Charles Fortyth added support for the arm64
+Charles Forsyth added support for the arm64
 architecture (architecture character '7'), which
-powers all recent Apple machines as well as recent Raspberry Pis.
+powers all recent Apple machines as well as the Raspberry Pi 3 and 4.
 %
 Richard Miller added support for the RISC-V architecture,
 both the 32 and 64 bits variants,
 with respectively characters 'i' and 'j'.
+% put dates? Miller in 2017?
 
 The Inferno developers removed the use of \plan-specific C extensions
 in the Kencc code in exchange for the ability to compile Kencc itself
-using [[gcc]] or [[clang]].
+using [[gcc]] or [[clang]], so one could install and use Kencc
+on Linux, macOS, and Windows (but only to link \plan binaries).
 % help for bootstrap
 
 
@@ -117,7 +121,7 @@ Up until Go 1.3, the Go repository contained the C code of the
 [[5a/5c/5l]] (ARM), [[8a/8c/8l]] (x86), and [[6a/6c/6l]] (amd64)
 toolchains.
 %
-They extended Kencc to not only produce \plan{} [[a.out]] binaries
+They extended Kencc to not only link \plan{} [[a.out]] binaries
 but also Linux [[ELF]] binaries, macOS [[Mach-O]] binaries, and
 even Windows [[PE]] binaries.
 %
@@ -139,8 +143,13 @@ The \goken toolchain should
 {\em build} on \plan but also Linux, macOS, and Windows, 
 and finally {\em link} binaries that can run on those four OSes.
 %
-For example, you should be able to install Goken on an arm64 macOS and use it
-to produce binaries for an amd64 Linux.
+For example, you should be able to install Goken on an arm64 macOS 
+machine and use it to produce binaries for a RISC-V Linux machine.
+
+The goal is to provide a viable alternative to
+[[gcc]]/binutils  and [[clang]]/LLVM with a
+codebase that is only a fraction of their size.
+%doable, the golang developers did it for Go!
 
 \section{Current state}
 
