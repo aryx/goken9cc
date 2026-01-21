@@ -38,6 +38,7 @@ assemblers, linkers, and C compilers for modern architectures, capable
 of producing binaries not only for \plan but also Linux, macOS, and Windows.
 \end{abstract}
 
+
 \section{Introduction}
 
 The \plan designers didn't just rethink from scratch the kernel;
@@ -46,34 +47,36 @@ they rethinked the whole operating system (OS) in a holistic manner.
 In particular, the \plan assemblers, linkers, and C compilers, 
 % with an 's' because many archs and separate progs
 forming what is commonly called a {\em toolchain}, were also
-written from scratch by none other than Ken Thompson.
+written from scratch, by none other than Ken Thompson.
 %
 The design of this toolchain was also original with
 the machine-code generation part shifted from the assembler to the linker,
+%to factorize code? to simplify?
 %% later though Rob Pike said it was maybe a mistake.
 a C preprocessor embedded in the C compiler to speedup compilation time,
 % also embedded in assembler
-% a common complaint from Pike, ledding later to Go
+% cpp, a common complaint from Pike, leading later to Go
 the support for numerous architectures (x86, Mips, ARM, Sparc, etc.),
-the ability to easily cross compile for those architectures
-partly thanks to a clever naming scheme, and more.
-%
-In \plan, each architecture is assigned a letter: x86 is '8', Mips
+and the ability to easily cross compile for those architectures
+partly thanks to a clever naming scheme.
+%, and more?
+
+
+In \plan, each architecture is assigned a character: x86 is '8', Mips
 is 'v', ARM is '5', etc. To produce ARM binaries, one can simply
 call [[5a]], the ARM assembler, to produce [[.5]] object
 files (not [[.o]]), which can be linked by [[5l]], the ARM linker, to
 produce a [[5.out]] binary (not [[a.out]]).
 %
-To produce x86 binaries use instead [[8a]], [[8l]] in the same
+To produce x86 binaries use instead [[8a]] and [[8l]] in the same
 directory without fear of overwriting the previous ARM object files
 as this time the object files will use the [[.8]] extension.
-% (now popularized by ziglang).
-
-
+% (cross compiling, now popularized by ziglang).
+%
 In the following, I use the name {\em Kencc} to denote the set of 
 assemblers, linkers, and C compilers supporting the many
 architectures in the original \plan.
-%
+
 Kencc has a simple and very small codebase, which made
 it very easy for other people to add more architectures.
 % cite article, and people did add!
@@ -84,6 +87,62 @@ assembler [[5a]] is 3600, the ARM linker [[5l]] is 7500 LOC, and the
 C compiler [[5l]] with the architecture-independent code and ARM target is
 only 18500 LOC. This is incredibly small compared to
 the LOC of [[gcc]]/binutils or [[clang]]/llvm.
+
+\section{Kencc after \plan}
+
+After \plan 4th edition, Kencc continued to evolve and has been forked
+many times.
+%
+Charles Fortyth added support for the arm64
+architecture (architecture character '7'), which
+powers all recent Apple machines as well as recent Raspberry Pis.
+%
+Richard Miller added support for the RISC-V architecture,
+both the 32 and 64 bits variants,
+with respectively characters 'i' and 'j'.
+
+The Inferno developers removed the use of \plan-specific C extensions
+in the Kencc code in exchange for the ability to compile Kencc itself
+using [[gcc]] or [[clang]].
+% help for bootstrap
+
+
+Finally, the Go designers, which include Rob Pike, designer of
+\plan and author of the \plan assemblers and linkers, and
+Ken Thompson, designer of \unix, \plan, and author of the \plan
+C compilers, used and extended Kencc to write the 
+original Go compiler.
+%
+Up until Go 1.3, the Go repository contained the C code of the
+[[5a/5c/5l]] (ARM), [[8a/8c/8l]] (x86), and [[6a/6c/6l]] (amd64)
+toolchains.
+%
+They extended Kencc to not only produce \plan{} [[a.out]] binaries
+but also Linux [[ELF]] binaries, macOS [[Mach-O]] binaries, and
+even Windows [[PE]] binaries.
+%
+They also developed a minimalist C and assembly library to interact
+with the system calls of Linux, macOS, and Windows, so the Go
+toolchain could produce Go binaries that could run on those 3 OSes.
+%Unfortunately disappeared, or spread around. Enter Goken!
+
+\section{The \goken project}
+
+The goal of the new \goken project is to consolidate, in a 
+single repository (\url{https://github.com/aryx/goken9cc}),
+the many improvements made to the \plan toolchain over
+the past two decades.
+%
+The \goken toolchain should
+{\em cross-compile} for modern architectures (arm64, amd64, RISC-V),
+{\em build} on those modern architectures, 
+{\em build} on \plan but also Linux, macOS, and Windows, 
+and finally {\em link} binaries that can run on those four OSes.
+%
+For example, you should be able to install Goken on an arm64 macOS and use it
+to produce binaries for an amd64 Linux.
+
+\section{Current state}
 
 
 % Life after plan9, it evolved (see next section). Was actually used
