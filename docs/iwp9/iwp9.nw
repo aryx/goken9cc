@@ -45,6 +45,7 @@ In particular, the \plan assemblers, linkers, and C compilers,
 % with an 's' because many archs and separate progs
 forming what is commonly called a {\em toolchain}, were also
 written from scratch, by none other than Ken Thompson.
+% and Rob pike for assemblers/linkers?
 %
 The design of this toolchain was also original with
 the machine-code generation part shifted from the assembler to the linker,
