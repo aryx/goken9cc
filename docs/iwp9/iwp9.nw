@@ -30,26 +30,29 @@ yoann.padioleau@gmail.com
 \maketitle
 
 \begin{abstract}
-\goken is a work-in-progress project attempting to unify in one repository
-(\url{https://github.com/aryx/goken9cc})
-the many improvements to the original \plan toolchain. The goal is to provide
-assemblers, linkers, and C compilers for modern architectures that
-can produce binaries not only for \plan but also Linux, macOS, and Windows.
+\goken is a work-in-progress project that aims to unify, in a single repository
+(\url{https://github.com/aryx/goken9cc}),
+the many improvements made to the original \plan toolchain.
+The goal is to provide
+assemblers, linkers, and C compilers for modern architectures, capable
+of producing binaries not only for \plan but also Linux, macOS, and Windows.
 \end{abstract}
 
 \section{Introduction}
 
-The \plan designers didn't just rethink from scratch the kernel,
+The \plan designers didn't just rethink from scratch the kernel;
 they rethinked the whole operating system (OS) in a holistic manner.
 %
-In particular, the \plan assembler, linker, and C compiler, 
+In particular, the \plan assemblers, linkers, and C compilers, 
+% with an 's' because many archs and separate progs
 forming what is commonly called a {\em toolchain}, were also
 written from scratch by none other than Ken Thompson.
 %
-The \plan toolchain design was also original with
-a machine code generation part shifted from the assembler to the linker,
+The design of this toolchain was also original with
+the machine-code generation part shifted from the assembler to the linker,
 %% later though Rob Pike said it was maybe a mistake.
-an embedded C preprocessor to speedup compilation time,
+a C preprocessor embedded in the C compiler to speedup compilation time,
+% also embedded in assembler
 % a common complaint from Pike, ledding later to Go
 the support for numerous architectures (x86, Mips, ARM, Sparc, etc.),
 the ability to easily cross compile for those architectures
@@ -64,6 +67,7 @@ produce a [[5.out]] binary (not [[a.out]]).
 To produce x86 binaries use instead [[8a]], [[8l]] in the same
 directory without fear of overwriting the previous ARM object files
 as this time the object files will use the [[.8]] extension.
+% (now popularized by ziglang).
 
 
 In the following, I use the name {\em Kencc} to denote the set of 
@@ -79,12 +83,8 @@ For example, the number of lines of code (LOC) of the ARM
 assembler [[5a]] is 3600, the ARM linker [[5l]] is 7500 LOC, and the
 C compiler [[5l]] with the architecture-independent code and ARM target is
 only 18500 LOC. This is incredibly small compared to
-the LOC of
-%
+the LOC of [[gcc]]/binutils or [[clang]]/llvm.
 
-% Quite small! compared to gcc/binutils, clang/llvm.
-% And super easy to cross compile from one arch to the other
-% (now popularized by ziglang).
 
 % Life after plan9, it evolved (see next section). Was actually used
 % to bootstrap golang! The 6/8/5 assemblers/linkers/compilers were
