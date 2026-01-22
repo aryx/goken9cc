@@ -155,7 +155,7 @@ The \goken toolchain should
 {\em build} on \plan but also Linux, macOS, and Windows, 
 and finally {\em link} binaries that can run on those four OSes.
 %
-For example, you should be able to install Goken on an arm64 macOS 
+For example, you should be able to install \goken on an arm64 macOS 
 machine and use it to produce binaries for a RISC-V Linux machine.
 
 The goal is to provide a viable alternative to
@@ -228,7 +228,7 @@ with the path to [[rc]] built during the bootstrapping phase.
 %\item
 %dup: principia iwp9
 Fifth, 
-The whole build and packaging process for Goken
+The whole build and packaging process for \goken
 is succintely specified using Docker\furl{https://www.docker.com/}.
 %
 Docker files are
