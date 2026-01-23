@@ -56,10 +56,8 @@ a C preprocessor embedded in the C compiler to speedup compilation time,
 % cpp, a common complaint from Pike, leading later to Go
 the support for numerous architectures (x86, Mips, ARM, Sparc, etc.),
 and the ability to easily cross compile for those architectures
-partly thanks to a clever naming scheme.
+partly thanks to a clever naming scheme\footnote{
 %alt:, and more?
-
-
 In \plan, each architecture is assigned a character: x86 is '8', Mips
 is 'v', ARM is '5', etc. To produce ARM binaries, one can simply
 call [[5a]], the ARM assembler, to produce [[.5]] object
@@ -69,6 +67,7 @@ produce a [[5.out]] binary (not [[a.out]]).
 To produce x86 binaries use instead [[8a]] and [[8l]] in the same
 directory without fear of overwriting the previous ARM object files
 as this time the object files will use the [[.8]] extension.
+}.
 % (cross compiling, now popularized by ziglang).
 % always supported by gcc, but never made easy (less needed too it's true)
 %
@@ -183,7 +182,7 @@ Second, \goken contains also the source of a portable
 minimal C library inspired from the [[lib9]] library in
 plan9port\furl{https://9fans.github.io/plan9port/}
 that allows to compile \plan source almost unchanged on mainstream OSes
-(e.g., Linux, macOS). \goken also includes the source of Lex, Yacc,
+(e.g., Linux, macOS). Finally, \goken includes also the source of Lex, Yacc,
 the source of variants of [[mk]] and [[rc]] that can build
 on POSIX OSes, and the source of a few utilities (e.g., [[ed]]).
 % regexp, libbio
@@ -230,7 +229,9 @@ with the path to [[rc]] built during the bootstrapping phase.
 %dup: principia iwp9
 Fifth, 
 The whole build and packaging process for \goken
-is succintely specified using Docker\furl{https://www.docker.com/}.
+is succintely specified using Docker\footnote{See \url{https://www.docker.com/}
+and \url{https://github.com/aryx/goken9cc/blob/master/Dockerfile}.
+}.
 %
 Docker files are
 a convenient and portable way to specify the commands to run
