@@ -255,6 +255,8 @@ already a lot with just those four system calls).
 \section{Future work}
 
 Complete the matrix (host arch, host OS) x (target arch, target OS).
+The code is there. Just need to connect things together and
+adapt to latest formats, latest OSes.
 
 % - future work: Mach-O, PE, multi-OS libc. Code is there
 %   for Go, and actually part of goken9cc repo, but need to
