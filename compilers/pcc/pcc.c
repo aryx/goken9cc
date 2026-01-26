@@ -74,6 +74,7 @@ main(int argc, char *argv[])
 			cflag = 1;
 			break;
 		case 'l':
+            //TODO: path is wrong, can't have /386/ on Linux or macOS
 			append(&objs, smprint("/%s/lib/ape/lib%s.a", ot->name, ARGF()));
 			break;
 		case 'o':
@@ -100,9 +101,12 @@ main(int argc, char *argv[])
 		case 'U':
 			append(&cpp, smprint("-%c%s", ARGC(), ARGF()));
 			break;
-        //pad: pcc does not recognize -L
+        //pad: pcc used to not recognize -L but now I pass it down
+        // in ldargs
 		case 'L':
-			ARGF();
+            // old: ARGF(); // ignored
+			s = ARGF();
+			append(&ldargs, smprint("-L%s", s));
 			break;
 		case 'v':
 			vflag = 1;
@@ -166,9 +170,10 @@ main(int argc, char *argv[])
     // finding 8c or 8l
     //old: was "/bin/%s" but removed /bin so found automatically in PATH
 	ccpath = smprint("%s", ot->cc); // should be KENCC/bin
+    //TODO: commented because all those paths can't exist on Linux or macOS
 	//append(&cpp, smprint("-I/%s/include/ape", ot->name)); // old
-    append(&cpp, smprint("-I/sys/include/ape/%s", ot->name));
-	append(&cpp, "-I/sys/include/ape");
+    //append(&cpp, smprint("-I/sys/include/ape/%s", ot->name));
+	//append(&cpp, "-I/sys/include/ape");
 	cppn = cpp.n;
 	ccn = cc.n;
 	for(i = 0; i < srcs.n; i++) {
@@ -195,8 +200,10 @@ main(int argc, char *argv[])
 			append(&ld, ldargs.strings[i]);
 		for(i = 0; i < objs.n; i++)
 			append(&ld, objs.strings[i]);
-		append(&ld, smprint("/%s/lib/ape/libap.a", ot->name));
-		doexec(smprint("/bin/%s", ot->ld), &ld);
+        // avoid adding libap.a as /386/.../path is wrong anyway
+		//append(&ld, smprint("/%s/lib/ape/libap.a", ot->name));
+        // old: was /bin/%s
+		doexec(smprint("%s", ot->ld), &ld);
 		if(objs.n == 1){
 			/* prevent removal of a library */
 			if(strstr(objs.strings[0], ".a") == 0)
