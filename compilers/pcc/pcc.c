@@ -11,13 +11,9 @@ typedef struct Objtype {
 } Objtype;
 
 Objtype objtype[] = {
-	{"spim",	"0c", "0l", "0", "0.out"},
 	{"arm",		"5c", "5l", "5", "5.out"},
 	{"amd64",	"6c", "6l", "6", "6.out"},
 	{"386",		"8c", "8l", "8", "8.out"},
-	{"power64",	"9c", "9l", "9", "9.out"},
-	{"sparc",	"kc", "kl", "k", "k.out"},
-	{"power",	"qc", "ql", "q", "q.out"},
 	{"mips",	"vc", "vl", "v", "v.out"},
 };
 
@@ -33,7 +29,7 @@ typedef struct List {
 
 List	srcs, objs, cpp, cc, ld, ldargs;
 int	cflag, vflag, Eflag, Pflag;
-char	*allos = "01245678kqv";
+char	*allos = "568v";
 
 void	append(List *, char *);
 char	*changeext(char *, char *);
@@ -63,7 +59,7 @@ main(int argc, char *argv[])
     // => I have to use gcc -E instead of /usr/bin/cpp
 	append(&cpp, "gcc"); 
 	append(&cpp, "-E");	
-	append(&cpp, "-D__STDC__=1");	/* ANSI says so */
+	//append(&cpp, "-D__STDC__=1");	/* ANSI says so */
 //	append(&cpp, "-N");		/* turn off standard includes */
     append(&cpp, "-nostdinc");
 
@@ -168,7 +164,8 @@ main(int argc, char *argv[])
 	if(objs.n == 0)
 		fatal("no files to compile or load");
     // finding 8c or 8l
-	ccpath = smprint("/bin/%s", ot->cc); // should be KENCC/bin
+    //old: was "/bin/%s" but removed /bin so found automatically in PATH
+	ccpath = smprint("%s", ot->cc); // should be KENCC/bin
 	//append(&cpp, smprint("-I/%s/include/ape", ot->name)); // old
     append(&cpp, smprint("-I/sys/include/ape/%s", ot->name));
 	append(&cpp, "-I/sys/include/ape");
