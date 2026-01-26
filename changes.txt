@@ -1,6 +1,10 @@
 # -*- org -*-
 
-* 0.2 (Q1 2025)
+* 0.2 (Q1 2025) (pcc)
+
+** toolchain
+- import pcc from my fork-kencc and adjust to goken (remove need
+  for Posix.c/Plan.c thx to lib9)
 
 ** build infra
 - new push-docker Makefile target so padator/goken can be used in
