@@ -1,16 +1,15 @@
-#                                              -*-makefile-*-
-<../mkconfig
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=pcc
+LDLIBS=-l9
 
+# Posix.$O below not Plan9.$O!
 OFILES= \
- $TARGMODEL.$O\
  pcc.$O\
+ \
+ Posix.$O\
 
-
-LIBS=	9
-
-BIN=$ROOT/$OBJDIR/bin
-
-<$ROOT/mkfiles/mkone-$SHELLTYPE
+<$TOP/mkfiles/mkone
 
