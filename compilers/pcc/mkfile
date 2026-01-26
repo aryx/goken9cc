@@ -5,11 +5,6 @@ TOP=../..
 TARG=pcc
 LDLIBS=-l9
 
-# Posix.$O below not Plan9.$O!
-OFILES= \
- pcc.$O\
- \
- Posix.$O\
+OFILES=pcc.$O
 
 <$TOP/mkfiles/mkone
-

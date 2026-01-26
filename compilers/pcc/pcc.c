@@ -1,10 +1,6 @@
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
-
-int mydup(int f1, int f2);
-int myexec(char *path, char *argv[]);
-int mywait(int *s);
-
 
 typedef struct Objtype {
 	char	*name;
@@ -226,9 +222,9 @@ append(List *l, char *s)
 void
 doexec(char *c, List *a)
 {
-	//Waitmsg *w;
-    int status;
-    int p;
+	Waitmsg *w;
+    //int status;
+    //int p;
 
 	if(vflag) {
 		printlist(a);
@@ -239,28 +235,28 @@ doexec(char *c, List *a)
 	case -1:
 		fatal("fork failed");
 	case 0:
-		myexec(c, a->strings);
+		exec(c, a->strings);
 		fatal("exec failed 1");
 	}
 
-    p = mywait(&status);
-    if (p < 0)
-      fatal("wait failed");
+    //p = wait(&status);
+    //if (p < 0)
+    //  fatal("wait failed");
 
-	//w = wait();
-	//if(w == nil)
-	//	fatal("wait failed");
-	//if(w->msg[0])
-	//	fatal(smprint("%s: %s", a->strings[0], w->msg));
-	//free(w);
+	w = wait();
+	if(w == nil)
+		fatal("wait failed");
+	if(w->msg[0])
+		fatal(smprint("%s: %s", a->strings[0], w->msg));
+	free(w);
 }
 
 void
 dopipe(char *c1, List *a1, char *c2, List *a2)
 {
-	//Waitmsg *w;
-    int status;
-    int p;
+	Waitmsg *w;
+    //int status;
+    //int p;
 
 	int pid1, got;
 	int fd[2];
@@ -278,10 +274,10 @@ dopipe(char *c1, List *a1, char *c2, List *a2)
 	case -1:
 		fatal("fork failed");
 	case 0:
-		mydup(fd[0], 0);
+		dup(fd[0], 0);
 		close(fd[0]);
 		close(fd[1]);
-		myexec(c2, a2->strings);
+		exec(c2, a2->strings);
         fprint(2, "exec failed with command %s\n", c2);
 		fatal("exec failed 2");
 	}
@@ -291,25 +287,25 @@ dopipe(char *c1, List *a1, char *c2, List *a2)
 		fatal("fork failed");
 	case 0:
 		close(0);
-		mydup(fd[1], 1);
+		dup(fd[1], 1);
 		close(fd[0]);
 		close(fd[1]);
-		myexec(c1, a1->strings);
+		exec(c1, a1->strings);
 		fatal("exec failed 3");
 	}
 	close(fd[0]);
 	close(fd[1]);
 	for(got = 0; got < 2; got++) {
-        p = mywait(&status);
-        if (p < 0)
-          fatal("wait failed");
-		//w = wait();
-		//if(w == nil)
-		//	fatal("wait failed");
-		//if(w->msg[0])
-		//	fatal(smprint("%s: %s",
-		//	   (w->pid == pid1) ? a1->strings[0] : a2->strings[0], w->msg));
-		//free(w);
+        //p = wait(&status);
+        //if (p < 0)
+        //  fatal("wait failed");
+		w = wait();
+		if(w == nil)
+			fatal("wait failed");
+		if(w->msg[0])
+			fatal(smprint("%s: %s",
+			   (w->pid == pid1) ? a1->strings[0] : a2->strings[0], w->msg));
+		free(w);
 	}
 }
 

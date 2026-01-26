@@ -9,7 +9,7 @@ DIRS=\
   mk rc \
   debuggers/libmach linkers/ar \
   src/libmach src/cmd/nm src/cmd/ar \
-  compilers/cc src/cmd/cc \
+  compilers/cc src/cmd/cc compilers/pcc \
   assemblers/5a linkers/5l compilers/5c   machines/5i \
   src/cmd/5l src/cmd/5a src/cmd/5c \
   linkers/5l__ assemblers/5a__ compilers/5c__ \
