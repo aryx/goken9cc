@@ -45,12 +45,12 @@ ENV GOOS="linux"
 ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
 
 ###############################################################################
-# Stage1 bis: Just binaries (on amd64/arm64)
+# Stage2: Just binaries (on amd64/arm64)
 ###############################################################################
 # TODO: copy just /src/ROOT/*/bin/ and maybe /src/ROOT/etc? 
 
 ###############################################################################
-# Stage2: Test (on amd64/arm64)
+# Test (on amd64/arm64)
 ###############################################################################
 
 FROM build AS test
@@ -70,7 +70,7 @@ RUN apt-get install -y qemu-user qemu-user-binfmt
 RUN mk test
 
 ###############################################################################
-# Stage3: Test on amd64/arm64 using the 386/arm plan9 toolchain (8c/5c)
+# Test on amd64/arm64 using the 386/arm plan9 toolchain (8c/5c)
 ###############################################################################
 
 FROM build AS principia
