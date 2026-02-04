@@ -27,8 +27,8 @@ yoann.padioleau@gmail.com
 \maketitle
 
 \begin{abstract}
-\goken is a work-in-progress project that aims to unify, in a single repository
-(\url{https://github.com/aryx/goken9cc}),
+\goken is a work-in-progress project that aims to unify in a single repository
+(\url{https://github.com/aryx/goken9cc})
 the many improvements made to the original \plan toolchain.
 The goal is to provide
 assemblers, linkers, and C compilers for modern architectures, capable
@@ -105,7 +105,8 @@ both the 32 and 64 bits variants,
 with respectively characters 'i' and 'j'.
 % put dates? Miller in 2017?
 
-The Inferno developers removed the use of \plan-specific C extensions
+The Inferno\furl{https://github.com/inferno-os/inferno-os/tree/master/utils}
+developers removed the use of \plan-specific C extensions
 in the Kencc code in exchange for the ability to compile Kencc itself
 using [[gcc]], 
 % or [[clang]] but actually back in the day there was no clang
@@ -240,7 +241,7 @@ in a fresh environment to build a project.
 %
 Moreover, the Github continuous integration (CI) system
 Github Actions\furl{https://github.com/features/actions}
-can also run Docker containers; this is used
+can also run Docker containers; this is used in \goken
 to automatically check for build and test regressions after each commit.
 
 %\item
@@ -249,6 +250,9 @@ for the amd64, ARM, and MIPS architectures,
 for programs using only a few system calls
 (e.g., [[open]], [[read]], [[write]], [[exit]], but you can do
 already a lot with just those four system calls).
+
+% incredible feeling, Linux hello world from syscall to C printf
+% all by plan9 programs
 
 %\end{itemize}
 
