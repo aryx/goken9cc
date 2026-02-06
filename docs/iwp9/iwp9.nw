@@ -39,7 +39,7 @@ of producing binaries not only for \plan but also Linux, macOS, and Windows.
 \section{Introduction}
 
 The \plan designers didn't just rethink from scratch the kernel;
-they rethinked the whole operating system (OS) in a holistic manner.
+they rethought the whole operating system (OS) in a holistic manner.
 %
 In particular, the \plan assemblers, linkers, and C compilers, 
 % with an 's' because many archs and separate progs
@@ -51,21 +51,21 @@ The design of this toolchain was also original with
 the machine-code generation part shifted from the assembler to the linker,
 %to factorize code? to simplify?
 %% later though Rob Pike said it was maybe a mistake.
-a C preprocessor embedded in the C compiler to speedup compilation time,
+a C preprocessor embedded in the C compiler to speed up compilation time,
 % also embedded in assembler
 % cpp, a common complaint from Pike, leading later to Go
-the support for numerous architectures (x86, Mips, ARM, Sparc, etc.),
-and the ability to easily cross compile for those architectures
+the support for numerous architectures (x86, MIPS, ARM, Sparc, etc.),
+and the ability to easily cross-compile for those architectures
 partly thanks to a clever naming scheme\footnote{
 %alt:, and more?
-In \plan, each architecture is assigned a character: x86 is '8', Mips
+In \plan, each architecture is assigned a character: x86 is '8', MIPS
 is 'v', ARM is '5', etc. To produce ARM binaries, one can simply
 call [[5a]], the ARM assembler, to produce [[.5]] object
 files (not [[.o]]), which can be linked by [[5l]], the ARM linker, to
 produce a [[5.out]] binary (not [[a.out]]).
 %
 To produce x86 binaries use instead [[8a]] and [[8l]] in the same
-directory without fear of overwriting the previous ARM object files
+directory without fear of overwriting the previous ARM object files,
 as this time the object files will use the [[.8]] extension.
 }.
 % (cross compiling, now popularized by ziglang).
@@ -92,17 +92,17 @@ the LOC of [[gcc]]/binutils or [[clang]]/LLVM.
 
 \section{Kencc after \plan}
 
-After the 4th edition of \plan in 2000, Kencc continued to evolve slowly
+After the 4th edition of \plan in 2000, Kencc has continued to evolve slowly
 in different repositories.
 %alt: forks
 %
-Charles Forsyth added support for the arm64
+Charles Forsyth added support for the ARM64
 architecture (architecture character '7'), which
 powers all recent Apple machines as well as the Raspberry Pi 3 and 4.
 %
 Richard Miller added support for the RISC-V architecture,
-both the 32 and 64 bits variants,
-with respectively characters 'i' and 'j'.
+both the 32- and 64-bits variants,
+with characters 'i' and 'j' respectively.
 % put dates? Miller in 2017?
 
 The Inferno\furl{https://github.com/inferno-os/inferno-os/tree/master/utils}
@@ -122,7 +122,7 @@ C compilers, used and extended Kencc to write the
 original Go compiler.
 %
 Up until Go 1.3, the Go repository contained the C code of the
-[[5a/5c/5l]] (ARM), [[8a/8c/8l]] (x86), and [[6a/6c/6l]] (amd64)
+[[5a/5c/5l]] (ARM), [[8a/8c/8l]] (x86), and [[6a/6c/6l]] (AMD64)
 toolchains.
 %
 They extended Kencc to not only link \plan{} ([[a.out]]) binaries
@@ -131,8 +131,8 @@ even Windows ([[PE]]) binaries.
 % also Dwarf GDB
 %
 They also developed a minimalist C and assembly library to interact
-with the system calls of Linux, macOS, and Windows, so the Go
-toolchain could produce Go binaries that could also run on those 3 OSes.
+with the system calls of Linux, macOS, and Windows. This allowed the Go
+toolchain to produce Go binaries that could run on those 3 OSes.
 %Unfortunately disappeared, gradually got converted to Go.
 % In fact hidden inside golang is this gem
 % with multi-arch AND multi-os!! can cross compile on 386 Linux
@@ -150,13 +150,13 @@ the many improvements made to the \plan toolchain over
 the past two decades.
 %
 The \goken toolchain should
-{\em target} modern architectures (arm64, amd64, RISC-V),
+{\em target} modern architectures (ARM64, AMD64, RISC-V),
 {\em build} on those modern architectures, 
 {\em build} on \plan but also Linux, macOS, and Windows, 
 and finally {\em cross-compile} and {\em link} binaries that can
 run on those four OSes.
 %
-For example, you should be able to install \goken on an arm64 macOS 
+For example, you should be able to install \goken on an ARM64 macOS 
 machine and use it to produce binaries for a RISC-V Linux machine.
 
 The goal is to provide a viable alternative to
@@ -174,19 +174,21 @@ The \goken repository is alive at \url{https://github.com/aryx/goken9cc} and
 has already a few interesting features.
 %alt:\begin{itemize}
 %\item
-First, \goken contains the source of the MIPS, ARM, x86, and amd64 toolchains
-from the original \plan, the arm64 toolchain
+First, \goken contains the source of the MIPS, ARM, x86, and AMD64 toolchains
+from the original \plan, the ARM64 toolchain
 by Charles Forsyth, the RISC-V toolchain by Richard Miller, and 
 the extensions by the Go Developers to support the Elf, Mach-O, and PE
 binary formats as well as the [[gdb]] Dwarf debugging format.
 
-Second, \goken contains also the source of a portable
+Second, \goken also contains the source of a portable
 minimal C library inspired from the [[lib9]] library in
 plan9port\furl{https://9fans.github.io/plan9port/}
 that allows to compile \plan source almost unchanged on mainstream OSes
-(e.g., Linux, macOS). Finally, \goken includes also the source of Lex, Yacc,
-the source of variants of [[mk]] and [[rc]] that can build
-on POSIX OSes, and the source of a few utilities (e.g., [[ed]]).
+(e.g., Linux, macOS).
+%
+Finally, \goken also includes the source of Lex and Yacc,
+variants of [[mk]] and [[rc]] that can build on POSIX OSes,
+and a few utilities (e.g., [[ed]]).
 % regexp, libbio
 % self-sufficient
 
@@ -195,12 +197,12 @@ Third, \goken builds on Linux, macOS, and Windows,
 % not plan9, not xv6, or tried?
 using either [[gcc]] or [[clang]], 
 % but not kencc? not self-hosted?
-on ARM, arm64, x86, and amd64 machines.
+on ARM, ARM64, x86, and AMD64 machines.
 % actually tested x86 and arm?
 %
 This was more difficult than anticipated because [[gcc]], as opposed
 to the \plan C compiler, treats [[long]] as 64 bits on 64 bits machines;
-the past assumption of the \plan authors though was that a [[long]] was always
+the past assumption of the \plan authors was that a [[long]] was always
 32 bits, which required to change many globals and fields in
 \goken from [[long]] to [[int32]] (but not all of them).
 
@@ -231,22 +233,22 @@ with the path to [[rc]] built during the bootstrapping phase.
 %dup: principia iwp9
 Fifth, 
 The whole build and packaging process for \goken
-is succintely specified using Docker\footnote{See \url{https://www.docker.com/}
+is succinctly specified using Docker\footnote{See \url{https://www.docker.com/}
 and \url{https://github.com/aryx/goken9cc/blob/master/Dockerfile}.
 }.
 %
-Docker files are
+Dockerfiles are
 a convenient and portable way to specify the commands to run
 in a fresh environment to build a project.
 %
-Moreover, the Github continuous integration (CI) system
-Github Actions\furl{https://github.com/features/actions}
+Moreover, the GitHub continuous integration (CI) system
+GitHub Actions\furl{https://github.com/features/actions}
 can also run Docker containers; this is used in \goken
 to automatically check for build and test regressions after each commit.
 
 %\item
 Finally, \goken can currently produce binaries for \plan, Linux, some old macOS,
-for the amd64, ARM, and MIPS architectures,
+for the AMD64, ARM, and MIPS architectures,
 for programs using only a few system calls
 (e.g., [[open]], [[read]], [[write]], [[exit]], but you can do
 already a lot with just those four system calls).
@@ -260,8 +262,9 @@ already a lot with just those four system calls).
 \section{Future work}
 
 Complete the matrix (host arch, host OS) x (target arch, target OS).
-The code is there. Just need to connect things together and
-adapt to latest formats, latest OSes.
+%
+The code is already present; the remaining work involves connecting
+the components and adapting to the latest formats and OSes.
 
 % - future work: Mach-O, PE, multi-OS libc. Code is there
 %   for Go, and actually part of goken9cc repo, but need to
