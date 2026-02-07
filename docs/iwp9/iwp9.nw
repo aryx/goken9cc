@@ -161,7 +161,10 @@ machine and use it to produce binaries for a RISC-V Linux machine.
 
 The goal is to provide a viable alternative to
 [[gcc]]/binutils  and [[clang]]/LLVM with a
-codebase that is only a fraction of their size.
+codebase that is only a fraction of their size
+and specifically designed to make cross-compilation effortless.
+% zig showed the way, but wrappers because what is under is messy
+%
 %doable, the golang developers did it for Go!
 % Lots of efforts on linker (mold, ...) but again time to go back
 % to simplicity! and re-expose this hidden plan9 and inferno and golang gem!!
@@ -177,10 +180,12 @@ has already a few interesting features.
 First, \goken contains the source of the MIPS, ARM, x86, and AMD64 toolchains
 from the original \plan, the ARM64 toolchain
 by Charles Forsyth, the RISC-V toolchain by Richard Miller, and 
-the extensions by the Go Developers to support the Elf, Mach-O, and PE
-binary formats as well as the [[gdb]] Dwarf debugging format.
-
-Second, \goken also contains the source of a portable
+the extensions by the Go Developers %until November 2010
+to support the Elf, Mach-O (for macOS 10.6), and PE (for windows 7)
+binary formats as well as the [[gdb]] Dwarf debugging format
+version 2.
+%
+\goken also contains the source of a portable
 minimal C library inspired from the [[lib9]] library in
 plan9port\furl{https://9fans.github.io/plan9port/}
 that allows to compile \plan source almost unchanged on mainstream OSes
@@ -193,7 +198,7 @@ and a few utilities (e.g., [[ed]]).
 % self-sufficient
 
 %\item
-Third, \goken builds on Linux, macOS, and Windows,
+Second, \goken builds on Linux, macOS, and Windows,
 % not plan9, not xv6, or tried?
 using either [[gcc]] or [[clang]], 
 % but not kencc? not self-hosted?
@@ -207,7 +212,7 @@ the past assumption of the \plan authors was that a [[long]] was always
 \goken from [[long]] to [[int32]] (but not all of them).
 
 %item
-Fourth, \goken requires just a C compiler, a linker, and a POSIX shell
+Third, \goken requires just a C compiler, a linker, and a POSIX shell
 (e.g., [[bash]]) to build. There is no need for Make or prebuilt binaries
 of [[mk]] like in Inferno.
 %
@@ -231,7 +236,7 @@ with the path to [[rc]] built during the bootstrapping phase.
 
 %\item
 %dup: principia iwp9
-Fifth, 
+Fourth, 
 The whole build and packaging process for \goken
 is succinctly specified using Docker\footnote{See \url{https://www.docker.com/}
 and \url{https://github.com/aryx/goken9cc/blob/master/Dockerfile}.
@@ -247,7 +252,7 @@ can also run Docker containers; this is used in \goken
 to automatically check for build and test regressions after each commit.
 
 %\item
-Finally, \goken can currently produce binaries for \plan, Linux, some old macOS,
+Finally, \goken can currently produce binaries for \plan, Linux, macOS 10.6,
 for the AMD64, ARM, and MIPS architectures,
 for programs using only a few system calls
 (e.g., [[open]], [[read]], [[write]], [[exit]], but you can do
