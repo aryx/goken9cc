@@ -127,6 +127,11 @@
 * Alpha (Q2 2025) (focus on C (not Go), Dockerfile/Nix/GHA, mips/arm64/riscv import v0)
 # see also pad.org history section
 
+Fork Go repo at Oct 10 2010 at commit 99a10eff16b79cfb8ccf36e586532a40b17a203c
+with a working 6a/6c/6l amd64 toolchain, the 8a/8c/8l x86 toolchain,
+and a possibly working 5a/5c/5l arm toolchain, as well as libmach, ar,
+nm, etc.
+
 ** toolchain
 - add mips toolchain va/vl/vc from https://bitbucket.org/plan9-from-bell-labs/9-cc.git
   and adapt it to goken; tested va/vl with vi from principia on hello_plan9_mips.s
