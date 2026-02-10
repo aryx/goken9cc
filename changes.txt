@@ -161,6 +161,8 @@ nm, etc.
 - adapt quietgcc to modern macOS (2025) with recent clang
 - adapt quietgcc to modern Windows (2025) with recent mingw-gcc
 
+* -----------------------------------------------------------
+
 * Goken9cc Pre-history
 
 ** TODO Cinap 9front: 2019-2025
@@ -225,6 +227,8 @@ Most of the code in goken9cc comes from Plan 9 4th edition:
 the origin:
 - lex
 - yacc
+
+* -----------------------------------------------------------
 
 * Template 0.X (Qx 2025) (major-contrib)
 
