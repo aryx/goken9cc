@@ -195,7 +195,8 @@ Finally, \goken also includes the source of Lex and Yacc,
 variants of [[mk]] and [[rc]] that can build on POSIX OSes,
 and a few utilities (e.g., [[ed]]).
 % regexp, libbio
-% self-sufficient
+%TODO: goal is self-sufficient; include all that is needed to build
+% itself
 
 %\item
 Second, \goken builds on Linux, macOS, and Windows,
@@ -213,6 +214,7 @@ the past assumption of the \plan authors was that a [[long]] was always
 
 %item
 Third, \goken requires just a C compiler, a linker, and a POSIX shell
+% no need for assembler; pure C code toolchain
 (e.g., [[bash]]) to build. There is no need for Make or prebuilt binaries
 of [[mk]] like in Inferno.
 %
