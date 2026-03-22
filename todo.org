@@ -59,6 +59,52 @@ but better wait to avoid diff.rc to show big diffs
 
 * Last
 
+** Last2
+
+*** incorportate plan9port libmach so can get acid to work on Linux
+DWARF binaries!
+
+*** pcc: improve -lxxx to look for libxxx.a in -L given path
+so then I can use more -lunix in xix mkconfig
+
+*** goken iwp9.nw refinments until March 9
+fix float
+start libos (thin syscalls wrappers)
+test support macOS 10.6
+add windows? too complex?
+talk about QEMU testing infra
+
+*** why order of -I matters?
+this does not work:
+  8c -c test_bind_c.c -I/home/pad/principia/include/ALL/ -I/home/pad/principia/include/arch/386/
+but this does:
+  8c -I/home/pad/principia/include/ALL/ -I/home/pad/principia/include/arch/386/ test_bind_c.c
+
+*** improve configure to run build-mk.sh
+see comment in configure:
+
+# TODO: 
+#  - check for gcc/clang
+#  - detect if bin/ contains mk, rc, and ed
+#    and maybe run scripts/build-mk.sh and promote-mk.sh automatically
+
+at the same time nice to see explicitely the build-mk.sh in Dockerfile
+for iwp9 goken paper
+
+*** -----------------------------------------------------------
+
+*** undo changes to va/vc/vl, restore old code
+then add back elf, -X, and some long->int32 that are needed
+according to what we did for 5c/8c
+
+works better tests/c/mini2/ ? works better with -m32 on thinkstation?
+diff .v produced?
+
+*** undo changes to ia/ic/il
+*** undo changes to 7a/7c/7l
+
+** Last1
+
 *** continue switch to kencc code in goken
 
 **** RELAX 5l/8l: cleanup the code like I did before with the '9',
