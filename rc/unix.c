@@ -400,7 +400,12 @@ Noerror(void)
 // Directories
 //******************************************************************************
 
-#define	NDIR	14		/* should get this from param.h */
+// bugfix: was 14, matching V7 Unix's 14-char filename limit.
+// Modern filesystems allow up to 255-char filenames (NAME_MAX).
+// Globsize() uses NDIR to size the globname buffer; with NDIR=14,
+// a directory containing e.g. "getnetconninfo.c" (18 chars) would
+// overflow the buffer during Readdir()'s strcpy(), corrupting the heap.
+#define	NDIR	256
 int
 Globsize(char *p)
 {
