@@ -1,0 +1,5 @@
+TOP=../..
+<$TOP/mkconfig
+
+test:V:
+	bash glob_long_filenames.sh

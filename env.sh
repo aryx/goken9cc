@@ -4,6 +4,8 @@ export PATH=`pwd`/bin:`pwd`/ROOT/amd64/bin:`pwd`/ROOT/arm64/bin:$PATH
 
 # for mk to find rc
 export MKSHELL=`pwd`/bin/rc
+# disable leak detection when built with --asan; many tools have harmless leaks
+export ASAN_OPTIONS=detect_leaks=0
 # for mk to use multiple processors
 export NPROC=`nproc`
 

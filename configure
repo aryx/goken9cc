@@ -31,6 +31,26 @@ set -eu # to debug this script add '-x'
 # Entry point
 ###############################################################################
 
+# Parse options
+SANITIZE=
+for arg in "$@"; do
+    case "$arg" in
+        --asan)
+            SANITIZE='-fsanitize=address'
+            ;;
+        --help|-h)
+            echo "Usage: ./configure [options]"
+            echo "  --asan    Build with AddressSanitizer (memory error detector)"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg" >&2
+            echo "Try: ./configure --help" >&2
+            exit 1
+            ;;
+    esac
+done
+
 #TODO: imitate what x9cc/configure does
 ARCH=`uname -m`
 case "$ARCH" in
@@ -77,6 +97,10 @@ echo "GOARCH=$GOARCH" >> mkconfig
 #GOHOSTOS=linux
 #GOHOSTARCH=amd64
 echo "YACC=$YACC" >> mkconfig
+if [ -n "$SANITIZE" ]; then
+    # single quotes needed so mk/rc don't choke on the '=' inside the value
+    echo "SANITIZE='$SANITIZE'" >> mkconfig
+fi
 
 #TODO: run scripts/build-mk.sh and scripts/promote-mk.sh
 

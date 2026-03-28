@@ -15,9 +15,10 @@ CPUS=arm arm64 386 amd64
 #principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype -I$TOP/include/ALL
 #TODO: gcc and linux specific so move somewhere else
 #TODO was -O2 but better -O0 for ease of debugging with gdb
-GCCFLAGS=-O0 -fno-inline -ggdb
+#note: SANITIZE is optionally set by ./configure --asan
+GCCFLAGS=-O0 -fno-inline -ggdb $SANITIZE
 CFLAGS=-I$TOP/include -I. $GCCFLAGS
-LDFLAGS=-L$ROOT/$objtype/lib
+LDFLAGS=-L$ROOT/$objtype/lib $SANITIZE
 
 LEX=lex
 #alt: bison but not always super compatible. apparently on my Linux /bin/yacc
