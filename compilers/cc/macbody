@@ -845,7 +845,29 @@ gethunk(void)
 	nh = NHUNK;
 	if(thunk >= 10L*NHUNK)
 		nh = 10L*NHUNK;
-	h = (char*)sbrk(nh);
+	/* claude: was sbrk(nh) in original Plan 9 code.
+	 *
+	 * On macOS (especially arm64), sbrk() is deprecated: it satisfies a
+	 * small initial reservation and then returns -1 for any further
+	 * request, regardless of how much memory is actually available. The
+	 * effect is that small source files compile fine, but once the
+	 * compiler's hunk allocator has chewed through that initial quota,
+	 * gethunk() fails and the compile dies with "out of memory" — even
+	 * on a machine with plenty of free RAM. This bit us when compiling
+	 * principia/lib_graphics/libimg/torgbv.c with 8c.
+	 *
+	 * Switching to malloc() is safe because the hunk allocator never
+	 * relies on sbrk's contiguity guarantee: each gethunk() call
+	 * overwrites the `hunk` and `nhunk` globals (rather than extending
+	 * them), and pointers handed out from previous hunks remain valid
+	 * because malloc, like sbrk, never moves existing allocations. The
+	 * == (char*)-1 check below is now vestigial (malloc returns NULL on
+	 * failure, not -1), but real OOM at 50KB–500KB chunk sizes is not
+	 * going to happen on a modern machine, so it's left alone to keep
+	 * this a one-line change.
+	 */
+	/*old: h = (char*)sbrk(nh); */
+	h = (char*)malloc(nh);
 	if(h == (char*)-1) {
 		yyerror("out of memory");
 		errorexit();

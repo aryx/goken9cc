@@ -1255,7 +1255,27 @@ gethunk(void)
 		if(thunk >= 25L*NHUNK)
 			nh = 25L*NHUNK;
 	}
-	h = sbrk(nh);
+	/* claude: was sbrk(nh) in original Plan 9 code.
+	 *
+	 * Same fix as compilers/cc/macbody:gethunk(). On macOS (especially
+	 * arm64), sbrk() satisfies a small initial reservation and then
+	 * returns -1 forever, regardless of how much memory is actually
+	 * available. Small links work; once the linker's hunk allocator has
+	 * chewed through the quota, gethunk() fails and the link dies with
+	 * "out of memory" (prefixed by the current text symbol via diag(),
+	 * e.g. "xdtoa: out of memory" when linking 8.jpg).
+	 *
+	 * malloc() is a safe substitute: gethunk() never relies on sbrk's
+	 * contiguity guarantee — each call overwrites `hunk` and `nhunk`
+	 * rather than extending them, and pointers handed out from previous
+	 * hunks remain valid because malloc, like sbrk, never moves
+	 * existing allocations. The == (char*)-1 check below is now
+	 * vestigial (malloc returns NULL on failure, not -1), but real OOM
+	 * at NHUNK..25*NHUNK chunk sizes is not going to happen on a modern
+	 * machine, so it's left alone to keep this a one-line change.
+	 */
+	/*old: h = sbrk(nh); */
+	h = malloc(nh);
 	if(h == (char*)-1) {
 		diag("out of memory");
 		errorexit();
