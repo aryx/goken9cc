@@ -7,6 +7,8 @@ systems. Originally extended by Go developers, this toolchain brings
 cross-platform support for Linux, macOS, and Windows while preserving
 the simplicity, elegance, and efficiency of the original Plan 9 tools.
 
+See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the project.
+
 ---
 
 ## Features
