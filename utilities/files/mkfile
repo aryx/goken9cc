@@ -11,8 +11,9 @@ LDLIBS=-lbio -lstring -l9 -lm
 # we skip 'cp' as mk install will lead to a "Text file busy" error
 # we skip ls, mv, and they are breaking current usage or buggy
 # (mv seems to not work)
-#TODO: mv ls
-TARG=cat touch mkdir rm chmod chgrp mtime wc du
+# we skip chmod seems to not work when used in principia/git9/ mk install
+#TODO: mv ls chmod
+TARG=cat touch mkdir rm chgrp mtime wc du
 
 <$TOP/mkfiles/mkmany
 #<$TOP/mkfiles/mkmanyauto
