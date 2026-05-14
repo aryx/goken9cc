@@ -11,7 +11,7 @@ FROM ubuntu:24.04 AS build
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
-RUN apt-get install -y --no-install-recommends gcc libc6-dev byacc
+RUN apt-get install -y --no-install-recommends gcc libc6-dev
 
 # Now let's build from source
 WORKDIR /src
@@ -24,7 +24,7 @@ RUN ./configure
 # - 'rc', which is called by 'mk'
 # - 'ed', which is used by the mkenam script run during the build
 RUN ./scripts/build-mk.sh
-# copy ./ROOT/<arch>/bin/mk to ./bin/
+# copy ./ROOT/<arch>/bin/{mk,rc,ed} to ./bin/
 RUN ./scripts/promote-mk.sh
 
 # coupling: env.sh

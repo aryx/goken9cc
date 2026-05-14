@@ -23,8 +23,8 @@ LDFLAGS=-L$ROOT/$objtype/lib $SANITIZE
 LEX=lex
 #alt: bison but not always super compatible. apparently on my Linux /bin/yacc
 # is actually bison in disguise but compatible :)
-#set now in mkconfig instead
-#YACC=yacc
+#old: used to be set in mkconfig to byacc or bison but now built by build-mk.sh
+YACC=yacc
 
 # recursive mk will have these set from the parent
 # this is never what we want.  clear them

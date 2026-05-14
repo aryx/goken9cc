@@ -5,10 +5,6 @@ TOP=../..
 TARG=iyacc
 LDLIBS=-lbio -l9
 
-#coupling: o.out is used in ../lex/mkfile, in ../typesetting/eqn/mkfile
-# so if you change the mkone target below, you'll need to adjust
-# those mkfiles too
-
 OFILES=yacc.$O
 
 #alt: use mkmany which removes need for OFILES but then can't use iyacc bin

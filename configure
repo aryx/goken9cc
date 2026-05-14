@@ -70,12 +70,9 @@ OS=`uname -s`
 case "$OS" in
     Linux)
         GOOS=linux
-        YACC=yacc
         ;;
     Darwin)
         GOOS=darwin
-	#old: was byacc, but does not work on nix
-        YACC=yacc
         ;;
     *)
         echo "Unsupported OS: $OS" >&2
@@ -96,7 +93,6 @@ echo "GOARCH=$GOARCH" >> mkconfig
 #still needed? used in golang
 #GOHOSTOS=linux
 #GOHOSTARCH=amd64
-echo "YACC=$YACC" >> mkconfig
 if [ -n "$SANITIZE" ]; then
     # single quotes needed so mk/rc don't choke on the '=' inside the value
     echo "SANITIZE='$SANITIZE'" >> mkconfig
