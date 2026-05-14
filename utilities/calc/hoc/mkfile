@@ -17,8 +17,6 @@ HFILES=\
 	y.tab.h\
 	hoc.h\
 
-YACC=$TOP/generators/yacc/o.out
-
 YFILES=hoc.y
 
 <$TOP/mkfiles/mkone
