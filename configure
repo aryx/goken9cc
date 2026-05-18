@@ -98,12 +98,22 @@ if [ -n "$SANITIZE" ]; then
     echo "SANITIZE='$SANITIZE'" >> mkconfig
 fi
 
-#TODO: run scripts/build-mk.sh and scripts/promote-mk.sh
+#echo 'Here is the content of the ./mkconfig that configure generated:'
+echo 'Here is its content:'
+cat mkconfig
+echo
 
+#coupling: Dockerfile and README.md
 echo 'Everything looks fine. You can now run: '
 echo
-echo '   $ make'
-echo '   $ make install'
+echo '   $ ./scripts/build-mk.sh'
+echo '   $ ./scripts/promote-mk.sh'
+echo '   $ . env.sh'
 echo
-echo 'Here is the content of the ./mkconfig that configure generated:'
-cat mkconfig
+echo 'and after that: '
+echo
+echo '   $ mk'
+echo '   $ mk install'
+echo
+echo 'at which point 5c/5a/5l, 8c/8a/8l, mk/rc, ... should be in your $PATH'
+

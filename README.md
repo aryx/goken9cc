@@ -46,8 +46,11 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
 git clone https://github.com/aryx/goken9cc.git
 cd goken9cc
 ./configure
-make
-make install
+./scripts/build-mk.sh
+./scripts/promote-mk.sh
+. env.sh
+mk
+mk install
 ```
 
 You can also play with the `$GOOS` and `$GOARCH` environment variables
