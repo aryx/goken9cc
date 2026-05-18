@@ -103,7 +103,7 @@ echo 'Here is its content:'
 cat mkconfig
 echo
 
-#coupling: Dockerfile and README.md
+#coupling: Dockerfile and README.md and principia/docs/getting-started.html
 echo 'Everything looks fine. You can now run: '
 echo
 echo '   $ ./scripts/build-mk.sh'
