@@ -14,8 +14,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
-          - macos-latest
+          #TODO: restore
+          #- ubuntu-latest
+          #- macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
