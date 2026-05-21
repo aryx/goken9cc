@@ -1,0 +1,55 @@
+goken9cc for Debian
+===================
+
+The full toolchain is installed under /usr/lib/goken9cc, which serves as
+the runtime install prefix. mk, rc, yacc, ... pick up rcmain.unix,
+yaccpar, the Plan 9 headers, the per-arch lib/ directory, etc. from
+there.
+
+The install prefix is baked into the binaries at build time (via
+-DGOROOT=/usr/lib/goken9cc when compiling lib_core/lib9/goos.c and
+lib_core/lib9/get9root.c). The package therefore does *not* export a
+GOROOT environment variable, since that name is also used by the Go
+toolchain (golang-go) and exporting it from /etc/profile.d would
+silently break Go.
+
+If you do have GOROOT exported in your shell (e.g. you set it manually
+for Go), the goken binaries will honor it and look for their support
+files there, which is almost certainly not what you want. Unset GOROOT
+before invoking goken tools in that case:
+
+    env -u GOROOT 6c hello.c
+
+PATH
+----
+
+/etc/profile.d/goken9cc.sh appends /usr/lib/goken9cc/<host-arch>/bin to
+PATH on login shells. For non-login shells (or until you log out and
+back in) source it manually:
+
+    . /etc/profile.d/goken9cc.sh
+
+After that the toolchain commands are on PATH:
+
+    5c, 5a, 5l           # arm
+    6c, 6a, 6l           # amd64
+    7c, 7a, 7l           # arm64
+    8c, 8a, 8l           # 386
+    vc, va, vl           # mips
+    ic, ia, il           # riscv
+    mk, rc, ed, yacc     # Plan 9 build tools
+    acid, 5i, vi         # debugger and emulators
+
+PATH is intentionally *appended* so that Plan 9 utilities like cat, ls,
+grep, awk, etc. (also shipped by upstream) do not shadow the system
+versions. They can still be invoked by their absolute path under
+/usr/lib/goken9cc/<host-arch>/bin/ if needed.
+
+Layout
+------
+
+    /usr/lib/goken9cc/
+        <host-arch>/bin/   host binaries
+        <host-arch>/lib/   static libraries (lib9.a, libbio.a, ...)
+        include/           public headers (u.h, libc.h, bio.h, mach.h, ...)
+        etc/               rcmain.unix, yaccpar, acid macros

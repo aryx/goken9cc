@@ -1,0 +1,129 @@
+#!/usr/bin/make -f
+#
+# Debian rules for goken9cc.
+#
+# The upstream build is driven by Plan 9 mk (not GNU make). The pipeline is:
+#
+#   ./configure                  # detects host arch/OS, generates ./mkconfig
+#   ./scripts/build-mk.sh        # bootstraps mk, rc, ed, yacc from POSIX sh
+#   ./scripts/promote-mk.sh      # copies them into ./bin/
+#   mk                           # builds the full toolchain into ROOT/$arch/
+#   mk install                   # copies binaries to ROOT/$arch/bin
+#
+# We then relocate ROOT/ into /usr/lib/goken9cc. The same path is baked
+# into the binaries at build time (see MK_OVERRIDE below) so they find
+# their support files without needing a runtime env var.
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+GOKEN_PREFIX = /usr/lib/goken9cc
+DESTROOT     = $(CURDIR)/debian/goken9cc$(GOKEN_PREFIX)
+
+# Honor DEB_BUILD_OPTIONS=parallel=N (passed to mk via NPROC).
+NPROC := $(shell echo $${DEB_BUILD_OPTIONS} | sed -n 's/.*parallel=\([0-9]\+\).*/\1/p')
+ifeq ($(NPROC),)
+NPROC := $(shell nproc 2>/dev/null || echo 1)
+endif
+
+# Build environment shared by build/install (mirrors env.sh).
+BUILD_ENV = \
+    PATH=$(CURDIR)/bin:$(CURDIR)/ROOT/$(DEB_HOST_ARCH)/bin:$${PATH} \
+    MKSHELL=$(CURDIR)/bin/rc \
+    NPROC=$(NPROC) \
+    ASAN_OPTIONS=detect_leaks=0
+
+# Bake the final install prefix into the binaries via -DGOROOT=... so that
+# rc/mk/yacc/etc. find rcmain.unix, yaccpar, the Plan 9 headers, etc.
+# under /usr/lib/goken9cc *without* needing a runtime GOROOT env var
+# (which would clash with the Go toolchain).
+#
+# The compile-time macro is driven by the ROOTDIR variable in
+# lib_core/lib9/mkfile, which is unconditionally assigned to
+# `{cd $TOP/ROOT; pwd}`. Plan 9 mk does not let us override that from
+# the command line in a way that survives the recursive `mk $MKFLAGS`
+# calls in mkfiles/mkdirs (mk's parser rejects MKFLAGS=ROOTDIR=...
+# because of the second '='), and env-var assignments lose to mkfile
+# assignments. So we drop the mkfile's ROOTDIR= line for the duration
+# of the build (restored on clean) and let the env var below propagate.
+LIB9_MKFILE = lib_core/lib9/mkfile
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	./configure
+
+override_dh_auto_build:
+	# build-mk.sh expects ROOT/$arch/{bin,lib} to already exist (upstream
+	# tracks them via .keep files, but a sanity mkdir doesn't hurt).
+	mkdir -p ROOT/$(DEB_HOST_ARCH)/bin ROOT/$(DEB_HOST_ARCH)/lib
+	./scripts/build-mk.sh
+	./scripts/promote-mk.sh
+	# Clean the .o leftovers from the bootstrap so the main build is
+	# driven entirely by mk (matches the upstream Dockerfile).
+	$(BUILD_ENV) ./bin/mk nuke
+	# Drop ROOTDIR=... from lib_core/lib9/mkfile so the env var below
+	# survives the recursive mk calls; restored by dh_auto_clean.
+	if [ ! -f $(LIB9_MKFILE).debian-orig ]; then \
+	    cp $(LIB9_MKFILE) $(LIB9_MKFILE).debian-orig; \
+	fi
+	sed -i '/^ROOTDIR=/d' $(LIB9_MKFILE)
+	$(BUILD_ENV) ROOTDIR=$(GOKEN_PREFIX) ./bin/mk
+
+override_dh_auto_install:
+	$(BUILD_ENV) ROOTDIR=$(GOKEN_PREFIX) ./bin/mk install
+	# Relocate the build artefacts into /usr/lib/goken9cc.
+	#  - ROOT/<arch>/{bin,lib} are real dirs containing the build output
+	#  - include/ and etc/ live at the top of the source tree (the
+	#    ROOT/include and ROOT/etc names are symlinks back to them, so
+	#    we copy from the source paths directly to avoid shipping broken
+	#    symlinks).
+	mkdir -p $(DESTROOT)
+	cp -a ROOT/$(DEB_HOST_ARCH) $(DESTROOT)/
+	cp -a include               $(DESTROOT)/
+	cp -a etc                   $(DESTROOT)/
+	# Drop the .keep placeholders and any empty dirs we don't want to ship.
+	find $(DESTROOT) -name .keep -delete
+	find $(DESTROOT) -type d -empty -delete
+	# build-mk.sh builds 'yacc' standalone (with the build tree's path
+	# baked into the linked-in goos.o/get9root.o), while the top-level
+	# mk builds the same source as 'iyacc' against the fixed lib9.a.
+	# Drop the leaky bootstrap yacc and point it at iyacc so $YACC=yacc
+	# in mkfile.proto keeps working.
+	if [ -f $(DESTROOT)/$(DEB_HOST_ARCH)/bin/iyacc ]; then \
+	    rm -f $(DESTROOT)/$(DEB_HOST_ARCH)/bin/yacc; \
+	    ln -s iyacc $(DESTROOT)/$(DEB_HOST_ARCH)/bin/yacc; \
+	fi
+
+override_dh_auto_clean:
+	# Restore the mkfile we patched in dh_auto_build.
+	if [ -f $(LIB9_MKFILE).debian-orig ]; then \
+	    mv $(LIB9_MKFILE).debian-orig $(LIB9_MKFILE); \
+	fi
+	# 'mk nuke' needs the bootstrapped mk/rc; only run it if present.
+	if [ -x ./bin/mk ] && [ -f mkconfig ]; then \
+	    $(BUILD_ENV) ./bin/mk nuke || true; \
+	fi
+	rm -f  mkconfig
+	rm -f  bin/mk bin/rc bin/ed bin/yacc
+	# Remove the contents of ROOT/<arch>/{bin,lib} but keep the .keep
+	# markers so git stays clean and the bootstrap can `cp` into them.
+	for arch in amd64 arm64; do \
+	    for sub in bin lib; do \
+	        if [ -d ROOT/$$arch/$$sub ]; then \
+	            find ROOT/$$arch/$$sub -mindepth 1 ! -name .keep -delete; \
+	        fi; \
+	    done; \
+	done
+	# Bootstrap leftovers in source tree.
+	find lib_core lib_strings mk rc generators utilities \
+	     -name '*.o' -delete 2>/dev/null || true
+
+# Upstream has no test suite that runs offline / hermetically in a build
+# environment (mk test pulls in qemu-user etc.). Skip it for now.
+override_dh_auto_test:
+
+# The toolchain ships its own static .a libraries that don't need shlibdeps,
+# but dh_shlibdeps still runs against the produced binaries; that's fine.

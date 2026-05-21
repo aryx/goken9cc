@@ -1,0 +1,12 @@
+goken9cc (0.3.0) unstable; urgency=medium
+
+  * Initial Debian packaging.
+  * Ships the goken9cc Plan 9 / kencc-derived toolchain (compilers,
+    assemblers, linkers, mk, rc) under /usr/lib/goken9cc.
+  * Builds with ROOTDIR=/usr/lib/goken9cc so the install prefix is
+    baked into the binaries; avoids exporting GOROOT at runtime since
+    that variable is also used by the Go toolchain.
+  * Installs /etc/profile.d/goken9cc.sh which only extends PATH with
+    the host architecture's bin directory.
+
+ -- Rafael Diniz <rafael.1.diniz@nokia.com>  Thu, 21 May 2026 00:00:00 +0000

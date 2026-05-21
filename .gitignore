@@ -116,4 +116,8 @@ GO/test/times.out
 docs/iwp9/iwp9.pdf
 docs/iwp9/iwp9.tex
 
+# debian packaging: source files patched in-place by debian/rules and
+# restored on clean leave a .debian-orig backup next to the original.
+*.debian-orig
+
 # ----------------------------------------------------------------------------

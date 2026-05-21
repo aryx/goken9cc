@@ -1,0 +1,12 @@
+# debhelper / dpkg-buildpackage build artifacts
+.debhelper/
+debhelper-build-stamp
+files
+*.substvars
+*.debhelper.log
+*.debhelper
+
+# Per-binary-package staging directories created by dh_install et al.
+goken9cc/
+goken9cc-*/
+tmp/

@@ -1,0 +1,34 @@
+Source: goken9cc
+Section: devel
+Priority: optional
+Maintainer: Rafael Diniz <rafael.1.diniz@nokia.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ gcc,
+ libc6-dev,
+Standards-Version: 4.7.0
+Homepage: https://github.com/aryx/goken9cc
+Rules-Requires-Root: no
+
+Package: goken9cc
+Architecture: amd64 arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ libc6-dev,
+Description: Portable Plan 9 / kencc C compiler, assembler and linker toolchain
+ goken9cc is a portable multi-platform C compiler, assembler, and linker
+ toolchain as well as a minimalist C library rooted in the work of Ken
+ Thompson and the Plan 9 / Inferno operating systems. It is a fork of the
+ kencc toolchain that lived in the Go repository circa 2010, itself forked
+ from inferno-os and plan9port.
+ .
+ It can build C programs targeting the 386, amd64, arm, arm64, riscv and
+ mips architectures on Linux and macOS hosts, and ships the Plan 9 mk and
+ rc build tools needed to drive it.
+ .
+ Everything is installed under /usr/lib/goken9cc. The install prefix is
+ baked into the binaries at build time, so no GOROOT environment
+ variable is exported (which would clash with the Go toolchain); the
+ shipped /etc/profile.d/goken9cc.sh only appends the host architecture's
+ bin directory to PATH on login shells.
