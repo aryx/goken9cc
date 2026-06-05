@@ -1066,6 +1066,7 @@ append(int (*f)(void), int *a)
     int nline = 0;
     // file offset in tfile for temporary line just added by putline() (Rune-unit)
     int tl;
+    /*s: [[append()]] other locals */
     /* claude: pointer-relocation delta when realloc() moves the zero[] block.
      * It is a 64-bit ptrdiff (in int-element units), so it must NOT be an int:
      * the original code reused `int tl` here and silently truncated it on LP64
@@ -1075,6 +1076,7 @@ append(int (*f)(void), int *a)
      * int; the truncated delta then corrupts zero/addr1/addr2/dol/dot and the
      * next `*rdot = tl` store segfaults. */
     intptr delta;
+    /*e: [[append()]] other locals */
 
     dot = a;
     // f() (e.g., getfile()) will modify linebuf[]
@@ -1088,7 +1090,8 @@ append(int (*f)(void), int *a)
                 error("MEM?");
                 rescue();
             }
-            delta = a1 - zero; /* relocate pointers */ /*old: tl = a1 - zero; */
+            // old: tl = a1 - zero;
+            delta = a1 - zero; /* relocate pointers */ 
 
             zero += delta;
             addr1 += delta;

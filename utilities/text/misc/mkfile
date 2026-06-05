@@ -11,5 +11,5 @@ TARG=uniq tr ed sed
 <$TOP/mkfiles/mkmany
 
 sync:VI:
-       syncweb -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/docs/principia/Principia.nw $TOP/principia/editors/ed.nw  ed.c
+       syncweb -no_cache -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/docs/principia/Principia.nw $TOP/principia/editors/ed.nw  ed.c
 
