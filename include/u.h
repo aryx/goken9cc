@@ -186,6 +186,11 @@ typedef intptr_t intptr;
 typedef uint32_t u32int;
 typedef int32_t s32int;
 
+//pad: I added that, for ed.c
+//alt: remove this typedef and use ptrdiff_t which is standard
+// but types without the _t suffix is more plan9ish
+typedef intptr ptrdiff;
+
 //TODO: define like Rust/Zig instead u8/u32/u64, s8/s32/s64
 typedef s8int int8;
 typedef u8int uint8;
