@@ -22,7 +22,7 @@ RUN ./configure
 
 # The script below obviously builds 'mk' but also:
 # - 'rc', which is called by 'mk'
-# - 'ed', which is used by the mkenam script run during the build
+# - 'ed', which is used by the mkenam scripts run during the build
 RUN ./scripts/build-mk.sh
 # copy ./ROOT/<arch>/bin/{mk,rc,ed} to ./bin/
 RUN ./scripts/promote-mk.sh

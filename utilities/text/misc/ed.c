@@ -1,11 +1,10 @@
-/*s: editors/misc/ed.c */
+/*s: ed/ed.c */
 /*
  * Editor
  */
-/*s: plan9 includes */
 #include <u.h>
 #include <libc.h>
-/*e: plan9 includes */
+
 #include <bio.h>
 #include <regexp.h>
 
@@ -14,112 +13,149 @@ enum
     /*s: constants ed.c */
     FNSIZE  = 128,      /* file name */
     /*x: constants ed.c */
-    EOF = -1,
-    /*x: constants ed.c */
     LBSIZE  = 4096,     /* max line size */
     /*x: constants ed.c */
-    GBSIZE  = 256,      /* max size of global command */
+    EOF = -1,
     /*x: constants ed.c */
     ESIZE   = 256,      /* max size of reg exp */
     /*x: constants ed.c */
-    BLKSIZE = 4096,     /* block size in temp file */
-    NBLK    = 8191,     /* max size of temp file */
     MAXSUB  = 9,        /* max number of sub reg exp */
+    /*x: constants ed.c */
     ESCFLG  = Runemax,  /* escape Rune - user defined code */
+    /*x: constants ed.c */
+    GBSIZE  = 256,      /* max size of global command */
+    /*x: constants ed.c */
+    BLKSIZE = 4096,     /* block size in temp file */
+    /*x: constants ed.c */
+    NBLK    = 8191,     /* max size of temp file */
     /*e: constants ed.c */
 };
 
-// ??? seems dead
-void    (*oldhup)(int);
-void    (*oldquit)(int);
-
 /*s: globals ed.c */
-ulong   nlall = 128;
-int*    zero; // size: (nlall+5)*sizeof(int*)
-char*   tfname; // temporary filename (/tmp/eXXXX)
+char*   tfname; // temporary filename ("/tmp/eXXXXXX")
 /*x: globals ed.c */
-int*    dot;
-int*    dol;
+fdt tfile   = -1;
 /*x: globals ed.c */
-char    line[70];
-char*   linp    = line;
-int col;
-/*x: globals ed.c */
-// ??
-bool vflag   = true;
-// ??
-bool oflag;
-/*x: globals ed.c */
-// console buffered input
-Biobuf  bcons;
+// current write file offset in tfile (in Rune-unit)
+int tline;
 /*x: globals ed.c */
 // for w, r, f
 char    savedfile[FNSIZE];
 /*x: globals ed.c */
-fdt tfile   = -1;
-int tline;
-int names[26];
-int subnewa;
-int anymarks;
-int iblock;
-int oblock;
-int ichanged;
+ulong   nlall = 128;
+// growing_array<int(even)|int&mark|0>, initial size = (nlall+2+margin)*sizeof(int)
+// where the ints are file offsets (Rune-unit) in tfname, one per line
+int*    zero;
+/*x: globals ed.c */
+// ref<int> in zero[], current line pointer
+int*    dot;
+// ref<int> in zero[], last line pointer
+int*    dol;
+/*x: globals ed.c */
+char    line[70];
+// ref<char> in line (mark end of line usually)
+char*   linp    = line;
+/*x: globals ed.c */
+Rune    linebuf[LBSIZE];
+/*x: globals ed.c */
+long count;
+/*x: globals ed.c */
+int col;
+/*x: globals ed.c */
+// console buffered input
+Biobuf  bcons;
+/*x: globals ed.c */
+// verbose (a.k.a. interactive) mode
+bool vflag   = true;
+/*x: globals ed.c */
+// output to standard output (instead of editing a file).
+// Useful when ed is used as a filter.
+bool oflag;
+/*x: globals ed.c */
+// in Linux pid can be very long, so better to have at least 6 X (was 5 before)
+// the mkstemp Linux man page recommends 6 X
+char template[] = "/tmp/eXXXXXX";
+/*x: globals ed.c */
+char    T[] = "TMP";
 /*x: globals ed.c */
 bool fchange;
 /*x: globals ed.c */
 char    Q[] = "";
 /*x: globals ed.c */
-jmp_buf savej;
-/*x: globals ed.c */
-int listn;
-bool pflag;
-/*x: globals ed.c */
-bool rescuing;
-bool waiting;
-/*x: globals ed.c */
-// ??
-int listf;
-/*x: globals ed.c */
-int lastc;
+//option<Rune> (0 = None)
 int peekc;
-// ??
+/*x: globals ed.c */
+//option<Rune> (0 = None)
+int lastc;
+/*x: globals ed.c */
+// optional programmed command (e.g., L"r", L"a" or longer string with global())
+//option<array<Rune>>
 Rune*   globp;
 /*x: globals ed.c */
-Rune    linebuf[LBSIZE];
-/*x: globals ed.c */
+// ref<int> in zero[]
 int*    addr1;
+// ref<int> in zero[]
 int*    addr2;
 /*x: globals ed.c */
-bool given;
-/*x: globals ed.c */
 char    file[FNSIZE];
+/*x: globals ed.c */
 fdt io;
 Biobuf  iobuf;
 /*x: globals ed.c */
 // write append
 bool wrapp;
 /*x: globals ed.c */
-long count;
+bool given;
 /*x: globals ed.c */
 Reprog  *pattern;
 /*x: globals ed.c */
-Rune    genbuf[LBSIZE];
-Rune*   linebp;
+Resub   subexp[MAXSUB];
+/*x: globals ed.c */
 Rune*   loc1;
 Rune*   loc2;
-int nleft;
+/*x: globals ed.c */
 Rune    rhsbuf[LBSIZE/sizeof(Rune)];
+/*x: globals ed.c */
+int subnewa;
+/*x: globals ed.c */
+Rune    genbuf[LBSIZE];
+/*x: globals ed.c */
 int subolda;
-Resub   subexp[MAXSUB];
-
-
-char    T[] = "TMP";
-char    WRERR[] = "WRITE ERROR";
-int bpagesize = 20;
+/*x: globals ed.c */
+int names[26];
+/*x: globals ed.c */
+int anymarks;
+/*x: globals ed.c */
+bool waiting;
+/*x: globals ed.c */
+// for displaying special chars, 'l' list flag
+bool listf;
+/*x: globals ed.c */
 char    hex[]   = "0123456789abcdef";
-// in Linux pid can be very long, so better to have at least 7 X (was 5 before)
-char template[] = "/tmp/eXXXXXXX";
+/*x: globals ed.c */
+// 'n' flag
+bool listn;
+/*x: globals ed.c */
+bool pflag;
+/*x: globals ed.c */
+int bpagesize = 20;
+/*x: globals ed.c */
+int nleft;
+/*x: globals ed.c */
+Rune*   linebp;
+/*x: globals ed.c */
+// index in ibuff
+int iblock;
+// index in obuff
+int oblock;
+
+int ichanged;
+/*x: globals ed.c */
+jmp_buf savej;
+/*x: globals ed.c */
+bool rescuing;
 /*e: globals ed.c */
+bool opti = false;
 
 // forward declarations
 void    add(int);
@@ -129,10 +165,10 @@ void    browse(void);
 void    callunix(void);
 void    commands(void);
 void    compile(int);
-int     compsub(void);
+bool     compsub(void);
 void    dosub(void);
 void    error(char*);
-int     match(int*);
+bool     match(int*);
 void    exfile(int);
 void    filename(int);
 Rune*   getblock(int, int);
@@ -177,37 +213,45 @@ main(int argc, char *argv[])
     notify(notifyf);
 
     ARGBEGIN {
+    /*s: [[main()]](ed.c) flags processing cases */
     case 'o':
         oflag = true;
         vflag = false;
         break;
+    /*e: [[main()]](ed.c) flags processing cases */
     } ARGEND
 
     USED(argc);
-    if(*argv && (strcmp(*argv, "-") == ORD__EQ)) {
+    /*s: [[main()]](ed.c) if [[-]] flag */
+    if(*argv && (strcmp(*argv, "-") == 0)) {
         argv++;
         vflag = false;
     }
+    /*e: [[main()]](ed.c) if [[-]] flag */
+    /*s: [[main()]](ed.c) if [[oflag]] */
     if(oflag) {
         p1 = "/fd/1";
         p2 = savedfile;
-        while((*p2++ = *p1++))
+        while(*p2++ = *p1++)
             ;
         globp = L"a";
-    } else
-    if(*argv) {
+    }
+    /*e: [[main()]](ed.c) if [[oflag]] */
+    else if(*argv) {
         p1 = *argv;
         p2 = savedfile;
-        while((*p2++ = *p1++))
+        while(*p2++ = *p1++)
             if(p2 >= &savedfile[sizeof(savedfile)])
                 p2--;
         globp = L"r";
     }
-    zero = malloc((nlall+5)*sizeof(int*));
+    zero = malloc((nlall+5)*sizeof(int*)); // BUG should be sizeof(int)
     tfname = mktemp(template);
 
     init();
+    /*s: [[main()]](ed.c) before [[commands()]] */
     setjmp(savej);
+    /*e: [[main()]](ed.c) before [[commands()]] */
     commands();
     quit();
 }
@@ -217,77 +261,124 @@ main(int argc, char *argv[])
 void
 commands(void)
 {
-    int *a1, c;
+    int c;
+    /*s: [[commands()]] other locals */
     int temp;
-    char lastsep;
+    /*x: [[commands()]] other locals */
+    int *a1;
+    /*x: [[commands()]] other locals */
+    char lastsep; // '\n' or ',' or ';'
+    /*x: [[commands()]] other locals */
     Dir *d;
+    /*e: [[commands()]] other locals */
 
     for(;;) {
+        /*s: [[commands()]] in for loop, if [[pflag]] */
         if(pflag) {
             pflag = false;
             addr1 = addr2 = dot;
             printcom();
         }
+        /*e: [[commands()]] in for loop, if [[pflag]] */
+        /*s: [[commands()]] read [[addr1]] and [[c]] via [[getchr]] */
         c = '\n';
-        for(addr1 = nil;;) {
+        addr1 = nil;
+
+        for(;;) {
             lastsep = c;
             a1 = address();
             c = getchr();
-            if(c != ',' && c != ';')
+ 
+           if(c != ',' && c != ';')
                 break;
 
+            // else
             if(lastsep == ',')
                 error(Q);
             if(a1 == nil) {
-                a1 = zero+1;
+                a1 = zero+1; // line 1
                 if(a1 > dol)
                     a1--;
             }
             addr1 = a1;
+            /*s: [[commands()]] in address parsing, if separator is [[';']] */
             if(c == ';')
                 dot = a1;
+            /*e: [[commands()]] in address parsing, if separator is [[';']] */
         }
+        /*s: [[commands()]] after address parsing, use defaults if missing addresses */
         if(lastsep != '\n' && a1 == nil)
             a1 = dol;
+
         if((addr2=a1) == nil) {
             given = false;
             addr2 = dot;    
         } else
             given = true;
+
         if(addr1 == nil)
             addr1 = addr2;
-
+        /*e: [[commands()]] after address parsing, use defaults if missing addresses */
+        /*e: [[commands()]] read [[addr1]] and [[c]] via [[getchr]] */
         switch(c) {
         /*s: [[commands()]] switch [[c]] cases (ed.c) */
         case EOF:
             return;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'a':
-            add(0);
-            continue;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'i':
-            add(-1);
+        case 'r':
+            // will set file[]
+            filename(c);
+        caseread:
+            io=open(file, OREAD);
+            /*s: [[commands()]] in [[r]] case, sanity check [[io]] */
+            if(io < 0) {
+                lastc = '\n';
+                error(file);
+            }
+            /*e: [[commands()]] in [[r]] case, sanity check [[io]] */
+            /*s: [[commands()]] in [[r]] case, if append only file */
+            if((d = dirfstat(io)) != nil){
+                if(d->mode & DMAPPEND)
+                    print("warning: %s is append only\n", file);
+                free(d);
+            }
+            /*e: [[commands()]] in [[r]] case, if append only file */
+            Binit(&iobuf, io, OREAD);
+            // will set addr2 to dol
+            setwide();
+            squeeze(0);
+            c = (zero != dol);
+            // getfile() will use iobuf
+            append(getfile, addr2);
+            exfile(OREAD); // will close io
+
+            fchange = c;
             continue;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
         case 'W':
             wrapp = true;
+            // Fallthrough
         case 'w':
             setwide();
             squeeze(dol>zero);
 
+            /*s: [[commands()]] when [['w']] check for [['q']] part1 */
             temp = getchr();
             if(temp != 'q' && temp != 'Q') {
                 peekc = temp;
                 temp = 0;
             }
+            /*e: [[commands()]] when [['w']] check for [['q']] part1 */
             filename(c);
 
             if(!wrapp ||
               ((io = open(file, OWRITE)) == -1) ||
-              ((seek(io, 0L, 2)) == -1))
-                if((io = create(file, OWRITE, 0666)) < 0)
+              ((seek(io, 0L, SEEK__END)) == -1))
+
+                io = create(file, OWRITE, 0666);
+                if(io < 0)
                     error(file);
+            // else and fallthrough
 
             Binit(&iobuf, io, OWRITE);
             wrapp = false;
@@ -298,25 +389,19 @@ commands(void)
 
             if(addr1<=zero+1 && addr2==dol)
                 fchange = false;
+            /*s: [[commands()]] when [['w']] check for [['q']] part2 */
             if(temp == 'Q')
                 fchange = false;
             if(temp)
                 quit();
+            /*e: [[commands()]] when [['w']] check for [['q']] part2 */
             continue;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'Q':
-            fchange = false;
-        case 'q':
-            setnoaddr();
-            newline();
-            quit();
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case '!':
-            callunix();
-            continue;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        /*s: [[commands]] before [['p']] case */
         case 'l':
-            listf++;
+            listf = true;
+            // fallthrough:
+        /*e: [[commands]] before [['p']] case */
         case 'p':
         case 'P':
             newline();
@@ -324,14 +409,21 @@ commands(void)
             continue;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
         case '\n':
-            if(a1==0) {
+            if(a1==nil) {
                 a1 = dot+1;
                 addr2 = a1;
                 addr1 = a1;
             }
             if(lastsep==';')
                 addr1 = a1;
+
             printcom();
+            continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'f':
+            setnoaddr();
+            filename(c);
+            putst(savedfile);
             continue;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
         case '=':
@@ -342,6 +434,22 @@ commands(void)
             putd();
             putchr(L'\n');
             continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'a':
+            add(0);
+            continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'i':
+            add(-1);
+            continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'Q':
+            fchange = false;
+            // fallthrough:
+        case 'q':
+            setnoaddr();
+            newline();
+            quit();
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
         case 'd':
             nonzero();
@@ -364,17 +472,9 @@ commands(void)
             move(1);
             continue;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'g':
-            global(1);
-            continue;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'v':
-            global(0);
-            continue;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
         case 's':
             nonzero();
-            substitute(globp != 0);
+            substitute(globp != nil);
             continue;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
         case 'u':
@@ -386,60 +486,6 @@ commands(void)
             dot = addr2;
             continue;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'j':
-            if(!given)
-                addr2++;
-            newline();
-            join();
-            continue;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'r':
-            filename(c);
-        caseread:
-            if((io=open(file, OREAD)) < 0) {
-                lastc = '\n';
-                error(file);
-            }
-            if((d = dirfstat(io)) != nil){
-                if(d->mode & DMAPPEND)
-                    print("warning: %s is append only\n", file);
-                free(d);
-            }
-            Binit(&iobuf, io, OREAD);
-            setwide();
-            squeeze(0);
-            c = zero != dol;
-            append(getfile, addr2);
-            exfile(OREAD);
-
-            fchange = c;
-            continue;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'f':
-            setnoaddr();
-            filename(c);
-            putst(savedfile);
-            continue;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'b':
-            nonzero();
-            browse();
-            continue;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
-        case 'E':
-            fchange = false;
-            c = 'e';
-        case 'e':
-            setnoaddr();
-            if(vflag && fchange) {
-                fchange = false;
-                error(Q);
-            }
-            filename(c);
-            init();
-            addr2 = zero;
-            goto caseread;
-        /*x: [[commands()]] switch [[c]] cases (ed.c) */
         case 'k':
             nonzero();
             c = getchr();
@@ -450,11 +496,50 @@ commands(void)
             anymarks |= 01;
             continue;
         /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'g':
+            global(1);
+            continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'v':
+            global(0);
+            continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case '!':
+            callunix();
+            continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
         case 'n':
-            listn++;
+            listn = true;
             newline();
             printcom();
             continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'j':
+            if(!given)
+                addr2++;
+            newline();
+            join();
+            continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'b':
+            nonzero();
+            browse();
+            continue;
+        /*x: [[commands()]] switch [[c]] cases (ed.c) */
+        case 'E':
+            fchange = false;
+            c = 'e';
+            // Fallthrough
+        case 'e':
+            setnoaddr();
+            if(vflag && fchange) {
+                fchange = false;
+                error(Q);
+            }
+            filename(c);
+            init();
+            addr2 = zero;
+            goto caseread;
         /*e: [[commands()]] switch [[c]] cases (ed.c) */
         }
         error(Q);
@@ -472,20 +557,25 @@ printcom(void)
     nonzero();
     a1 = addr1;
     do {
+        /*s: [[printcom()]] if [[listn]] */
         if(listn) {
             count = a1-zero;
             putd();
             putchr(L'\t');
         }
+        /*e: [[printcom()]] if [[listn]] */
         putshst(getline(*a1++));
     } while(a1 <= addr2);
     dot = addr2;
-    listf = 0;
-    listn = 0;
+    /*s: [[printcom()]] reset flags at the end */
+    listf = false;
+    listn = false;
     pflag = false;
+    /*e: [[printcom()]] reset flags at the end */
 }
 /*e: function [[printcom]](ed.c) */
 
+// address parsing
 /*s: function [[address]](ed.c) */
 int*
 address(void)
@@ -500,19 +590,70 @@ address(void)
         do {
             c = getchr();
         } while(c == ' ' || c == '\t');
+
         if(c >= '0' && c <= '9') {
             peekc = c;
             if(!opcnt)
                 a = zero;
             a += sign*getnum();
         } else
+
         switch(c) {
+        // will return in default: case
+        /*s: [[address()]](ed.c) switch [[c]] cases */
+        default:
+            if(nextopand == opcnt) {
+                a += sign;
+                if(a < zero || dol < a)
+                    continue;       /* error(Q); */
+            }
+
+            if(c != '+' && c != '-' && c != '^') {
+                peekc = c;
+                if(opcnt == 0)
+                    a = nil;
+
+                // finally returning!
+                return a;
+            }
+            sign = 1;
+            if(c != '+')
+                sign = -sign;
+            nextopand = ++opcnt;
+            continue;
+        /*x: [[address()]](ed.c) switch [[c]] cases */
         case '$':
             a = dol;
+            // Fallthrough
         case '.':
             if(opcnt)
                 error(Q);
             break;
+        /*x: [[address()]](ed.c) switch [[c]] cases */
+        case '?':
+            sign = -sign;
+            // Fallthrough
+        case '/':
+            // read the regexp and compile it in Reprog pattern[]
+            compile(c);
+            b = a;
+            for(;;) {
+                // direction
+                a += sign;
+                // wrap around
+                if(a <= zero)
+                    a = dol;
+                if(a > dol)
+                    a = zero;
+
+                if(match(a))
+                    break;
+                // reached back where we were without finding anything
+                if(a == b)
+                    error(Q);
+            }
+            break;
+        /*x: [[address()]](ed.c) switch [[c]] cases */
         case '\'':
             c = getchr();
             if(opcnt || c < 'a' || c > 'z')
@@ -522,55 +663,25 @@ address(void)
                 a++;
             } while(a <= dol && names[c-'a'] != (*a & ~01));
             break;
-        case '?':
-            sign = -sign;
-        case '/':
-            compile(c);
-            b = a;
-            for(;;) {
-                a += sign;
-                if(a <= zero)
-                    a = dol;
-                if(a > dol)
-                    a = zero;
-                if(match(a))
-                    break;
-                if(a == b)
-                    error(Q);
-            }
-            break;
-        default:
-            if(nextopand == opcnt) {
-                a += sign;
-                if(a < zero || dol < a)
-                    continue;       /* error(Q); */
-            }
-            if(c != '+' && c != '-' && c != '^') {
-                peekc = c;
-                if(opcnt == 0)
-                    a = 0;
-                return a;
-            }
-            sign = 1;
-            if(c != '+')
-                sign = -sign;
-            nextopand = ++opcnt;
-            continue;
+
+        /*e: [[address()]](ed.c) switch [[c]] cases */
         }
+
         sign = 1;
         opcnt++;
     } while(zero <= a && a <= dol);
+
     error(Q);
-    return 0;
+    return nil;
 }
 /*e: function [[address]](ed.c) */
 /*s: function [[getnum]](ed.c) */
 int
 getnum(void)
 {
-    int r, c;
+    int r = 0;
+    int c;
 
-    r = 0;
     for(;;) {
         c = getchr();
         if(c < '0' || c > '9')
@@ -582,8 +693,9 @@ getnum(void)
 }
 /*e: function [[getnum]](ed.c) */
 
-// ???
+// addr1/addr2 set and checks
 /*s: function [[setwide]](ed.c) */
+/// main -> commands('r') -> <>
 void
 setwide(void)
 {
@@ -609,6 +721,7 @@ nonzero(void)
 }
 /*e: function [[nonzero]](ed.c) */
 /*s: function [[squeeze]](ed.c) */
+/// main -> commands('r') -> <>
 void
 squeeze(int i)
 {
@@ -616,6 +729,7 @@ squeeze(int i)
         error(Q);
 }
 /*e: function [[squeeze]](ed.c) */
+
 /*s: function [[newline]](ed.c) */
 void
 newline(void)
@@ -625,21 +739,25 @@ newline(void)
     c = getchr();
     if(c == '\n' || c == EOF)
         return;
+    /*s: [[newline()]] if special chars [[pln]] */
     if(c == 'p' || c == 'l' || c == 'n') {
-        pflag++;
+        pflag = true;
         if(c == 'l')
-            listf++;
+            listf = true;
         else
         if(c == 'n')
-            listn++;
+            listn = true;
         c = getchr();
         if(c == '\n')
             return;
     }
+    /*e: [[newline()]] if special chars [[pln]] */
+    // else
     error(Q);
 }
 /*e: function [[newline]](ed.c) */
 /*s: function [[filename]](ed.c) */
+/// main -> commands('r' | 'e' | 'f') -> <>
 void
 filename(int comm)
 {
@@ -649,21 +767,26 @@ filename(int comm)
 
     count = 0;
     c = getchr();
+    /*s: [[filename()]] if [[c]] is newline or EOF, use [[savedfile]] */
     if(c == '\n' || c == EOF) {
         p1 = savedfile;
-        if(*p1 == 0 && comm != 'f')
+        if(*p1 == '\0' && comm != 'f')
             error(Q);
         p2 = file;
-        while((*p2++ = *p1++))
+        while(*p2++ = *p1++)
             ;
         return;
     }
+    /*e: [[filename()]] if [[c]] is newline or EOF, use [[savedfile]] */
+    // else
+    /*s: [[filename()]] read a space and skip extra spaces */
     if(c != ' ')
         error(Q);
     while((c=getchr()) == ' ')
         ;
     if(c == '\n')
         error(Q);
+    /*e: [[filename()]] read a space and skip extra spaces */
     p1 = file;
     do {
         if(p1 >= &file[sizeof(file)-6] || c == ' ' || c == EOF)
@@ -671,18 +794,20 @@ filename(int comm)
         rune = c;
         p1 += runetochar(p1, &rune);
     } while((c=getchr()) != '\n');
-    *p1 = 0;
-    if(savedfile[0] == 0 || comm == 'e' || comm == 'f') {
+    *p1 = '\0';
+    
+    /*s: [[filename()]] set [[savedfile]] depending on commands */
+    if(savedfile[0] == '\0' || comm == 'e' || comm == 'f') {
         p1 = savedfile;
         p2 = file;
-        while((*p1++ = *p2++))
+        while(*p1++ = *p2++)
             ;
     }
+    /*e: [[filename()]] set [[savedfile]] depending on commands */
 }
 /*e: function [[filename]](ed.c) */
-
-// Writing files
 /*s: function [[exfile]](ed.c) */
+/// main -> commands('r'|'w') -> <>
 void
 exfile(int om)
 {
@@ -706,9 +831,10 @@ error_1(char *s)
 {
     int c;
 
+    /*s: [[error_1()]](ed.c)) reset globals */
     wrapp = false;
-    listf = 0;
-    listn = 0;
+    listf = false;
+    listn = false;
     count = 0;
 
     seek(STDIN, 0, SEEK__END);
@@ -730,7 +856,7 @@ error_1(char *s)
         close(io);
         io = -1;
     }
-
+    /*e: [[error_1()]](ed.c)) reset globals */
     putchr(L'?');
     putst(s);
 }
@@ -767,7 +893,7 @@ rescue(void)
 void
 notifyf(void *a, char *s)
 {
-    if(strcmp(s, "interrupt") == ORD__EQ){
+    if(strcmp(s, "interrupt") == 0){
         if(rescuing || waiting)
             noted(NCONT);
         putchr(L'\n');
@@ -775,7 +901,7 @@ notifyf(void *a, char *s)
         error_1(Q);
         notejmp(a, savej, 0);
     }
-    if(strcmp(s, "hangup") == ORD__EQ){
+    if(strcmp(s, "hangup") == 0){
         if(rescuing)
             noted(NDFLT);
         rescue();
@@ -790,42 +916,54 @@ notifyf(void *a, char *s)
 int
 getchr(void)
 {
-    if((lastc = peekc)) {
+    lastc = peekc;
+    if(lastc) {
         peekc = 0;
         return lastc;
     }
+    // else
     if(globp) {
-        if((lastc=*globp++) != 0)
+        lastc=*globp++;
+        if(lastc != 0)
             return lastc;
+        // else
         globp = nil;
         return EOF;
     }
+    // else
     lastc = Bgetrune(&bcons);
     return lastc;
 }
 /*e: function [[getchr]](ed.c) */
 /*s: function [[gety]](ed.c) */
+/// gettty -> <>
 int
 gety(void)
 {
     int c;
-    Rune *gf, *p;
+    Rune *p = linebuf;
+    /*s: [[gety()]] other locals */
+    Rune *gf = globp;
+    /*e: [[gety()]] other locals */
 
-    p = linebuf;
-    gf = globp;
     for(;;) {
         c = getchr();
         if(c == '\n') {
             *p = 0;
-            return 0;
+            return OK_0;
         }
+        // else
         if(c == EOF) {
+            /*s: [[get()]] if [[gf]] */
             if(gf)
                 peekc = c;
+            /*e: [[get()]] if [[gf]] */
             return c;
         }
+        // else
         if(c == 0)
             continue;
+        // else
         *p++ = c;
         if(p >= &linebuf[LBSIZE-sizeof(Rune)])
             error(Q);
@@ -833,6 +971,7 @@ gety(void)
 }
 /*e: function [[gety]](ed.c) */
 /*s: function [[gettty]](ed.c) */
+/// main -> commands('a'|'i') -> add -> append(<>,...) -> <>
 int
 gettty(void)
 {
@@ -841,14 +980,17 @@ gettty(void)
     rc = gety();
     if(rc)
         return rc;
+    // else
     if(linebuf[0] == '.' && linebuf[1] == 0)
         return EOF;
-    return 0;
+    // else
+    return OK_0; // OK_0 for caller to read more lines
 }
 /*e: function [[gettty]](ed.c) */
 
 // Reading and writing files
 /*s: function [[getfile]](ed.c) */
+/// main -> commands(c = 'r') -> append(<>, ...) -> <>
 int
 getfile(void)
 {
@@ -858,6 +1000,7 @@ getfile(void)
     lp = linebuf;
     do {
         c = Bgetrune(&iobuf);
+        /*s: [[getfile()]] if [[c]] negative, possibly return [[EOF]] */
         if(c < 0) {
             if(lp > linebuf) {
                 putst("'\\n' appended");
@@ -865,18 +1008,24 @@ getfile(void)
             } else
                 return EOF;
         }
+        /*e: [[getfile()]] if [[c]] negative, possibly return [[EOF]] */
+        // else
+        /*s: [[getfile()]] if overflow [[linebuf]] */
         if(lp >= &linebuf[LBSIZE]) {
             lastc = '\n';
             error(Q);
         }
+        /*e: [[getfile()]] if overflow [[linebuf]] */
+        // else
         *lp++ = c;
         count++;
     } while(c != '\n');
     lp[-1] = 0;
-    return 0;
+    return OK_0;
 }
 /*e: function [[getfile]](ed.c) */
-/*s: function [[putfile]](ex.c) */
+/*s: function [[putfile]](ed.c) */
+/// main -> commands('w) -> <>
 void
 putfile(void)
 {
@@ -886,15 +1035,18 @@ putfile(void)
 
     a1 = addr1;
     do {
+        // modifies (and returns) linebuf[]
         lp = getline(*a1++);
         for(;;) {
             count++;
             c = *lp++;
             if(c == 0) {
+                // a null Rune in tfile converts to \n in the written file
                 if(Bputrune(&iobuf, '\n') < 0)
                     error(Q);
                 break;
             }
+            // else
             if(Bputrune(&iobuf, c) < 0)
                 error(Q);
         }
@@ -902,39 +1054,52 @@ putfile(void)
     if(Bflush(&iobuf) < 0)
         error(Q);
 }
-/*e: function [[putfile]](ex.c) */
+/*e: function [[putfile]](ed.c) */
 
 /*s: function [[append]](ed.c) */
+/// main -> commands('r'|'i'|'a') -> add -> <> -> (getfile | gettty) 
 int
 append(int (*f)(void), int *a)
 {
-    int *a1, *a2, *rdot, nline, tl;
+    //ref<int> in zero[]
+    int *a1, *a2, *rdot;
+    int nline = 0;
+    // file offset in tfile for temporary line just added by putline() (Rune-unit)
+    int tl;
 
-    nline = 0;
     dot = a;
-    while((*f)() == 0) {
+    // f() (e.g., getfile()) will modify linebuf[]
+    while((*f)() == OK_0) {
+        /*s: [[append()]] grow [[zero]] if [[zero]] too small */
         if((dol-zero) >= nlall) {
 
             nlall += 512;
-            a1 = realloc(zero, (nlall+5)*sizeof(int*));
+            a1 = realloc(zero, (nlall+5)*sizeof(int*)); // BUG: sizeof(int)
             if(a1 == nil) {
                 error("MEM?");
                 rescue();
             }
             tl = a1 - zero; /* relocate pointers */
+
             zero += tl;
             addr1 += tl;
             addr2 += tl;
             dol += tl;
             dot += tl;
         }
+        /*e: [[append()]] grow [[zero]] if [[zero]] too small */
+        // putline() will use linebuf[]
         tl = putline();
         nline++;
+
+        // set zero[] indices
         a1 = ++dol;
         a2 = a1+1;
         rdot = ++dot;
+        // shift existing line references up by one
         while(a1 > rdot)
             *--a2 = *--a1;
+        // insert the new line reference in zero
         *rdot = tl;
     }
     return nline;
@@ -958,7 +1123,8 @@ add(int i)
 void
 browse(void)
 {
-    int forward, n;
+    int forward;
+    int n;
     static int bformat, bnum; /* 0 */
 
     forward = 1;
@@ -1012,14 +1178,16 @@ callunix(void)
             rune = c;
             p += runetochar(p, &rune);
         }
-    *p = 0;
+    *p = '\0';
 
     pid = fork();
     if(pid == 0) {
+        // child
         execl("/bin/rc", "rc", "-c", buf, nil);
         // should not be reached
         exits("execl failed");
     }
+    // else, parent
     waiting = true;
     while(waitpid() != pid)
         ;
@@ -1030,6 +1198,7 @@ callunix(void)
 /*e: function [[callunix]](ed.c) */
 
 /*s: function [[quit]](ed.c) */
+/// main | commands('q') | commands('Q') | ... -> <>
 void
 quit(void)
 {
@@ -1037,6 +1206,7 @@ quit(void)
         fchange = false;
         error(Q);
     }
+    // else
     remove(tfname);
     exits(nil);
 }
@@ -1096,9 +1266,10 @@ gdelete(void)
 /*e: function [[gdelete]](ed.c) */
 
 // Get/Put lines
-/*s: function [[getline]](ed.c) */
+/*s: function [[getline_opti]](ed.c) */
+/// printcom | putfile -> <>
 Rune*
-getline(int tl)
+getline_opti(int tl)
 {
     Rune *lp, *bp;
     int nl;
@@ -1107,7 +1278,7 @@ getline(int tl)
     bp = getblock(tl, OREAD);
     nl = nleft;
     tl &= ~((BLKSIZE/sizeof(Rune)) - 1);
-    while((*lp++ = *bp++)) {
+    while(*lp++ = *bp++) {
         nl -= sizeof(Rune);
         if(nl == 0) {
             tl += BLKSIZE/sizeof(Rune);
@@ -1117,10 +1288,11 @@ getline(int tl)
     }
     return linebuf;
 }
-/*e: function [[getline]](ed.c) */
-/*s: function [[putline]](ed.c) */
+/*e: function [[getline_opti]](ed.c) */
+/*s: function [[putline_opti]](ed.c) */
+/// main -> commands('r') -> append -> putline -> <>
 int
-putline(void)
+putline_opti(void)
 {
     Rune *lp, *bp;
     int nl, tl;
@@ -1128,10 +1300,11 @@ putline(void)
     fchange = true;
     lp = linebuf;
     tl = tline;
+
     bp = getblock(tl, OWRITE);
     nl = nleft;
     tl &= ~((BLKSIZE/sizeof(Rune))-1);
-    while((*bp = *lp++)) {
+    while(*bp = *lp++) {
         if(*bp++ == '\n') {
             bp[-1] = 0;
             linebp = lp;
@@ -1144,14 +1317,15 @@ putline(void)
             nl = nleft;
         }
     }
+
     nl = tline;
     tline += ((lp-linebuf) + 03) & 077776;
     return nl;
 }
-/*e: function [[putline]](ed.c) */
+/*e: function [[putline_opti]](ed.c) */
 /*s: function [[blkio]](ed.c) */
 void
-blkio(int b, uchar *buf, long (*iofcn)(int, void *, unsigned long))
+blkio(int b, uchar *buf, long (*iofcn)(int, void *, long))
 {
     seek(tfile, b*BLKSIZE, SEEK__START);
     if((*iofcn)(tfile, buf, BLKSIZE) != BLKSIZE) {
@@ -1160,10 +1334,12 @@ blkio(int b, uchar *buf, long (*iofcn)(int, void *, unsigned long))
 }
 /*e: function [[blkio]](ed.c) */
 /*s: function [[getblock]](ed.c) */
+/// putline_opti | getline_opti -> <>
 Rune*
 getblock(int atl, int iof)
 {
-    int bno, off;
+    int bno; // block number
+    int off; // offset
     
     static uchar ibuff[BLKSIZE];
     static uchar obuff[BLKSIZE];
@@ -1184,35 +1360,45 @@ getblock(int atl, int iof)
         return (Rune*)(obuff+off);
     if(iof == OREAD) {
         if(ichanged)
-            blkio(iblock, ibuff, (long (*)(int, void *, unsigned long))write);
+            blkio(iblock, ibuff, write);
         ichanged = 0;
         iblock = bno;
         blkio(bno, ibuff, read);
         return (Rune*)(ibuff+off);
     }
     if(oblock >= 0)
-        blkio(oblock, obuff, (long (*)(int, void *, unsigned long))write);
+        blkio(oblock, obuff, write);
     oblock = bno;
     return (Rune*)(obuff+off);
 }
 /*e: function [[getblock]](ed.c) */
 
 /*s: function [[init]](ed.c) */
+/// main | commands('e') -> <>
 void
 init(void)
 {
+    /*s: [[init()]](ed.c) locals */
     int *markp;
+    /*e: [[init()]](ed.c) locals */
 
     close(tfile);
+    /*s: [[init()]](ed.c) initializing globals */
     tline = 2;
+    /*x: [[init()]](ed.c) initializing globals */
+    subnewa = 0;
+    /*x: [[init()]](ed.c) initializing globals */
+    anymarks = 0;
+    /*x: [[init()]](ed.c) initializing globals */
     for(markp = names; markp < &names[26]; )
         *markp++ = 0;
-    subnewa = 0;
-    anymarks = 0;
+    /*x: [[init()]](ed.c) initializing globals */
     iblock = -1;
     oblock = -1;
     ichanged = 0;
-    if((tfile = create(tfname, ORDWR, 0600)) < 0){
+    /*e: [[init()]](ed.c) initializing globals */
+    tfile = create(tfname, ORDWR, 0600);
+    if(tfile < 0){
         error_1(T);
         exits(nil);
     }
@@ -1227,19 +1413,24 @@ global(int k)
     Rune *gp, globuf[GBSIZE];
     int c, *a1;
 
+    /*s: [[global()]] sanity check not already in global command */
     if(globp)
         error(Q);
+    /*e: [[global()]] sanity check not already in global command */
 
     setwide();
     squeeze(dol > zero);
 
+    // readding a '/' or '?'
     c = getchr();
     if(c == '\n')
         error(Q);
 
+    // reading the whole pattern until corresponding ending '/' or '?'
     compile(c);
 
     gp = globuf;
+    /*s: [[global()]] read the global command in [[globuf]] */
     while((c=getchr()) != '\n') {
         if(c == EOF)
             error(Q);
@@ -1252,16 +1443,19 @@ global(int k)
         if(gp >= &globuf[GBSIZE-2])
             error(Q);
     }
+    /*e: [[global()]] read the global command in [[globuf]] */
     if(gp == globuf)
         *gp++ = 'p';
     *gp++ = '\n';
     *gp = 0;
+
+    // phase 1
     for(a1=zero; a1<=dol; a1++) {
         *a1 &= ~01;
         if(a1 >= addr1 && a1 <= addr2 && match(a1) == k)
             *a1 |= 01;
     }
-
+    /*s: [[global()]](ed.c) if [[g/.../d]] command, call optimized [[gdelete()]] */
     /*
      * Special case: g/.../d (avoid n^2 algorithm)
      */
@@ -1269,13 +1463,17 @@ global(int k)
         gdelete();
         return;
     }
+    /*e: [[global()]](ed.c) if [[g/.../d]] command, call optimized [[gdelete()]] */
+
+    // phase 2
     for(a1=zero; a1<=dol; a1++) {
         if(*a1 & 01) {
             *a1 &= ~01;
             dot = a1;
             globp = globuf;
+            // recurse!
             commands();
-            a1 = zero;
+            a1 = zero; // zero may have grown and move, need restart from zero
         }
     }
 }
@@ -1292,13 +1490,13 @@ join(void)
     gp = genbuf;
     for(a1=addr1; a1<=addr2; a1++) {
         lp = getline(*a1);
-        while((*gp = *lp++))
+        while(*gp = *lp++)
             if(gp++ >= &genbuf[LBSIZE-sizeof(Rune)])
                 error(Q);
     }
     lp = linebuf;
     gp = genbuf;
-    while((*lp++ = *gp++))
+    while(*lp++ = *gp++)
         ;
     *addr1 = putline();
     if(addr1 < addr2)
@@ -1307,17 +1505,103 @@ join(void)
 }
 /*e: function [[join]](ed.c) */
 
+// Get/Put lines simplified versions (not in original ed.c)
+/*s: function [[getline]] */
+/// putfile -> <>
+Rune*
+getline(int tl)
+{
+    int n;
+
+    /*s: [[getline()]] if [[opti]] */
+    if(opti) return getline_opti(tl);
+    /*e: [[getline()]] if [[opti]] */
+    // else
+
+    // tfile stores fixed-width Runes; convert Rune offset to bytes
+    seek(tfile, tl * sizeof(Rune), SEEK__START);
+
+    // read one Rune at a time until we hit the null-Rune terminator
+    n = 0;
+    // syscall
+    while(read(tfile, &linebuf[n], sizeof(Rune)) == sizeof(Rune)
+          && linebuf[n] != 0)
+        n++;
+
+    linebuf[n] = 0;
+    return linebuf;
+}
+/*e: function [[getline]] */
+/*s: function [[putline]] */
+/// append -> <>
+int
+putline(void)
+{
+    Rune *lp;
+    int n, tl;
+
+    /*s: [[putline()]] if [[opti]] */
+    if(opti) return putline_opti();
+    /*e: [[putline()]] if [[opti]] */
+    // else
+
+    fchange = true;
+    tl = tline;                              // current write offset (Rune units)
+
+    // walk linebuf[]; stop at the null Rune or an embedded '\n'
+    for(lp = linebuf; *lp; lp++) {
+        /*s: [[putline()]] if newline char, adjust and break */
+        // (the latter happens after dosub() injects \n in a multi-line subst)
+        if(*lp == '\n') {
+            *lp = 0;                         // turn '\n' into null terminator
+            linebp = lp + 1;                 // stash remainder for getsub()
+            break;
+        }
+        /*e: [[putline()]] if newline char, adjust and break */
+        // else, nothing, continue loop until *lp == 0 == null Rune
+    }
+    n = lp - linebuf + 1;                    // # Runes including terminator
+
+    if(tline + n >= NBLK * BLKSIZE / (int)sizeof(Rune))
+        error(T);
+
+    // tfile stores fixed-width Runes (not UTF-8);
+    // convert Rune offset/count to byte offsets for seek/write
+    seek(tfile, tline * sizeof(Rune), SEEK__START);
+    // syscall!
+    write(tfile, linebuf, n * sizeof(Rune));
+
+    // advance past the line just written, rounding up to an even Rune
+    // count so tline stays even. zero[] entries are Rune offsets, and
+    // global() and 'k' steal the low bit of each entry as a "matched"
+    // flag (see global() and anymarks). Padding costs at most one Rune.
+    tline += (n + 1) & ~1;
+    return tl;
+}
+/*e: function [[putline]] */
+
 // Search and replace
 /*s: function [[substitute]](ed.c) */
 void
 substitute(int inglob)
 {
-    int *mp, *a1, nl, gsubf, n;
+    int *a1;
+    bool gsubf; // s/.../.../g  global subst
+    int n = 0;
+    /*s: [[substitute()]](ed.c) other locals */
+    int *mp, nl;
+    /*e: [[substitute()]](ed.c) other locals */
 
+    /*s: [[substitute()]](ed.c) read optional [[n]] */
     n = getnum();   /* OK even if n==0 */
+    /*e: [[substitute()]](ed.c) read optional [[n]] */
+
     gsubf = compsub();
+
     for(a1 = addr1; a1 <= addr2; a1++) {
+        // will internally set linebuf[]
         if(match(a1)){
+
             int *ozero;
             int m = n;
 
@@ -1325,32 +1609,44 @@ substitute(int inglob)
                 int span = loc2-loc1;
 
                 if(--m <= 0) {
+                    // will modify linebuf[]
                     dosub();
+
                     if(!gsubf)
                         break;
+                    // else
                     if(span == 0) { /* null RE match */
                         if(*loc2 == 0)
                             break;
                         loc2++;
                     }
                 }
-            } while(match(0));
+            } while(match(nil));
+
             if(m <= 0) {
                 inglob |= 01;
+                // will use linebuf[]
                 subnewa = putline();
                 *a1 &= ~01;
+                /*s: [[substitute()]](ed.c) after [[putline()]] if [[anymarks]] */
                 if(anymarks) {
                     for(mp=names; mp<&names[26]; mp++)
                         if(*mp == *a1)
                             *mp = subnewa;
                 }
+                /*e: [[substitute()]](ed.c) after [[putline()]] if [[anymarks]] */
+                /*s: [[substitute()]](ed.c) after [[putline()]] set [[subolda]] */
                 subolda = *a1;
+                /*e: [[substitute()]](ed.c) after [[putline()]] set [[subolda]] */
                 *a1 = subnewa;
+
+                /*s: [[substitute()]](ed.c) after [[putline()]] call [[append()]] */
                 ozero = zero;
                 nl = append(getsub, a1);
                 addr2 += nl;
                 nl += zero-ozero;
                 a1 += nl;
+                /*e: [[substitute()]](ed.c) after [[putline()]] call [[append()]] */
             }
         }
     }
@@ -1359,7 +1655,7 @@ substitute(int inglob)
 }
 /*e: function [[substitute]](ed.c) */
 /*s: function [[compsub]](ed.c) */
-int
+bool
 compsub(void)
 {
     int seof, c;
@@ -1368,36 +1664,54 @@ compsub(void)
     seof = getchr();
     if(seof == '\n' || seof == ' ')
         error(Q);
+
+    // read (and compile) the regexp (left hand side)
     compile(seof);
+
+    // read the subst (right hand side)
     p = rhsbuf;
     for(;;) {
         c = getchr();
+        /*s: [[compsub()]](ed.c) if match group */
         if(c == '\\') {
             c = getchr();
             *p++ = ESCFLG;
+            /*s: [[compsub()]](ed.c) sanity check [[p]] inside [[rhsbuf]] */
             if(p >= &rhsbuf[LBSIZE/sizeof(Rune)])
                 error(Q);
-        } else
+            /*e: [[compsub()]](ed.c) sanity check [[p]] inside [[rhsbuf]] */
+        } 
+        /*e: [[compsub()]](ed.c) if match group */
+        else
+        /*s: [[compsub()]](ed.c) if newline and no [[globp]] */
         if(c == '\n' && (!globp || !globp[0])) {
             peekc = c;
-            pflag++;
+            pflag = true;
             break;
-        } else
-        if(c == seof)
-            break;
+        }
+        /*e: [[compsub()]](ed.c) if newline and no [[globp]] */
+        else
+          if(c == seof)
+              break;
+        // else
         *p++ = c;
+        /*s: [[compsub()]](ed.c) sanity check [[p]] inside [[rhsbuf]] */
         if(p >= &rhsbuf[LBSIZE/sizeof(Rune)])
             error(Q);
+        /*e: [[compsub()]](ed.c) sanity check [[p]] inside [[rhsbuf]] */
     }
     *p = 0;
+    /*s: [[compsub()]](ed.c) peek to check for [['g']] */
     peekc = getchr();
     if(peekc == 'g') {
         peekc = 0;
         newline();
-        return 1;
+        return true;
     }
+    /*e: [[compsub()]](ed.c) peek to check for [['g']] */
+    // else
     newline();
-    return 0;
+    return false;
 }
 /*e: function [[compsub]](ed.c) */
 /*s: function [[getsub]](ed.c) */
@@ -1409,7 +1723,7 @@ getsub(void)
     p1 = linebuf;
     if((p2 = linebp) == 0)
         return EOF;
-    while((*p1++ = *p2++))
+    while(*p1++ = *p2++)
         ;
     linebp = 0;
     return 0;
@@ -1427,11 +1741,14 @@ dosub(void)
     rp = rhsbuf;
     while(lp < loc1)
         *sp++ = *lp++;
-    while((c = *rp++)) {
+    while(c = *rp++) {
+        /*s: [[dosub()]](ed.c) if [[c == '&']] */
         if(c == '&'){
             sp = place(sp, loc1, loc2);
             continue;
         }
+        /*e: [[dosub()]](ed.c) if [[c == '&']] */
+        /*s: [[dosub()]](ed.c) if match group */
         if(c == ESCFLG && (c = *rp++) >= '1' && c < MAXSUB+'0') {
             n = c-'0';
             if(subexp[n].s.rsp && subexp[n].e.rep) {
@@ -1440,18 +1757,20 @@ dosub(void)
             }
             error(Q);
         }
+        /*e: [[dosub()]](ed.c) if match group */
+        // else
         *sp++ = c;
         if(sp >= &genbuf[LBSIZE])
             error(Q);
     }
     lp = loc2;
-    loc2 = sp - genbuf + linebuf;
-    while((*sp++ = *lp++))
+    loc2 = (sp - genbuf) + linebuf;
+    while(*sp++ = *lp++)
         if(sp >= &genbuf[LBSIZE])
             error(Q);
     lp = linebuf;
     sp = genbuf;
-    while((*lp++ = *sp++))
+    while(*lp++ = *sp++)
         ;
 }
 /*e: function [[dosub]](ed.c) */
@@ -1476,11 +1795,17 @@ move(int cflag)
     int *adt, *ad1, *ad2;
 
     nonzero();
-    if((adt = address())==0)    /* address() guarantees addr is in range */
+    adt = address();
+    /*s: [[move()]] sanity check [[adt]] */
+    if(adt==0)    /* address() guarantees addr is in range */
         error(Q);
+    /*e: [[move()]] sanity check [[adt]] */
     newline();
+
+    /*s: [[move()]](ed.c) if [[cflag]] */
     if(cflag) {
         int *ozero, delta;
+
         ad1 = dol;
         ozero = zero;
         append(getcopy, ad1++);
@@ -1488,10 +1813,14 @@ move(int cflag)
         delta = zero - ozero;
         ad1 += delta;
         adt += delta;
-    } else {
+    }
+    /*e: [[move()]](ed.c) if [[cflag]] */
+    else {
         ad2 = addr2;
+        /*s: [[move()]](ed.c) clear the low bit for the range */
         for(ad1 = addr1; ad1 <= ad2;)
-            *ad1++ &= ~01;
+            *ad1++ &= ~01; // tricky
+        /*e: [[move()]](ed.c) clear the low bit for the range */
         ad1 = addr1;
     }
     ad2++;
@@ -1535,19 +1864,22 @@ getcopy(void)
     if(addr1 > addr2)
         return EOF;
     getline(*addr1++);
-    return 0;
+    return OK_0;
 }
 /*e: function [[getcopy]](ed.c) */
 
 /*s: function [[compile]](ed.c) */
+/// (main -> address) | (commands('g' | 'v') -> global) -> <>
 void
 compile(int eof)
 {
     Rune c;
     char *ep;
+    // UTF8 string
     char expbuf[ESIZE];
 
-    if((c = getchr()) == '\n') {
+    c = getchr();
+    if(c == '\n') {
         peekc = c;
         c = eof;
     }
@@ -1556,6 +1888,7 @@ compile(int eof)
             error(Q);
         return;
     }
+    // else
     if(pattern) {
         free(pattern);
         pattern = nil;
@@ -1563,54 +1896,74 @@ compile(int eof)
     ep = expbuf;
     do {
         if(c == '\\') {
+            /*s: [[compile()]](ed.c) sanity check [[ep]] inside [[expbuf]] */
             if(ep >= expbuf+sizeof(expbuf)) {
                 error(Q);
                 return;
             }
+            /*e: [[compile()]](ed.c) sanity check [[ep]] inside [[expbuf]] */
+            // else
             ep += runetochar(ep, &c);
-            if((c = getchr()) == '\n') {
+            c = getchr();
+            if(c == '\n') {
                 error(Q);
                 return;
             }
         }
+        /*s: [[compile()]](ed.c) sanity check [[ep]] inside [[expbuf]] */
         if(ep >= expbuf+sizeof(expbuf)) {
             error(Q);
             return;
         }
+        /*e: [[compile()]](ed.c) sanity check [[ep]] inside [[expbuf]] */
+        // else
         ep += runetochar(ep, &c);
     } while((c = getchr()) != eof && c != '\n');
     if(c == '\n')
         peekc = c;
     *ep = 0;
+
+    // lib_regexp call
     pattern = regcomp(expbuf);
 }
 /*e: function [[compile]](ed.c) */
 /*s: function [[match]](ed.c) */
-int
+bool
 match(int *addr)
 {
+    /*s: [[match()]](ed.c) return if no [[pattern]] */
     if(!pattern)
-        return 0;
+        return false;
+    /*e: [[match()]](ed.c) return if no [[pattern]] */
     if(addr){
+        /*s: [[match()]](ed.c) return if [[addr]] is [[zero]] */
         if(addr == zero)
-            return 0;
+            return false;
+        /*e: [[match()]](ed.c) return if [[addr]] is [[zero]] */
         subexp[0].s.rsp = getline(*addr);
     } else
+        /*s: [[match()]](ed.c) when null [[addr]] use [[loc2]] not [[getline]] */
         subexp[0].s.rsp = loc2;
-    subexp[0].e.rep = 0;
+        /*e: [[match()]](ed.c) when null [[addr]] use [[loc2]] not [[getline]] */
+    subexp[0].e.rep = nil;
+
     if(rregexec(pattern, linebuf, subexp, MAXSUB)) {
+        /*s: [[match()]](ed.c) set [[loc1]] and [[loc2]] with matched string */
         loc1 = subexp[0].s.rsp;
         loc2 = subexp[0].e.rep;
-        return 1;
+        /*e: [[match()]](ed.c) set [[loc1]] and [[loc2]] with matched string */
+        return true;
     }
-    loc1 = loc2 = 0;
-    return 0;
-    
+    // else
+    /*s: [[match()]](ed.c) reset [[loc1]] and [[loc2]] */
+    loc1 = loc2 = nil;
+    /*e: [[match()]](ed.c) reset [[loc1]] and [[loc2]] */
+    return false;
 }
 /*e: function [[match]](ed.c) */
 
 // Printing text
-/*s: function [[putd]](ex.c) */
+/*s: function [[putd]](ed.c) */
 void
 putd(void)
 {
@@ -1619,11 +1972,13 @@ putd(void)
     r = count%10;
     count /= 10;
     if(count)
+        // recurse
         putd();
     putchr(r + L'0');
 }
-/*e: function [[putd]](ex.c) */
+/*e: function [[putd]](ed.c) */
 /*s: function [[putstr]](ed.c) */
+/// commands | getfile | error_1 | ... -> <> 
 void
 putst(char *sp)
 {
@@ -1650,6 +2005,7 @@ putshst(Rune *sp)
 }
 /*e: function [[putshst]](ed.c) */
 /*s: function [[putchr]](ed.c) */
+/// error | putst | putshst | ... -> <>
 void
 putchr(int ac)
 {
@@ -1659,6 +2015,7 @@ putchr(int ac)
 
     lp = linp;
     c = ac;
+    /*s: [[putchr()]] if [[listf]] */
     if(listf) {
         if(c == '\n') {
             if(linp != line && linp[-1] == ' ') {
@@ -1693,20 +2050,24 @@ putchr(int ac)
             }
         }
     }
+    /*e: [[putchr()]] if [[listf]] */
 
     rune = c;
     lp += runetochar(lp, &rune);
 
     if(c == '\n' || lp >= &line[sizeof(line)-5]) {
         linp = line;
+        // the actual output syscall!
         write(oflag? STDERR: STDOUT, line, lp-line);
         return;
     }
+    // else
     linp = lp;
 }
 /*e: function [[putchr]](ed.c) */
 
 /*s: function [[mktemp]](ed.c) */
+/// main -> <>
 char*
 mktemp(char *as)
 {
@@ -1719,11 +2080,13 @@ mktemp(char *as)
     while(*s++)
         ;
     s--;
+
     while(*--s == 'X') {
         *s = pid % 10 + '0';
         pid /= 10;
     }
     s++;
+
     i = 'a';
     while(access(as, 0) != -1) {
         if(i == 'z')
@@ -1742,4 +2105,4 @@ regerror(char *s)
     error(Q);
 }
 /*e: function [[regerror]](ed.c) */
-/*e: editors/misc/ed.c */
+/*e: ed/ed.c */
