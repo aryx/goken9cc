@@ -6,7 +6,7 @@
 - remove dependency to byacc or bison; build and use plan9 yacc in build-mk.sh
 
 ** utilities
-- ed: fix segfault on macOS when realloc in 6l/mkenam; use intptr not int
+- ed: fix segfault on macOS when realloc in 6l/mkenam; use new ptrdiff not int
   on 64 bit machine when computing (64bits) pointer differences
 
 * 0.2 (Q1 2026) (pcc, ASAN, dosfstools, IWP9 paper)
