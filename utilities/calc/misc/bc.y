@@ -93,6 +93,7 @@
         void    routput(char*);
         void    tp(char*);
         void    yyerror(char*, ...);
+        int     yylex(void);
         int     yyparse(void);
 
         typedef void*   pointer;

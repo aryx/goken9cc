@@ -19,13 +19,16 @@ test:
 hellotest:
 	echo TODO
 
+# CPU count for docker --build-arg NPROC (macOS has no nproc; match env.sh)
+NPROC_FOR_DOCKER := $(shell if [ "`uname -s`" = Darwin ]; then sysctl -n hw.ncpu 2>/dev/null || echo 1; else nproc 2>/dev/null || echo 1; fi)
+
 # works for both amd64 and arm64
 build-docker:
-	docker build --tag "padator/goken:"`uname -m` -f Dockerfile --build-arg NPROC=`nproc` --target build .
+	docker build --tag "padator/goken:"`uname -m` -f Dockerfile --build-arg NPROC=$(NPROC_FOR_DOCKER) --target build .
 build-docker-test: 
-	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc-test --target test .
+	docker build -f Dockerfile --build-arg NPROC=$(NPROC_FOR_DOCKER) --tag goken9cc-test --target test .
 build-docker-principia: 
-	docker build -f Dockerfile --build-arg NPROC=`nproc` --tag goken9cc-principia --target principia .
+	docker build -f Dockerfile --build-arg NPROC=$(NPROC_FOR_DOCKER) --tag goken9cc-principia --target principia .
 
 # need 'docker login -u padator' first with credentials of
 # https://hub.docker.com/r/padator/ stored in ~/.docker/config.json

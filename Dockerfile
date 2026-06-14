@@ -17,6 +17,12 @@ RUN apt-get install -y --no-install-recommends gcc libc6-dev
 WORKDIR /src
 COPY . .
 
+# build-mk.sh copies into ROOT/$GOARCH/{lib,bin}; host ROOT/ is dockerignored.
+# rc looks for #9/etc/rcmain.unix under GOROOT (ROOT); copy from ./etc.
+RUN mkdir -p ROOT/arm64/lib ROOT/arm64/bin ROOT/amd64/lib ROOT/amd64/bin \
+	ROOT/etc \
+	&& cp -a etc/. ROOT/etc/
+
 # Small shell script (not GNU autoconf) to detect arch and generate ./mkconfig
 RUN ./configure
 
@@ -42,7 +48,8 @@ RUN mk
 RUN mk install
 
 ENV GOOS="linux"
-ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
+# Promoted mk/rc in /src/bin must win over ROOT/*/bin (see .dockerignore for ROOT).
+ENV PATH="/src/bin:/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
 
 ###############################################################################
 # Stage2: Just binaries (on amd64/arm64)

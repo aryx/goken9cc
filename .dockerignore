@@ -2,3 +2,7 @@
 .git
 
 # partial copy of .gitignore
+
+# Never copy host toolchain output: wrong OS/arch (e.g. macOS Mach-O in ROOT/amd64)
+# and it would appear before /src/bin on PATH, breaking mk in the image.
+ROOT
