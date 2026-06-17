@@ -104,8 +104,8 @@ main(int argc, char *argv[])
         goos = getgoos();
 		if(goos != nil && strcmp(goos, "linux") == 0)
 			HEADTYPE = 7;
-		//if(strcmp(goos, "darwin") == 0)
-		//	HEADTYPE = 6;
+		else if(goos != nil && strcmp(goos, "darwin") == 0)
+			HEADTYPE = 6;	/* old-style arm64 Mach-O */
 		//else
 		//if(strcmp(goos, "freebsd") == 0)
 		//	HEADTYPE = 9;
@@ -137,6 +137,17 @@ main(int argc, char *argv[])
 			INITTEXT = (1<<22)+HEADR; // like in 6l
 		if(INITDAT == -1)
 			INITDAT = 0;
+		if(INITRND == -1)
+			INITRND = 4096;
+		break;
+	case 6:	/* apple MACH (Mach-O) */ // macOS arm64, see asmbmacho
+		HEADR = MACHORESERVE;
+		if(INITTEXT == -1)
+			INITTEXT = 0x100000+HEADR;	/* __TEXT >= 1MB clears Linux mmap_min_addr
+						 * (so the image loads under darling); INITTEXT is
+						 * int32 here, so a 4GB __PAGEZERO isn't possible. */
+		if(INITDAT == -1)
+			INITDAT = 0;		/* placed after text in span() */
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;

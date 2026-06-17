@@ -16,7 +16,7 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
 - **Portable:**
   It can *build* on Linux, macOS, and Windows (TODO and Plan 9 and xv6) using gcc or clang (TODO or a boostrapped version of itself)
 - **Multi-OS support:** 
-  Build C programs that can *run* on Linux, macOS (only old macOS for now), TODO Windows, Plan 9, and TODO xv6
+  Build C programs that can *run* on Linux, macOS (modern Mach-O: LC_MAIN, ad-hoc code-signed on arm64), TODO Windows, Plan 9, and TODO xv6
 - **Multi-architecture support:**
   Build C programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
   arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures (TODO Wasm)

@@ -12,8 +12,7 @@ PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 #TODO: hello_xv6_386.exe hello_xv6_riscv.exe
 XV6BINS=
 
-#TODO: hello_macos_arm64.exe
-MACOSBINS=hello_macos_amd64.exe
+MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe
 #TODO: hello_windows_386.exe hello_windows_amd64.exe
 WINDOWSBINS=
 
@@ -72,9 +71,20 @@ hello_linux_mips.exe: hello_linux_mips.s
 			
 
 # macOS
+# -H6 selects the apple MACH (Mach-O) header; without it the default header
+# on a non-darwin host is ELF (-H7), so the binary would not be a Mach-O.
+# Both linkers now emit the modern format: an LC_MAIN entry (not LC_UNIXTHREAD),
+# MH_DYLDLINK|MH_TWOLEVEL, LC_DYLD_INFO_ONLY, LC_BUILD_VERSION, LC_UUID and a
+# libSystem LC_LOAD_DYLIB. (-s on amd64 drops the debug __SYMDAT/__DWARF
+# segments; 7l strips internally for -H6.)
 hello_macos_amd64.exe: hello_macos_amd64.s
    6a -c $prereq
-   6l -o $target -E _start hello_macos_amd64.6
+   6l -s -H6 -o $target -E _start hello_macos_amd64.6
+# arm64 macOS additionally carries an ad-hoc LC_CODE_SIGNATURE (SHA-256
+# CodeDirectory), which Apple Silicon's kernel requires for any binary.
+hello_macos_arm64.exe: hello_macos_arm64.s
+   7a -c $prereq
+   7l -H6 -o $target -E _start hello_macos_arm64.7
 
 # Plan9
 # -H 2 this time and -E _main

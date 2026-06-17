@@ -2,6 +2,9 @@
 #include "7.out.h"
 #include "../lk/elf.h"
 
+/* space reserved at start of a Mach-O file for header + load commands */
+#define	MACHORESERVE	(3*1024)
+
 typedef	struct	Mask	Mask;
 typedef	struct	Optab	Optab;
 typedef	struct	Oprang	Oprang;
@@ -252,6 +255,8 @@ int	Rconv(Fmt*);
 int	aclass(Adr*);
 void	addpool(Prog*, Adr*);
 void	asmb(void);
+void	asmbmacho(void);
+void	sha256(uchar*, uint32, uchar*);
 void	asmdyn(void);
 void	asmlc(void);
 void	asmout(Prog*, Optab*);

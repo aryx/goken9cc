@@ -2,6 +2,24 @@
 
 * 0.3 (Q2 2026) (IWP9 presentation)
 
+** toolchain
+- macOS Mach-O (-H6) now targets modern macOS instead of old Mac OS X:
+  . 6l (amd64) and 7l (arm64) emit an LC_MAIN entry (not LC_UNIXTHREAD),
+    flag the binary MH_DYLDLINK|MH_TWOLEVEL, link /usr/lib/libSystem.B.dylib,
+    and carry LC_DYLD_INFO_ONLY, LC_BUILD_VERSION and LC_UUID.
+  . 7l also emits an ad-hoc LC_CODE_SIGNATURE: an embedded SuperBlob with a
+    SHA-256 CodeDirectory over the whole image (new sha256.c, two-pass write),
+    as Apple Silicon's kernel requires every binary to be signed.
+  . non-PIE with a 1MB __PAGEZERO (__TEXT at 0x100000): keeps the image above
+    Linux's mmap_min_addr so loaders can map it (verified: darling's loader maps
+    and runs it), while staying < 2GB for the amd64 32-bit-absolute addressing /
+    the classic linker's int32 INITTEXT. (Apple uses a 4GB __PAGEZERO, which our
+    codegen can't reach.)
+- 7l: add Mach-O output (-H6) for arm64 macOS (previously stubbed out); add
+  tests/s/mini/hello_macos_arm64.s and wire hello_macos_arm64.exe into the
+  mini mkfile. Also fix the macos rules to pass -H6 (without it a non-darwin
+  host emitted ELF instead of Mach-O).
+
 ** build infra
 - remove dependency to byacc or bison; build and use plan9 yacc in build-mk.sh
 
