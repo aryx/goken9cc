@@ -544,7 +544,7 @@ asmbmacho(vlong symdatva, vlong symo)
 		 * backend emits 32-bit-absolute addressing, so the image must load in
 		 * the low 4GB (hence no 0x100000000 __PAGEZERO and no MH_PIE here).
 		 */
-		machoflags = 1 | 4 | 0x80;	/* MH_NOUNDEFS|MH_DYLDLINK|MH_TWOLEVEL */
+		machoflags = 1 | 4 | 0x80 | 0x200000;	/* MH_NOUNDEFS|MH_DYLDLINK|MH_TWOLEVEL|MH_PIE */
 		entryoff = entryvalue() - (INITTEXT - HEADR);	/* file offset of entry */
 		ml = newMachoLoad(0x80000028, 4);	/* LC_MAIN */
 		ml->data[0] = entryoff;			/* entryoff low */

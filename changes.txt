@@ -10,11 +10,18 @@
   . 7l also emits an ad-hoc LC_CODE_SIGNATURE: an embedded SuperBlob with a
     SHA-256 CodeDirectory over the whole image (new sha256.c, two-pass write),
     as Apple Silicon's kernel requires every binary to be signed.
-  . non-PIE with a 1MB __PAGEZERO (__TEXT at 0x100000): keeps the image above
-    Linux's mmap_min_addr so loaders can map it (verified: darling's loader maps
-    and runs it), while staying < 2GB for the amd64 32-bit-absolute addressing /
-    the classic linker's int32 INITTEXT. (Apple uses a 4GB __PAGEZERO, which our
-    codegen can't reach.)
+  . 6l (amd64) is now PIE: a symbol memory reference (LEAQ name(SB), ...) is
+    encoded RIP-relative ([rip+disp32], a D_PCREL reloc) instead of an absolute
+    disp32, gated on HEADTYPE==6 so ELF/Plan 9 keep the proven absolute form.
+    The header sets MH_PIE. doasm() corrects the PC-relative addend for any
+    immediate emitted after the disp. (Code-only PIE: a program with absolute
+    pointers in __DATA would still need rebase opcodes, which we don't emit.)
+  . __PAGEZERO is 1MB (__TEXT at 0x100000), not Apple's 4GB: high enough to
+    clear Linux's mmap_min_addr (darling's loader maps and runs it), and below
+    the 4GB boundary where 6l's text layout 32-bit-truncates (the code is not
+    emitted at all). With MH_PIE the loader can still slide the image.
+  . 7l (arm64) stays non-PIE for now (it loads addresses from a 64-bit literal
+    pool, which would need ADRP/ADR to be position-independent).
 - 7l: add Mach-O output (-H6) for arm64 macOS (previously stubbed out); add
   tests/s/mini/hello_macos_arm64.s and wire hello_macos_arm64.exe into the
   mini mkfile. Also fix the macos rules to pass -H6 (without it a non-darwin

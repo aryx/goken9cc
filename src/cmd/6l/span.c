@@ -779,16 +779,26 @@ vaddr(Adr *a, Reloc *r)
 	return v;
 }
 
+/*
+ * riprelfix: when asmandsz emits a macOS (PIE) RIP-relative reference, it
+ * records (reloc index + 1) here so doasm() can correct the addend for any
+ * immediate emitted after the disp32 (RIP is relative to the end of the whole
+ * instruction). 0 means "nothing to fix".
+ */
+int	riprelfix;
+
 static void
 asmandsz(Adr *a, int r, int rex, int m64)
 {
 	int32 v;
 	int t, scale;
+	int rip;
 	Reloc rel;
 
 	rex &= (0x40 | Rxr);
 	v = a->offset;
 	t = a->type;
+	rip = 0;
 	rel.siz = 0;
 	if(a->index != D_NONE) {
 		if(t < D_INDIR) { 
@@ -862,6 +872,20 @@ asmandsz(Adr *a, int r, int rex, int m64)
 			*andptr++ = (0 << 6) | (5 << 0) | (r << 3);
 			goto putrelv;
 		}
+		if(HEADTYPE == 6 && rel.siz == 4) {
+			/*
+			 * macOS (PIE): a symbol reference becomes RIP-relative
+			 * [rip+disp32] (mod=00, rm=101) with a PC-relative reloc,
+			 * instead of the absolute disp32 SIB form below. The disp
+			 * is then load-address-independent, so the image can use a
+			 * 4GB __PAGEZERO / be slid by ASLR. (Other -H targets keep
+			 * the proven absolute encoding.)
+			 */
+			*andptr++ = (0 << 6) | (5 << 0) | (r << 3);
+			rel.type = D_PCREL;
+			rip = 1;
+			goto putrelv;
+		}
 		/* temporary */
 		*andptr++ = (0 <<  6) | (4 << 0) | (r << 3);	/* sib present */
 		*andptr++ = (0 << 6) | (4 << 3) | (5 << 0);	/* DS:d32 */
@@ -910,6 +934,8 @@ putrelv:
 		r = addrel(cursym);
 		*r = rel;
 		r->off = curp->pc + andptr - and;
+		if(rip)
+			riprelfix = cursym->nr;	/* index+1; doasm() fixes the addend */
 	}
 	put4(v);
 	return;
@@ -1151,6 +1177,7 @@ doasm(Prog *p)
 	Adr *a;
 	
 	curp = p;	// TODO
+	riprelfix = 0;
 
 	o = opindex[p->as];
 	if(o == nil) {
@@ -1630,6 +1657,17 @@ found:
 			}
 		}
 		break;
+	}
+	if(riprelfix) {
+		Reloc *rr;
+
+		/*
+		 * RIP-relative disp is measured from the end of the instruction.
+		 * Subtract any bytes emitted after the disp32 (e.g. an immediate).
+		 */
+		rr = &cursym->r[riprelfix-1];
+		rr->add -= (curp->pc + (andptr - and)) - (rr->off + rr->siz);
+		riprelfix = 0;
 	}
 	return;
 
