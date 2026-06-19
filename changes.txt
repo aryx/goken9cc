@@ -3,6 +3,16 @@
 * 0.3 (Q2 2026) (IWP9 presentation)
 
 ** toolchain
+- macOS Mach-O: call libSystem instead of raw syscalls. New "6l/7l -I
+  got:remote:lib" flag declares a dynamic import: the program defines a GOT
+  pointer slot `got` in __DATA and calls through it, and the linker emits an
+  LC_DYLD_INFO non-lazy bind so dyld resolves `remote` from `lib` (libSystem,
+  ordinal 1) into the slot at load. tests/s/mini/hello_macos_libc_{amd64,arm64}.s
+  call _write this way. The amd64 one runs under darling (prints "Hello,
+  world"), which emulates Darwin via libSystem and cannot run raw-syscall
+  binaries; the arm64 one is structurally complete (bind + ad-hoc signature
+  valid) but runtime-untested here and still non-PIE (7l uses a literal pool),
+  so real Apple Silicon may need ADRP-based PIE codegen first.
 - macOS Mach-O (-H6) now targets modern macOS instead of old Mac OS X:
   . 6l (amd64) and 7l (arm64) emit an LC_MAIN entry (not LC_UNIXTHREAD),
     flag the binary MH_DYLDLINK|MH_TWOLEVEL, link /usr/lib/libSystem.B.dylib,

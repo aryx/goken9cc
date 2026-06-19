@@ -213,6 +213,55 @@ enum {
 	CDHASH_PAGE		= 4096,		/* code-signing page size */
 };
 
+/*
+ * Dynamic imports declared via "7l -I got:remote:lib": the program defines a
+ * GOT pointer slot `got` in __DATA and calls through it; we emit an
+ * LC_DYLD_INFO non-lazy bind so dyld resolves `remote` from `lib` (libSystem,
+ * ordinal 1) into that slot. Mirrors 6l's -I. (See src/cmd/ld/macho.c.)
+ */
+static struct {
+	char	*got;
+	char	*remote;
+	char	*lib;
+} dynimp[16];
+static int	ndynimp;
+static uchar	machobind[1024];
+static int	nmachobind;
+
+void
+adddynimp(char *spec)
+{
+	char *s, *p, *q;
+
+	if(ndynimp >= nelem(dynimp))
+		sysfatal("too many -I imports");
+	s = strdup(spec);
+	p = utfrune(s, ':');
+	q = p ? utfrune(p+1, ':') : nil;
+	if(p == nil || q == nil)
+		sysfatal("bad -I import (want got:remote:lib): %s", spec);
+	*p = '\0';
+	*q = '\0';
+	dynimp[ndynimp].got = s;
+	dynimp[ndynimp].remote = p+1;
+	dynimp[ndynimp].lib = q+1;
+	ndynimp++;
+}
+
+static void
+binduleb(vlong val)
+{
+	uchar b;
+
+	do {
+		b = val & 0x7f;
+		val >>= 7;
+		if(val)
+			b |= 0x80;
+		machobind[nmachobind++] = b;
+	} while(val);
+}
+
 static void
 machoseg(char *name, vlong vaddr, vlong vsize, vlong fileoff, vlong filesize,
 	uint32 maxprot, uint32 initprot, int nsect)
@@ -251,7 +300,7 @@ machosect(char *sect, char *seg, vlong addr, vlong size, uint32 off,
 void
 asmbmacho(void)
 {
-	vlong va, v, linkoff, sigoff, codeLimit, linkva, llfsize, entryoff, p;
+	vlong va, v, linkoff, bindoff, sigoff, codeLimit, linkva, llfsize, entryoff, p;
 	uint32 identlen, nslot, hashOffset, cdLength, superLength;
 	uint32 i, n;
 	int sigfd;
@@ -268,7 +317,30 @@ asmbmacho(void)
 	va = INITTEXT - HEADR;			/* address the header maps to */
 	v = rnd(HEADR+textsize, INITRND);	/* text seg file/vm size */
 	linkoff = v + datsize;			/* file offset of __LINKEDIT */
-	sigoff = rnd(linkoff+2, 16);		/* signature follows the string table */
+
+	/* dyld non-lazy bind opcodes for -I imports, right after the string table */
+	bindoff = linkoff + 2;
+	nmachobind = 0;
+	if(ndynimp > 0) {
+		Sym *isym;
+		char *cp;
+
+		for(i=0; i<(uint32)ndynimp; i++) {
+			isym = lookup(dynimp[i].got, 0);
+			machobind[nmachobind++] = 0x10 | 1;	/* SET_DYLIB_ORDINAL_IMM, libSystem */
+			machobind[nmachobind++] = 0x40;		/* SET_SYMBOL_TRAILING_FLAGS_IMM, 0 */
+			for(cp = dynimp[i].remote; *cp; cp++)
+				machobind[nmachobind++] = *cp;
+			machobind[nmachobind++] = 0;
+			machobind[nmachobind++] = 0x50 | 1;	/* SET_TYPE_IMM, BIND_TYPE_POINTER */
+			machobind[nmachobind++] = 0x70 | 2;	/* SET_SEGMENT_AND_OFFSET_ULEB, __DATA */
+			binduleb(isym->value);			/* slot offset within __DATA */
+			machobind[nmachobind++] = 0x90;		/* DO_BIND */
+		}
+		machobind[nmachobind++] = 0x00;			/* DONE */
+	}
+
+	sigoff = rnd(bindoff + nmachobind, 16);	/* signature follows strtab + binds */
 	codeLimit = sigoff;			/* everything before the signature is hashed */
 	linkva = rnd(INITDAT+datsize+bsssize, INITRND);
 	entryoff = entryvalue() - va;		/* LC_MAIN entry, offset into __TEXT */
@@ -280,11 +352,13 @@ asmbmacho(void)
 	superLength = 12 + 8 + cdLength;	/* SuperBlob hdr + 1 index + CodeDirectory */
 	llfsize = (sigoff + superLength) - linkoff;	/* __LINKEDIT file size */
 
-	/* __LINKEDIT: string table " \0", zero-padded up to the signature */
+	/* __LINKEDIT: string table " \0", then bind opcodes, zero-padded to the signature */
 	seek(cout, linkoff, SEEK__START);
 	cput(' ');
 	cput(0);
-	for(p = linkoff+2; p < sigoff; p++)
+	for(i=0; i<(uint32)nmachobind; i++)
+		cput(machobind[i]);
+	for(p = bindoff + nmachobind; p < sigoff; p++)
 		cput(0);
 	cflush();
 
@@ -308,9 +382,13 @@ asmbmacho(void)
 	machosect("__bss", "__DATA", INITDAT+datsize, bsssize, 0, 0, 1);
 	machoseg("__LINKEDIT", linkva, rnd(llfsize, INITRND), linkoff, llfsize, 7, 1, 0);
 
-	/* LC_DYLD_INFO_ONLY - empty (non-PIE, no imports => no fixups/binds) */
+	/* LC_DYLD_INFO_ONLY - non-lazy binds for -I imports (rest empty) */
 	lputl(0x80000022); lputl(48);
-	for(i=0; i<10; i++) lputl(0);
+	lputl(0); lputl(0);			/* rebase off/size */
+	lputl(nmachobind ? bindoff : 0); lputl(nmachobind);	/* bind off/size */
+	lputl(0); lputl(0);			/* weak bind off/size */
+	lputl(0); lputl(0);			/* lazy bind off/size */
+	lputl(0); lputl(0);			/* export off/size */
 
 	/* LC_SYMTAB - empty symbol table, 2-byte string table */
 	lputl(2); lputl(24);

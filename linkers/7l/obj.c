@@ -56,6 +56,11 @@ main(int argc, char *argv[])
 	case 'L':
 		addlibpath(EARGF(usage()));
 		break;
+	case 'I':	/* -I got:remote:lib  declare a Mach-O dynamic import (libSystem) */
+		a = ARGF();
+		if(a)
+			adddynimp(a);
+		break;
 	case 'T':
 		a = ARGF();
 		if(a)

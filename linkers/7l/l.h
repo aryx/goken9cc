@@ -256,6 +256,7 @@ int	aclass(Adr*);
 void	addpool(Prog*, Adr*);
 void	asmb(void);
 void	asmbmacho(void);
+void	adddynimp(char*);
 void	sha256(uchar*, uint32, uchar*);
 void	asmdyn(void);
 void	asmlc(void);

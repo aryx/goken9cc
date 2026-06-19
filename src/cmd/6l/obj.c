@@ -103,6 +103,9 @@ main(int argc, char *argv[])
 	case 'L':
 		Lflag(EARGF(usage()));
 		break;
+	case 'I':	/* -I got:remote:lib  declare a Mach-O dynamic import (libSystem) */
+		adddynimp(EARGF(usage()));
+		break;
 	case 'T':
 		INITTEXT = atolwhex(EARGF(usage()));
 		break;
