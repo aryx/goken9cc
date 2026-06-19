@@ -1,5 +1,5 @@
 TEXT _start(SB), $0
-	MOV	$setSB(SB), R28		// set up static base
+	MOV	$setSB(SB), R28		// static base (PC-relative under -H6)
 	MOV	$1, R0			// fd = 1 (stdout)
 	MOV	$msg(SB), R1		// buf
 	MOV	$13, R2			// count

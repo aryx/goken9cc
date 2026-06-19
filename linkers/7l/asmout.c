@@ -1601,7 +1601,6 @@ omovlit(int as, Prog *p, Adr *a, int dr)
 
 	if(p->cond == nil){	/* not in literal pool */
 		aclass(a);
-fprint(2, "omovlit add %lld (%#llux)\n", instoffset, instoffset);
 		/* TO DO: could be clever, and use general constant builder */
 		o1 = opirr(AADD);
 		v = instoffset;
@@ -1611,6 +1610,22 @@ fprint(2, "omovlit add %lld (%#llux)\n", instoffset, instoffset);
 		}
 		o1 |= ((v& 0xFFF) << 10) | (REGZERO<<5) | dr;
 	}else{
+		/*
+		 * macOS (PIE): materialise a symbol address PC-relatively with
+		 * ADR dr, sym rather than loading its absolute value from the
+		 * read-only literal pool (which dyld cannot rebase). Covers both
+		 * MOV $sym(SB),R and the address half of MOV sym(SB),R.
+		 */
+		if(HEADTYPE == 6 && p->cond->as == ADWORD
+		   && (p->cond->to.name == D_EXTERN || p->cond->to.name == D_STATIC)){
+			vlong d;
+
+			aclass(&p->cond->to);		/* sets instoffset = symbol vaddr */
+			d = instoffset - pc;		/* PC-relative byte offset */
+			if(d < -((vlong)1<<20) || d >= ((vlong)1<<20))
+				diag("PIE ADR target out of range\n%P", p);
+			return ADR(0, (int32)d, dr);
+		}
 		fp = 0;
 		w = 0;	/* default: 32 bit, unsigned */
 		switch(as){

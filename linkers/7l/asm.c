@@ -371,7 +371,7 @@ asmbmacho(void)
 	lputl(2);				/* MH_EXECUTE */
 	lputl(13);				/* ncmds */
 	lputl(856);				/* sizeofcmds */
-	lputl(1 | 4 | 0x80);			/* MH_NOUNDEFS|MH_DYLDLINK|MH_TWOLEVEL */
+	lputl(1 | 4 | 0x80 | 0x200000);		/* MH_NOUNDEFS|MH_DYLDLINK|MH_TWOLEVEL|MH_PIE */
 	lputl(0);				/* reserved */
 
 	machoseg("__PAGEZERO", 0, va, 0, 0, 0, 0, 0);

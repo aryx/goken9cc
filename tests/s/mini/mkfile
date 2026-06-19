@@ -92,9 +92,10 @@ hello_macos_arm64.exe: hello_macos_arm64.s
 hello_macos_libc_amd64.exe: hello_macos_libc_amd64.s
    6a -c $prereq
    6l -s -H6 -I writep:_write:/usr/lib/libSystem.B.dylib -o $target -E _start hello_macos_libc_amd64.6
-# arm64 libSystem variant (7l -I). Structurally complete (bind + ad-hoc
-# signature) but untested at runtime here, and non-PIE (7l uses a literal
-# pool), which real Apple Silicon may reject without ADRP-based PIE codegen.
+# arm64 libSystem variant (7l -I). PIE: addresses are materialised with ADR
+# (PC-relative) instead of the absolute literal pool, so it can be slid. Bind +
+# ad-hoc signature verified structurally; not run here (no arm64 execution on an
+# x86 host) - test on Apple Silicon.
 hello_macos_libc_arm64.exe: hello_macos_libc_arm64.s
    7a -c $prereq
    7l -H6 -I writep:_write:/usr/lib/libSystem.B.dylib -o $target -E _start hello_macos_libc_arm64.7
