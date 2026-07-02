@@ -272,7 +272,7 @@ struct Symtab
     union{
         void*	ptr;
         uintptr	value;
-        double  time; // for S_TIME
+        double  time; // new: for S_TIME
     } u;
 
     // Extra
