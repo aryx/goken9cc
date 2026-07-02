@@ -13,7 +13,7 @@ CFLAGS_EXTRA=-DUnix
 OFILES=\
 	code.$O\
 	exec.$O\
-	getflags.$O\
+	getflags_.$O\
 	glob.$O\
 	here.$O\
 	io.$O\
@@ -68,5 +68,5 @@ VIEWS=$HFILES ${OFILES:%.o=%.c}
 sync:VI:
 	for (i in $VIEWS) {
 	   if (~ $i y.tab.[ch]) echo skipping $i
-	   if not  syncweb -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/shells/Shell.nw $TOP/principia/shells/Shell_extra.nw  $i
+	   if not  syncweb -no_cache -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/shells/Shell.nw $TOP/principia/shells/Shell_extra.nw  $i
         }
