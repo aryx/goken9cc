@@ -19,6 +19,10 @@
 
 ** Later
 
+*** try riscv hello-world?
+https://9fans.topicbox.com/groups/9fans/T3f252d4d7c5389ee/issue-compiling-hello-world-for-risc-v-on-plan-9-pc-resets
+
+
 *** LATER LONG try to boostrap itself; can compile 5c with 5c?
 need full libc and ELF in 5c/5l working for big C project, not just helloprintf.c
 
