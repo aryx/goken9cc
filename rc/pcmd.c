@@ -22,6 +22,7 @@ char nl='\n';		/* change to semicolon for bourne-proofing */
 /*e: constant [[c2]] */
 
 /*s: function [[pdeglob]] */
+/// pcmd -> <>
 void
 pdeglob(io *f, char *s)
 {
@@ -34,6 +35,7 @@ pdeglob(io *f, char *s)
 /*e: function [[pdeglob]] */
 
 /*s: function [[pcmd]] */
+/// (simplemung | fnstr) -> pfmt %t -> <>
 void
 pcmd(io *f, tree *t)
 {
@@ -46,7 +48,7 @@ pcmd(io *f, tree *t)
     case '"':	pfmt(f, "$\"%t", c0); break;
     case '&':	pfmt(f, "%t&", c0); break;
     case '^':	pfmt(f, "%t^%t", c0, c1); break;
-    case '`':	pfmt(f, "`%t", c0); break;
+    case '`':	pfmt(f, "`%t%t", c0, c1); break;
     case ANDAND:pfmt(f, "%t && %t", c0, c1); break;
     case OROR:	pfmt(f, "%t || %t", c0, c1); break;
     case BANG:	pfmt(f, "! %t", c0); break;

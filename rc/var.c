@@ -62,7 +62,7 @@ vlook(char *name)
 void
 setvar(char *name, word *val)
 {
-    struct Var *v = vlook(name);
+    var *v = vlook(name);
     freewords(v->val);
     v->val = val;
     v->changed = true;
@@ -85,5 +85,4 @@ newvar(char *name, var *next)
     return v;
 }
 /*e: function [[newvar]] */
-
 /*e: rc/var.c */

@@ -19,7 +19,6 @@ extern bool Isatty(fdt fd);
  * fabricate bootstrap code and start it (*=(argv);. /usr/lib/rcmain $*)
  * start interpreting code
  */
-/*s: function main (rc/exec.c) */
 void main(int argc, char *argv[])
 {
     /*s: [[main()]] locals */
@@ -42,8 +41,8 @@ void main(int argc, char *argv[])
     /*x: [[main()]] argc argv processing, modify flags */
     if(flag['I'])
         flag['i'] = nil;
-    else 
-        if(flag['i']==nil && argc==1 && Isatty(STDIN)) 
+    else
+        if(flag['i']==nil && argc==1 && Isatty(STDIN))
            flag['i'] = flagset;
     /*e: [[main()]] argc argv processing, modify flags */
 
@@ -68,23 +67,23 @@ void main(int argc, char *argv[])
     memset(bootstrap, 0, sizeof bootstrap);
 
     i = 0;
-    bootstrap[i++].i=1;
-    // runq->argv is populated with the arguments to rc
-    // we just need to add '*=(argv)'
+    bootstrap[i++].i=1; // ref count
+    // runq->argv is populated with the arguments to rc (argv)
+    // we just need to add '*=...'
     bootstrap[i++].f = Xmark;
       bootstrap[i++].f = Xword;
-      bootstrap[i++].s="*";
+      bootstrap[i++].s = "*";
     bootstrap[i++].f = Xassign; // will pop_list() x2
 
     bootstrap[i++].f = Xmark;
       bootstrap[i++].f = Xmark;
         bootstrap[i++].f = Xword;
-        bootstrap[i++].s="*";
+        bootstrap[i++].s = "*";
       bootstrap[i++].f = Xdol; // will pop_list()
       bootstrap[i++].f = Xword;
       bootstrap[i++].s = rcmain;
       bootstrap[i++].f = Xword;
-      bootstrap[i++].s=".";
+      bootstrap[i++].s = ".";
     bootstrap[i++].f = Xsimple; // will pop_list()
 
     bootstrap[i++].f = Xexit;
@@ -123,6 +122,5 @@ void main(int argc, char *argv[])
     }
     /*e: [[main()]] interpreter loop */
 }
-/*e: function main (rc/exec.c) */
-
+/*e: function [[main]] */
 /*e: rc/main.c */

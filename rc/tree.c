@@ -33,6 +33,7 @@ newtree(void)
 /*e: function [[newtree]] */
 
 /*s: function [[freenodes]] */
+/// Xrdcmds -> <>
 void
 freenodes(void)
 {
@@ -159,5 +160,4 @@ tree* simplemung(tree *t)
     return t;
 }
 /*e: function [[simplemung]] */
-
 /*e: rc/tree.c */

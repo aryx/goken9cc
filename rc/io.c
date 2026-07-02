@@ -98,6 +98,7 @@ io*
 openfd(fdt fd)
 {
     io *f = new(struct Io);
+
     f->fd = fd;
     f->bufp = f->ebuf = f->buf;
     f->strp = nil;
@@ -106,6 +107,7 @@ openfd(fdt fd)
 /*e: function [[openfd]] */
 
 /*s: function [[openstr]] */
+/// ??? -> <>
 io*
 openstr(void)
 {
@@ -120,6 +122,7 @@ openstr(void)
 /*e: function [[openstr]] */
 
 /*s: function [[opencore]] */
+/// ??? -> <>
 /*
  * Open a corebuffer to read.  EOF occurs after reading len
  * characters from buf.

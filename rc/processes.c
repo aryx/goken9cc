@@ -113,6 +113,7 @@ Xasync(void)
     fdt null = open("/dev/null", 0);
     int pid;
     char npid[10];
+
     if(null<0){
         Xerror("Can't open /dev/null\n");
         return;
@@ -124,7 +125,7 @@ Xasync(void)
         break;
     case 0: // child
         clearwaitpids();
-        pushredir(ROPEN, null, 0);
+        pushredir(ROPEN, null, STDIN);
         // start a new Thread runq->pc+1 so skip pointer to code after &
         start(runq->code, runq->pc+1, runq->local);
         runq->ret = 0;
@@ -187,17 +188,22 @@ Xpipe(void)
 void
 Xbackq(void)
 {
-    int n, pid;
-    int pfd[2];
+    int n;
     char *stop;
-    char utf[UTFmax+1];
+    fdt pfd[2];
+    int pid;
     struct Io *f;
-    var *ifs = vlook("ifs");
     word *v, *nextv;
+    String *word; // extensible string
+    /*s: [[Xbackq()]] other locals */
+    char utf[UTFmax+1];
     Rune r;
-    String *word;
+    /*e: [[Xbackq()]] other locals */
 
-    stop = ifs->val? ifs->val->word: "";
+
+    stop = "";
+    if(runq->argv && runq->argv->words)
+        stop = runq->argv->words->word;
     if(pipe(pfd)<0){
         Xerror("can't make pipe");
         return;
@@ -215,11 +221,14 @@ Xbackq(void)
         pushredir(ROPEN, pfd[PWR], 1);
         return;
     default: // parent
+        //pad: was commented at some point to remove the only dependency to
+        //str.h (libstring) that I originally didn't want to port to goken
         addwaitpid(pid);
         close(pfd[PWR]);
         f = openfd(pfd[PRD]);
         word = s_new();
         v = nil;
+        /*s: [[Xbackq()]] read UTF bytes from pipe [[f]] and modify [[word]] */
         /* rutf requires at least UTFmax+1 bytes in utf */
         while((n = rutf(f, utf, &r)) != EOF){
             utf[n] = '\0';
@@ -235,11 +244,13 @@ Xbackq(void)
                     s_reset(word);
                 }
         }
+        /*e: [[Xbackq()]] read UTF bytes from pipe [[f]] and modify [[word]] */
         if(s_len(word) > 0)
             v = newword(s_to_c(word), v);
         s_free(word);
         closeio(f);
         Waitfor(pid, false);
+        poplist();	/* ditch split in "stop" */
         /* v points to reversed arglist -- reverse it onto argv */
         while(v){
             nextv = v->next;
@@ -258,10 +269,12 @@ void
 Xpipefd(void)
 {
     struct Thread *p = runq;
-    int pc = p->pc, pid;
+    int pc = p->pc;
+    int pid;
     char name[40];
-    int pfd[2];
-    int sidefd, mainfd;
+    fdt pfd[2];
+    fdt sidefd, mainfd;
+
     if(pipe(pfd)<0){
         Xerror("can't get pipe");
         return;
