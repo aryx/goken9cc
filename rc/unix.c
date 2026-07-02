@@ -43,35 +43,35 @@ enval(char *s)
 void
 bigpath(var *v)
 {
-	/* convert $PATH to $path */
-	char *p, *q;
-	word **l, *w;
+ /* convert $PATH to $path */
+ char *p, *q;
+ word **l, *w;
 
-	if(v->val == nil){
-		setvar("path", nil);
-		return;
-	}
-	p = v->val->word;
-	w = nil;
-	l = &w;
-	/*
-	 * Doesn't handle escaped colon nonsense.
-	 */
-	if(p[0] == 0)
-		p = nil;
-	while(p){
-		q = strchr(p, ':');
-		if(q)
-			*q = 0;
-		*l = newword(p[0] ? p : ".", nil);
-		l = &(*l)->next;
-		if(q){
-			*q = ':';
-			p = q+1;
-		}else
-			p = nil;
-	}
-	setvar("path", w);
+ if(v->val == nil){
+  setvar("path", nil);
+  return;
+ }
+ p = v->val->word;
+ w = nil;
+ l = &w;
+ /*
+  * Doesn't handle escaped colon nonsense.
+  */
+ if(p[0] == 0)
+  p = nil;
+ while(p){
+  q = strchr(p, ':');
+  if(q)
+   *q = 0;
+  *l = newword(p[0] ? p : ".", nil);
+  l = &(*l)->next;
+  if(q){
+   *q = ':';
+   p = q+1;
+  }else
+   p = nil;
+ }
+ setvar("path", w);
 }
 
 // from plan9port (I commented some parts)
@@ -79,14 +79,14 @@ bigpath(var *v)
 void
 pathinit(void)
 {
-	var *v;
+ var *v;
     char* s;
 
-	//v = gvlook("path");
-	//v->changefn = littlepath;
-	v = gvlook("PATH");
-	//v->changefn = bigpath;
-	bigpath(v);
+ //v = gvlook("path");
+ //v->changefn = littlepath;
+ v = gvlook("PATH");
+ //v->changefn = bigpath;
+ bigpath(v);
 
     //TODO: done in Vinit instead
     //s = getenv("RCMAIN");
