@@ -11,6 +11,7 @@
 extern char* Rcmain;
 extern bool Isatty(fdt fd);
 
+/*s: function [[main]] */
 /*
  * get command line flags.
  * initialize keywords & traps.

@@ -226,7 +226,7 @@ cd $TOP/rc
 $TOP/ROOT/$GOARCH/bin/yacc -d syn.y
 gcc $CFLAGS -DUnix -c code.c
 gcc $CFLAGS -DUnix -c exec.c
-gcc $CFLAGS -DUnix -c getflags.c
+gcc $CFLAGS -DUnix -c getflags_.c
 gcc $CFLAGS -DUnix -c glob.c
 gcc $CFLAGS -DUnix -c here.c
 gcc $CFLAGS -DUnix -c io.c
@@ -252,7 +252,7 @@ gcc $CFLAGS -DUnix -c fmt.c
 gcc $CFLAGS -DUnix -c main.c
 gcc $CFLAGS -DUnix -c y.tab.c
 gcc $CFLAGS -DUnix -c unix.c
-gcc $LDFLAGS -o o.out code.o exec.o getflags.o glob.o here.o io.o lex.o pcmd.o pfnc.o simple.o trap.o tree.o var.o processes.o globals.o utils.o error.o words.o executils.o status.o builtins.o input.o path.o env.o fmt.o main.o y.tab.o unix.o -lstring -l9 -lm
+gcc $LDFLAGS -o o.out code.o exec.o getflags_.o glob.o here.o io.o lex.o pcmd.o pfnc.o simple.o trap.o tree.o var.o processes.o globals.o utils.o error.o words.o executils.o status.o builtins.o input.o path.o env.o fmt.o main.o y.tab.o unix.o -lstring -l9 -lm
 cp o.out $TOP/ROOT/$GOARCH/bin/rc
 
 # We now also compile 'ed' because it is needed by mkenam and it is simpler

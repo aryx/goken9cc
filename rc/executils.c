@@ -16,6 +16,7 @@
 /*e: global [[argv0]] */
 
 /*s: function [[start]] */
+/// main | Xrdcmds -> <>
 void
 start(code *c, int pc, var *local)
 {
