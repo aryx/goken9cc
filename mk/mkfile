@@ -39,5 +39,5 @@ HFILES=fns.h mk.h
 VIEWS=$HFILES ${OFILES:%.o=%.c}
 sync:VI:
 	for (i in $VIEWS) {
-	   syncweb -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/builders/Make.nw $TOP/principia/builders/Make_extra.nw  $i
+	   syncweb -no_cache -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/builders/Make.nw $TOP/principia/builders/Make_extra.nw  $i
         }

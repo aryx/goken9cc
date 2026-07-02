@@ -24,7 +24,7 @@ struct RunEvent {
 /*e: struct [[RunEvent]] */
 
 /*s: global [[events]] */
-// growing_array<Runevent> (size = nevents (== nproclimit))
+// growing_array<Runevent> (allocated = nevents (== nproclimit))
 static RunEvent *events;
 /*e: global [[events]] */
 /*s: global [[nevents]] */
@@ -57,6 +57,7 @@ static Process *pfree;
 /*e: global [[pfree]] */
 
 /*s: function [[run]] */
+/// main -> mk -> work -> dorecipe -> <> -> sched
 void
 run(Job *j)
 {
@@ -81,6 +82,7 @@ run(Job *j)
 // shellname is back in Plan9.c
 
 /*s: function [[sched]] */
+/// main -> mk -> work -> dorecipe -> run -> <>
 static void
 sched(void)
 {
@@ -100,6 +102,7 @@ sched(void)
         return;
     }
     /*e: [[sched()]] return if no jobs */
+    // else
 
     // j = pop(jobs)
     j = jobs;
@@ -144,10 +147,10 @@ sched(void)
        Bflush(&bout);
        /*e: [[sched()]] if [[DEBUG(D_EXEC)]] print recipe */
         flags = "-e";
-       /*s: [[sched()]] reset flags if NOMINUSE rule */
+       /*s: [[sched()]] reset flags if [[NOMINUSE]] rule */
        if (j->r->attr&NOMINUSE)
            flags = nil;
-       /*e: [[sched()]] reset flags if NOMINUSE rule */
+       /*e: [[sched()]] reset flags if [[NOMINUSE]] rule */
 
         // launching the job!
         events[slot].pid = execsh(flags, j->r->recipe, nil, e);
@@ -164,14 +167,15 @@ sched(void)
 
 // execsh() is back in Plan9.c
 // xwaitfor() is back in Plan9.c
-extern pidt xwaitfor(char *msg);
+extern int xwaitfor(char *msg);
 
 /*s: function [[waitup]] */
+/// mk -> work; <> -> update; sched
 int
 waitup(int echildok, int *retstatus)
 {
     // child process
-    pidt pid;
+    int pid;
     // return string of child process
     char buf[ERRMAX];
     // index in events[]
@@ -305,7 +309,8 @@ nproc(void)
     Symtab *sym;
     Word *w;
 
-    if(sym = symlook("NPROC", S_VAR, nil)) {
+    sym = symlook("NPROC", S_VAR, nil);
+    if(sym) {
         w = sym->u.ptr;
         if (!empty_words(w))
             nproclimit = atoi(w->s);
@@ -333,6 +338,7 @@ nproc(void)
 /*e: function [[nproc]] */
 
 /*s: function [[nextslot]] */
+/// sched -> <>
 int
 nextslot(void)
 {
@@ -341,12 +347,14 @@ nextslot(void)
     for(i = 0; i < nproclimit; i++)
         if(events[i].pid <= 0) 
             return i;
+    // else
     assert(/*out of slots!!*/ false);
     return 0;	/* cyntax */
 }
 /*e: function [[nextslot]] */
 
 /*s: function [[pidslot]] */
+/// waitup -> <>
 int
 pidslot(int pid)
 {
@@ -360,12 +368,13 @@ pidslot(int pid)
     if(DEBUG(D_EXEC))
         fprint(STDERR, "mk: wait returned unexpected process %d\n", pid);
     /*e: [[pidslot()]] if [[DEBUG(D_EXEC)]] */
-    return -1;
+    return ERROR_NEG1;
 }
 /*e: function [[pidslot]] */
 
 
 /*s: function [[pnew]] */
+/// waitup -> <>
 static void
 pnew(int pid, int status)
 {

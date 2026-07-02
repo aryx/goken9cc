@@ -6,7 +6,7 @@
 /*e: constant [[ENVQUANTA]] */
 
 /*s: global [[shellenv]] */
-// growing_array<ShellEnvVar> (endmarker = (nil,nil), size = envinsert.envsize)
+// growing_array<ShellEnvVar> (endmarker = (nil,nil), used = nextv, allocated = envsize)
 ShellEnvVar	*shellenv;
 /*e: global [[shellenv]] */
 /*s: global [[nextv]] */
@@ -53,6 +53,7 @@ extern void readenv(void);
 // exportenv() is back in plan9.c
 
 /*s: function [[inithash]] */
+/// main -> <>
 void
 inithash(void)
 {
@@ -66,6 +67,7 @@ inithash(void)
 /*e: function [[inithash]] */
 
 /*s: function [[envinsert]] */
+/// envupd | ecopy | execinit -> <>
 static void
 envinsert(char *name, Word *value)
 {
@@ -128,12 +130,13 @@ ecopy(Symtab *s)
 /*e: function [[ecopy]] */
 
 /*s: function [[initenv]] */
+/// main -> parse; mk; <>
 void
 initenv(void)
 {
     char **p;
 
-    nextv = 0; // reset envy
+    nextv = 0; // reset shellenv
 
     // internal mk variables
     for(p = specialvars; *p; p++)
@@ -148,6 +151,7 @@ initenv(void)
 /*e: function [[initenv]] */
 
 /*s: function [[buildenv]] */
+/// main -> mk -> work -> dorecipe -> run -> sched -> <>
 ShellEnvVar*
 buildenv(Job *j, int slot)
 {

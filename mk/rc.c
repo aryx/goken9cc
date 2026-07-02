@@ -1,12 +1,12 @@
 /*s: mk/rc.c */
 #include	"mk.h"
 
-/*s: global [[termchars]] */
+/*s: global [[termchars]](rc.c) */
 char	*termchars = "=' \t";	/*used in parse.c to isolate assignment attribute*/
-/*e: global [[termchars]] */
-/*s: global [[shflags]] */
+/*e: global [[termchars]](rc.c) */
+/*s: global [[shflags]](rc.c) */
 char	*shflags = "-I";	/* rc flag to force non-interactive mode */
-/*e: global [[shflags]] */
+/*e: global [[shflags]](rc.c) */
 
 /*
  *	This file contains functions that depend on rc's syntax.  Most
@@ -14,6 +14,7 @@ char	*shflags = "-I";	/* rc flag to force non-interactive mode */
  */
 
 /*s: function [[squote]] */
+/// charin -> <>
 /*
  *	skip a token in single quotes.
  */
@@ -26,12 +27,12 @@ squote(char *cp)
     while(*cp){
         n = chartorune(&r, cp);
         if(r == '\'') {
-            /*s: [[squote()]] return, unless double quote */
+            /*s: [[squote()]] return, unless quote quote */
             n += chartorune(&r, cp+n);
             if(r != '\'')
                 return cp;
             // else, double '', continue while loop
-            /*e: [[squote()]] return, unless double quote */
+            /*e: [[squote()]] return, unless quote quote */
         }
         cp += n;
     }
@@ -42,6 +43,7 @@ squote(char *cp)
 /*e: function [[squote]] */
 
 /*s: function [[charin]] */
+/// addrule | rhead -> <>
 /*
  *	Search a string for characters in a pattern set.
  *	Characters in quotes and variable generators are escaped.
@@ -93,7 +95,7 @@ charin(char *cp, char *pat)
 }
 /*e: function [[charin]] */
 
-/*s: function [[expandquote]] */
+/*s: function [[expandquote]](rc.c) */
 /*
  *	extract an escaped token.  Possible escape chars are single-quote,
  *	double-quote, and backslash.  Only the first is valid for rc. The
@@ -103,27 +105,28 @@ char*
 expandquote(char *s, Rune r, Bufblock *buf)
 {
     if (r != '\'') {
+        // " and \ are not valid escape for rc, only '
         rinsert(buf, r);
         return s;
     }
-
+    // else
     while(*s){
         s += chartorune(&r, s);
         if(r == '\'') {
-            /*s: [[expandquote()]] return, unless double quote */
+            /*s: [[expandquote()]] return, unless quote quote */
             if(*s == '\'')
-                s++; // skip one of the double quotes
+                s++; // skip one of the two quotes
             else
                 return s;
-            /*e: [[expandquote()]] return, unless double quote */
+            /*e: [[expandquote()]] return, unless quote quote */
         }
         rinsert(buf, r);
     }
     return nil;
 }
-/*e: function [[expandquote]] */
+/*e: function [[expandquote]](rc.c) */
 
-/*s: function [[escapetoken]] */
+/*s: function [[escapetoken]](rc.c) */
 /*
  *	Input an escaped token.  Possible escape chars are single-quote,
  *	double-quote and backslash.  Only the first is a valid escape for
@@ -136,13 +139,13 @@ escapetoken(Biobuf *bp, Bufblock *buf, bool preserve, int esc)
     int line = mkinline;
 
     if(esc != '\'')
-        return OK_1;
+        return OK_1; // " and \ are not valid escape for rc, only '
 
     while((c = nextrune(bp, false)) > 0){
         if(c == '\''){
             if(preserve)
                 rinsert(buf, c);
-            /*s: [[escapetoken()]] return, unless double quote */
+            /*s: [[escapetoken()]] return, unless quote quote */
             c = Bgetrune(bp);
             if (c < 0)
                 break; // eof
@@ -151,7 +154,7 @@ escapetoken(Biobuf *bp, Bufblock *buf, bool preserve, int esc)
                 return OK_1;
             }
             // else, '', so continue the while loop
-            /*e: [[escapetoken()]] return, unless double quote */
+            /*e: [[escapetoken()]] return, unless quote quote */
         }
         // else
         rinsert(buf, c);
@@ -161,7 +164,7 @@ escapetoken(Biobuf *bp, Bufblock *buf, bool preserve, int esc)
     fprint(STDERR, "missing closing %c\n", esc);
     return ERROR_0;
 }
-/*e: function [[escapetoken]] */
+/*e: function [[escapetoken]](rc.c) */
 
 /*s: function [[copysingle]] */
 /*
@@ -183,6 +186,7 @@ copysingle(char *s, Bufblock *buf)
 /*e: function [[copysingle]] */
 
 /*s: function [[copyq]] */
+/// shprint -> <>
 /*
  *	check for quoted strings.  backquotes are handled here; single quotes above.
  *	s points to char after opening quote, q.
