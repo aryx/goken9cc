@@ -176,7 +176,7 @@ applyrules(char *target, char *cnt)
                     for(pre = r->prereqs; pre; pre = pre->next) {
                         /*s: [[applyrules()]] if regexp rule, adjust buf and rmatch */
                         if(r->attr&REGEXP)
-                            regsub(pre->s, buf, /*sizeof(buf),*/ rmatch, NREGEXP);
+                            regsub(pre->s, buf, sizeof(buf), rmatch, NREGEXP);
                         /*e: [[applyrules()]] if regexp rule, adjust buf and rmatch */
                         else
                             subst(stem, pre->s, buf, sizeof(buf));

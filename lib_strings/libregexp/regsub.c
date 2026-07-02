@@ -5,12 +5,14 @@
 extern	void
 regsub(char *sp,	/* source string */
 	char *dp,	/* destination string */
+	int dlen,	/* size of destination buffer, in bytes */
 	Resub *mp,	/* subexpression elements */
 	int ms)		/* number of elements pointed to by mp */
 {
-	char *ssp;
+	char *ssp, *ep;
 	int i;
 
+	ep = dp+dlen-1;
 	while(*sp != '\0'){
 		if(*sp == '\\'){
 			switch(*++sp){
@@ -25,30 +27,35 @@ regsub(char *sp,	/* source string */
 			case '8':
 			case '9':
 				i = *sp-'0';
-				if(mp[i].s.sp != 0 && mp!=0 && ms>i)
+				if(mp!=0 && mp[i].s.sp != 0 && ms>i)
 					for(ssp = mp[i].s.sp;
 					     ssp < mp[i].e.ep;
 					     ssp++)
-						*dp++ = *ssp;
+						if(dp < ep)
+							*dp++ = *ssp;
 				break;
 			case '\\':
-				*dp++ = '\\';
+				if(dp < ep)
+					*dp++ = '\\';
 				break;
 			case '\0':
 				sp--;
 				break;
 			default:
-				*dp++ = *sp;
+				if(dp < ep)
+					*dp++ = *sp;
 				break;
 			}
-		}else if(*sp == '&'){				
-			if(mp[0].s.sp != 0 && mp!=0 && ms>0)
-			if(mp[0].s.sp != 0)
+		}else if(*sp == '&'){
+			if(mp!=0 && mp[0].s.sp != 0 && ms>0)
 				for(ssp = mp[0].s.sp;
 				     ssp < mp[0].e.ep; ssp++)
-					*dp++ = *ssp;
-		}else
-			*dp++ = *sp;
+					if(dp < ep)
+						*dp++ = *ssp;
+		}else{
+			if(dp < ep)
+				*dp++ = *sp;
+		}
 		sp++;
 	}
 	*dp = '\0';
