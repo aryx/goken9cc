@@ -214,7 +214,11 @@ int simplec(long b)
 
     b &= BCLASS;
     switch(b) {
-    case 0: 
+    // claude: 0 (no class bits) must be CXXX, not CAUTO: grouping it with
+    // BAUTO broke every multi-token type ("unsigned long x;" etc.), which
+    // reaches here through simplec(gctnlist-bits) with b == 0
+    case 0:
+        return CXXX;
     case BAUTO:
         return CAUTO;
     case BEXTERN:
