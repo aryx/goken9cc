@@ -1,0 +1,65 @@
+# Cross-check the two C compiler lineages on toy inputs:
+#  - the kencc lineage (8c, from compilers/8ck), known good, able to
+#    cross-compile principia
+#  - the principia-synced lineage (8c___, from compilers/8c), kept in
+#    sync with the principia books via syncweb
+# See also tests/s/variants for the assemblers and linkers.
+#
+# Each local .c file is the minimal repro of a mismatch found between
+# the lineages (see the comment at the top of each file). The files
+# from ../misc are the historical -m32 vs -m64 long->int32 triggers.
+#
+# expected/ holds golden reference outputs produced by the kencc lineage
+# with -r (reproducible: no cwd in the object history); regenerate them
+# with the 'golden' target.
+
+CTESTS=unsigned_long manyvars
+CTESTSMISC=f_1_e_126 minus_one_index switch_hex float vlong_max
+
+test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testgolden
+
+# Not yet in the default 'test' target: long-mantissa float literals
+# still differ, the kencc cc parses with plan9's mpatof() (1 ulp off on
+# hard cases) while the principia cc uses lib9's strtod() (correctly
+# rounded). Principia is the more correct one; enable once the lineages
+# are aligned on one parser.
+testfloat:V: float_parse.vcmp
+
+# Not yet in the default 'test' target either: ~ on sub-word unsigned
+# values, the principia 8c emits NOTB+MOVBLZX where kencc emits NOTL
+# (and the C promotion rules say kencc is right). Enable once fixed.
+testnot:V: not_byte.vcmp
+
+testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm}
+
+%.vcmp:V:
+	8c    -r -o $stem.k.8 $stem.c
+	8c___ -r -o $stem.p.8 $stem.c
+	cmp $stem.k.8 $stem.p.8
+
+%.vcmpm:V:
+	8c    -r -o $stem.k.8 ../misc/$stem.c
+	8c___ -r -o $stem.p.8 ../misc/$stem.c
+	cmp $stem.k.8 $stem.p.8
+
+# uses .g.* names because mk can run this in parallel with the cmp rules
+%.vgold:V:
+	8c -r -o $stem.g.8 $stem.c
+	cmp $stem.g.8 expected/$stem.8
+
+%.vgoldm:V:
+	8c -r -o $stem.g.8 ../misc/$stem.c
+	cmp $stem.g.8 expected/$stem.8
+
+# Regenerate the golden reference outputs from the kencc lineage.
+# Only run this deliberately, after verifying the new outputs are correct.
+golden:V: ${CTESTS:%=%.mkgold} ${CTESTSMISC:%=%.mkgoldm}
+
+%.mkgold:V:
+	8c -r -o expected/$stem.8 $stem.c
+
+%.mkgoldm:V:
+	8c -r -o expected/$stem.8 ../misc/$stem.c
+
+clean nuke:V:
+	rm -f *.[58] *.exe

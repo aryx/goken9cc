@@ -14,28 +14,19 @@
 #
 # expected/ holds golden reference outputs produced by the kencc lineage
 # (see the 'golden' target to regenerate them). They protect against both
-# lineages drifting together. The compilers also support -r, so the C
-# tests have goldens too.
+# lineages drifting together. The C compilers are compared separately
+# in tests/c/variants.
 
 # float_386 and const_386 exercise historically long->int32 sensitive
 # paths (ieee float encoding, large/negative constants), see changes.txt.
-TESTS386=hello_386 float_386 const_386
+TESTS386=hello_386 float_386 const_386 macro_386
 TESTSARM=hello_arm
 
-# C files whose compilation historically differed between -m32 and -m64
-# hosts before the long->int32 fixes (Node xoffset, Adr offset, ieeedtod,
-# pswt switch sort), see changes.txt and the comments in each file.
-CTESTS386=f_1_e_126 minus_one_index switch_hex float vlong_max
-CDIR=../../c/misc
-
-test:V: test386 testc386 testgolden
+test:V: test386 testgolden
 
 # byte-compare object files and executables produced by the two lineages
 test386:V: ${TESTS386:%=%.vcmp8}
 	./hello_386.k.exe
-
-# byte-compare the object files produced by the two C compilers
-testc386:V: ${CTESTS386:%=%.vcmpc8}
 
 # Not yet in the default 'test' target: the arm lineages do not agree yet
 # (include/5.out.h and linkers/5lk/5.out.h differ in opcode numbering and
@@ -46,7 +37,7 @@ testarm:V: ${TESTSARM:%=%.vcmp5}
 # Regression check: the kencc lineage still produces the committed
 # reference outputs (the arm part guards kencc itself even though the
 # two arm lineages do not agree yet).
-testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5} ${CTESTS386:%=%.vgoldc8}
+testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 
 # compare stripped and -S executables: the symbol table is only emitted
 # without -s, and the ELF section table only with -S; e.g. the
@@ -70,11 +61,6 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5} ${CTESTS386:%=%.vgol
 	5l___ -s -H7 -E _start -o $stem.p.exe $stem.p.5
 	cmp $stem.k.exe $stem.p.exe
 
-%.vcmpc8:V:
-	8c    -r -o $stem.k.8 $CDIR/$stem.c
-	8c___ -r -o $stem.p.8 $CDIR/$stem.c
-	cmp $stem.k.8 $stem.p.8
-
 # uses .g.* names because mk can run this in parallel with test386
 %.vgold8:V:
 	8a -r -c -o $stem.g.8 $stem.s
@@ -90,14 +76,10 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5} ${CTESTS386:%=%.vgol
 	5l -s -H7 -E _start -o $stem.g.exe $stem.g.5
 	cmp $stem.g.exe expected/$stem.exe
 
-%.vgoldc8:V:
-	8c -r -o $stem.g.8 $CDIR/$stem.c
-	cmp $stem.g.8 expected/$stem.8
-
 # Regenerate the golden reference outputs from the kencc lineage.
 # Only run this deliberately, after verifying the new outputs are correct
 # (e.g. the executables still run).
-golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5} ${CTESTS386:%=%.mkgoldc8}
+golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5}
 
 %.mkgold8:V:
 	8a -r -c -o expected/$stem.8 $stem.s
@@ -107,9 +89,6 @@ golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5} ${CTESTS386:%=%.mkgold
 %.mkgold5:V:
 	5a -r -c -o expected/$stem.5 $stem.s
 	5l -s -H7 -E _start -o expected/$stem.exe expected/$stem.5
-
-%.mkgoldc8:V:
-	8c -r -o expected/$stem.8 $CDIR/$stem.c
 
 clean nuke:V:
 	rm -f *.[58] *.exe
