@@ -981,7 +981,8 @@ outhist(void)
         p = h->filename;
         op = nil;
         // relative file?
-        if(p && p[0] != c && h->local_line == 0 && pathname){
+        // claude: -r produces reproducible output: don't embed the cwd in history
+        if(!debug['r'] && p && p[0] != c && h->local_line == 0 && pathname){
             if(pathname[0] == c){
                 op = p;
                 p = pathname;

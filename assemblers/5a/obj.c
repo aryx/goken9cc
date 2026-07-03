@@ -220,7 +220,8 @@ outhist(void)
         p = h->filename;
 
         /*s: [[outhist()]] adjust p and op if p is relative filename */
-        if(p && p[0] != '/' && h->local_line == 0 && pathname && pathname[0] == '/') {
+        // claude: -r produces reproducible output: don't embed the cwd in history
+        if(!debug['r'] && p && p[0] != '/' && h->local_line == 0 && pathname && pathname[0] == '/') {
             op = p; // save p
             p = pathname; // start with cwd
         } else {
