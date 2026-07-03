@@ -58,12 +58,16 @@ typedef	Rune	TRune;	/* target system type */
 #define	BITS	5
 /*e: constant [[BITS]] */
 /*s: constant [[NVAR]] */
-#define	NVAR	(BITS*sizeof(ulong)*8)
+// claude: uint32, not ulong: the bits code (blsh, /32, %32) assumes
+// 32-bit words; 64-bit ulongs make NVAR 320 and blsh(160+) writes past
+// b[BITS] (stack smash on functions with many variables, e.g.
+// libsec blake2sblock.c)
+#define	NVAR	(BITS*sizeof(uint32)*8)
 /*e: constant [[NVAR]] */
 /*s: struct [[Bits]] */
 struct	Bits
 {
-    ulong	b[BITS];
+    uint32	b[BITS];
 };
 /*e: struct [[Bits]] */
 
