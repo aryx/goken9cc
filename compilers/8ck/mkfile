@@ -22,9 +22,9 @@ OFILES=\
 	cgen64.$O\
 	div.$O\
         \
-	$TOP/linkers/8l/enam.$O\
+	$TOP/linkers/8lk/enam.$O\
 
-HFILES=	gc.h $TOP/linkers/8l/8.out.h $TOP/compilers/cc/cc.h
+HFILES=	gc.h $TOP/linkers/8lk/8.out.h $TOP/compilers/cc/cc.h
 
 LIB= $TOP/compilers/cc/cc.a
 
