@@ -13,22 +13,10 @@
 # with -r (reproducible: no cwd in the object history); regenerate them
 # with the 'golden' target.
 
-CTESTS=unsigned_long manyvars
+CTESTS=unsigned_long manyvars not_byte float_parse
 CTESTSMISC=f_1_e_126 minus_one_index switch_hex float vlong_max
 
 test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testgolden
-
-# Not yet in the default 'test' target: long-mantissa float literals
-# still differ, the kencc cc parses with plan9's mpatof() (1 ulp off on
-# hard cases) while the principia cc uses lib9's strtod() (correctly
-# rounded). Principia is the more correct one; enable once the lineages
-# are aligned on one parser.
-testfloat:V: float_parse.vcmp
-
-# Not yet in the default 'test' target either: ~ on sub-word unsigned
-# values, the principia 8c emits NOTB+MOVBLZX where kencc emits NOTL
-# (and the C promotion rules say kencc is right). Enable once fixed.
-testnot:V: not_byte.vcmp
 
 testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm}
 

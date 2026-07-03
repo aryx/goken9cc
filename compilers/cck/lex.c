@@ -913,10 +913,11 @@ caseout:
 	}
 	*cp = 0;
 	peekc = c;
-//old:
-//	yylval.dval = strtod(symb, nil);
-//	if(isInf(yylval.dval, 1) || isInf(yylval.dval, -1)) {
-	if(mpatof(symb, &yylval.dval)) {
+	/* claude: strtod like original plan9 cc (and the principia lineage);
+	 * mpatof (from the Go/inferno fork) can be 1 ulp off on long
+	 * mantissas, see tests/c/variants/float_parse.c */
+	yylval.dval = strtod(symb, nil);
+	if(isInf(yylval.dval, 1) || isInf(yylval.dval, -1)) {
 		yyerror("overflow in float constant");
 		yylval.dval = 0;
 	}
