@@ -1,4 +1,5 @@
 TOP=../..
+<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 LIB=cc.a$O
