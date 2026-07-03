@@ -287,7 +287,8 @@ outhist(Biobuf *b)
     for(h = hist; h != H; h = h->link) {
         p = h->name;
         op = 0;
-        if(p && p[0] != c && h->offset == 0 && pathname){
+        // claude: -r produces reproducible output: don't embed the cwd in history
+        if(!debug['r'] && p && p[0] != c && h->offset == 0 && pathname){
             if(pathname[0] == c){
                 op = p;
                 p = pathname;
