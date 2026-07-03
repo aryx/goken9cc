@@ -1366,7 +1366,10 @@ loop:
             *n = *r;
             break;
         }
-        // Fallthrough, goto commute
+        // claude: must be a real goto: the fallthrough lands in the
+        // OASHR/OASHL/OLSHR case (bogus "stupid shift" warnings on AND
+        // masks and no commutative-constant rewrite for OAND)
+        goto commute;
     /*x: [[ccom()]] switch node kind cases */
     case OASHR:
     case OASHL:
