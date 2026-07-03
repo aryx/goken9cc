@@ -121,3 +121,6 @@ docs/iwp9/iwp9.pdf
 docs/iwp9/iwp9.tex
 
 # ----------------------------------------------------------------------------
+
+# golden reference outputs for tests/s/variants (see its mkfile 'golden' target)
+!tests/s/variants/expected/*

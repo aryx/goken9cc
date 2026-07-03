@@ -1,6 +1,6 @@
 TOP=..
 <$TOP/mkconfig
 
-DIRS=s/mini c rc
+DIRS=s/mini s/variants c rc
 
 <$TOP/mkfiles/mkdirs

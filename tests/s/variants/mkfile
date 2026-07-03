@@ -1,0 +1,68 @@
+# Cross-check the two toolchain lineages on toy assembly files:
+#  - the kencc lineage (8a/8l, 5a/5l, from assemblers/8ak etc.), known good,
+#    able to cross-compile principia
+#  - the principia-synced lineage (8a___/8l___, 5a___/5l___, from
+#    assemblers/8a etc.), kept in sync with the principia books via syncweb
+# The goal of the merge work is that both lineages produce byte-identical
+# object files and executables.
+#
+# Requirements for byte-comparable (and committable) outputs:
+#  - the assemblers' -r flag (reproducible: don't embed the cwd in the
+#    object file history records)
+#  - the linkers' -s flag (strip the symbol table, which would otherwise
+#    also embed source paths in the executable)
+#
+# expected/ holds golden reference outputs produced by the kencc lineage
+# (see the 'golden' target to regenerate them). They protect against both
+# lineages drifting together.
+
+test:V: test386 testgolden
+
+# Byte-compare object files and executables produced by the two lineages,
+# and check the executables actually run (requires qemu binfmt on non-x86).
+test386:V:
+	8a    -r -c -o hello_386.k.8 hello_386.s
+	8a___ -r -c -o hello_386.p.8 hello_386.s
+	cmp hello_386.k.8 hello_386.p.8
+	8l    -s -H7 -E _start -o hello_386.k.exe hello_386.k.8
+	8l___ -s -H7 -E _start -o hello_386.p.exe hello_386.p.8
+	cmp hello_386.k.exe hello_386.p.exe
+	./hello_386.k.exe
+
+# Not yet in the default 'test' target: the arm lineages do not agree yet
+# (include/5.out.h and linkers/5lk/5.out.h differ in opcode numbering and
+# operand encoding). Enable once 5.out.h is reconciled.
+testarm:V:
+	5a    -r -c -o hello_arm.k.5 hello_arm.s
+	5a___ -r -c -o hello_arm.p.5 hello_arm.s
+	cmp hello_arm.k.5 hello_arm.p.5
+	5l    -s -H7 -E _start -o hello_arm.k.exe hello_arm.k.5
+	5l___ -s -H7 -E _start -o hello_arm.p.exe hello_arm.p.5
+	cmp hello_arm.k.exe hello_arm.p.exe
+	./hello_arm.k.exe
+
+# Regression check: the kencc lineage still produces the committed
+# reference outputs (the arm part guards kencc itself even though the
+# two arm lineages do not agree yet).
+# note: uses .g.* names because mk can run this in parallel with test386.
+testgolden:V:
+	8a -r -c -o hello_386.g.8 hello_386.s
+	cmp hello_386.g.8 expected/hello_386.8
+	8l -s -H7 -E _start -o hello_386.g.exe hello_386.g.8
+	cmp hello_386.g.exe expected/hello_386.exe
+	5a -r -c -o hello_arm.g.5 hello_arm.s
+	cmp hello_arm.g.5 expected/hello_arm.5
+	5l -s -H7 -E _start -o hello_arm.g.exe hello_arm.g.5
+	cmp hello_arm.g.exe expected/hello_arm.exe
+
+# Regenerate the golden reference outputs from the kencc lineage.
+# Only run this deliberately, after verifying the new outputs are correct
+# (e.g. the executables still run).
+golden:V:
+	8a -r -c -o expected/hello_386.8 hello_386.s
+	8l -s -H7 -E _start -o expected/hello_386.exe expected/hello_386.8
+	5a -r -c -o expected/hello_arm.5 hello_arm.s
+	5l -s -H7 -E _start -o expected/hello_arm.exe expected/hello_arm.5
+
+clean nuke:V:
+	rm -f *.[58] *.exe
