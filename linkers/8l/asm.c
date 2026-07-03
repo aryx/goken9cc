@@ -48,7 +48,7 @@ entryvalue(void)
 /*s: function [[wputl]](x86) */
 /* these need to take long arguments to be compatible with elf.c */
 void
-wputl(long w)
+wputl(int32 w)
 {
     cput(w);
     cput(w>>8);
@@ -57,7 +57,7 @@ wputl(long w)
 
 /*s: function [[wput]](x86) */
 void
-wput(long w)
+wput(int32 w)
 {
     cput(w>>8);
     cput(w);
@@ -66,7 +66,7 @@ wput(long w)
 
 /*s: function [[lput]](x86) */
 void
-lput(long l)
+lput(int32 l)
 {
     cput(l>>24);
     cput(l>>16);
@@ -77,7 +77,7 @@ lput(long l)
 
 /*s: function [[lputl]](x86) */
 void
-lputl(long l)
+lputl(int32 l)
 {
     cput(l);
     cput(l>>8);

@@ -459,8 +459,8 @@ void	import(void);
 
 void	listinit(void);
 Sym*	lookup(char*, int);
-void	lput(long);
-void	lputl(long);
+void	lput(int32);
+void	lputl(int32);
 void	main(int, char*[]);
 
 void	patch(void);
@@ -473,8 +473,8 @@ void	strnput(char*, int);
 void	undef(void);
 void	undefsym(Sym*);
 
-void	wput(long);
-void	wputl(long);
+void	wput(int32);
+void	wputl(int32);
 void	xdefine(char*, int, long);
 
 void mylog(char*, ...);

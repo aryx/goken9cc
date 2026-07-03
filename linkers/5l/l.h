@@ -442,10 +442,10 @@ void    ckoff(Sym*, long);
 
 // io.c
 void    cput(int);
-void    lput(long);
-void    lputl(long l);
-void    wput(long);
-void    wputl(long);
+void    lput(int32);
+void    lputl(int32 l);
+void    wput(int32);
+void    wputl(int32);
 void    cflush(void);
 byte* readsome(fdt f, byte *buf, byte *good, byte *stop, int max);
 
