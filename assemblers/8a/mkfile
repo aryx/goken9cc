@@ -1,7 +1,9 @@
 TOP=../..
+<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-TARG=8a
+TARG=8a___
+LDLIBS=-lbio -l9 -lm
 
 OFILES=globals.$O\
 	y.tab.$O\
@@ -10,17 +12,16 @@ OFILES=globals.$O\
 HFILES=\
 	y.tab.h\
 	a.h\
-    $TOP/include/ALL/8.out.h
+    $TOP/include/8.out.h
 
 YFILES=a.y
 
-LIB=../aa/aa.a$O
+LIB=../as/aa.a$O
 
 <$TOP/mkfiles/mkone
 
 $LIB:
-	cd ../aa
+	cd ../as
 	mk all
 
 YFLAGS=-D1 -d
-
