@@ -1,0 +1,36 @@
+TOP=..
+
+VIEWS= \
+  as/lexbody.c\
+   as/utils.c\
+   as/lookup.c\
+   as/error.c\
+   as/float.c\
+   as/hist.c\
+  as/macbody.c\
+  \
+  5a/a.h\
+   as/aa.h\
+   as/globals.c\
+   5a/globals.c\
+  5a/lex.c\
+   5a/obj.c\
+   5a/main.c\
+  5a/a.y\
+  \
+  8a/a.h\
+   8a/globals.c\
+  8a/lex.c\
+  8a/a.y \
+
+TODO=\
+  \
+  ../include/obj/5.out.h\
+  ../include/obj/8.out.h \
+  ../include/obj/common.out.h\
+
+
+sync:VI:
+	for (i in $VIEWS) {
+	   syncweb -no_cache -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/assemblers/Assembler.nw $TOP/principia/assemblers/Intro.nw $TOP/principia/assemblers/Assembler_extra.nw $TOP/principia/assemblers/Assembler_x86.nw   $i
+        }
