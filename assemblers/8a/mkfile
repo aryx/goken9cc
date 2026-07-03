@@ -1,0 +1,26 @@
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=8a
+
+OFILES=globals.$O\
+	y.tab.$O\
+	lex.$O\
+
+HFILES=\
+	y.tab.h\
+	a.h\
+    $TOP/include/ALL/8.out.h
+
+YFILES=a.y
+
+LIB=../aa/aa.a$O
+
+<$TOP/mkfiles/mkone
+
+$LIB:
+	cd ../aa
+	mk all
+
+YFLAGS=-D1 -d
+

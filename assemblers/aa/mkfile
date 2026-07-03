@@ -1,0 +1,17 @@
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
+
+LIB=aa.a$O
+OFILES=\
+        globals.$O\
+        utils.$O\
+        error.$O\
+        hist.$O\
+        float.$O\
+        lookup.$O\
+        lexbody.$O\
+        macbody.$O\
+
+HFILES=aa.h
+
+<$TOP/mkfiles/mklib

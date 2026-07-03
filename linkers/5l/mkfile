@@ -1,0 +1,50 @@
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=5l
+
+OFILES=globals.$O\
+    utils.$O\
+    error.$O\
+	datagen.$O\
+	codegen.$O\
+	io.$O\
+	dynamic.$O\
+	asm.$O\
+	fmt.$O\
+	noop.$O\
+	float.$O\
+	profile.$O\
+	debugging.$O\
+	hist.$O\
+	obj.$O\
+	lib.$O\
+	optab.$O\
+	pass.$O\
+	layout.$O\
+	span.$O\
+	enam.$O\
+	elf.$O\
+    main.$O\
+
+HFILES=\
+	l.h\
+	../8l/elf.h\
+    $TOP/include/ALL/5.out.h
+
+CFLAGS=$CFLAGS -. -I.
+
+<$TOP/mkfiles/mkone
+
+# updated manually for now, because of syncweb
+#$TOP/compilers/5c/enam.c: $TOP/include/ALL/5.out.h
+#	@ { cd ../5c; mk enam.c }
+
+enam.$O:	$TOP/compilers/5c/enam.c
+	$CC $CFLAGS $TOP/compilers/5c/enam.c
+
+elf.$O:	../8l/elf.c
+	$CC $CFLAGS ../8l/elf.c
+
+x:V:	$O.out
+	$O.out -la -o/dev/null x.5
