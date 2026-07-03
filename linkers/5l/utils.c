@@ -145,7 +145,7 @@ rnd(long v, long r)
 /*e: function [[rnd]] */
 
 /*s: function [[fileexists]] */
-//old: now in libc.h
+//old: now in libc
 //int
 //fileexists(char *s)
 //{
