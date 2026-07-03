@@ -12,7 +12,7 @@ DIRS=\
   compilers/cc src/cmd/cc compilers/pcc \
   assemblers/5ak linkers/5lk compilers/5ck   machines/5i \
   src/cmd/5l src/cmd/5a src/cmd/5c \
-  linkers/5l__ assemblers/5a__ compilers/5c__ \
+  linkers/5l9 assemblers/5a9 compilers/5c9 \
   linkers/7l assemblers/7a compilers/7c \
   assemblers/8ak linkers/8lk compilers/8ck \
   src/cmd/8l src/cmd/8a src/cmd/8c \

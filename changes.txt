@@ -6,6 +6,11 @@
 - import 5a/5l 8a/8l from principia (and rename the existing 5a/5l/5c 8a/8l/8c
   that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
 
+** internals
+- rename 5a__/5l__/5c__ to 5a9/5l9/5c9
+  (5a__ was previously renamed from 5a_ that was originally imported
+  from https://bitbucket.org/plan9-from-bell-labs/9-cc.git )
+
 * 0.3 (Q2 2026) (IWP9 presentation)
 
 ** build infra

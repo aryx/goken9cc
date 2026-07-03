@@ -1,5 +1,5 @@
 #include	"../../src/cmd/cc/cc.h"
-#include	"../../linkers/5l__/5.out.h"
+#include	"../../linkers/5l9/5.out.h"
 
 /*
  * 5c/arm

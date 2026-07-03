@@ -8,7 +8,7 @@ OFILES=\
 	y.tab.$O\
 	lex.$O\
 
-HFILES=	$TOP/linkers/5l__/5.out.h y.tab.h a.h
+HFILES=	$TOP/linkers/5l9/5.out.h y.tab.h a.h
 
 YFILES=a.y
 

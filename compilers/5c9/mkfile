@@ -17,9 +17,9 @@ OFILES=\
         \
 	pgen.$O\
 	pswt.$O\
-	$TOP/linkers/5l__/enam.$O\
+	$TOP/linkers/5l9/enam.$O\
 
-HFILES=	gc.h $TOP/linkers/5l__/5.out.h	$TOP/src/cmd/cc/cc.h
+HFILES=	gc.h $TOP/linkers/5l9/5.out.h	$TOP/src/cmd/cc/cc.h
 
 LIB=../../src/cmd/cc/cc.a
 
