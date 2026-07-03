@@ -1,5 +1,11 @@
 # -*- org -*-
 
+* 0.4 (Q3 2026) (??)
+
+** toolchain
+- import 5a/5l 8a/8l from principia (and rename the existing 5a/5l/5c 8a/8l/8c
+  that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
+
 * 0.3 (Q2 2026) (IWP9 presentation)
 
 ** build infra

@@ -10,7 +10,7 @@ OFILES=\
 	lex.$O\
 
 HFILES=\
-	$TOP/linkers/5l/5.out.h\
+	$TOP/linkers/5lk/5.out.h\
 	y.tab.h\
 	a.h\
 
