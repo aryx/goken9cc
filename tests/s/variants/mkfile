@@ -48,6 +48,9 @@ testarm:V: ${TESTSARM:%=%.vcmp5}
 # two arm lineages do not agree yet).
 testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5} ${CTESTS386:%=%.vgoldc8}
 
+# compare stripped and -S executables: the symbol table is only emitted
+# without -s, and the ELF section table only with -S; e.g. the
+# elf32sectab() data offset bug was invisible in stripped links
 %.vcmp8:V:
 	8a    -r -c -o $stem.k.8 $stem.s
 	8a___ -r -c -o $stem.p.8 $stem.s
@@ -55,6 +58,9 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5} ${CTESTS386:%=%.vgol
 	8l    -s -H7 -E _start -o $stem.k.exe $stem.k.8
 	8l___ -s -H7 -E _start -o $stem.p.exe $stem.p.8
 	cmp $stem.k.exe $stem.p.exe
+	8l    -S -H7 -E _start -o $stem.ksym.exe $stem.k.8
+	8l___ -S -H7 -E _start -o $stem.psym.exe $stem.p.8
+	cmp $stem.ksym.exe $stem.psym.exe
 
 %.vcmp5:V:
 	5a    -r -c -o $stem.k.5 $stem.s
@@ -75,6 +81,8 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5} ${CTESTS386:%=%.vgol
 	cmp $stem.g.8 expected/$stem.8
 	8l -s -H7 -E _start -o $stem.g.exe $stem.g.8
 	cmp $stem.g.exe expected/$stem.exe
+	8l -S -H7 -E _start -o $stem.gsym.exe $stem.g.8
+	cmp $stem.gsym.exe expected/$stem.sym.exe
 
 %.vgold5:V:
 	5a -r -c -o $stem.g.5 $stem.s
@@ -94,6 +102,7 @@ golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5} ${CTESTS386:%=%.mkgold
 %.mkgold8:V:
 	8a -r -c -o expected/$stem.8 $stem.s
 	8l -s -H7 -E _start -o expected/$stem.exe expected/$stem.8
+	8l -S -H7 -E _start -o expected/$stem.sym.exe expected/$stem.8
 
 %.mkgold5:V:
 	5a -r -c -o expected/$stem.5 $stem.s
