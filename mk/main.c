@@ -259,6 +259,15 @@ main(int argc, char **argv)
         timeinit(whatif->start);
         freebuf(whatif);
     }
+    /*x: [[main()]] initializations before building */
+    //pad-ext: MKSHELL environment var to specify the path to rc
+    sym = symlook("MKSHELL", S_VAR, 0);
+    if(sym != nil) {
+      w = (Word*) sym->u.value;
+      if(w != nil && w->s != nil) {
+        shell->shell = w->s;
+      }
+    }
     /*e: [[main()]] initializations before building */
     /*s: [[main()]] setting the targets, call [[mk()]] */
     if(*argv == nil){
