@@ -20,4 +20,4 @@ YFLAGS=-D1 -d
 
 <$TOP/mkfiles/mkone
 
-lex.$O:	$TOP/compilers/cc/macbody $TOP/compilers/cc/lexbody
+lex.$O:	$TOP/compilers/cck/macbody $TOP/compilers/cck/lexbody

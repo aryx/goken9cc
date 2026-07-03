@@ -24,11 +24,11 @@ OFILES=\
         \
 	$TOP/linkers/8lk/enam.$O\
 
-HFILES=	gc.h $TOP/linkers/8lk/8.out.h $TOP/compilers/cc/cc.h
+HFILES=	gc.h $TOP/linkers/8lk/8.out.h $TOP/compilers/cck/cc.h
 
-LIB= $TOP/compilers/cc/cc.a
+LIB= $TOP/compilers/cck/cc.a
 
 <$TOP/mkfiles/mkone
 
-p%.$O: $TOP/compilers/cc/p%.c
-	$CC $CFLAGS $TOP/compilers/cc/p$stem.c
+p%.$O: $TOP/compilers/cck/p%.c
+	$CC $CFLAGS $TOP/compilers/cck/p$stem.c

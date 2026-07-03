@@ -704,5 +704,5 @@ outhist(void)
 	}
 }
 
-#include "../../compilers/cc/lexbody"
-#include "../../compilers/cc/macbody"
+#include "../../compilers/cck/lexbody"
+#include "../../compilers/cck/macbody"

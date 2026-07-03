@@ -1,4 +1,4 @@
-#include	"../cc/cc.h"
+#include	"../cck/cc.h"
 #include	"../../linkers/8lk/8.out.h"
 
 /*
