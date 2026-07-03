@@ -119,7 +119,9 @@ struct	Node
     // (also (ab)used as a bool to mark label definitions (true = already defined))
     char	complex; 
     /*x: [[Node]] code generation fields */
-    long	xoffset;
+    // claude: must be int32, not long: offset arithmetic relies on 32-bit
+    // overflow; see tests/c/misc/minus_one_index.c on 64-bit hosts
+    int32	xoffset;
     /*x: [[Node]] code generation fields */
     long	pc;
     /*x: [[Node]] code generation fields */
@@ -1115,8 +1117,8 @@ long	outstring(char*, long);
 long	outlstring(TRune*, long);
 void	xcom(Node*);
 long	exreg(Type*);
-long	align(long, Type*, int);
-long	maxround(long, long);
+int32	align(int32, Type*, int);
+int32	maxround(int32, int32);
 
 extern	schar	ewidth[];
 

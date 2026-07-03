@@ -57,7 +57,8 @@ struct	Adr
     // enum<Operand_kind> (D_NONE by default)
     char	type;
 
-    long	offset; // generic value, offset or simple constant
+    // claude: int32, not long, like in the kencc lineage (see changes.txt)
+    int32	offset; // generic value, offset or simple constant
     char	sval[NSNAME];
     double	dval;
     Ieee	ieee;
@@ -161,7 +162,7 @@ struct	Var
     char	symkind;
     //enum<type_kind>
     char	etype;
-    long	offset;
+    int32	offset;
 };
 /*e: struct [[Var]] */
 

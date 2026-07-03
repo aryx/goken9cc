@@ -60,7 +60,8 @@ extern struct Idx idx;
 /*s: struct [[Adr]](x86) */
 struct	Adr
 {
-    long	offset;
+    // claude: int32, not long, like in the kencc lineage (see changes.txt)
+    int32	offset;
     double	dval;
     char	sval[NSNAME];
     Sym*	sym;
@@ -130,7 +131,7 @@ struct	Var
     char	symkind;
     //enum<type_kind>
     char	etype;
-    long	offset;
+    int32	offset;
 };
 /*e: struct [[Var]] */
 
