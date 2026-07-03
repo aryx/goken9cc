@@ -23,7 +23,7 @@ VIEWS= \
   5l/optab.c\
   5l/span.c\
   \
-  8l/elf.h\
+  8l/elf_.h\
   8l/elf.c\
   \
   5l/fmt.c\
@@ -39,11 +39,12 @@ VIEWS= \
   8l/asm.c\
   8l/span.c\
   8l/obj.c\
+  \
+  ../include/a.out.h\
+  ../include/elf.h\
 
 
 TODO=\
-  ../include/exec/a.out.h\
-  ../include/exec/elf.h\
   ../include/obj/ar.h\
 
 

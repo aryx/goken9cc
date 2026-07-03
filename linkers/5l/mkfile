@@ -1,7 +1,9 @@
 TOP=../..
+<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
-TARG=5l
+TARG=5l___
+LDLIBS=-lbio -l9 -lm
 
 OFILES=globals.$O\
     utils.$O\
@@ -29,10 +31,10 @@ OFILES=globals.$O\
 
 HFILES=\
 	l.h\
-	../8l/elf.h\
-    $TOP/include/ALL/5.out.h
+	$TOP/include/elf.h\
+        $TOP/include/5.out.h
 
-CFLAGS=$CFLAGS -. -I.
+CFLAGS=$CFLAGS -I.
 
 <$TOP/mkfiles/mkone
 
