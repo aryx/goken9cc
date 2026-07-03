@@ -321,7 +321,7 @@ enum misc1 {
  *	-H2 -T4128 -R4096		is plan9 format
  *	-H3 -Tx -Rx			is MS-DOS .COM
  *	-H4 -Tx -Rx			is fake MS-DOS .EXE
- *	-H5 -T0x80100020 -R4096		is ELF
+ *	-H7 -T0x08048000+HEADR -R4096	is ELF
  */
 enum headtype {
     H_GARBAGE = 0,
@@ -329,7 +329,9 @@ enum headtype {
     H_PLAN9 = 2, // default
     H_COM = 3,
     H_EXE = 4,
-    H_ELF = 5,
+    // claude: kept as 7 (not 5) to match 5l/7l/8lk's numbering, since
+    // scripts/tests uniformly pass -H7 for ELF across all archs
+    H_ELF = 7,
 };
 /*e: enum [[headtype]](x86) */
 

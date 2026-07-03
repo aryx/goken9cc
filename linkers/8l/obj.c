@@ -300,8 +300,10 @@ main(int argc, char *argv[])
         break;
     case H_ELF:	/* elf executable */
         HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+        // claude: 0x08048000+HEADR matches the traditional Linux x86 ELF
+        // load address (and what 8lk uses), not the old 0x80100020
         if(INITTEXT == -1)
-            INITTEXT = 0x80100020L;
+            INITTEXT = 0x08048000+HEADR;
         if(INITDAT == -1)
             INITDAT = 0;
         if(INITRND == -1)

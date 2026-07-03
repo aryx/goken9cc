@@ -161,7 +161,9 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
      * correct for INITDAT and INITDATP.
      */
     phydata = INITDAT - (INITTEXT - INITTEXTP);
-    elf32phdr(putl, PT_LOAD, HEADR+textsize, INITDAT, phydata,
+    // claude: file offset must be page-aligned like INITDAT (see the
+    // matching rnd() in asm.c's asmb(), which is where this is written)
+    elf32phdr(putl, PT_LOAD, rnd(HEADR+textsize, INITRND), INITDAT, phydata,
         datsize, datsize+bsssize, R|W|X, INITRND); /* data */
     elf32phdr(putl, NOPTYPE, HEADR+textsize+datsize, 0, 0,
         symsize, lcsize, R, 4);			/* symbol table */

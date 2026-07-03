@@ -118,7 +118,10 @@ asmb(void)
         break;
     /*x: [[asmb()]] switch HEADTYPE (to position after text) cases(arm) */
     case H_ELF:
-        OFFSET = HEADR+textsize;
+        // claude: ELF on Linux requires vaddr modulo page == file offset
+        // modulo page, so round up to a page boundary here to match
+        // INITDAT (see span.c) and the PT_LOAD file offset in elf.c
+        OFFSET = rnd(HEADR+textsize, INITRND);
         seek(cout, OFFSET, 0);
         break;
     /*e: [[asmb()]] switch HEADTYPE (to position after text) cases(arm) */

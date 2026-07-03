@@ -173,8 +173,11 @@ asmb(void)
         textsize = rnd(HEADR+textsize, 4096)-HEADR;
         seek(cout, textsize+HEADR, 0);
         break;
-    case H_ELF: // like H_PLAN9
-        seek(cout, HEADR+textsize, 0);
+    case H_ELF:
+        // claude: ELF on Linux requires vaddr modulo page == file offset
+        // modulo page, so round up to a page boundary here to match
+        // INITDAT (see span.c) and the PT_LOAD file offset in elf.c
+        seek(cout, rnd(HEADR+textsize, INITRND), 0);
         break;
     case H_COM:
     case H_EXE:
