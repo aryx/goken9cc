@@ -1,0 +1,13 @@
+TOP=../../..
+<$TOP/mkfiles/$objtype/mkfile
+
+all:V: helloc
+
+helloc: helloc.$O
+	$LD -o $target $prereq        
+
+%.$O: %.c
+	$CC $CFLAGS $stem.c
+
+clean nuke:V:
+	rm -f *.[$OS] [$OS].out helloc

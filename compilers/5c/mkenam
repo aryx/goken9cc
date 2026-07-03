@@ -1,0 +1,15 @@
+ed - ../../include/arch/arm/5.out.h <<'!'
+v/^    A/d
+,s/\/\/.*//
+,s/^ +A/    "/
+,s/,.*$/",/
+1i
+char*	anames[] =
+{
+.
+$a
+};
+.
+w enam.c
+Q
+!
