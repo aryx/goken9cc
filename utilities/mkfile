@@ -41,5 +41,5 @@ SRC_VIEWS=\
 sync:VI:
 	for (i in $SRC_VIEWS) {
 	   if (~ $i y.tab.[ch]) echo skipping $i
-	   if not  syncweb -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/utilities/Utilities.nw $TOP/principia/utilities/Utilities_extra.nw  $i
+	   if not  syncweb -no_cache -verbose -md5sum_in_auxfile -less_marks -lang C $TOP/principia/utilities/Utilities.nw $TOP/principia/utilities/Utilities_extra.nw  $i
         }
