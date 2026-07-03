@@ -11,6 +11,10 @@
   (5a__ was previously renamed from 5a_ that was originally imported
   from https://bitbucket.org/plan9-from-bell-labs/9-cc.git )
 
+** test-infra
+- start tests/s/variants to compare object and execs produced by the
+  principia lineage vs kencc lineage for 386 and arm
+
 * 0.3 (Q2 2026) (IWP9 presentation)
 
 ** build infra
