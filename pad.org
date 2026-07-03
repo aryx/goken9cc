@@ -184,6 +184,42 @@ git push -u origin master
 
 du -s -m gokencc is now 220M vs the 467M of the cloned go repo
 
+** regression/mismatch fixes reconciliation between principia and kencc variants
+of 8a/8c/8l
+
+  ┌─────────────────────────────────┬─────────────────────────────────────┬────────────┐
+  │               Bug               │               Origin                │   Status   │
+  ├─────────────────────────────────┼─────────────────────────────────────┼────────────┤
+  │ simplec(): unsigned long x; →   │ principia 46fc889d (Dec 2016):      │ fixed      │
+  │ "illegal combination of class"  │ aspectizing BREGISTER left case 0:  │ d6fcc17a   │
+  │ (406 files failed)              │ falling into CAUTO                  │            │
+  ├─────────────────────────────────┼─────────────────────────────────────┼────────────┤
+  │ Bits/NVAR with 64-bit ulong →   │ never got kencc's uint32 fix        │ fixed      │
+  │ stack smash on functions with   │ (changes.txt "cc/bits.c" entry)     │ d6175984   │
+  │ >160 vars                       │                                     │            │
+  ├─────────────────────────────────┼─────────────────────────────────────┼────────────┤
+  │ assembler filbuf() emits        │ lost plan9's if(i->f < 0) goto pop; │ fixed      │
+  │ spurious AHISTORY per macro use │  guard during aspectization         │ d9b9a876   │
+  │  (26 .s files)                  │                                     │            │
+  ├─────────────────────────────────┼─────────────────────────────────────┼────────────┤
+  │ ccom() OAND falls into the      │                                     │            │
+  │ shift cases (bogus "stupid      │ a goto commute became a comment     │ fixed      │
+  │ shift" warnings, missed         │ saying "Fallthrough, goto commute"  │ 8bd9b787   │
+  │ rewrites)                       │                                     │            │
+  ├─────────────────────────────────┼─────────────────────────────────────┼────────────┤
+  │                                 │ deliberate divergence: kencc kept   │            │
+  │ float literal parsing, 1 ulp on │ plan9's mpatof, principia uses      │ open,      │
+  │  long mantissas                 │ strtod — principia is the correct   │ testfloat  │
+  │                                 │ one                                 │            │
+  ├─────────────────────────────────┼─────────────────────────────────────┼────────────┤
+  │ ~ on sub-word unsigned:         │                                     │            │
+  │ principia emits NOTB+MOVBLZX    │ not yet traced                      │ open,      │
+  │ (wrong per C promotion) vs      │                                     │ testnot    │
+  │ kencc NOTL                      │                                     │            │
+  └─────────────────────────────────┴─────────────────────────────────────┴────────────┘
+
+
+
 * Important commits in Go history from https://github.com:golang/go
 
 In the following the = + - ~ are giving an informal score to the commit.
