@@ -67,7 +67,7 @@ typedef struct Hashchain
 
 		/* constants and flags */
 char	*man =		"mrxtdpq";
-char	*opt =		"uvnbailo";
+char	*opt =		"uvnbailoD";
 char	artemp[] =	"/tmp/vXXXXX";
 char	movtemp[] =	"/tmp/v1XXXXX";
 char	tailtemp[] =	"/tmp/v2XXXXX";
@@ -79,6 +79,11 @@ int	cflag;
 int	oflag;
 int	uflag;
 int	vflag;
+/* claude: 'D' = deterministic archives, like GNU ar -D: zero dates and
+ * constant modes so archive bytes do not depend on build time (used by
+ * the principia mkfiles for reproducible builds; was previously
+ * hardcoded, see the git history of the //PAD: comments) */
+int	Dflag;
 
 Arfile *astart, *amiddle, *aend;	/* Temp file control block pointers */
 int	allobj = 1;			/* set when all members are object files of the same type */
@@ -166,6 +171,7 @@ main(int argc, char *argv[])
 		case 'u':	uflag = 1;	break;
 		case 'v':	vflag = 1;	break;
 		case 'x':	setcom(xcmd);	break;
+		case 'D':	Dflag = 1;	break;
 		default:
 			fprint(2, "ar: bad option `%c'\n", *cp);
 			exits("error");
@@ -725,10 +731,10 @@ armove(Biobuf *b, Arfile *ap, Armember *bp)
 	for (cp = strchr(bp->hdr.name, 0);		/* blank pad on right */
 		cp < bp->hdr.name+sizeof(bp->hdr.name); cp++)
 			*cp = ' ';
-	sprint(bp->hdr.date, "%-12ld", 0);//PAD: d->mtime); for reproducible builds
+	sprint(bp->hdr.date, "%-12ld", Dflag ? 0 : (long)d->mtime);
 	sprint(bp->hdr.uid, "%-6d", 0);
 	sprint(bp->hdr.gid, "%-6d", 0);
-	sprint(bp->hdr.mode, "%-8lo", 0644); //PAD: d->mode); for reproducible builds
+	sprint(bp->hdr.mode, "%-8lo", Dflag ? 0644 : (long)d->mode);
 	sprint(bp->hdr.size, "%-10lld", (vlong)d->length);
 	strncpy(bp->hdr.fmag, ARFMAG, 2);
 	bp->size = d->length;
@@ -822,7 +828,7 @@ rl(int fd)
 	len = symdefsize;
 	if(len&01)
 		len++;
-	sprint(a.date, "%-12ld", 0); //PAD: time(0)); for reproducible build
+	sprint(a.date, "%-12ld", Dflag ? 0 : (long)time(0));
 	sprint(a.uid, "%-6d", 0);
 	sprint(a.gid, "%-6d", 0);
 	sprint(a.mode, "%-8o", 0644);
