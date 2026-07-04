@@ -3,15 +3,17 @@
 #
 # Compile every .c file of the principia corpus with both C compiler
 # lineages and compare the object files byte-for-byte:
-#  - the kencc lineage (8c, from compilers/8ck), known good
-#  - the principia-synced lineage (8c___, from compilers/8c), kept in
-#    sync with the principia books via syncweb
+#  - the kencc lineage (8ck, from compilers/8ck), known good, the
+#    original reference
+#  - the principia-synced lineage (8c, from compilers/8c), kept in
+#    sync with the principia books via syncweb; now the default
+#    install name
 #
 # This is how the mismatches behind the tests in tests/c/variants were
 # found (see the comment at the top of each test there).
 #
 # Usage:
-#   cd <goken9cc root> && source env.sh   # puts 8c and 8c___ in PATH
+#   cd <goken9cc root> && source env.sh   # puts 8c and 8ck in PATH
 #   tests/scripts/cmp-c-corpus.sh [principia-dir] [results-dir]
 #
 # Results (one file path per line):
@@ -24,8 +26,8 @@
 TOP=${1:-$HOME/github/principia-softwarica}
 OUT=${2:-/tmp/cmp-c-corpus}
 
-if ! command -v 8c >/dev/null || ! command -v 8c___ >/dev/null; then
-	echo 'error: 8c and 8c___ must be in PATH (source env.sh first)' >&2
+if ! command -v 8c >/dev/null || ! command -v 8ck >/dev/null; then
+	echo 'error: 8c and 8ck must be in PATH (source env.sh first)' >&2
 	exit 1
 fi
 
@@ -41,8 +43,8 @@ CFLAGS="-FTVw -r -I$TOP/include/arch/386 -I$TOP/include/ALL"
 
 find $TOP -name '*.c' | sort | while read f; do
 	d=$(dirname "$f")
-	8c    $CFLAGS -I"$d" -o $OUT/k.8 "$f" >/dev/null 2>&1; rk=$?
-	8c___ $CFLAGS -I"$d" -o $OUT/p.8 "$f" >/dev/null 2>&1; rp=$?
+	8ck $CFLAGS -I"$d" -o $OUT/k.8 "$f" >/dev/null 2>&1; rk=$?
+	8c  $CFLAGS -I"$d" -o $OUT/p.8 "$f" >/dev/null 2>&1; rp=$?
 	if [ $rk -eq 0 ] && [ $rp -eq 0 ]; then
 		if cmp -s $OUT/k.8 $OUT/p.8; then
 			echo "$f" >> $OUT/match.txt

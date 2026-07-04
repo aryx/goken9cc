@@ -1,8 +1,13 @@
 # Cross-check the two toolchain lineages on toy inputs:
-#  - the kencc lineage (8a/8c/8l, 5a/5c/5l, from assemblers/8ak etc.),
-#    known good, able to cross-compile principia
-#  - the principia-synced lineage (8a___/8c___/8l___, ..., from
-#    assemblers/8a etc.), kept in sync with the principia books via syncweb
+#  - the kencc lineage (8ak/8ck/8lk, from assemblers/8ak etc.),
+#    known good, the original reference
+#  - the principia-synced lineage (8a/8c/8l, from assemblers/8a etc.),
+#    kept in sync with the principia books via syncweb; now the default
+#    install names since it was proven byte-identical to kencc over the
+#    whole principia corpus (see tests/scripts/cmp-*-corpus.sh)
+# Note: the arm lineages are not swapped yet (5a/5c/5l are still kencc,
+# 5a___/5c___/5l___ the principia-synced ones) pending 5.out.h
+# reconciliation.
 # The goal of the merge work is that both lineages produce byte-identical
 # object files and executables.
 #
@@ -43,14 +48,14 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 # without -s, and the ELF section table only with -S; e.g. the
 # elf32sectab() data offset bug was invisible in stripped links
 %.vcmp8:V:
-	8a    -r -c -o $stem.k.8 $stem.s
-	8a___ -r -c -o $stem.p.8 $stem.s
+	8ak -r -c -o $stem.k.8 $stem.s
+	8a  -r -c -o $stem.p.8 $stem.s
 	cmp $stem.k.8 $stem.p.8
-	8l    -s -H7 -E _start -o $stem.k.exe $stem.k.8
-	8l___ -s -H7 -E _start -o $stem.p.exe $stem.p.8
+	8lk -s -H7 -E _start -o $stem.k.exe $stem.k.8
+	8l  -s -H7 -E _start -o $stem.p.exe $stem.p.8
 	cmp $stem.k.exe $stem.p.exe
-	8l    -S -H7 -E _start -o $stem.ksym.exe $stem.k.8
-	8l___ -S -H7 -E _start -o $stem.psym.exe $stem.p.8
+	8lk -S -H7 -E _start -o $stem.ksym.exe $stem.k.8
+	8l  -S -H7 -E _start -o $stem.psym.exe $stem.p.8
 	cmp $stem.ksym.exe $stem.psym.exe
 
 %.vcmp5:V:
@@ -63,11 +68,11 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 
 # uses .g.* names because mk can run this in parallel with test386
 %.vgold8:V:
-	8a -r -c -o $stem.g.8 $stem.s
+	8ak -r -c -o $stem.g.8 $stem.s
 	cmp $stem.g.8 expected/$stem.8
-	8l -s -H7 -E _start -o $stem.g.exe $stem.g.8
+	8lk -s -H7 -E _start -o $stem.g.exe $stem.g.8
 	cmp $stem.g.exe expected/$stem.exe
-	8l -S -H7 -E _start -o $stem.gsym.exe $stem.g.8
+	8lk -S -H7 -E _start -o $stem.gsym.exe $stem.g.8
 	cmp $stem.gsym.exe expected/$stem.sym.exe
 
 %.vgold5:V:
@@ -82,9 +87,9 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5}
 
 %.mkgold8:V:
-	8a -r -c -o expected/$stem.8 $stem.s
-	8l -s -H7 -E _start -o expected/$stem.exe expected/$stem.8
-	8l -S -H7 -E _start -o expected/$stem.sym.exe expected/$stem.8
+	8ak -r -c -o expected/$stem.8 $stem.s
+	8lk -s -H7 -E _start -o expected/$stem.exe expected/$stem.8
+	8lk -S -H7 -E _start -o expected/$stem.sym.exe expected/$stem.8
 
 %.mkgold5:V:
 	5a -r -c -o expected/$stem.5 $stem.s
