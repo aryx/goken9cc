@@ -13,7 +13,7 @@
 # with -r (reproducible: no cwd in the object history); regenerate them
 # with the 'golden' target.
 
-CTESTS=unsigned_long manyvars not_byte float_parse
+CTESTS=unsigned_long manyvars not_byte float_parse label_if
 CTESTSMISC=f_1_e_126 minus_one_index switch_hex float vlong_max
 
 test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testgolden
