@@ -218,6 +218,14 @@ of 8a/8c/8l
   │ kencc NOTL                      │                                     │            │
   └─────────────────────────────────┴─────────────────────────────────────┴────────────┘
 
+more mismatch like label_if.c.
+In many cases due to me introducing regressions when moving around chunks
+in the principia books.
+=> when LPizing grammars, do first chunk with the head rule and then add
+ other cases after that append
+=> make sure you LPize code in a way that moving around chunks have no
+ consequence
+
 
 
 * Important commits in Go history from https://github.com:golang/go

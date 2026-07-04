@@ -7,6 +7,8 @@
   that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
 - fix regressions/mismatch between the principia and kencc variants:
   see pad.org regression/mismatch section
+- ar: add D flag like in GNU ar for "deterministic" builds (was
+  hardcoded before with some //PAD: commented code for reproducible builds)
 
 ** internals
 - rename 5a__/5l__/5c__ to 5a9/5l9/5c9
