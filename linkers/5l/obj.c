@@ -539,11 +539,33 @@ loop:
             diag("GLOBL must have a name\n%P", p);
             errorexit();
         }
-        if(!(s->type == SNONE || s->type == SXREF))
+        /* claude: a symbol may legitimately be GLOBL'd in more than one
+         * object, and that is NOT a redefinition. The compiler emits
+         * some global BSS symbols -- notably the shared scratch area
+         * '.rathole' -- as an AGLOBL in *every* object that uses them,
+         * expecting the linker to merge the declarations and keep the
+         * largest size. plan9 and the kencc 5l only report a redefinition
+         * when the symbol already has a *non-BSS* type (it is also a TEXT
+         * or DATA symbol); a repeated BSS GLOBL just widens it. This LP
+         * refactor tightened the guard to "anything already typed" and
+         * overwrote the size instead of taking the max, so linking any
+         * two objects sharing such a symbol failed with
+         * "redefinition: .rathole" -- and every libc archive member has
+         * one, so no real program linked. Restore the kencc/plan9 logic.
+         * See tests/l/variants/rathole_arm. */
+        if(s->type == SNONE || s->type == SXREF) {
+            s->type = SBSS;
+            s->value = 0;
+        }
+        if(s->type != SBSS) {
             diag("redefinition: %s\n%P", s->name, p);
+            s->type = SBSS;
+            s->value = 0;
+        }
         /*e: [[ldobj()]] sanity check for AGLOBL symbol s */
-        s->type = SBSS; // for now; will be set maybe to SDATA in dodata()
-        s->value = (p->to.offset > 0) ? p->to.offset : 0;
+        // keep the largest size seen across the repeated GLOBLs
+        if(p->to.offset > s->value)
+            s->value = p->to.offset;
         break;
     /*x: [[ldobj()]] switch opcode cases(arm) */
     case ADATA:

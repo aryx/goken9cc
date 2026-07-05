@@ -138,7 +138,21 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
         putl(HEADR+textsize+datsize+symsize); /* offset to first shdr */
     else
         putl(0);
-    putl(0L);			/* flags */
+    // claude: the kencc lk/elf.c switches on thechar here, but this
+    // shared elf.c only sees 8l's l.h (relative include) which does
+    // not declare thechar; the mach parameter is the ELF machine type
+    // and the EABI flags word is a property of exactly that, so switch
+    // on mach instead.
+    //old: putl(0L);			/* flags */
+    switch(mach) {
+    case ARM:
+        // version5 EABI soft-float, like the kencc 5l
+        putl(0x5000200);		/* flags */
+        break;
+    default:
+        putl(0L);			/* flags */
+        break;
+    }
     putw(Ehdr32sz);
     putw(Phdr32sz);
     putw(3 + addpsects);		/* # of Phdrs */

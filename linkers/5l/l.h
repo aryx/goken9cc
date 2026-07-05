@@ -186,6 +186,10 @@ enum Mark {
 enum Headtype {
      H_NOTHING = 0,
      H_PLAN9 = 2, // a.k.a H_AOUT
+     // claude: raw image, no a.out header, segments padded to pages
+     // (-H6 -R4096). This is how the bcm (raspberry pi) kernel is
+     // linked; kencc's 5l has it as case 6, an LP refactor dropped it.
+     H_RAW = 6,
      H_ELF = 7,
 };
 /*e: enum [[headtype]](arm) */

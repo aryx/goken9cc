@@ -149,20 +149,41 @@ main(int argc, char *argv[])
             INITRND = 4096; // 1 page
         break;
     /*x: [[main()]] switch HEADTYPE cases(arm) */
-    case H_ELF:	/* elf executable */
-        HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+    // claude: raw kernel image, no header (see enum Headtype). HEADR=0;
+    // the caller passes -T and -R (the bcm kernel uses -T0x80008000
+    // -R4096). Matches kencc's case 6.
+    case H_RAW:
+        HEADR = 0;
         if(INITTEXT == -1)
-            INITTEXT = 4096+HEADR;
+            INITTEXT = 0;
         if(INITDAT == -1)
             INITDAT = 0;
         if(INITRND == -1)
             INITRND = 4;
+        break;
+    case H_ELF:	/* elf executable */
+        HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+        // claude: 0x8000 text base and page rounding like the kencc
+        // lineage (the arm Linux convention; 4096+HEADR with -R4 gave
+        // a layout that qemu-user tolerates but that diverges from the
+        // proven kencc 5l output), see tests/s/variants
+        if(INITTEXT == -1)
+            INITTEXT = 0x8000+HEADR;
+        if(INITDAT == -1)
+            INITDAT = 0;
+        if(INITRND == -1)
+            INITRND = 4096;
         break;
     /*e: [[main()]] switch HEADTYPE cases(arm) */
     default:
         diag("unknown -H option");
         errorexit();
     }
+    // claude: default the physical text address to the virtual one,
+    // like the kencc 5l; it is emitted as p_paddr in the ELF program
+    // headers (it stayed -1 = 0xffffffff without this)
+    if (INITTEXTP == -1)
+        INITTEXTP = INITTEXT;
     /*s: [[main()]] sanity check INITXXX */
     if(INITDAT != 0 && INITRND != 0)
         print("warning: -D0x%lux is ignored because of -R0x%lux\n",
