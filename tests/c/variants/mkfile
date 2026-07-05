@@ -17,10 +17,27 @@
 
 CTESTS=unsigned_long manyvars not_byte float_parse label_if
 CTESTSMISC=f_1_e_126 minus_one_index switch_hex float vlong_max
+# arm C tests: kencc 5c vs principia 5c___ (arm lineage not swapped yet)
+CTESTSARM=reg_alloc_arm float_cmp_arm
 
-test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testgolden
+test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testgolden
 
-testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm}
+testarm:V: ${CTESTSARM:%=%.vcmp5}
+
+testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm} ${CTESTSARM:%=%.vgold5}
+
+# arm: compare kencc 5c and principia 5c___ object files
+%.vcmp5:V:
+	5c    -r -o $stem.k.5 $stem.c
+	5c___ -r -o $stem.p.5 $stem.c
+	cmp $stem.k.5 $stem.p.5
+
+%.vgold5:V:
+	5c -r -o $stem.g.5 $stem.c
+	cmp $stem.g.5 expected/$stem.5
+
+%.mkgold5:V:
+	5c -r -o expected/$stem.5 $stem.c
 
 %.vcmp:V:
 	8ck -r -o $stem.k.8 $stem.c
@@ -43,7 +60,7 @@ testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm}
 
 # Regenerate the golden reference outputs from the kencc lineage.
 # Only run this deliberately, after verifying the new outputs are correct.
-golden:V: ${CTESTS:%=%.mkgold} ${CTESTSMISC:%=%.mkgoldm}
+golden:V: ${CTESTS:%=%.mkgold} ${CTESTSMISC:%=%.mkgoldm} ${CTESTSARM:%=%.mkgold5}
 
 %.mkgold:V:
 	8ck -r -o expected/$stem.8 $stem.c

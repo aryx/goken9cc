@@ -25,23 +25,22 @@
 # float_386 and const_386 exercise historically long->int32 sensitive
 # paths (ieee float encoding, large/negative constants), see changes.txt.
 TESTS386=hello_386 float_386 const_386 macro_386
-TESTSARM=hello_arm
+TESTSARM=hello_arm swi_line_arm addr_arm call_arm
 
-test:V: test386 testgolden
+test:V: test386 testarm testgolden
 
 # byte-compare object files and executables produced by the two lineages
 test386:V: ${TESTS386:%=%.vcmp8}
 	./hello_386.k.exe
 
-# Not yet in the default 'test' target: the arm lineages do not agree yet
-# (include/5.out.h and linkers/5lk/5.out.h differ in opcode numbering and
-# operand encoding). Enable once 5.out.h is reconciled.
+# The arm lineages agree since the 5.out.h merge: both share
+# include/5.out.h (principia numbering), with linkers/5lk/5.out.h a
+# thin compat wrapper for the kencc-only identifiers.
 testarm:V: ${TESTSARM:%=%.vcmp5}
 	./hello_arm.k.exe
 
 # Regression check: the kencc lineage still produces the committed
-# reference outputs (the arm part guards kencc itself even though the
-# two arm lineages do not agree yet).
+# reference outputs.
 testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 
 # compare stripped and -S executables: the symbol table is only emitted
