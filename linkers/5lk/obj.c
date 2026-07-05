@@ -547,6 +547,7 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	case D_BRANCH:
 	case D_OREG:
 	case D_CONST:
+	case D_ADDR:	/* claude: serialized like D_CONST, see 5.out.h merge */
 	case D_OCONST:
 	case D_SHIFT:
 		a->offset = p[4] | (p[5]<<8) |

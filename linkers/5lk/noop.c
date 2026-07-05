@@ -85,10 +85,8 @@ noops(void)
 
 		case ABEQ:
 		case ABNE:
-		case ABCS:
-		case ABHS:
+		case ABCS:	/* claude: == ABHS/ABLO since the 5.out.h merge */
 		case ABCC:
-		case ABLO:
 		case ABMI:
 		case ABPL:
 		case ABVS:
