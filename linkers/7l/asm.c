@@ -33,7 +33,8 @@ void
 asmb(void)
 {
 	Prog *p;
-	int32 magic, t, etext;
+	int32 magic;
+	vlong t, etext, rest;
 	vlong vl;
 	Optab *o;
 
@@ -86,12 +87,14 @@ asmb(void)
 		OFFSET = HEADR+textsize;
 		seek(cout, OFFSET, SEEK__START);
 		break;
+	case 6:
 	case 7:
         //NEW: ELF Linux constrains that virtual
         // address modulo page must match file offset modulo
         // page, so simpler to start data at a page boundary
         //coupling: must match the code generating the ELF
         // section and ELF program header in elf.c
+        // (macOS Mach-O has the same constraint, see macho.c)
 		OFFSET = rnd(HEADR+textsize, INITRND);
 		seek(cout, OFFSET, SEEK__START);
 		break;
@@ -109,6 +112,22 @@ asmb(void)
 			datblk(t, datsize-t, 0);
 	}
 
+	if(HEADTYPE == 6) {
+		//NEW: pad the file up to a page boundary so that the
+		// __LINKEDIT segment (which codesign(1) fills with the
+		// code signature) starts page-aligned in the file
+		//coupling: must match the __LINKEDIT fileoffset in macho.c
+		rest = rnd(datsize, INITRND) - datsize;
+		memset(buf.dbuf, 0, MAXIO);
+		while(rest > 0) {
+			if(rest > MAXIO)
+				write(cout, buf.dbuf, MAXIO);
+			else
+				write(cout, buf.dbuf, rest);
+			rest -= MAXIO;
+		}
+	}
+
 	symsize = 0;
 	lcsize = 0;
 	if(!debug['s']) {
@@ -123,10 +142,12 @@ asmb(void)
 			OFFSET = HEADR+textsize+datsize;
 			seek(cout, OFFSET, SEEK__START);
 			break;
-		//case 6:	/* no header, padded segments */
-		//	OFFSET += rnd(datsize, 4096);
-		//	seek(cout, OFFSET, SEEK__START);
-		//	break;
+		//TODO: no symbol table for macOS (would need a Mach-O
+		// __SYMDAT-like segment, but modern XNU kernels are strict
+		// about segments so simpler to skip for now like -H0 does)
+		case 6:
+			debug['s'] = true;
+			break;
         //TODO: no symbol table for ELF Linux?
 		case 7:
 			break;
@@ -172,6 +193,9 @@ asmb(void)
 		lput(0L);
 		lput(lcsize);
 		llput(vl);			/* va of entry */
+		break;
+	case 6:	/* apple MACH */
+		asmbmacho();
 		break;
 	case 7:	/* elf */
 		debug['S'] = true;			/* symbol table */
@@ -374,7 +398,8 @@ putsymb(char *s, int t, vlong v, int ver)
 void
 asmlc(void)
 {
-	int32 oldpc, oldlc;
+	vlong oldpc;
+	int32 oldlc;
 	Prog *p;
 	int32 v, s;
 

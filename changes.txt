@@ -9,6 +9,11 @@
   see pad.org regression/mismatch section
 - ar: add D flag like in GNU ar for "deterministic" builds (was
   hardcoded before with some //PAD: commented code for reproducible builds)
+- 7l: produce macOS arm64 Mach-O executables with -H6 (in linkers/lk/macho.c,
+  adapted from the old src/cmd/ld/macho.c of 6l). Modern arm64 macOS requires
+  signed, dynamic (dyld + LC_MAIN), PIE executables, so 7l also generates
+  pc-relative ADRP/ADD pairs for MOV $sym(SB) and the mkfile runs codesign;
+  see docs/notes_macos.txt and tests/s/mini/hello_macos_arm64.s
 
 ** internals
 - rename 5a__/5l__/5c__ to 5a9/5l9/5c9

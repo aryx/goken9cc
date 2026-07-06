@@ -859,6 +859,18 @@ asmout(Prog *p, Optab *o)
 			break;
 		o2 = olsr12u(opldr12(p->as), 0, REGTMP, p->to.reg);
 		break;
+
+	//NEW: for macOS PIE executables (see the C_ADDR cases in aclass())
+	case 66:	/* mov $addr(SB), R -> adrp + add (pc-relative) */
+		aclass(&p->from);
+		d = instoffset;
+		rt = p->to.reg;
+		v = (d >> 12) - (p->pc >> 12);	/* delta in 4K pages */
+		if(v < -(1<<20) || v >= (1<<20))
+			diag("adrp page displacement out of range\n%P", p);
+		o1 = (1u<<31) | (0x10<<24) | ((v&3)<<29) | (((v>>2)&0x7FFFF)<<5) | rt;
+		o2 = opirr(AADD) | ((d & 0xFFF)<<10) | (rt<<5) | rt;
+		break;
 	}
 
 	if(debug['a'] > 1)

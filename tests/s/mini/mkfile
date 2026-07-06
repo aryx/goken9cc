@@ -12,8 +12,7 @@ PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 #TODO: hello_xv6_386.exe hello_xv6_riscv.exe
 XV6BINS=
 
-#TODO: hello_macos_arm64.exe
-MACOSBINS=hello_macos_amd64.exe
+MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe
 #TODO: hello_windows_386.exe hello_windows_amd64.exe
 WINDOWSBINS=
 
@@ -75,6 +74,15 @@ hello_linux_mips.exe: hello_linux_mips.s
 hello_macos_amd64.exe: hello_macos_amd64.s
    6a -c $prereq
    6l -o $target -E _start hello_macos_amd64.6
+
+# the codesign step is mandatory on arm64 macOS: the kernel SIGKILLs
+# unsigned (or non-PIE, or static) arm64 executables at exec() time.
+# It is skipped when cross-building from Linux (CI), where the binary
+# can not run anyway. See docs/notes_macos.txt for the whole story.
+hello_macos_arm64.exe: hello_macos_arm64.s
+   7a -c $prereq
+   7l -H6 -o $target -E _start hello_macos_arm64.7
+   if(~ `{uname} Darwin) codesign -s - -f $target
 
 # Plan9
 # -H 2 this time and -E _main

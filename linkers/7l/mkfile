@@ -26,11 +26,12 @@ OFILES=\
 	sub.$O\
 	enam.$O\
 	elf.$O\
+	macho.$O\
 
 #HOST=Posix
 
 
-HFILES=	l.h 7.out.h ../lk/ld.h ../lk/elf.h
+HFILES=	l.h 7.out.h ../lk/ld.h ../lk/elf.h ../lk/macho.h
 
 CLEANFILES=enam.c
 
