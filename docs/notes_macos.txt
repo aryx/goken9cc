@@ -117,3 +117,21 @@ The kernel kills at exec() silently, so work hypothesis-by-hypothesis:
 - syspolicyd/AMFI verdicts sometimes show up in the unified log:
       log stream --predicate 'sender == "AppleMobileFileIntegrity"'
   run in another terminal while exec'ing the binary.
+
+- if the binary runs but is silently wrong (exit 0, no output), the
+  syscalls themselves are probably failing: on error XNU sets the
+  carry flag and puts errno in x0. lldb single-stepping works fine on
+  ad-hoc signed binaries:
+
+      lldb -b -o "process launch --stop-at-entry" \
+           -o "b -a 0x100000c50" -o c \
+           -o "register read x0 x1 x2 x16 cpsr" ./file.exe
+
+  (set breakpoints only after --stop-at-entry: in batch mode a plain
+  'run' can race past breakpoints created before launch.)
+
+  Real example: helloc (tests/c/mini) printed nothing on macOS while
+  working on Linux. Stepping showed write() returning EINVAL because
+  x2 (the count) was 0x10000000e: the xwrite stub loaded 64 bits (MOV)
+  from a stack slot where 7c's caller had stored a 32-bit int (MOVW
+  was needed) -- Linux got a zeroed stack by luck, dyld leaves garbage.

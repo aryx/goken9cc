@@ -14,6 +14,11 @@
   signed, dynamic (dyld + LC_MAIN), PIE executables, so 7l also generates
   pc-relative ADRP/ADD pairs for MOV $sym(SB) and the mkfile runs codesign;
   see docs/notes_macos.txt and tests/s/mini/hello_macos_arm64.s
+- 7c-compiled programs run natively on macOS arm64 too (7c itself needed
+  no change): see helloc_macos_arm64.exe in tests/c/mini, with Darwin
+  syscall stubs and a MOVW fix in xwrite_arm64.s (a 64-bit load of a
+  32-bit int argument that only worked on Linux because the stack
+  happened to be zero there)
 
 ** internals
 - rename 5a__/5l__/5c__ to 5a9/5l9/5c9
