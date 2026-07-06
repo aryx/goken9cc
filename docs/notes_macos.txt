@@ -49,25 +49,50 @@ crash report, which makes this painful to debug (see below).
    - LC_SYMTAB and LC_DYSYMTAB (may be all zeros)
    - the MH_DYLDLINK flag in the Mach-O header.
 
-3. The binary must be PIE (MH_PIE flag). The kernel slides the whole
-   image by a random multiple of the page size at every exec (ASLR).
-   Verified experimentally: taking a working, signed, dynamic
-   executable and just clearing the MH_PIE bit makes it get
-   SIGKILLed. ld64 similarly refuses -no_pie for arm64.
+3. The binary must be PIE (MH_PIE flag). Verified experimentally:
+   taking a working, signed, dynamic executable and just clearing the
+   MH_PIE bit makes it get SIGKILLed. ld64 similarly refuses -no_pie
+   for arm64.
 
-   Consequence for code generation: an absolute virtual address is
-   unknown at link time, so "MOV $sym(SB), R" can not be a 64-bit
-   constant in a literal pool anymore; it must compute the address
-   pc-relatively at run time. This is what the ADRP/ADD pair does
-   (clang generates the same for "adrp x1, msg@PAGE; add x1, x1,
-   msg@PAGEOFF"); the pc-relative delta is invariant under the ASLR
-   slide since the slide is a multiple of the page size. See
-   asmout.c case 66 in 7l. Everything else survives ASLR for free:
-   branches are pc-relative, and extern loads/stores are encoded as
-   offsets from the SB register (R28), itself initialized with an
-   ADRP/ADD. (Address constants stored in DATA would need dyld rebase
-   fixups; 7l does not support that yet, and text is read-only so
-   literal pools could not be rebased anyway.)
+   Background: ASLR (Address Space Layout Randomization) is a
+   security mitigation, introduced in the 2000s against "return to
+   known address" style exploits: instead of loading a program at the
+   fixed virtual address written in its headers (0x100000000 here) so
+   that every run has every function and every global at the same
+   predictable address, the kernel picks a random offset at each
+   exec() -- the "slide", a multiple of the page size -- and loads
+   every segment at vaddr+slide. An attacker who can corrupt memory
+   then no longer knows where anything is. A PIE (Position
+   Independent Executable) is an executable built so that it still
+   works when moved like this. Linux slides PIE executables too, but
+   accepts non-PIE ones (and loads them at the fixed address); the
+   arm64 macOS kernel just refuses non-PIE outright. Consequence for
+   testing: a bug involving an absolute address may come and go with
+   the slide, so it can crash when run directly but "work" under a
+   debugger -- lldb launches processes with the slide forced to 0
+   (see image list -h).
+
+   Consequences for code generation:
+   - an absolute virtual address is unknown at link time, so
+     "MOV $sym(SB), R" can not be a 64-bit constant in a literal pool
+     anymore; it must compute the address pc-relatively at run time.
+     This is what the ADRP/ADD pair does (clang generates the same
+     for "adrp x1, msg@PAGE; add x1, x1, msg@PAGEOFF"); the
+     pc-relative delta is invariant under the slide since the slide
+     is a multiple of the page size. See asmout.c case 66 in 7l.
+     Branches are pc-relative and extern loads/stores are offsets
+     from the SB register (R28), itself set with an ADRP/ADD, so they
+     survive the slide for free.
+   - an absolute address stored in initialized DATA (a C global like
+     'static char *dig = "0123...";') can not be computed at run
+     time: the linker records its location in a "rebase" bytecode
+     stream in __LINKEDIT, pointed to by an LC_DYLD_INFO_ONLY load
+     command, and dyld adds the slide to each listed pointer at load
+     time (possible for __DATA because it is writable; a literal pool
+     in read-only __TEXT could not be patched this way). See
+     machorebase() in linkers/lk/macho.c. Symptom when this is
+     missing: reads through such a pointer fault under a nonzero
+     slide but work under lldb (slide 0).
 
 4. Segments must be page aligned, with the arm64 page size of 16K
    (0x4000), not 4K; vmaddr and fileoff must be congruent modulo the
@@ -135,3 +160,40 @@ The kernel kills at exec() silently, so work hypothesis-by-hypothesis:
   x2 (the count) was 0x10000000e: the xwrite stub loaded 64 bits (MOV)
   from a stack slot where 7c's caller had stored a 32-bit int (MOVW
   was needed) -- Linux got a zeroed stack by luck, dyld leaves garbage.
+
+- to trace every call to a function (poor man's strace/printf), use a
+  breakpoint with attached commands that auto-continue, in an lldb
+  script file (quoting nested commands on the lldb -o command line is
+  hopeless; also remember the write syscall's return convention:
+  carry set + errno in x0):
+
+      $ cat trace.lldb
+      process launch --stop-at-entry
+      breakpoint set -a 0x1000012a8        # the SVC inside write()
+      breakpoint command add 1
+      register read x0 x1 x2
+      continue
+      DONE
+      continue
+      $ lldb -b -s trace.lldb ./file.exe
+
+  This is how the 7c frame-size bug was found (tests/c/mini2
+  regress7c.c): the literal chunks of the format string were written
+  but none of the converted values, and one write() got a buffer
+  pointer of 0x10000000c -- an address inside the Mach-O header, i.e.
+  a 64-bit reload of a stack slot whose low 32 bits had been
+  overwritten (by an outgoing call argument, it turned out).
+
+- to see what the compiler intended (before the linker resolves
+  pseudo-instructions), compile with 7c -S and read the Plan 9
+  assembly; compare with otool -tv of the linked binary to see what
+  the linker actually emitted. Local variables appear as name-8(SP)
+  and outgoing call arguments as 16(R31), 24(R31), ... -- if a local's
+  resolved offset (autosize + negative offset) equals an argument
+  slot, that is the 7c frame bug of regress7c.c.
+
+- the 9front tree (sys/src/cmd/7c, 7l) shares ancestry with
+  compilers/7c and linkers/7l here; 'git log' + diff over there is a
+  goldmine when suspecting a codegen bug: both 7c fixes found on this
+  branch (gtext frame size, vlong first-arg spill) have counterparts
+  visible by diffing goken against 9front.

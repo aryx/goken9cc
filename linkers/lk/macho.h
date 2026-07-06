@@ -78,6 +78,14 @@ enum {
 	MACHO_SEGMENT_64 = 25,
 	MACHO_BUILD_VERSION = 0x32,
 	MACHO_MAIN = 0x80000028,
+	MACHO_DYLD_INFO_ONLY = 0x80000022,
+
+	/* rebase opcodes (high nibble) and immediates, for LC_DYLD_INFO */
+	REBASE_TYPE_POINTER = 1,
+	REBASE_OPCODE_DONE = 0x00,
+	REBASE_OPCODE_SET_TYPE_IMM = 0x10,
+	REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB = 0x20,
+	REBASE_OPCODE_DO_REBASE_IMM_TIMES = 0x50,
 
 	MACHO_PLATFORM_MACOS = 1,
 
@@ -90,4 +98,5 @@ MachoSeg*	newMachoSeg(char*, int);
 MachoSect*	newMachoSect(MachoSeg*, char*);
 MachoLoad*	newMachoLoad(uint32, uint32);
 int	machowrite(void);
+void	machorebase(void);
 void	asmbmacho(void);

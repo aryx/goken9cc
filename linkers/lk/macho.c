@@ -78,6 +78,115 @@ newMachoSect(MachoSeg *seg, char *name)
 	return s;
 }
 
+/*
+ * PIE executables get relocated (slid) by ASLR at exec time, so an
+ * absolute address stored in initialized data (e.g. a C global like
+ * 'static char *dig = "0123...";') must be adjusted by dyld. This is
+ * described by a "rebase" bytecode stream, pointed to by an
+ * LC_DYLD_INFO_ONLY load command, that lists the offsets (in the
+ * __DATA segment) of every pointer that needs the ASLR slide added.
+ * (Absolute addresses in *code* need no rebase: the code generator
+ * emits pc-relative ADRP/ADD for those, see asmout.c case 66, and
+ * __TEXT is read-only anyway so dyld could not patch it.)
+ */
+static	int32	rebasesize;	/* bytes written, for asmbmacho() */
+
+static int
+uleb128(uvlong v, uchar *p)
+{
+	int n;
+
+	n = 0;
+	do {
+		p[n] = v & 0x7f;
+		v >>= 7;
+		if(v)
+			p[n] |= 0x80;
+		n++;
+	} while(v);
+	return n;
+}
+
+/* build and write the rebase stream; call once cout is positioned
+ * at the future __LINKEDIT file offset (end of padded data) */
+void
+machorebase(void)
+{
+	Prog *p;
+	Sym *v;
+	vlong *off;
+	int noff, moff, i, j;
+	vlong o, t;
+	uchar *buf;
+	int32 n, m;
+
+	/* collect the __DATA offsets of pointers to rebase,
+	   mirroring the address cases of datblk() */
+	off = nil;
+	noff = 0;
+	moff = 0;
+	for(p = datap; p != P; p = p->link) {
+		if(p->as != ADATA)
+			continue;
+		if(p->from.sym->type == SSTRING)
+			continue;
+		if(p->to.type != D_CONST)
+			continue;
+		v = p->to.sym;
+		if(v == S)
+			continue;
+		switch(v->type) {
+		default:
+			continue;
+		case STEXT:
+		case SLEAF:
+		case SSTRING:
+		case SDATA:
+		case SBSS:
+			break;
+		}
+		if(p->reg != 8)
+			diag("initialized pointer in data must be 8 bytes\n%P", p);
+		if(noff >= moff) {
+			moff = 2*moff + 64;
+			off = realloc(off, moff*sizeof off[0]);
+		}
+		off[noff++] = p->from.sym->value + p->from.offset;
+	}
+	if(noff == 0)
+		return;
+
+	/* dyld wants ascending offsets; datap order is arbitrary */
+	for(i = 1; i < noff; i++) {
+		o = off[i];
+		for(j = i; j > 0 && off[j-1] > o; j--)
+			off[j] = off[j-1];
+		off[j] = o;
+	}
+
+	/* worst case: 2 opcodes + 10-byte uleb per pointer */
+	m = 2 + noff*12 + 8;
+	buf = malloc(m);
+	n = 0;
+	buf[n++] = REBASE_OPCODE_SET_TYPE_IMM | REBASE_TYPE_POINTER;
+	for(i = 0; i < noff; i++) {
+		/* segment 2 is __DATA (after __PAGEZERO and __TEXT) */
+		buf[n++] = REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB | 2;
+		n += uleb128(off[i], buf+n);
+		buf[n++] = REBASE_OPCODE_DO_REBASE_IMM_TIMES | 1;
+	}
+	buf[n++] = REBASE_OPCODE_DONE;
+	while(n & 7)
+		buf[n++] = REBASE_OPCODE_DONE;	/* pad to 8 bytes */
+
+	t = write(cout, buf, n);
+	if(t != n)
+		diag("error writing rebase info");
+	rebasesize = n;
+	free(buf);
+	free(off);
+}
+
 /* returns the total size of the header and load commands */
 int
 machowrite(void)
@@ -226,17 +335,25 @@ asmbmacho(void)
 	msect->flag = 1;	/* flag - zero fill */
 
 	/*
-	 * an empty __LINKEDIT segment at the end of the file.
-	 * codesign(1) requires it to exist and extends it with the
-	 * code signature that the arm64 kernel insists on.
+	 * the __LINKEDIT segment at the end of the file holds the
+	 * rebase stream (see machorebase() above), if any. codesign(1)
+	 * requires this segment to exist and extends it with the code
+	 * signature that the arm64 kernel insists on.
 	 */
 	ms = newMachoSeg("__LINKEDIT", 0);
 	ms->vaddr = INITDAT + w;
-	ms->vsize = 0;
+	ms->vsize = rnd(rebasesize, INITRND);
 	ms->fileoffset = v + rnd(datsize, INITRND);
-	ms->filesize = 0;
+	ms->filesize = rebasesize;
 	ms->prot1 = 1;	/* r-- */
 	ms->prot2 = 1;
+
+	if(rebasesize > 0) {
+		ml = newMachoLoad(MACHO_DYLD_INFO_ONLY, 10);
+		ml->data[0] = v + rnd(datsize, INITRND);	/* rebase_off */
+		ml->data[1] = rebasesize;	/* rebase_size */
+		/* bind, weak_bind, lazy_bind, export: all empty */
+	}
 
 	/* minimum OS version, so that tools know this targets macOS */
 	ml = newMachoLoad(MACHO_BUILD_VERSION, 4);

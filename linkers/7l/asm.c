@@ -126,6 +126,9 @@ asmb(void)
 				write(cout, buf.dbuf, rest);
 			rest -= MAXIO;
 		}
+		//NEW: dyld rebase info for pointers in initialized data,
+		// written at the start of __LINKEDIT
+		machorebase();
 	}
 
 	symsize = 0;

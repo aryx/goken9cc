@@ -19,6 +19,22 @@
   syscall stubs and a MOVW fix in xwrite_arm64.s (a 64-bit load of a
   32-bit int argument that only worked on Linux because the stack
   happened to be zero there)
+- fix two long-standing 7c code generation bugs, found by running
+  tests/c/mini2, vlong and float natively on macOS arm64 (all three now
+  work there, and should now work on Linux arm64 too):
+  * 7c/sgen.c gtext() overwrote the frame size with 0, so stack locals
+    overlapped the outgoing-argument area and were corrupted by any
+    call with 3+ arguments (the old "arm64 segfault" TODOs of mini2)
+  * cc/pgen.c used typechlp instead of the per-compiler typeword table
+    (like 9front does) to decide whether to spill the first argument
+    register to the stack, so a vlong first argument was passed in R0
+    by the caller but never spilled by the callee (no-op for 5c/6c/8c
+    which all have REGARG = -1)
+  runtime regression test with minimal repros: tests/c/mini2/regress7c.c
+- 7l -H6: dyld rebase info (LC_DYLD_INFO_ONLY) for pointers stored in
+  initialized data, so C globals like 'static char *dig = "0123...";'
+  survive the ASLR slide of PIE executables (see the enlarged ASLR
+  explanations in docs/notes_macos.txt)
 
 ** internals
 - rename 5a__/5l__/5c__ to 5a9/5l9/5c9

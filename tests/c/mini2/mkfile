@@ -24,8 +24,32 @@ helloprintf.exe: helloprintf.c
 #TODO: arm__: works, but if use -DDEBUG then segfault and weird output
 #TODO: arm_: works for the bool and hexa but not for 42; segfault
 #TODO: mips: gives weird output, 'false' instead of 'true'
-#TODO: arm64: illegal combination DWORD $buf-100(SP)
+#old: arm64: illegal combination DWORD $buf-100(SP)
 #       and when use global buf, get segfault
+#     (no longer reproduces as of the hello_macos_arm64 branch work)
+
+# macOS arm64: Darwin syscall stubs, Mach-O (-H6), mandatory ad-hoc
+# signature (see docs/notes_macos.txt). Runs natively on Apple Silicon.
+helloprintf_macos_arm64.exe: helloprintf.c
+   7c -Darm64 -c test.c
+   7c -Darm64 -c print_nofloat_no64.c
+   7c -Darm64 -c helloprintf.c
+   7a -Darm64 -c macos_arm64.s
+   ar_ rc libprint.a macos_arm64.7 print*.7 test.7
+   7l -H6 -L. -o $target -E _main helloprintf.7
+   if(~ `{uname} Darwin) codesign -s - -f $target
+
+# 7c code generation regression test (see comments in regress7c.c);
+# reuses the print/stub objects built by the helloprintf rule above
+regress7c_macos_arm64.exe: regress7c.c helloprintf_macos_arm64.exe
+   7c -Darm64 -c regress7c.c
+   7l -H6 -L. -o $target -E _main regress7c.7
+   if(~ `{uname} Darwin) codesign -s - -f $target
+
+# runs natively on Apple Silicon (no qemu needed)
+test_macos:V: helloprintf_macos_arm64.exe regress7c_macos_arm64.exe
+	./helloprintf_macos_arm64.exe
+	./regress7c_macos_arm64.exe
 
 ARCHS=amd64 arm arm__ mips
 test:V:
