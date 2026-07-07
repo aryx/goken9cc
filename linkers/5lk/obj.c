@@ -1225,12 +1225,16 @@ gethunk(void)
 		if(thunk >= 25L*NHUNK)
 			nh = 25L*NHUNK;
 	}
-	h = sbrk(nh);
-	if(h == (char*)-1) {
+	//h = sbrk(nh);
+	//if(h == (char*)-1) {
+    h = (char*)malloc(nh);
+    if(h == nil) {
 		diag("out of memory");
 		errorexit();
 	}
-	hunk = h;
+    memset(h, 0, nh);
+
+ 	hunk = h;
 	nhunk = nh;
 	thunk += nh;
 }

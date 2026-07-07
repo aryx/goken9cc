@@ -3,26 +3,26 @@
 /*
  * fake malloc
  */
-void*
-malloc(ulong n)
-{
-	void *p;
-
-	while(n & 7)
-		n++;
-	while(nhunk < n)
-		gethunk();
-	p = hunk;
-	nhunk -= n;
-	hunk += n;
-	return p;
-}
-
-void
-free(void *p)
-{
-	USED(p);
-}
+//void*
+//malloc(ulong n)
+//{
+//	void *p;
+//
+//	while(n & 7)
+//		n++;
+//	while(nhunk < n)
+//		gethunk();
+//	p = hunk;
+//	nhunk -= n;
+//	hunk += n;
+//	return p;
+//}
+//
+//void
+//free(void *p)
+//{
+//	USED(p);
+//}
 
 void*
 calloc(ulong m, ulong n)
@@ -45,7 +45,7 @@ realloc(void *p, ulong n)
 	return 0;
 }
 
-void
-setmalloctag(void*, ulong)
-{
-}
+//void
+//setmalloctag(void*, ulong)
+//{
+//}
