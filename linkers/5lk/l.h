@@ -367,7 +367,6 @@ void	llputl(vlong);
 void	lput(int32);
 void	lputl(int32);
 void	mkfwd(void);
-void*	mysbrk(ulong);
 void	names(void);
 void	nocache(Prog*);
 void	nuxiinit(void);
