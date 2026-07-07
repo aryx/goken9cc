@@ -9,6 +9,7 @@ char	*thestring 	= "arm64";
 /*
  *	-H0				no header
  *	-H2 -T0x100028 -R0x100000		is plan9 format
+ *	-H6				is apple MACH (macOS arm64)
  *	-H7				is elf linux
  */
 
@@ -104,8 +105,9 @@ main(int argc, char *argv[])
         goos = getgoos();
 		if(goos != nil && strcmp(goos, "linux") == 0)
 			HEADTYPE = 7;
-		//if(strcmp(goos, "darwin") == 0)
-		//	HEADTYPE = 6;
+		else
+		if(goos != nil && strcmp(goos, "darwin") == 0)
+			HEADTYPE = 6;
 		//else
 		//if(strcmp(goos, "freebsd") == 0)
 		//	HEADTYPE = 9;
@@ -131,6 +133,16 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 0x100000;
 		break;
+	case 6:	/* apple MACH */ // macOS arm64
+		HEADR = MACHORESERVE;
+		if(INITTEXT == -1)
+			/* the __PAGEZERO segment covers [0, 4GB) on arm64 macOS */
+			INITTEXT = ((vlong)1<<32) + HEADR;
+		if(INITDAT == -1)
+			INITDAT = 0;
+		if(INITRND == -1)
+			INITRND = 0x4000; /* 16K pages on arm64, not 4K */
+		break;
 	case 7:	/* elf executable */ // Linux arm64
 		HEADR = rnd(Ehdr64sz+3*Phdr64sz, 16);
 		if(INITTEXT == -1)
@@ -147,10 +159,10 @@ main(int argc, char *argv[])
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;
 	if(INITDAT != 0 && INITRND != 0)
-		print("warning: -D0x%lux is ignored because of -R0x%lux\n",
+		print("warning: -D0x%llux is ignored because of -R0x%lux\n",
 			INITDAT, INITRND);
 	if(debug['v'])
-		Bprint(&bso, "HEADER = -H0x%d -T0x%lux -D0x%lux -R0x%lux\n",
+		Bprint(&bso, "HEADER = -H0x%d -T0x%llux -D0x%llux -R0x%lux\n",
 			HEADTYPE, INITTEXT, INITDAT, INITRND);
 	Bflush(&bso);
 	zprg.as = AGOK;

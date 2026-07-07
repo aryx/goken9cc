@@ -3,7 +3,9 @@
 #define	BIT(n)	((uvlong)1<<(n))
 
 static struct {
-	uint32	start;
+	//old: was uint32, but pool.start holds a text address which can
+	// be above 4GB on macOS (see the comment on INITTEXT in l.h)
+	vlong	start;
 	uint32	size;
 } pool;
 
@@ -21,7 +23,8 @@ span(void)
 	Sym *setext, *s;
 	Optab *o;
 	int m, bflag, i;
-	int32 c, otxt, v;
+	vlong c, otxt;
+	int32 v;
 
 	if(debug['v'])
 		Bprint(&bso, "%5.2f span\n", cputime());
@@ -174,7 +177,7 @@ flushpool(Prog *p, int skip)
 	if(blitrl) {
 		if(skip){
 			if(debug['v'] && skip == 1)
-				print("note: flush literal pool at %#llux: len=%lud ref=%lux\n", p->pc+4, pool.size, pool.start);
+				print("note: flush literal pool at %#llux: len=%lud ref=%llux\n", p->pc+4, pool.size, pool.start);
 			q = prg();
 			q->as = AB;
 			q->to.type = D_BRANCH;
@@ -627,6 +630,13 @@ aclass(Adr *a)
 			case SCONST:
 			case SLEAF:
 				instoffset = s->value + a->offset;
+				//NEW: on macOS the executable is PIE and so
+				// gets relocated by ASLR; an absolute address
+				// must be computed pc-relatively at run-time
+				// (with ADRP/ADD, see asmout.c case 66)
+				if(HEADTYPE == 6 &&
+				   (t == STEXT || t == SLEAF || t == SSTRING))
+					return C_ADDR;
 				return C_LCON;
 			}
 			if(!dlm) {
@@ -635,6 +645,9 @@ aclass(Adr *a)
 					return C_AECON;
 			}
 			instoffset = s->value + a->offset + INITDAT;
+			//NEW: same PIE story as above for data addresses
+			if(HEADTYPE == 6)
+				return C_ADDR;
 			return C_LCON;
 
 		case D_AUTO:

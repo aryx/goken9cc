@@ -1,6 +1,7 @@
 #include "../lk/ld.h"
 #include "7.out.h"
 #include "../lk/elf.h"
+#include "../lk/macho.h"
 
 typedef	struct	Mask	Mask;
 typedef	struct	Optab	Optab;
@@ -202,10 +203,12 @@ enum
 
 EXTERN	int32	HEADR;			/* length of header */
 EXTERN	int	HEADTYPE;		/* type of header */
-EXTERN	int32	INITDAT;		/* data location */
+//old: was int32, but macOS needs a text (and so data) location
+// above 4GB (the __PAGEZERO segment covers the first 4GB on arm64)
+EXTERN	vlong	INITDAT;		/* data location */
 EXTERN	int32	INITRND;		/* data round above text location */
-EXTERN	int32	INITTEXT;		/* text location */
-EXTERN	int32	INITTEXTP;		/* text location (physical) */
+EXTERN	vlong	INITTEXT;		/* text location */
+EXTERN	vlong	INITTEXTP;		/* text location (physical) */
 EXTERN	char*	INITENTRY;		/* entry point */
 EXTERN	int32	autosize;
 EXTERN	Biobuf	bso;

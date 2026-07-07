@@ -103,7 +103,16 @@ codgen(Node *n, Node *nn)
 			nodreg(&nod, &nod1, REGARG);
 			gmove(&nod, &nod1);
 		} else
-		if(firstarg && typechlp[firstargtype->etype]) {
+		//old: was typechlp[...], but this must MATCH the caller-side
+		// check deciding whether the first argument is passed in
+		// REGARG (see gargs()/garg1() in ?c/txt.c): 7c uses typechlpv
+		// there (vlong included, since it fits a 64-bit register), so
+		// a vlong first argument was passed in R0 by the caller but
+		// never spilled to 0(FP) here in the callee. Like in 9front,
+		// use the per-compiler typeword table (7c ginit() sets it to
+		// typechlvp; the others keep the typechlp default from sub.c,
+		// and anyway 5c/6c/8c all have REGARG = -1).
+		if(firstarg && typeword[firstargtype->etype]) {
 			nod1 = *nodret->left;
 			nod1.sym = firstarg;
 			nod1.type = firstargtype;

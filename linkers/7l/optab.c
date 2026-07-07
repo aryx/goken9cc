@@ -131,6 +131,12 @@ Optab	optab[] =
 	{ AMOVW,	C_ADDR,	C_NONE,	C_REG,		65, 8, 0,	LFROM },
 	{ AMOVBU,	C_ADDR,	C_NONE,	C_REG,		65, 8, 0,	LFROM },
 
+	//NEW: mov $addr(SB), R for macOS PIE executables: the address is
+	// computed pc-relatively with ADRP/ADD instead of being loaded as
+	// an absolute constant from the literal pool (hence no LFROM),
+	// because ASLR relocates the whole executable at exec time
+	{ AMOV,		C_ADDR,	C_NONE,	C_REG,		66, 8, 0 },
+
 	{ AMUL,		C_REG,	C_REG,	C_REG,		15, 4, 0 },
 	{ AMUL,		C_REG,	C_NONE,	C_REG,		15, 4, 0 },
 	{ AMADD,		C_REG,	C_REG,	C_REG,		15, 4, 0 },

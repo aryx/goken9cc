@@ -1,0 +1,199 @@
+Producing (and debugging) macOS arm64 executables
+==================================================
+
+Notes gathered while adding Mach-O output to 7l (-H6), tested on
+macOS 26 (Darwin 25) on Apple Silicon in July 2026.
+See linkers/lk/macho.c, linkers/7l/, and tests/s/mini/hello_macos_arm64.s.
+
+What the arm64 kernel demands of an executable
+----------------------------------------------
+
+Modern arm64 macOS (11.0 "Big Sur" and later, stricter with each
+release) refuses to exec() a main executable unless ALL of the
+following hold. Violating any of them results in an immediate SIGKILL
+("Killed: 9", exit status 137), usually with NO diagnostic and NO
+crash report, which makes this painful to debug (see below).
+
+1. The binary must be code-signed. An "ad-hoc" signature (no
+   certificate, no identity) is enough for local execution:
+
+       codesign -s - file.exe        # -s - means ad-hoc identity
+       codesign -s - -f file.exe     # -f to replace an existing sig
+       codesign -dv file.exe         # inspect
+       codesign --verify --strict -v file.exe
+
+   codesign(1) stores the signature (a CodeDirectory of SHA-256 page
+   hashes) at the end of the __LINKEDIT segment and inserts an
+   LC_CODE_SIGNATURE load command pointing at it. Consequences for a
+   linker:
+   - a __LINKEDIT segment must exist, be the last segment, and start
+     page-aligned at the end of the file (7l emits an empty one and
+     pads the data segment with zeros up to a page boundary);
+   - there must be free space between the last load command and the
+     first section for the extra load command (7l reserves
+     MACHORESERVE = 3K of header space, cf. HEADR).
+
+2. The binary must be dynamically linked. Historically a "static"
+   executable declared its entry point with an LC_UNIXTHREAD command
+   holding the initial register state of the main thread (pc = entry),
+   and needed no dyld; that is how the old Go 6l produced macOS amd64
+   binaries (src/cmd/ld/macho.c) and how hello_macos_amd64.exe was
+   built. On today's arm64 kernel this is dead: even Apple's own
+   'ld -static' output gets SIGKILLed. A main executable must have:
+   - LC_LOAD_DYLINKER  ("/usr/lib/dyld")
+   - LC_MAIN           (entry point as a *file offset* into __TEXT;
+                        dyld calls it like a C function and expects it
+                        to return or to call exit)
+   - at least one LC_LOAD_DYLIB (dyld refuses to load a program that
+     links against no dylib; /usr/lib/libSystem.B.dylib is the one)
+   - LC_SYMTAB and LC_DYSYMTAB (may be all zeros)
+   - the MH_DYLDLINK flag in the Mach-O header.
+
+3. The binary must be PIE (MH_PIE flag). Verified experimentally:
+   taking a working, signed, dynamic executable and just clearing the
+   MH_PIE bit makes it get SIGKILLed. ld64 similarly refuses -no_pie
+   for arm64.
+
+   Background: ASLR (Address Space Layout Randomization) is a
+   security mitigation, introduced in the 2000s against "return to
+   known address" style exploits: instead of loading a program at the
+   fixed virtual address written in its headers (0x100000000 here) so
+   that every run has every function and every global at the same
+   predictable address, the kernel picks a random offset at each
+   exec() -- the "slide", a multiple of the page size -- and loads
+   every segment at vaddr+slide. An attacker who can corrupt memory
+   then no longer knows where anything is. A PIE (Position
+   Independent Executable) is an executable built so that it still
+   works when moved like this. Linux slides PIE executables too, but
+   accepts non-PIE ones (and loads them at the fixed address); the
+   arm64 macOS kernel just refuses non-PIE outright. Consequence for
+   testing: a bug involving an absolute address may come and go with
+   the slide, so it can crash when run directly but "work" under a
+   debugger -- lldb launches processes with the slide forced to 0
+   (see image list -h).
+
+   Consequences for code generation:
+   - an absolute virtual address is unknown at link time, so
+     "MOV $sym(SB), R" can not be a 64-bit constant in a literal pool
+     anymore; it must compute the address pc-relatively at run time.
+     This is what the ADRP/ADD pair does (clang generates the same
+     for "adrp x1, msg@PAGE; add x1, x1, msg@PAGEOFF"); the
+     pc-relative delta is invariant under the slide since the slide
+     is a multiple of the page size. See asmout.c case 66 in 7l.
+     Branches are pc-relative and extern loads/stores are offsets
+     from the SB register (R28), itself set with an ADRP/ADD, so they
+     survive the slide for free.
+   - an absolute address stored in initialized DATA (a C global like
+     'static char *dig = "0123...";') can not be computed at run
+     time: the linker records its location in a "rebase" bytecode
+     stream in __LINKEDIT, pointed to by an LC_DYLD_INFO_ONLY load
+     command, and dyld adds the slide to each listed pointer at load
+     time (possible for __DATA because it is writable; a literal pool
+     in read-only __TEXT could not be patched this way). See
+     machorebase() in linkers/lk/macho.c. Symptom when this is
+     missing: reads through such a pointer fault under a nonzero
+     slide but work under lldb (slide 0).
+
+4. Segments must be page aligned, with the arm64 page size of 16K
+   (0x4000), not 4K; vmaddr and fileoff must be congruent modulo the
+   page size; __TEXT conventionally starts at file offset 0 (i.e. it
+   maps the Mach-O header too) and at vmaddr 0x100000000, right above
+   the 4GB __PAGEZERO segment. No segment may be writable and
+   executable at the same time (7l uses r-x for __TEXT and rw- for
+   __DATA; the old 7/5 maxprot/initprot values are refused).
+
+Raw syscalls on arm64 macOS differ from Linux: the syscall number
+goes in x16 (not x8), and the trap is SVC $0x80 (not SVC $0); write=4,
+exit=1 (BSD numbers, cf. the 0x2000000 "BSD class" prefix that amd64
+puts in rax instead). Unsupported by Apple, but fine for tests.
+
+How to debug a binary that refuses to run
+-----------------------------------------
+
+The kernel kills at exec() silently, so work hypothesis-by-hypothesis:
+
+- exit status 137 = 128+9 = SIGKILL at (or right after) exec: think
+  code signing / PIE / static. Exit 139 = SIGSEGV: the binary ran but
+  crashed, look for a crash report (*.ips) in
+  ~/Library/Logs/DiagnosticReports/ ("Killed: 9" often leaves none).
+
+- once dyld is involved (LC_LOAD_DYLINKER present), errors become
+  visible: dyld prints an explicit message to stderr ("dyld[pid]:
+  ...") instead of the kernel's silent SIGKILL. Getting from "silent
+  kill" to "dyld error message" is progress.
+
+- bisect against a known-good binary. Write the equivalent assembly
+  for clang/as and link it with Apple's ld, check it runs, then
+  compare load commands one by one with the suspect binary:
+
+      otool -lv file.exe            # load commands, segments
+      otool -tv file.exe            # disassemble __text
+      vmmap, size -m                # more segment views
+      log show --last 2m --predicate 'process == "kernel"'
+
+  This is how the constraints above were found: Apple's 'ld -static'
+  output was killed too (rules out a 7l bug, proves static is banned);
+  a working dynamic binary with MH_PIE bit-flipped off was killed
+  (proves PIE is mandatory).
+
+- codesign --verify --strict -v tells whether the signature is the
+  problem (valid signature + still killed = look elsewhere).
+
+- syspolicyd/AMFI verdicts sometimes show up in the unified log:
+      log stream --predicate 'sender == "AppleMobileFileIntegrity"'
+  run in another terminal while exec'ing the binary.
+
+- if the binary runs but is silently wrong (exit 0, no output), the
+  syscalls themselves are probably failing: on error XNU sets the
+  carry flag and puts errno in x0. lldb single-stepping works fine on
+  ad-hoc signed binaries:
+
+      lldb -b -o "process launch --stop-at-entry" \
+           -o "b -a 0x100000c50" -o c \
+           -o "register read x0 x1 x2 x16 cpsr" ./file.exe
+
+  (set breakpoints only after --stop-at-entry: in batch mode a plain
+  'run' can race past breakpoints created before launch.)
+
+  Real example: helloc (tests/c/mini) printed nothing on macOS while
+  working on Linux. Stepping showed write() returning EINVAL because
+  x2 (the count) was 0x10000000e: the xwrite stub loaded 64 bits (MOV)
+  from a stack slot where 7c's caller had stored a 32-bit int (MOVW
+  was needed) -- Linux got a zeroed stack by luck, dyld leaves garbage.
+
+- to trace every call to a function (poor man's strace/printf), use a
+  breakpoint with attached commands that auto-continue, in an lldb
+  script file (quoting nested commands on the lldb -o command line is
+  hopeless; also remember the write syscall's return convention:
+  carry set + errno in x0):
+
+      $ cat trace.lldb
+      process launch --stop-at-entry
+      breakpoint set -a 0x1000012a8        # the SVC inside write()
+      breakpoint command add 1
+      register read x0 x1 x2
+      continue
+      DONE
+      continue
+      $ lldb -b -s trace.lldb ./file.exe
+
+  This is how the 7c frame-size bug was found (tests/c/mini2
+  regress7c.c): the literal chunks of the format string were written
+  but none of the converted values, and one write() got a buffer
+  pointer of 0x10000000c -- an address inside the Mach-O header, i.e.
+  a 64-bit reload of a stack slot whose low 32 bits had been
+  overwritten (by an outgoing call argument, it turned out).
+
+- to see what the compiler intended (before the linker resolves
+  pseudo-instructions), compile with 7c -S and read the Plan 9
+  assembly; compare with otool -tv of the linked binary to see what
+  the linker actually emitted. Local variables appear as name-8(SP)
+  and outgoing call arguments as 16(R31), 24(R31), ... -- if a local's
+  resolved offset (autosize + negative offset) equals an argument
+  slot, that is the 7c frame bug of regress7c.c.
+
+- the 9front tree (sys/src/cmd/7c, 7l) shares ancestry with
+  compilers/7c and linkers/7l here; 'git log' + diff over there is a
+  goldmine when suspecting a codegen bug: both 7c fixes found on this
+  branch (gtext frame size, vlong first-arg spill) have counterparts
+  visible by diffing goken against 9front.

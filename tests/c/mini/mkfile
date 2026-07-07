@@ -9,6 +9,10 @@ clean:V:
 test_one:V: all
         ./helloc.exe
 
+# runs natively on Apple Silicon (no qemu needed)
+test_macos:V: helloc_macos_arm64.exe
+        ./helloc_macos_arm64.exe
+
 #TODO? 'ar rc'? in principia we use 'ar vu'
 #old: $LD_ -X to require NOSPLIT for all linked code, especially in $stem.6
 #alt: ar rc libmini.a *.$O_   below
@@ -19,6 +23,19 @@ helloc.exe: helloc.c
    $AS_ -D$objtype -c xexit_$objtype.s
    $AR_ rc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
    $LD_ -L. -o $target -E _start helloc.$O_
+
+# macOS arm64: same helloc.c but with the Darwin syscall stubs, the
+# Mach-O header (-H6) and the mandatory ad-hoc code signature
+# (see docs/notes_macos.txt); start_arm64.s is OS-independent so it
+# is reused as-is. Runs natively on Apple Silicon.
+helloc_macos_arm64.exe: helloc.c
+   7c -Darm64 -c helloc.c
+   7a -Darm64 -c start_arm64.s
+   7a -Darm64 -c xwrite_macos_arm64.s
+   7a -Darm64 -c xexit_macos_arm64.s
+   ar_ rc libmini.a start_arm64.7 xwrite_macos_arm64.7 xexit_macos_arm64.7
+   7l -H6 -L. -o $target -E _start helloc.7
+   if(~ `{uname} Darwin) codesign -s - -f $target
 
 #alt: 5l_ -H7 -L. -o $target -E _start helloc.5 xwrite_arm.5 xexit_arm.5 start_arm.5
 # when ar_ is not working

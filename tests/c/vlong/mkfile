@@ -19,6 +19,21 @@ helloprintf.exe: helloprintf.c
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ vlrt.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
+# macOS arm64: Darwin syscall stubs, Mach-O (-H6), mandatory ad-hoc
+# signature (see docs/notes_macos.txt). Runs natively on Apple Silicon.
+helloprintf_macos_arm64.exe: helloprintf.c
+   7c -Darm64 -c vlrt.c
+   7c -Darm64 -c print.c
+   7c -Darm64 -c helloprintf.c
+   7a -Darm64 -c macos_arm64.s
+   ar_ rc libprint.a macos_arm64.7 print*.7 vlrt.7
+   7l -H6 -L. -o $target -E _main helloprintf.7
+   if(~ `{uname} Darwin) codesign -s - -f $target
+
+# runs natively on Apple Silicon (no qemu needed)
+test_macos:V: helloprintf_macos_arm64.exe
+	./helloprintf_macos_arm64.exe
+
 #TODO: arm_ arm64 mips 386 riscv
 #TODO: mips: give weird result, 0x00 and '*' instead of 42
 ARCHS=amd64 arm arm__ mips
