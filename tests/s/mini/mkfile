@@ -82,7 +82,8 @@ hello_macos_amd64.exe: hello_macos_amd64.s
 hello_macos_arm64.exe: hello_macos_arm64.s
    7a -c $prereq
    7l -H6 -o $target -E _start hello_macos_arm64.7
-   if(~ `{uname} Darwin) codesign -s - -f $target
+   #TODO:
+   #if(~ `{uname} Darwin) codesign -s - -f $target
 
 # Plan9
 # -H 2 this time and -E _main
