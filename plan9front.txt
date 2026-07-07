@@ -1,0 +1,11 @@
+Most of the code in goken9cc derives from code in Plan 9 4th edition
+available at https://9p.io/sources/plan9/sys/src/ and
+https://github.com/plan9foundation/plan9, as well as code from
+https://code.google.com/p/ken-cc/ and https://github.com:golang/go/ at
+the 99a10eff16b79cfb8ccf36e586532a40b17a203c commit point
+(see pad.org for more info).
+
+Some code and fixes comes also from 9front at https://github.com/9front/9front
+such as:
+ - 7a/7c/7l:
+ - 6a/6c/6l:
