@@ -698,7 +698,12 @@ addhist(long line, int type)
 
 	u = malloc(sizeof(Auto));
 	s = malloc(sizeof(Sym));
-	s->name = malloc(2*(histfrogp+1) + 1);
+	/* claude: mallocz (zeroed): the loop fills only name[1..2*histfrogp];
+	 * name[0] and the trailing double-NUL terminator are left for the
+	 * allocator to zero. plan9 relies on malloc returning zeroed memory,
+	 * lib9's here does not, so putsymb() emitted garbage 'z' history
+	 * records read past the buffer. See linkers/5l/hist.c. */
+	s->name = mallocz(2*(histfrogp+1) + 1, 1);
 
 	u->asym = s;
 	u->type = type;
