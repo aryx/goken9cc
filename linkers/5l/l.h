@@ -221,8 +221,15 @@ enum rxxx {
 /*s: enum [[misc_constant]](arm) */
 enum misc_constants {
     /*s: constant [[BIG]] */
-    //BIG       = (1<<12)-4,
-    BIG     = 0,
+    /* claude: BIG is the SB (R12/setR12) bias -- setR12 points BIG bytes
+     * into the data segment so SB-relative offsets reach +/-BIG, and
+     * aclass() subtracts BIG from a symbol's offset. It MUST match
+     * kencc's (1<<12)-4; principia had set it to 0 (SB = data start),
+     * which is internally consistent and works but changes constant-load
+     * instruction selection (near C_FEXT/C_SEXT vs far C_LEXT) for every
+     * load, making arm executables ~3% larger and byte-different from
+     * kencc across the whole corpus. */
+    BIG     = (1<<12)-4,
     /*e: constant [[BIG]] */
 
     /*s: constant [[STRINGSZ]] */
