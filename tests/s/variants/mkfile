@@ -64,6 +64,12 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 	5l    -s -H7 -E _start -o $stem.k.exe $stem.k.5
 	5l___ -s -H7 -E _start -o $stem.p.exe $stem.p.5
 	cmp $stem.k.exe $stem.p.exe
+	# also compare UNSTRIPPED (the two lineages, same run -- no golden):
+	# catches the addhist history-symbol-table mismatch (mallocz fix)
+	# that the stripped compare above cannot see
+	5l    -H7 -E _start -o $stem.k.uexe $stem.k.5
+	5l___ -H7 -E _start -o $stem.p.uexe $stem.p.5
+	cmp $stem.k.uexe $stem.p.uexe
 
 # uses .g.* names because mk can run this in parallel with test386
 %.vgold8:V:
@@ -95,4 +101,4 @@ golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5}
 	5l -s -H7 -E _start -o expected/$stem.exe expected/$stem.5
 
 clean nuke:V:
-	rm -f *.[58] *.exe
+	rm -f *.[58] *.exe *.uexe
