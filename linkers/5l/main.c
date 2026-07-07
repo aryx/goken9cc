@@ -290,9 +290,18 @@ main(int argc, char *argv[])
         else
             doprof2();
     /*e: [[main()]] call doprofxxx() if profiling */
-    noops();
-
+    /* claude: match the kencc pass order: dodata(); follow(); noops();
+     * span(). follow() (xfol) collapses the unreachable fall-through RET
+     * the compiler emits after every function's real RET -- 5c emits
+     * 'RET; RET' and relies on the linker to drop the dead one. principia
+     * had dropped the follow() call entirely, so every function kept a
+     * duplicate 'B (R14)' (~4 bytes each): the second of the two arm
+     * linker mismatches (the other was BIG). follow() must run BEFORE
+     * noops(), which rewrites ARET into B/MOVW and would hide the
+     * terminal RET from xfol's detection. */
     dodata();
+    follow();
+    noops();
     dotext();
     /*e: [[main()]] resolving phase */
 
