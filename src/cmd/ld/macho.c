@@ -16,6 +16,7 @@ static	MachoLoad	load[16];
 static	MachoSeg	seg[16];
 static	MachoDebug	xdebug[16];
 static	int	nload, nseg, ndebug, nsect;
+static	uint32	machoflags = 1;	/* MH_NOUNDEFS; modern path ORs in DYLDLINK|TWOLEVEL */
 
 void
 machoinit(void)
@@ -156,7 +157,7 @@ machowrite(void)
 	LPUT(2);	/* file type - mach executable */
 	LPUT(nload+nseg+ndebug);
 	LPUT(loadsize);
-	LPUT(1);	/* flags - no undefines */
+	LPUT(machoflags);	/* flags */
 	if(macho64)
 		LPUT(0);	/* reserved */
 
@@ -445,6 +446,7 @@ asmbmacho(vlong symdatva, vlong symo)
 {
 	vlong v, w;
 	vlong va;
+	vlong entryoff;
 	int a, i, ptrsize;
 	char *pkgroot;
 	MachoHdr *mh;
@@ -534,11 +536,21 @@ asmbmacho(vlong symdatva, vlong symo)
 		diag("unknown macho architecture");
 		errorexit();
 	case '6':
-		ml = newMachoLoad(5, 42+2);	/* unix thread */
-		ml->data[0] = 4;	/* thread type */
-		ml->data[1] = 42;	/* word count */
-		ml->data[2+32] = entryvalue();	/* start pc */
-		ml->data[2+32+1] = entryvalue()>>16>>16;	// hide >>32 for 8l
+		/*
+		 * Modern macOS: LC_MAIN (an entry-point file offset) replaces the
+		 * old LC_UNIXTHREAD register-state entry. dyld runs first, then calls
+		 * this offset. Also flag the binary as dynamically linked + two-level
+		 * (MH_DYLDLINK|MH_TWOLEVEL) as ld64 does. We stay non-PIE: the amd64
+		 * backend emits 32-bit-absolute addressing, so the image must load in
+		 * the low 4GB (hence no 0x100000000 __PAGEZERO and no MH_PIE here).
+		 */
+		machoflags = 1 | 4 | 0x80;	/* MH_NOUNDEFS|MH_DYLDLINK|MH_TWOLEVEL */
+		entryoff = entryvalue() - (INITTEXT - HEADR);	/* file offset of entry */
+		ml = newMachoLoad(0x80000028, 4);	/* LC_MAIN */
+		ml->data[0] = entryoff;			/* entryoff low */
+		ml->data[1] = entryoff>>16>>16;		/* entryoff high */
+		ml->data[2] = 0;			/* stacksize low */
+		ml->data[3] = 0;			/* stacksize high */
 		break;
 	case '8':
 		ml = newMachoLoad(5, 16+2);	/* unix thread */
@@ -546,6 +558,30 @@ asmbmacho(vlong symdatva, vlong symo)
 		ml->data[1] = 16;	/* word count */
 		ml->data[2+10] = entryvalue();	/* start pc */
 		break;
+	}
+
+	if(thechar == '6') {
+		/* modern macOS metadata load commands */
+		ml = newMachoLoad(0x80000022, 10);	/* LC_DYLD_INFO_ONLY - empty (no fixups/binds) */
+
+		ml = newMachoLoad(0x1b, 4);		/* LC_UUID (deterministic placeholder) */
+		ml->data[0] = 0x6b636e6b;
+		ml->data[1] = 0x36303963;
+		ml->data[2] = 0x6f72636d;
+		ml->data[3] = 0x00000073;
+
+		ml = newMachoLoad(0x32, 4);		/* LC_BUILD_VERSION */
+		ml->data[0] = 1;			/* platform = PLATFORM_MACOS */
+		ml->data[1] = 0x000a0f00;		/* minos 10.15.0 */
+		ml->data[2] = 0x000a0f00;		/* sdk   10.15.0 */
+		ml->data[3] = 0;			/* ntools */
+
+		ml = newMachoLoad(12, 4+(strlen("/usr/lib/libSystem.B.dylib")+1+7)/8*2);	/* LC_LOAD_DYLIB */
+		ml->data[0] = 24;			/* name offset */
+		ml->data[1] = 2;			/* timestamp */
+		ml->data[2] = 0x051f0000;		/* current_version 1311.0.0 */
+		ml->data[3] = 0x00010000;		/* compatibility_version 1.0.0 */
+		strcpy((char*)&ml->data[4], "/usr/lib/libSystem.B.dylib");
 	}
 
 	if(!debug['d']) {
