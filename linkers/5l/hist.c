@@ -11,7 +11,11 @@ addhist(long line, int type)
     int i, j, k;
     /*e: [[addhist()]] other locals */
 
-    s = malloc(sizeof(Sym));
+    /* claude: mallocz (zeroed): addhist only sets s->name below; every
+     * other Sym field (value/type/sig/file/subtype/...) is left implicitly
+     * zero, which the old bump allocator guaranteed. With direct lib9
+     * malloc they would be garbage in the history symbol. */
+    s = mallocz(sizeof(Sym), 1);
 
     u = malloc(sizeof(Auto));
     u->asym = s;

@@ -424,7 +424,15 @@ loop:
     /*e: [[ldobj()]] if ANAME or ASIGNAME(arm) */
     // else
 
-    p = malloc(sizeof(Prog));
+    /* claude: mallocz (zeroed), not plain malloc: only the fields decoded
+     * from the object below are set (as/scond/reg/line/from/to/link/cond);
+     * p->optab, p->mark, p->align, p->pc etc. are left implicitly zero and
+     * MUST be, or oplook() reads a stale p->optab and misclassifies even the
+     * zero-width ATEXT (breaking the text layout so TEXT symbols never get an
+     * address and the -H7 ELF e_entry comes out 0). The old bump allocator
+     * handed back zeroed memory; with the direct-malloc path this alloc must
+     * zero itself. */
+    p = mallocz(sizeof(Prog), 1);
     p->as = o;
     /*s: [[ldobj()]] read one instruction in p */
     // mostly opposite of outcode() in 5a

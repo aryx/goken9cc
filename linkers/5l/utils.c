@@ -60,7 +60,12 @@ lookup(char *symb, int v)
 
     // else
     /*s: [[lookup()]] if symbol name not found */
-    sym = malloc(sizeof(Sym));
+    /* claude: mallocz (zeroed): only name/version/value/type/sig/link are
+     * set below; file/subtype/become/frame are left implicitly zero (the
+     * bump allocator used to hand back zeroed memory). With the direct
+     * lib9-malloc path they would be garbage -- e.g. a stale s->file makes
+     * putsymb() emit a wrong file index in the symbol table. */
+    sym = mallocz(sizeof(Sym), 1);
     sym->name = malloc(len + 1); // +1 again?
     memmove(sym->name, symb, len);
     sym->version = v;
