@@ -18,6 +18,60 @@ static	MachoDebug	xdebug[16];
 static	int	nload, nseg, ndebug, nsect;
 static	uint32	machoflags = 1;	/* MH_NOUNDEFS; modern path ORs in DYLDLINK|TWOLEVEL */
 
+/*
+ * Dynamic imports declared via "6l -I got:remote:lib": the program defines a
+ * GOT pointer slot `got` (8 bytes of zero in __DATA) and calls through it; the
+ * linker emits an LC_DYLD_INFO non-lazy bind that makes dyld resolve `remote`
+ * from `lib` into that slot at load. Only libSystem (dylib ordinal 1) is wired.
+ */
+static struct {
+	char	*got;
+	char	*remote;
+	char	*lib;
+} dynimp[16];
+static int ndynimp;
+static uchar	machobind[1024];
+static int	nmachobind;
+static vlong	machobindoff;
+
+void
+adddynimp(char *spec)
+{
+	char *s, *p, *q;
+
+	if(ndynimp >= nelem(dynimp)) {
+		diag("too many -I imports");
+		errorexit();
+	}
+	s = strdup(spec);
+	p = utfrune(s, ':');
+	q = p ? utfrune(p+1, ':') : nil;
+	if(p == nil || q == nil) {
+		diag("bad -I import (want got:remote:lib): %s", spec);
+		errorexit();
+	}
+	*p = '\0';
+	*q = '\0';
+	dynimp[ndynimp].got = s;
+	dynimp[ndynimp].remote = p+1;
+	dynimp[ndynimp].lib = q+1;
+	ndynimp++;
+}
+
+static void
+binduleb(vlong v)
+{
+	uchar b;
+
+	do {
+		b = v & 0x7f;
+		v >>= 7;
+		if(v)
+			b |= 0x80;
+		machobind[nmachobind++] = b;
+	} while(v);
+}
+
 void
 machoinit(void)
 {
@@ -564,7 +618,32 @@ asmbmacho(vlong symdatva, vlong symo)
 
 	if(thechar == '6') {
 		/* modern macOS metadata load commands */
-		ml = newMachoLoad(0x80000022, 10);	/* LC_DYLD_INFO_ONLY - empty (no fixups/binds) */
+
+		/* build the non-lazy bind opcode stream for -I imports (libSystem, ord 1) */
+		nmachobind = 0;
+		machobindoff = 0;
+		if(ndynimp > 0) {
+			char *cp;
+			Sym *isym;
+
+			for(i=0; i<ndynimp; i++) {
+				isym = lookup(dynimp[i].got, 0);
+				machobind[nmachobind++] = 0x10 | 1;	/* SET_DYLIB_ORDINAL_IMM, libSystem */
+				machobind[nmachobind++] = 0x40;		/* SET_SYMBOL_TRAILING_FLAGS_IMM, 0 */
+				for(cp = dynimp[i].remote; *cp; cp++)
+					machobind[nmachobind++] = *cp;
+				machobind[nmachobind++] = 0;
+				machobind[nmachobind++] = 0x50 | 1;	/* SET_TYPE_IMM, BIND_TYPE_POINTER */
+				machobind[nmachobind++] = 0x70 | 2;	/* SET_SEGMENT_AND_OFFSET_ULEB, __DATA */
+				binduleb(symaddr(isym) - (va+v));	/* slot offset within __DATA */
+				machobind[nmachobind++] = 0x90;		/* DO_BIND */
+			}
+			machobind[nmachobind++] = 0x00;			/* DONE */
+			machobindoff = linkoff + nlinkdata + nstrtab;	/* after symtab/strtab */
+		}
+		ml = newMachoLoad(0x80000022, 10);	/* LC_DYLD_INFO_ONLY */
+		ml->data[2] = machobindoff;		/* bind_off */
+		ml->data[3] = nmachobind;		/* bind_size */
 
 		ml = newMachoLoad(0x1b, 4);		/* LC_UUID (deterministic placeholder) */
 		ml->data[0] = 0x6b636e6b;
@@ -593,9 +672,9 @@ asmbmacho(vlong symdatva, vlong symo)
 
 		ms = newMachoSeg("__LINKEDIT", 0);
 		ms->vaddr = va+v+rnd(segdata.len, INITRND);
-		ms->vsize = nlinkdata+nstrtab;
+		ms->vsize = nlinkdata+nstrtab+nmachobind;
 		ms->fileoffset = linkoff;
-		ms->filesize = nlinkdata+nstrtab;
+		ms->filesize = nlinkdata+nstrtab+nmachobind;
 		ms->prot1 = 7;
 		ms->prot2 = 3;
 
@@ -668,4 +747,15 @@ asmbmacho(vlong symdatva, vlong symo)
 	a = machowrite();
 	if(a > MACHORESERVE)
 		diag("MACHORESERVE too small: %d > %d", a, MACHORESERVE);
+
+	/*
+	 * Append the dyld bind opcode stream at the end of __LINKEDIT.
+	 * machowrite() buffers the header via LPUT; flush it to disk first so
+	 * these direct seek/ewrite calls don't race the buffered output.
+	 */
+	if(nmachobind > 0) {
+		cflush();
+		seek(cout, machobindoff, 0);
+		ewrite(cout, machobind, nmachobind);
+	}
 }
