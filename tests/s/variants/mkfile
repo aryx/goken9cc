@@ -36,8 +36,27 @@ test386:V: ${TESTS386:%=%.vcmp8}
 # The arm lineages agree since the 5.out.h merge: both share
 # include/5.out.h (principia numbering), with linkers/5lk/5.out.h a
 # thin compat wrapper for the kencc-only identifiers.
-testarm:V: ${TESTSARM:%=%.vcmp5}
+testarm:V: ${TESTSARM:%=%.vcmp5} mixaddr_arm
 	./hello_arm.k.exe
+
+# mixaddr_arm: a symbol whose address is taken by BOTH the assembler
+# ($shared(SB) -> D_ADDR) and the compiler (&shared -> D_CONST+name),
+# linked together. The two must collapse to one literal-pool entry.
+# principia's 5l___ canonicalizes D_CONST+name to D_ADDR in inopd(), so
+# it deduped; kencc 5l did not and kept two identical pool entries -- an
+# 8-byte divergence that surfaced only in the kernel bootstrap link
+# (init.out, which mixes init9.s + initcode.c and made the whole 9pi
+# kernel differ). 5lk now applies the same canonicalization. -l -R1
+# reproduces the bootstrap link mode. See linkers/5lk/obj.c zaddr /
+# linkers/5l/obj.c inopd.
+mixaddr_arm:V:
+	5a    -r -c -o mixaddr_arm.s.k.5 mixaddr_arm.s
+	5a___ -r -c -o mixaddr_arm.s.p.5 mixaddr_arm.s
+	cmp mixaddr_arm.s.k.5 mixaddr_arm.s.p.5
+	5c    -r -o mixaddr_arm.c.5 mixaddr_arm.c
+	5l    -l -R1 -s -E _start -o mixaddr_arm.k.exe mixaddr_arm.s.k.5 mixaddr_arm.c.5
+	5l___ -l -R1 -s -E _start -o mixaddr_arm.p.exe mixaddr_arm.s.k.5 mixaddr_arm.c.5
+	cmp mixaddr_arm.k.exe mixaddr_arm.p.exe
 
 # Regression check: the kencc lineage still produces the committed
 # reference outputs.

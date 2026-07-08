@@ -518,6 +518,14 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	a->reg = p[1];
 	a->sym = h[c];
 	a->name = p[3];
+	/* claude: canonicalize $sym(SB) (D_CONST with a name) to D_ADDR,
+	 * matching principia 5l___ inopd(), so a symbol referenced both as
+	 * an assembler address (native D_ADDR) and a compiler constant
+	 * (D_CONST) shares ONE literal-pool slot. Without it kencc kept two
+	 * identical pool entries, an 8-byte divergence surfacing only in the
+	 * kernel bootstrap link (init.out mixes init9.s asm + initcode.c). */
+	if(a->type == D_CONST && a->name != D_NONE)
+		a->type = D_ADDR;
 	c = 4;
 
 	if(a->reg < 0 || a->reg > NREG) {
