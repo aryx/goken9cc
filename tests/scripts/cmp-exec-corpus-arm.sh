@@ -7,16 +7,14 @@
 # executables linked by 5l, and the bcm/9pi kernel). This exercises the
 # whole arm pipeline (5c/5a -> iar -> 5l).
 #
-# NOTE the arm naming asymmetry (opposite of x86): on arm the *plain*
-# names are the KENCC lineage and the '___' names are the principia one:
-#  - kencc lineage: 5a/5c/5l (assemblers/5ak, compilers/5ck+cck,
-#    linkers/5lk), known good, the original reference; the DEFAULT install
-#    names, used directly by the principia mkfiles -> built with no shim.
-#  - principia lineage: 5a___/5c___/5l___ (assemblers/5a, compilers/5c+cc,
-#    linkers/5l), synced with the principia books via syncweb; shimmed
-#    under the plain names in a private bin dir for its build.
-# (On x86 it is the other way around: 8a/8c/8l are principia, 8ak/8ck/8lk
-# are kencc. See cmp-exec-corpus.sh.)
+# Same convention as x86 (arm was swapped once it reached byte parity):
+#  - principia lineage: 5a/5c/5l (assemblers/5a, compilers/5c+cc,
+#    linkers/5l), synced with the principia books via syncweb; the DEFAULT
+#    install names, used directly by the principia mkfiles -> built with no
+#    shim.
+#  - kencc lineage: 5ak/5ck/5lk (assemblers/5ak, compilers/5ck+cck,
+#    linkers/5lk), known good, the original reference; shimmed under the
+#    plain names in a private bin dir for its build.
 #
 # Both builds run in the same tree (mk nuke in between), so the cwd
 # recorded in the object history is identical and no -r flag is needed.
@@ -38,7 +36,7 @@
 TOP=${1:-$HOME/github/principia-softwarica}
 OUT=${2:-/tmp/cmp-exec-corpus-arm}
 
-for t in 5a 5c 5l 5a___ 5c___ 5l___ iar mk; do
+for t in 5a 5c 5l 5ak 5ck 5lk iar mk; do
 	if ! command -v $t >/dev/null; then
 		echo "error: $t must be in PATH (source env.sh first)" >&2
 		exit 1
@@ -52,11 +50,11 @@ fi
 
 mkdir -p $OUT
 
-# shim dir mapping the plain tool names to the principia ('___') lineage
-SHIM=$OUT/bin.prin
+# shim dir mapping the plain tool names to the kencc lineage
+SHIM=$OUT/bin.kencc
 mkdir -p $SHIM
 for t in 5a 5c 5l; do
-	command -v ${t}___ >/dev/null && ln -sf $(command -v ${t}___) $SHIM/$t
+	command -v ${t}k >/dev/null && ln -sf $(command -v ${t}k) $SHIM/$t
 done
 
 build() {
@@ -79,10 +77,10 @@ build() {
 	fi
 }
 
-# kencc is the default (plain names) on arm: build it with no shim first
-build kencc
-# principia lineage: shim the '___' tools under the plain names
-PATH=$SHIM:$PATH build prin
+# kencc is now shimmed under the plain names (5ak/5ck/5lk -> 5a/5c/5l)
+PATH=$SHIM:$PATH build kencc
+# principia is the default (plain names), used directly with no shim
+build prin
 
 # compare the two snapshots file by file
 : > $OUT/match.txt

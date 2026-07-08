@@ -17,7 +17,7 @@
 
 CTESTS=unsigned_long manyvars not_byte float_parse label_if
 CTESTSMISC=f_1_e_126 minus_one_index switch_hex float vlong_max
-# arm C tests: kencc 5c vs principia 5c___ (arm lineage not swapped yet)
+# arm C tests: kencc 5ck vs principia 5c (principia is the plain-name default)
 CTESTSARM=reg_alloc_arm float_cmp_arm
 
 test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testgolden
@@ -25,33 +25,33 @@ test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testgolden
 testarm:V: ${CTESTSARM:%=%.vcmp5} bigfunc_arm
 
 # bigfunc_arm: a single function whose compiled text exceeds 128K (1<<17),
-# to exercise the arm linker's large-procedure path. principia's 5l___
-# used to diag()+errorexit() ("Procedure too large") where kencc 5l keeps
+# to exercise the arm linker's large-procedure path. principia's 5l
+# used to diag()+errorexit() ("Procedure too large") where kencc 5lk keeps
 # going (ARM B/BL reach +-32MB, so the procedure links fine); both must
-# now link it byte-identically. See linkers/5l/layout.c dotext(). The
+# now link it byte-identically. See linkers/5lk/layout.c dotext(). The
 # source is generated (not committed) because a >128K function is huge;
 # entry is f itself so no libc/startup is needed.
 bigfunc_arm:V:
 	awk 'BEGIN{print "long g;"; print "long f(void){"; print "  long x=g;"; for(i=1;i<7000;i++) print "  x=x+g*"i";"; print "  return x;"; print "}"}' > bigfunc_arm.c
-	5c    -r -o bigfunc_arm.5 bigfunc_arm.c
-	5l    -H7 -E f -o bigfunc_arm.k.exe bigfunc_arm.5
-	5l___ -H7 -E f -o bigfunc_arm.p.exe bigfunc_arm.5
+	5ck    -r -o bigfunc_arm.5 bigfunc_arm.c
+	5lk    -H7 -E f -o bigfunc_arm.k.exe bigfunc_arm.5
+	5l -H7 -E f -o bigfunc_arm.p.exe bigfunc_arm.5
 	cmp bigfunc_arm.k.exe bigfunc_arm.p.exe
 
 testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm} ${CTESTSARM:%=%.vgold5}
 
-# arm: compare kencc 5c and principia 5c___ object files
+# arm: compare kencc 5ck and principia 5c object files
 %.vcmp5:V:
-	5c    -r -o $stem.k.5 $stem.c
-	5c___ -r -o $stem.p.5 $stem.c
+	5ck    -r -o $stem.k.5 $stem.c
+	5c -r -o $stem.p.5 $stem.c
 	cmp $stem.k.5 $stem.p.5
 
 %.vgold5:V:
-	5c -r -o $stem.g.5 $stem.c
+	5ck -r -o $stem.g.5 $stem.c
 	cmp $stem.g.5 expected/$stem.5
 
 %.mkgold5:V:
-	5c -r -o expected/$stem.5 $stem.c
+	5ck -r -o expected/$stem.5 $stem.c
 
 %.vcmp:V:
 	8ck -r -o $stem.k.8 $stem.c

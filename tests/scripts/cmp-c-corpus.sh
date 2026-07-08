@@ -10,10 +10,9 @@
 #   cd <goken9cc root> && source env.sh
 #   tests/scripts/cmp-c-corpus.sh [principia-dir] [results-dir] [arch]
 #
-# arch is 386 (default) or arm. Note the asymmetric naming: on x86 the
-# principia-synced lineage owns the plain names (8c) and kencc is 8ck,
-# while on arm (not swapped yet) kencc owns 5c and the principia one
-# is 5c___.
+# arch is 386 (default) or arm. Both arches use the same convention now:
+# the principia-synced lineage owns the plain names (8c, 5c) and kencc
+# owns the k names (8ck, 5ck).
 #
 # Results (one file path per line):
 #   match.txt     both compile, identical objects
@@ -28,7 +27,7 @@ ARCH=${3:-386}
 
 case $ARCH in
 386)	KCC=8ck; PCC=8c;    O=8;;
-arm)	KCC=5c;  PCC=5c___; O=5;;
+arm)	KCC=5ck;  PCC=5c; O=5;;
 *)	echo "error: unknown arch $ARCH (386 or arm)" >&2; exit 1;;
 esac
 

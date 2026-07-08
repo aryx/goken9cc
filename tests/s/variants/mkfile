@@ -5,9 +5,11 @@
 #    kept in sync with the principia books via syncweb; now the default
 #    install names since it was proven byte-identical to kencc over the
 #    whole principia corpus (see tests/scripts/cmp-*-corpus.sh)
-# Note: the arm lineages are not swapped yet (5a/5c/5l are still kencc,
-# 5a___/5c___/5l___ the principia-synced ones) pending 5.out.h
-# reconciliation.
+# Both arches are now swapped the same way: the principia-synced lineage
+# installs under the plain names (8a/8c/8l, 5a/5c/5l) and the kencc lineage
+# under the k names (8ak/8ck/8lk, 5ak/5ck/5lk). arm reached parity after
+# the 5.out.h merge and the whole-corpus byte-identity proof (asm/compiler
+# sweeps + cmp-exec-corpus-arm.sh: 254/254 including the 9pi kernel).
 # The goal of the merge work is that both lineages produce byte-identical
 # object files and executables.
 #
@@ -42,20 +44,20 @@ testarm:V: ${TESTSARM:%=%.vcmp5} mixaddr_arm
 # mixaddr_arm: a symbol whose address is taken by BOTH the assembler
 # ($shared(SB) -> D_ADDR) and the compiler (&shared -> D_CONST+name),
 # linked together. The two must collapse to one literal-pool entry.
-# principia's 5l___ canonicalizes D_CONST+name to D_ADDR in inopd(), so
-# it deduped; kencc 5l did not and kept two identical pool entries -- an
+# principia's 5l canonicalizes D_CONST+name to D_ADDR in inopd(), so
+# it deduped; kencc 5lk did not and kept two identical pool entries -- an
 # 8-byte divergence that surfaced only in the kernel bootstrap link
 # (init.out, which mixes init9.s + initcode.c and made the whole 9pi
 # kernel differ). 5lk now applies the same canonicalization. -l -R1
 # reproduces the bootstrap link mode. See linkers/5lk/obj.c zaddr /
-# linkers/5l/obj.c inopd.
+# linkers/5lk/obj.c inopd.
 mixaddr_arm:V:
-	5a    -r -c -o mixaddr_arm.s.k.5 mixaddr_arm.s
-	5a___ -r -c -o mixaddr_arm.s.p.5 mixaddr_arm.s
+	5ak    -r -c -o mixaddr_arm.s.k.5 mixaddr_arm.s
+	5a -r -c -o mixaddr_arm.s.p.5 mixaddr_arm.s
 	cmp mixaddr_arm.s.k.5 mixaddr_arm.s.p.5
-	5c    -r -o mixaddr_arm.c.5 mixaddr_arm.c
-	5l    -l -R1 -s -E _start -o mixaddr_arm.k.exe mixaddr_arm.s.k.5 mixaddr_arm.c.5
-	5l___ -l -R1 -s -E _start -o mixaddr_arm.p.exe mixaddr_arm.s.k.5 mixaddr_arm.c.5
+	5ck    -r -o mixaddr_arm.c.5 mixaddr_arm.c
+	5lk    -l -R1 -s -E _start -o mixaddr_arm.k.exe mixaddr_arm.s.k.5 mixaddr_arm.c.5
+	5l -l -R1 -s -E _start -o mixaddr_arm.p.exe mixaddr_arm.s.k.5 mixaddr_arm.c.5
 	cmp mixaddr_arm.k.exe mixaddr_arm.p.exe
 
 # Regression check: the kencc lineage still produces the committed
@@ -77,17 +79,17 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 	cmp $stem.ksym.exe $stem.psym.exe
 
 %.vcmp5:V:
-	5a    -r -c -o $stem.k.5 $stem.s
-	5a___ -r -c -o $stem.p.5 $stem.s
+	5ak    -r -c -o $stem.k.5 $stem.s
+	5a -r -c -o $stem.p.5 $stem.s
 	cmp $stem.k.5 $stem.p.5
-	5l    -s -H7 -E _start -o $stem.k.exe $stem.k.5
-	5l___ -s -H7 -E _start -o $stem.p.exe $stem.p.5
+	5lk    -s -H7 -E _start -o $stem.k.exe $stem.k.5
+	5l -s -H7 -E _start -o $stem.p.exe $stem.p.5
 	cmp $stem.k.exe $stem.p.exe
 	# also compare UNSTRIPPED (the two lineages, same run -- no golden):
 	# catches the addhist history-symbol-table mismatch (mallocz fix)
 	# that the stripped compare above cannot see
-	5l    -H7 -E _start -o $stem.k.uexe $stem.k.5
-	5l___ -H7 -E _start -o $stem.p.uexe $stem.p.5
+	5lk    -H7 -E _start -o $stem.k.uexe $stem.k.5
+	5l -H7 -E _start -o $stem.p.uexe $stem.p.5
 	cmp $stem.k.uexe $stem.p.uexe
 
 # uses .g.* names because mk can run this in parallel with test386
@@ -100,9 +102,9 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 	cmp $stem.gsym.exe expected/$stem.sym.exe
 
 %.vgold5:V:
-	5a -r -c -o $stem.g.5 $stem.s
+	5ak -r -c -o $stem.g.5 $stem.s
 	cmp $stem.g.5 expected/$stem.5
-	5l -s -H7 -E _start -o $stem.g.exe $stem.g.5
+	5lk -s -H7 -E _start -o $stem.g.exe $stem.g.5
 	cmp $stem.g.exe expected/$stem.exe
 
 # Regenerate the golden reference outputs from the kencc lineage.
@@ -116,8 +118,8 @@ golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5}
 	8lk -S -H7 -E _start -o expected/$stem.sym.exe expected/$stem.8
 
 %.mkgold5:V:
-	5a -r -c -o expected/$stem.5 $stem.s
-	5l -s -H7 -E _start -o expected/$stem.exe expected/$stem.5
+	5ak -r -c -o expected/$stem.5 $stem.s
+	5lk -s -H7 -E _start -o expected/$stem.exe expected/$stem.5
 
 clean nuke:V:
 	rm -f *.[58] *.exe *.uexe

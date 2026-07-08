@@ -10,10 +10,9 @@
 #   cd <goken9cc root> && source env.sh
 #   tests/scripts/cmp-s-corpus.sh [principia-dir] [results-dir] [arch]
 #
-# arch is 386 (default) or arm. Note the asymmetric naming: on x86 the
-# principia-synced lineage owns the plain names (8a) and kencc is 8ak,
-# while on arm (not swapped yet) kencc owns 5a and the principia one
-# is 5a___.
+# arch is 386 (default) or arm. Both arches use the same convention now:
+# the principia-synced lineage owns the plain names (8a, 5a) and kencc
+# owns the k names (8ak, 5ak).
 
 TOP=${1:-$HOME/github/principia-softwarica}
 OUT=${2:-/tmp/cmp-s-corpus}
@@ -21,7 +20,7 @@ ARCH=${3:-386}
 
 case $ARCH in
 386)	KAS=8ak; PAS=8a;    O=8;;
-arm)	KAS=5a;  PAS=5a___; O=5;;
+arm)	KAS=5ak;  PAS=5a; O=5;;
 *)	echo "error: unknown arch $ARCH (386 or arm)" >&2; exit 1;;
 esac
 
