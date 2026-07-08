@@ -1022,10 +1022,8 @@ copyu(Prog *p, Adr *v, Adr *s)
 
 	case ABEQ:	/* read, read */
 	case ABNE:
-	case ABCS:
-	case ABHS:
+	case ABCS:	/* claude: == ABHS/ABLO since the 5.out.h merge */
 	case ABCC:
-	case ABLO:
 	case ABMI:
 	case ABPL:
 	case ABVS:
@@ -1231,12 +1229,13 @@ struct {
 	int scond; 
 	int notscond; 
 } predinfo[]  = { 
-	{ ABEQ,	ABNE,	0x0,	0x1, }, 
-	{ ABNE,	ABEQ,	0x1,	0x0, }, 
-	{ ABCS,	ABCC,	0x2,	0x3, }, 
-	{ ABHS,	ABLO,	0x2,	0x3, }, 
-	{ ABCC,	ABCS,	0x3,	0x2, }, 
-	{ ABLO,	ABHS,	0x3,	0x2, }, 
+	{ ABEQ,	ABNE,	0x0,	0x1, },
+	{ ABNE,	ABEQ,	0x1,	0x0, },
+	/* claude: the ABHS/ABLO rows are gone: ABCS/ABCC alias them
+	 * since the 5.out.h merge, and this table is indexed by
+	 * (as - ABEQ) so it must mirror the enum Opcode branch block */
+	{ ABCS,	ABCC,	0x2,	0x3, },
+	{ ABCC,	ABCS,	0x3,	0x2, },
 	{ ABMI,	ABPL,	0x4,	0x5, }, 
 	{ ABPL,	ABMI,	0x5,	0x4, }, 
 	{ ABVS,	ABVC,	0x6,	0x7, }, 

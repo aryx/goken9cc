@@ -117,6 +117,11 @@ asmb(void)
         seek(cout, OFFSET, SEEK__START);
         break;
     /*x: [[asmb()]] switch HEADTYPE (to position after text) cases(arm) */
+    // claude: raw image (-H6), data segment padded to a page, like kencc
+    case H_RAW:
+        OFFSET = rnd(HEADR+textsize, INITRND);
+        seek(cout, OFFSET, SEEK__START);
+        break;
     case H_ELF:
         // claude: ELF on Linux requires vaddr modulo page == file offset
         // modulo page, so round up to a page boundary here to match
@@ -159,6 +164,12 @@ asmb(void)
             seek(cout, OFFSET, SEEK__START);
             break;
         /*x: [[asmb()]] switch HEADTYPE (for symbol table generation) cases(arm) */
+        // claude: raw image (-H6): symbols go after the page-padded data,
+        // continuing from the OFFSET set for the text above. Like kencc.
+        case H_RAW:
+            OFFSET += rnd(datsize, INITRND);
+            seek(cout, OFFSET, SEEK__START);
+            break;
         case H_ELF:
             break;
         /*e: [[asmb()]] switch HEADTYPE (for symbol table generation) cases(arm) */
@@ -213,6 +224,9 @@ asmb(void)
         lput(lcsize);
         break;
     /*x: [[asmb()]] switch HEADTYPE (for header generation) cases(arm) */
+    // claude: raw image (-H6) has HEADR==0, so emit no header at all
+    case H_RAW:
+        break;
     case H_ELF:
         debug['S'] = 1;			/* symbol table */
         elf32(ARM, ELFDATA2LSB, 0, nil);

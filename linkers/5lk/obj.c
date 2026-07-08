@@ -518,6 +518,14 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	a->reg = p[1];
 	a->sym = h[c];
 	a->name = p[3];
+	/* claude: canonicalize $sym(SB) (D_CONST with a name) to D_ADDR,
+	 * matching principia 5l___ inopd(), so a symbol referenced both as
+	 * an assembler address (native D_ADDR) and a compiler constant
+	 * (D_CONST) shares ONE literal-pool slot. Without it kencc kept two
+	 * identical pool entries, an 8-byte divergence surfacing only in the
+	 * kernel bootstrap link (init.out mixes init9.s asm + initcode.c). */
+	if(a->type == D_CONST && a->name != D_NONE)
+		a->type = D_ADDR;
 	c = 4;
 
 	if(a->reg < 0 || a->reg > NREG) {
@@ -547,6 +555,7 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	case D_BRANCH:
 	case D_OREG:
 	case D_CONST:
+	case D_ADDR:	/* claude: serialized like D_CONST, see 5.out.h merge */
 	case D_OCONST:
 	case D_SHIFT:
 		a->offset = p[4] | (p[5]<<8) |
@@ -697,7 +706,12 @@ addhist(long line, int type)
 
 	u = malloc(sizeof(Auto));
 	s = malloc(sizeof(Sym));
-	s->name = malloc(2*(histfrogp+1) + 1);
+	/* claude: mallocz (zeroed): the loop fills only name[1..2*histfrogp];
+	 * name[0] and the trailing double-NUL terminator are left for the
+	 * allocator to zero. plan9 relies on malloc returning zeroed memory,
+	 * lib9's here does not, so putsymb() emitted garbage 'z' history
+	 * records read past the buffer. See linkers/5l/hist.c. */
+	s->name = mallocz(2*(histfrogp+1) + 1, 1);
 
 	u->asym = s;
 	u->type = type;
@@ -902,6 +916,9 @@ loop:
 	nhunk -= sizeof(Prog);
 	hunk += sizeof(Prog);
 
+	/* claude: unlike prg() this does NOT copy zprg; only the fields decoded
+	 * from the object below are set. p->optab/mark/cond/align are left zero
+	 * on purpose and depend on gethunk() returning zeroed memory. */
 	p->as = o;
 	p->scond = bloc[1];
 	p->reg = bloc[2];
@@ -1227,11 +1244,22 @@ gethunk(void)
 	}
 	//h = sbrk(nh);
 	//if(h == (char*)-1) {
-    h = (char*)malloc(nh);
-    if(h == nil) {
+    //alt: use mallocz() so no need memset below
+	h = (char*)malloc(nh);
+	if(h == nil) {
 		diag("out of memory");
 		errorexit();
 	}
+	/* claude: the hunk MUST come back zeroed. Callers carve raw structs out
+	 * of it and initialize only the fields they read, relying on the rest
+	 * being zero -- see ldobj() below, which allocates a Prog straight from
+	 * the hunk and sets p->as/scond/reg/line/from/to/link but leaves
+	 * p->optab/mark/cond/align at their assumed-zero value (unlike prg(),
+	 * which copies zprg); zaddr() likewise carves a->sval/a->ieee scratch
+	 * buffers that must be zero past the bytes it fills. The original plan9
+	 * linker got zero-filled pages from sbrk(); mixing sbrk() with the
+	 * malloc() the rest of lib9 uses is unsafe on this host, so allocate
+	 * with mallocz() (malloc + zero), matching the other linkers. */
     memset(h, 0, nh);
 
  	hunk = h;

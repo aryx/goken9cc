@@ -187,10 +187,12 @@ outcode(int opcode, int scond,  Gen *g1, int reg, Gen *g2)
     Bputc(&obuf, opcode);
     Bputc(&obuf, scond);
     Bputc(&obuf, reg);
-    Bputc(&obuf, lineno);
-    Bputc(&obuf, lineno>>8);
-    Bputc(&obuf, lineno>>16);
-    Bputc(&obuf, lineno>>24);
+    // claude: stmtline, not lineno: deterministic wrt the yacc
+    // newline-lookahead timing, see the yylex wrapper in lex.c
+    Bputc(&obuf, stmtline);
+    Bputc(&obuf, stmtline>>8);
+    Bputc(&obuf, stmtline>>16);
+    Bputc(&obuf, stmtline>>24);
     outopd(g1, sf);
     outopd(g2, st);
 

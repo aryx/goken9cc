@@ -321,7 +321,14 @@ ximm:	'$' con
 |	'$' oreg
 	{
 		$$ = $2;
-		$$.type = D_CONST;
+		/* claude: $name(SB) etc. is D_ADDR since the 5.out.h merge
+		 * with the principia lineage (which types symbol addresses
+		 * distinctly, like plan9 x86 8a does); a nameless $con(R)
+		 * stays D_CONST */
+		if($$.name != D_NONE)
+			$$.type = D_ADDR;
+		else
+			$$.type = D_CONST;
 	}
 |	'$' '*' '$' oreg
 	{

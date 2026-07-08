@@ -441,6 +441,9 @@ aclass(Adr *a)
 		return C_FCON;
 
 	case D_CONST:
+	case D_ADDR:	/* claude: symbol addresses arrive as D_ADDR since
+			 * the 5.out.h merge; same classification as the old
+			 * D_CONST-with-a-name (the name switch below) */
 		switch(a->name) {
 
 		case D_NONE:

@@ -25,23 +25,41 @@
 # float_386 and const_386 exercise historically long->int32 sensitive
 # paths (ieee float encoding, large/negative constants), see changes.txt.
 TESTS386=hello_386 float_386 const_386 macro_386
-TESTSARM=hello_arm
+TESTSARM=hello_arm swi_line_arm addr_arm call_arm
 
-test:V: test386 testgolden
+test:V: test386 testarm testgolden
 
 # byte-compare object files and executables produced by the two lineages
 test386:V: ${TESTS386:%=%.vcmp8}
 	./hello_386.k.exe
 
-# Not yet in the default 'test' target: the arm lineages do not agree yet
-# (include/5.out.h and linkers/5lk/5.out.h differ in opcode numbering and
-# operand encoding). Enable once 5.out.h is reconciled.
-testarm:V: ${TESTSARM:%=%.vcmp5}
+# The arm lineages agree since the 5.out.h merge: both share
+# include/5.out.h (principia numbering), with linkers/5lk/5.out.h a
+# thin compat wrapper for the kencc-only identifiers.
+testarm:V: ${TESTSARM:%=%.vcmp5} mixaddr_arm
 	./hello_arm.k.exe
 
+# mixaddr_arm: a symbol whose address is taken by BOTH the assembler
+# ($shared(SB) -> D_ADDR) and the compiler (&shared -> D_CONST+name),
+# linked together. The two must collapse to one literal-pool entry.
+# principia's 5l___ canonicalizes D_CONST+name to D_ADDR in inopd(), so
+# it deduped; kencc 5l did not and kept two identical pool entries -- an
+# 8-byte divergence that surfaced only in the kernel bootstrap link
+# (init.out, which mixes init9.s + initcode.c and made the whole 9pi
+# kernel differ). 5lk now applies the same canonicalization. -l -R1
+# reproduces the bootstrap link mode. See linkers/5lk/obj.c zaddr /
+# linkers/5l/obj.c inopd.
+mixaddr_arm:V:
+	5a    -r -c -o mixaddr_arm.s.k.5 mixaddr_arm.s
+	5a___ -r -c -o mixaddr_arm.s.p.5 mixaddr_arm.s
+	cmp mixaddr_arm.s.k.5 mixaddr_arm.s.p.5
+	5c    -r -o mixaddr_arm.c.5 mixaddr_arm.c
+	5l    -l -R1 -s -E _start -o mixaddr_arm.k.exe mixaddr_arm.s.k.5 mixaddr_arm.c.5
+	5l___ -l -R1 -s -E _start -o mixaddr_arm.p.exe mixaddr_arm.s.k.5 mixaddr_arm.c.5
+	cmp mixaddr_arm.k.exe mixaddr_arm.p.exe
+
 # Regression check: the kencc lineage still produces the committed
-# reference outputs (the arm part guards kencc itself even though the
-# two arm lineages do not agree yet).
+# reference outputs.
 testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 
 # compare stripped and -S executables: the symbol table is only emitted
@@ -65,6 +83,12 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 	5l    -s -H7 -E _start -o $stem.k.exe $stem.k.5
 	5l___ -s -H7 -E _start -o $stem.p.exe $stem.p.5
 	cmp $stem.k.exe $stem.p.exe
+	# also compare UNSTRIPPED (the two lineages, same run -- no golden):
+	# catches the addhist history-symbol-table mismatch (mallocz fix)
+	# that the stripped compare above cannot see
+	5l    -H7 -E _start -o $stem.k.uexe $stem.k.5
+	5l___ -H7 -E _start -o $stem.p.uexe $stem.p.5
+	cmp $stem.k.uexe $stem.p.uexe
 
 # uses .g.* names because mk can run this in parallel with test386
 %.vgold8:V:
@@ -96,4 +120,4 @@ golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5}
 	5l -s -H7 -E _start -o expected/$stem.exe expected/$stem.5
 
 clean nuke:V:
-	rm -f *.[58] *.exe
+	rm -f *.[58] *.exe *.uexe

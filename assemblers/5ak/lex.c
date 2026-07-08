@@ -3,6 +3,10 @@
 #include "y.tab.h"
 #include <ctype.h>
 
+/* claude: line of the statement being parsed, maintained by the yylex
+ * wrapper at the bottom of this file and recorded by outcode() */
+int32	stmtline;
+
 int
 systemtype(int sys)
 {
@@ -511,6 +515,7 @@ zaddr(Gen *a, int s)
 
 	case D_OREG:
 	case D_CONST:
+	case D_ADDR:	/* claude: serialized like D_CONST, see 5.out.h merge */
 	case D_BRANCH:
 	case D_SHIFT:
 		l = a->offset;
@@ -622,10 +627,16 @@ jackpot:
 	Bputc(&obuf, a);
 	Bputc(&obuf, scond);
 	Bputc(&obuf, reg);
-	Bputc(&obuf, lineno);
-	Bputc(&obuf, lineno>>8);
-	Bputc(&obuf, lineno>>16);
-	Bputc(&obuf, lineno>>24);
+	/* claude: stmtline, not lineno: outcode() runs when yacc reduces
+	 * the instruction rule, which may or may not have consumed the
+	 * newline lookahead depending on the LALR tables (yacc default
+	 * reductions), so lineno here is off by one for some rules and
+	 * not others; stmtline is captured by the yylex wrapper below
+	 * and is deterministic (and matches the principia lineage) */
+	Bputc(&obuf, stmtline);
+	Bputc(&obuf, stmtline>>8);
+	Bputc(&obuf, stmtline>>16);
+	Bputc(&obuf, stmtline>>24);
 	zaddr(g1, sf);
 	zaddr(g2, st);
 
@@ -705,5 +716,23 @@ outhist(void)
 	}
 }
 
+/* claude: wrap the shared yylex to record on which line the statement
+ * being parsed sits (see the stmtline comment in outcode above): every
+ * token except the end-of-statement ';' (a newline) updates stmtline,
+ * so when outcode runs, stmtline holds the line of the statement's
+ * last token whether or not the newline lookahead was consumed */
+#define yylex yylex0
 #include "../../compilers/cck/lexbody"
 #include "../../compilers/cck/macbody"
+#undef yylex
+
+int
+yylex(void)
+{
+	int t;
+
+	t = yylex0();
+	if(t != ';')
+		stmtline = lineno;
+	return t;
+}

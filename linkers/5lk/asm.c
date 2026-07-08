@@ -612,6 +612,8 @@ datblk(long s, long n, int str)
 			break;
 
 		case D_CONST:
+		case D_ADDR:	/* claude: DATA $sym(SB) values arrive as
+				 * D_ADDR since the 5.out.h merge */
 			d = p->to.offset;
 			v = p->to.sym;
 			if(v) {
@@ -1581,9 +1583,7 @@ opbra(int a, int sc)
 	case ABEQ:	return (0x0<<28)|(0x5<<25);
 	case ABNE:	return (0x1<<28)|(0x5<<25);
 	case ABCS:	return (0x2<<28)|(0x5<<25);
-	case ABHS:	return (0x2<<28)|(0x5<<25);
 	case ABCC:	return (0x3<<28)|(0x5<<25);
-	case ABLO:	return (0x3<<28)|(0x5<<25);
 	case ABMI:	return (0x4<<28)|(0x5<<25);
 	case ABPL:	return (0x5<<28)|(0x5<<25);
 	case ABVS:	return (0x6<<28)|(0x5<<25);
