@@ -27,6 +27,7 @@ y.output
 
 # pad's test files
 *.exe
+*.uexe
 
 # tex object files
 *.aux
