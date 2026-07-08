@@ -35,6 +35,7 @@
 #include	"../ld/elf.h"
 #include	"../ld/dwarf.h"
 #include	"../ld/macho.h"
+#include	"../ld/pe.h"
 
 #define	Dbufslop	100
 
@@ -408,6 +409,12 @@ asmb(void)
 			elftextsh += 8;
 #endif
 		break;
+
+	case 10:	/* PE (Windows) */
+		debug['8'] = 1;	/* 64-bit addresses */
+		v = rnd(HEADR+textsize, INITRND);
+		seek(cout, v, 0);
+		break;
 	}
 
 	if(debug['v'])
@@ -750,6 +757,10 @@ asmb(void)
 		cflush();
 		if(a+elfwriteinterp() > ELFRESERVE)
 			diag("ELFRESERVE too small: %d > %d", a, ELFRESERVE);
+		break;
+
+	case 10:
+		asmbpe();
 		break;
 	}
 	cflush();

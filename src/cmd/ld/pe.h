@@ -51,6 +51,43 @@ typedef struct {
 	IMAGE_DATA_DIRECTORY DataDirectory[16];
 } IMAGE_OPTIONAL_HEADER;
 
+// PE32+ optional header (64-bit): ImageBase and the four stack/heap sizes
+// widen to 8 bytes and BaseOfData is dropped. The uint64 fields fall on
+// naturally-aligned offsets, so the struct is written to disk verbatim
+// (like the 32-bit one) with no padding surprises: it is exactly 240 bytes.
+typedef struct {
+	uint16 Magic;
+	uint8  MajorLinkerVersion;
+	uint8  MinorLinkerVersion;
+	uint32 SizeOfCode;
+	uint32 SizeOfInitializedData;
+	uint32 SizeOfUninitializedData;
+	uint32 AddressOfEntryPoint;
+	uint32 BaseOfCode;
+	uint64 ImageBase;
+	uint32 SectionAlignment;
+	uint32 FileAlignment;
+	uint16 MajorOperatingSystemVersion;
+	uint16 MinorOperatingSystemVersion;
+	uint16 MajorImageVersion;
+	uint16 MinorImageVersion;
+	uint16 MajorSubsystemVersion;
+	uint16 MinorSubsystemVersion;
+	uint32 Win32VersionValue;
+	uint32 SizeOfImage;
+	uint32 SizeOfHeaders;
+	uint32 CheckSum;
+	uint16 Subsystem;
+	uint16 DllCharacteristics;
+	uint64 SizeOfStackReserve;
+	uint64 SizeOfStackCommit;
+	uint64 SizeOfHeapReserve;
+	uint64 SizeOfHeapCommit;
+	uint32 LoaderFlags;
+	uint32 NumberOfRvaAndSizes;
+	IMAGE_DATA_DIRECTORY DataDirectory[16];
+} IMAGE_OPTIONAL_HEADER64;
+
 typedef struct {
 	uint8  Name[8];
 	uint32 VirtualSize;
@@ -77,6 +114,9 @@ typedef struct {
 #define PEBASE		0x00400000
 
 enum {
+	IMAGE_NT_OPTIONAL_HDR32_MAGIC = 0x10b,	// PE32
+	IMAGE_NT_OPTIONAL_HDR64_MAGIC = 0x20b,	// PE32+
+
 	IMAGE_FILE_MACHINE_I386 = 0x14c,
 	IMAGE_FILE_MACHINE_AMD64 = 0x8664,
 

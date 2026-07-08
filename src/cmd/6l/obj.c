@@ -36,6 +36,7 @@
 #include	"../ld/lib.h"
 #include	"../ld/elf.h"
 #include	"../ld/macho.h"
+#include	"../ld/pe.h"
 #include	"../ld/dwarf.h"
 
 #include	<ar.h>
@@ -142,8 +143,14 @@ main(int argc, char *argv[])
 		if(strcmp(goos, "freebsd") == 0)
 			HEADTYPE = 9;
 		else
+		if(strcmp(goos, "windows") == 0)
+			HEADTYPE = 10;
+		else
 			print("goos is not known: %s\n", goos);
 	}
+
+	if(HEADTYPE == 10 && strcmp(outfile, "6.out") == 0)
+		outfile = "6.out.exe";
 
 	switch(HEADTYPE) {
 	case 2:	/* plan 9 */
@@ -206,6 +213,21 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
+	case 10:	/* PE (Windows) executable */
+		peinit();
+		// 6l's asmb() has no PE branch for the ELF symbol / DWARF path,
+		// so require a stripped image for now (the .exe runs fine without
+		// symbols; -H10 with symbols is a follow-up). Matches how the
+		// macos amd64 test is built with -s.
+		debug['s'] = 1;
+		HEADR = PERESERVE;
+		if(INITTEXT == -1)
+			INITTEXT = PEBASE+0x1000;
+		if(INITDAT == -1)
+			INITDAT = 0;
+		if(INITRND == -1)
+			INITRND = 4096;
+		break;
 	default:
 		diag("unknown -H option");
 		errorexit();
@@ -255,6 +277,11 @@ main(int argc, char *argv[])
 		else
 			doprof2();
 	span();
+	// PE: lay out sections and define the __imp_* import symbols before
+	// reloc() so that references to them (CALL __imp_WriteFile(SB), ...)
+	// resolve to the right IAT slot addresses.
+	if(HEADTYPE == 10)
+		dope();
 	reloc();
 	asmb();
 	undef();
