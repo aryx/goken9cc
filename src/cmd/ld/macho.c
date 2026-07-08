@@ -540,11 +540,13 @@ asmbmacho(vlong symdatva, vlong symo)
 		 * Modern macOS: LC_MAIN (an entry-point file offset) replaces the
 		 * old LC_UNIXTHREAD register-state entry. dyld runs first, then calls
 		 * this offset. Also flag the binary as dynamically linked + two-level
-		 * (MH_DYLDLINK|MH_TWOLEVEL) as ld64 does. We stay non-PIE: the amd64
-		 * backend emits 32-bit-absolute addressing, so the image must load in
-		 * the low 4GB (hence no 0x100000000 __PAGEZERO and no MH_PIE here).
+		 * (MH_DYLDLINK|MH_TWOLEVEL|MH_PIE) as ld64 does. amd64 uses
+		 * RIP-relative addressing for symbol references under -H6 (see
+		 * asmandsz), so the image is position-independent and dyld can slide
+		 * it under ASLR. __PAGEZERO stays at 1MB (not 4GB) because 6l's text
+		 * layout doesn't yet handle __TEXT >= 4GB -- separate work.
 		 */
-		machoflags = 1 | 4 | 0x80;	/* MH_NOUNDEFS|MH_DYLDLINK|MH_TWOLEVEL */
+		machoflags = 1 | 4 | 0x80 | 0x200000;	/* MH_NOUNDEFS|MH_DYLDLINK|MH_TWOLEVEL|MH_PIE */
 		entryoff = entryvalue() - (INITTEXT - HEADR);	/* file offset of entry */
 		ml = newMachoLoad(0x80000028, 4);	/* LC_MAIN */
 		ml->data[0] = entryoff;			/* entryoff low */
