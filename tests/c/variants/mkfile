@@ -22,7 +22,21 @@ CTESTSARM=reg_alloc_arm float_cmp_arm
 
 test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testgolden
 
-testarm:V: ${CTESTSARM:%=%.vcmp5}
+testarm:V: ${CTESTSARM:%=%.vcmp5} bigfunc_arm
+
+# bigfunc_arm: a single function whose compiled text exceeds 128K (1<<17),
+# to exercise the arm linker's large-procedure path. principia's 5l___
+# used to diag()+errorexit() ("Procedure too large") where kencc 5l keeps
+# going (ARM B/BL reach +-32MB, so the procedure links fine); both must
+# now link it byte-identically. See linkers/5l/layout.c dotext(). The
+# source is generated (not committed) because a >128K function is huge;
+# entry is f itself so no libc/startup is needed.
+bigfunc_arm:V:
+	awk 'BEGIN{print "long g;"; print "long f(void){"; print "  long x=g;"; for(i=1;i<7000;i++) print "  x=x+g*"i";"; print "  return x;"; print "}"}' > bigfunc_arm.c
+	5c    -r -o bigfunc_arm.5 bigfunc_arm.c
+	5l    -H7 -E f -o bigfunc_arm.k.exe bigfunc_arm.5
+	5l___ -H7 -E f -o bigfunc_arm.p.exe bigfunc_arm.5
+	cmp bigfunc_arm.k.exe bigfunc_arm.p.exe
 
 testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm} ${CTESTSARM:%=%.vgold5}
 
@@ -69,4 +83,4 @@ golden:V: ${CTESTS:%=%.mkgold} ${CTESTSMISC:%=%.mkgoldm} ${CTESTSARM:%=%.mkgold5
 	8ck -r -o expected/$stem.8 ../misc/$stem.c
 
 clean nuke:V:
-	rm -f *.[58] *.exe
+	rm -f *.[58] *.exe bigfunc_arm.c
