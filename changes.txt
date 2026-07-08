@@ -1,40 +1,43 @@
 # -*- org -*-
 
-* 0.4 (Q3 2026) (? [58][alc] toolchains merged with principia?)
+* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 7a/7c/7l macOS Mach-O)
 
 ** toolchain
-- import 5a/5l 8a/8l from principia (and rename the existing 5a/5l/5c 8a/8l/8c
-  that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
-- fix regressions/mismatch between the principia and kencc variants:
-  see pad.org regression/mismatch section
+- import 5a/5c/5l and 8a/7c/8l from principia (and rename the 5a/5l/5c
+  and 8a/8l/8c that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
+- fix regressions/mismatch between the principia and kencc variants
+  for both the 386 and arm toolchains (was long)
+  see pad.org regression/mismatch section (big thx to Claude)
 - ar: add D flag like in GNU ar for "deterministic" builds (was
   hardcoded before with some //PAD: commented code for reproducible builds)
-- 7l: produce macOS arm64 Mach-O executables with -H6 (in linkers/lk/macho.c,
-  adapted from the old src/cmd/ld/macho.c of 6l). Modern arm64 macOS requires
-  signed, dynamic (dyld + LC_MAIN), PIE executables, so 7l also generates
-  pc-relative ADRP/ADD pairs for MOV $sym(SB) and the mkfile runs codesign;
-  see docs/notes_macos.txt and tests/s/mini/hello_macos_arm64.s
-- 7c-compiled programs run natively on macOS arm64 too (7c itself needed
-  no change): see helloc_macos_arm64.exe in tests/c/mini, with Darwin
-  syscall stubs and a MOVW fix in xwrite_arm64.s (a 64-bit load of a
-  32-bit int argument that only worked on Linux because the stack
-  happened to be zero there)
-- fix two long-standing 7c code generation bugs, found by running
-  tests/c/mini2, vlong and float natively on macOS arm64 (all three now
-  work there, and should now work on Linux arm64 too):
-  * 7c/sgen.c gtext() overwrote the frame size with 0, so stack locals
-    overlapped the outgoing-argument area and were corrupted by any
-    call with 3+ arguments (the old "arm64 segfault" TODOs of mini2)
-  * cc/pgen.c used typechlp instead of the per-compiler typeword table
-    (like 9front does) to decide whether to spill the first argument
-    register to the stack, so a vlong first argument was passed in R0
-    by the caller but never spilled by the callee (no-op for 5c/6c/8c
-    which all have REGARG = -1)
-  runtime regression test with minimal repros: tests/c/mini2/regress7c.c
-- 7l -H6: dyld rebase info (LC_DYLD_INFO_ONLY) for pointers stored in
-  initialized data, so C globals like 'static char *dig = "0123...";'
-  survive the ASLR slide of PIE executables (see the enlarged ASLR
-  explanations in docs/notes_macos.txt)
+- 7a/7c/7l: produce macOS arm64 Mach-O executables with -H6
+  (big thx to Claude)
+  * 7l: add linkers/lk/macho.c, adapted from the old Go-era src/cmd/ld/macho.c
+    of 6l. Modern arm64 macOS requires signed, dynamic (dyld + LC_MAIN), PIE
+    executables, so 7l also generates
+    pc-relative ADRP/ADD pairs for MOV $sym(SB) and the mkfile runs codesign;
+    see docs/notes_macos.txt and tests/s/mini/hello_macos_arm64.s
+  * 7l -H6: dyld rebase info (LC_DYLD_INFO_ONLY) for pointers stored in
+    initialized data, so C globals like 'static char *dig = "0123...";'
+    survive the ASLR slide of PIE executables (see the enlarged ASLR
+    explanations in docs/notes_macos.txt)
+  * 7c-compiled programs run natively on macOS arm64 too (7c itself needed
+    no change): see helloc_macos_arm64.exe in tests/c/mini, with Darwin
+    syscall stubs and a MOVW fix in xwrite_arm64.s (a 64-bit load of a
+    32-bit int argument that only worked on Linux because the stack
+    happened to be zero there)
+  * 7c: fix two long-standing 7c code generation bugs, found by running
+    tests/c/mini2, vlong and float natively on macOS arm64 (all three now
+    work there, and should now work on Linux arm64 too):
+    * 7c/sgen.c gtext() overwrote the frame size with 0, so stack locals
+      overlapped the outgoing-argument area and were corrupted by any
+      call with 3+ arguments (the old "arm64 segfault" TODOs of mini2)
+    * cc/pgen.c used typechlp instead of the per-compiler typeword table
+      (like 9front does) to decide whether to spill the first argument
+      register to the stack, so a vlong first argument was passed in R0
+      by the caller but never spilled by the callee (no-op for 5c/6c/8c
+      which all have REGARG = -1)
+    * runtime regression test with minimal repros: tests/c/mini2/regress7c.c
 
 ** internals
 - rename 5a__/5l__/5c__ to 5a9/5l9/5c9
