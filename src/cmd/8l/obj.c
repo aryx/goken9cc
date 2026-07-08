@@ -246,6 +246,11 @@ main(int argc, char *argv[])
 		break;
 	case 10: /* PE executable */
 		peinit();
+		// asmbpe() would emit a .symdat section after .idata when not
+		// stripped, which perturbs the section layout the import table
+		// relies on; force -s (the .exe runs fine without symbols, and
+		// this matches 6l -H 10).
+		debug['s'] = 1;
 		HEADR = PERESERVE;
 		if(INITTEXT == -1)
 			INITTEXT = PEBASE+0x1000;
@@ -313,9 +318,12 @@ main(int argc, char *argv[])
 		else
 			doprof2();
 	span();
-	reloc();
+	// PE: lay out sections and define the __imp_* import symbols before
+	// reloc() so that references to them (MOVL __imp_WriteFile(SB), AX; ...)
+	// resolve to the right IAT slot addresses.
 	if(HEADTYPE == 10)
 		dope();
+	reloc();
 	asmb();
 	undef();
 	if(debug['v']) {
