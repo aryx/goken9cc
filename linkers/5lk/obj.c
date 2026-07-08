@@ -908,6 +908,9 @@ loop:
 	nhunk -= sizeof(Prog);
 	hunk += sizeof(Prog);
 
+	/* claude: unlike prg() this does NOT copy zprg; only the fields decoded
+	 * from the object below are set. p->optab/mark/cond/align are left zero
+	 * on purpose and depend on gethunk() returning zeroed memory. */
 	p->as = o;
 	p->scond = bloc[1];
 	p->reg = bloc[2];
@@ -1231,8 +1234,18 @@ gethunk(void)
 		if(thunk >= 25L*NHUNK)
 			nh = 25L*NHUNK;
 	}
-	h = sbrk(nh);
-	if(h == (char*)-1) {
+	/* claude: the hunk MUST come back zeroed. Callers carve raw structs out
+	 * of it and initialize only the fields they read, relying on the rest
+	 * being zero -- see ldobj() below, which allocates a Prog straight from
+	 * the hunk and sets p->as/scond/reg/line/from/to/link but leaves
+	 * p->optab/mark/cond/align at their assumed-zero value (unlike prg(),
+	 * which copies zprg); zaddr() likewise carves a->sval/a->ieee scratch
+	 * buffers that must be zero past the bytes it fills. The original plan9
+	 * linker got zero-filled pages from sbrk(); mixing sbrk() with the
+	 * malloc() the rest of lib9 uses is unsafe on this host, so allocate
+	 * with mallocz() (malloc + zero), matching the other linkers. */
+	h = mallocz(nh, 1);
+	if(h == nil) {
 		diag("out of memory");
 		errorexit();
 	}
