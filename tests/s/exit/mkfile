@@ -1,0 +1,62 @@
+# Minimal exit(42) programs, one per Linux arch. They require no .data
+# segment, which makes them the simplest thing to assemble/link/run when
+# troubleshooting a new assembler or linker backend. Each is expected to
+# terminate the process with exit code 42.
+#
+# Split out of tests/s/mini (which now stays focused on hello-world), see
+# that mkfile for the toolchain-flag rationale (-H7 etc.).
+
+# arm and arm_ share exit_linux_arm.s but use different toolchain lineages
+# (5a_/5l_ vs 5a__/5l__), handled by the generic %.exe / %_.exe rules below.
+EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm_.exe \
+              exit_linux_arm64.exe \
+              exit_linux_mips.exe exit_linux_riscv.exe
+
+all:V: $EXITLINUXBINS
+
+# Part of the mk test CI regression check (see tests/mkfile DIRS). qemu-mips
+# needs forcing the same way tests/s/mini does; the other arches run via
+# ./$i (natively or through qemu-user-binfmt). Every program must exit(42).
+# The run is wrapped in `{...} so its expected non-zero (42) exit is captured
+# into $st instead of aborting the recipe, which mk would do on any non-zero
+# command status.
+test:V: all
+      fail=()
+      for (i in $EXITLINUXBINS) {
+         echo $i
+         if (~ $i exit_linux_mips.exe)
+            st=`{ qemu-mips ./$i; echo $status }
+         if not
+            st=`{ ./$i; echo $status }
+         if (~ $st 42)
+            echo '  ok: exit 42'
+         if not
+            fail=($fail $i^'(got '^$st^')')
+      }
+      if (~ $#fail 0)
+         echo 'all exit tests passed'
+      if not {
+         echo 'FAILED: '$fail
+         exit failed
+      }
+
+clean:V:
+	rm -f *.[5678iv] *.exe
+
+exit_linux_arm64.exe: exit_linux_arm64.s
+   7a -c $prereq
+   7l -o $target -H7 -E _start exit_linux_arm64.7
+exit_linux_mips.exe: exit_linux_mips.s
+   va -c $prereq
+   vl -o $target -E _start exit_linux_mips.v
+exit_linux_riscv.exe: exit_linux_riscv.s
+   ia -c $prereq
+   il -o $target -E _start exit_linux_riscv.i
+
+%.exe: %.s
+   5a_ -c $prereq
+   5l_ -o $target -E _start $stem.5
+
+%_.exe: %.s
+   5a__ -c $prereq
+   5l__ -H7 -o $target -E _start $stem.5

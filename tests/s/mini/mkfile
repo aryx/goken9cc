@@ -4,9 +4,6 @@ LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
           hello_linux_arm.exe hello_linux_arm64.exe \
           hello_linux_mips.exe hello_linux_riscv.exe \
                  hello_linux_386_.exe hello_linux_arm_.exe hello_linux_arm__.exe
-EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe \
-              exit_linux_mips.exe exit_linux_riscv.exe \
-                 exit_linux_arm_.exe
 MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe \
           hello_macos_libc_amd64.exe
 WINDOWSBINS=hello_windows_386.exe hello_windows_amd64.exe
@@ -14,7 +11,7 @@ PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 #TODO: hello_xv6_386.exe hello_xv6_riscv.exe
 XV6BINS=
 
-all:V: $LINUXBINS $EXITLINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
+all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 
 # This target is part of mk test CI regression check in Dockerfile and GHA
 # (it requires dpkg --add-architecture i386 for _386.exe to run
@@ -24,7 +21,7 @@ all:V: $LINUXBINS $EXITLINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 # we need some special code because qemu-mips32sn is used instead
 # of qemu-mips which is weird so we have to force the use of qemu-mips.
 # TODO: cmp with "Hello world" string
-# TODO: run $EXITLINUXBINS and expect exit code to be 42
+# (the exit(42) programs moved to tests/s/exit, which asserts their code)
 test:V: all
       for (i in $LINUXBINS) {
          echo $i
@@ -124,21 +121,3 @@ hello_windows_386.exe: hello_windows_386.s
 hello_windows_amd64.exe: hello_windows_amd64.s
    6a -c $prereq
    6l -s -H 10 -o $target -E _start hello_windows_amd64.6
-
-exit_linux_arm64.exe: exit_linux_arm64.s
-   7a -c $prereq
-   7l -o $target -H7 -E _start exit_linux_arm64.7
-exit_linux_mips.exe: exit_linux_mips.s
-   va -c $prereq
-   vl -o $target -E _start exit_linux_mips.v
-exit_linux_riscv.exe: exit_linux_riscv.s
-   ia -c $prereq
-   il -o $target -E _start exit_linux_riscv.i
-
-%.exe: %.s
-   5a_ -c $prereq
-   5l_ -o $target -E _start $stem.5
-
-%_.exe: %.s
-   5a__ -c $prereq
-   5l__ -H7 -o $target -E _start $stem.5
