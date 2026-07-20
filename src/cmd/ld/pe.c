@@ -39,9 +39,30 @@ static int sect_virt_begin;
 static int sect_raw_begin = PERESERVE;
 
 static IMAGE_FILE_HEADER fh;
-static IMAGE_OPTIONAL_HEADER oh;
+static IMAGE_OPTIONAL_HEADER oh;	// PE32 (filled always; source of truth)
+static IMAGE_OPTIONAL_HEADER64 oh64;	// PE32+ (derived from oh when pe64)
 static IMAGE_SECTION_HEADER sh[16];
 static IMAGE_SECTION_HEADER *textsect, *datsect, *bsssect;
+
+// Imports from kernel32.dll. The layout of the .idata section (and thus
+// the address of each import's IAT slot) is computed early, in peimports()
+// called from dope(), so that reloc() can resolve references to the
+// __imp_<name> symbols we define at those slots. add_import_table() then
+// just writes the bytes during asmbpe().
+static char *importdllname = "kernel32.dll";
+static struct importfunc {
+	char	*name;
+	uint32	thunkrva;	// RVA of this import's hint/name entry
+} importfuncs[] = {
+	{ "GetStdHandle", 0 },
+	{ "WriteFile", 0 },
+	{ "ExitProcess", 0 },
+	{ 0, 0 }
+};
+static IMAGE_IMPORT_DESCRIPTOR importds[2];
+static IMAGE_SECTION_HEADER *importsect;
+static uint32 importsize;	// logical size of the .idata contents
+static uint32 importiatrva;	// RVA where the IAT (FirstThunk array) begins
 
 static IMAGE_SECTION_HEADER*
 new_section(char *name, int size, int noraw)
@@ -91,12 +112,76 @@ pewrite(void)
 
 	for (i=0; i<sizeof(fh); i++)
 		cput(((char*)&fh)[i]);
-	for (i=0; i<sizeof(oh); i++)
-		cput(((char*)&oh)[i]);
+	if(pe64) {
+		for (i=0; i<sizeof(oh64); i++)
+			cput(((char*)&oh64)[i]);
+	} else {
+		for (i=0; i<sizeof(oh); i++)
+			cput(((char*)&oh)[i]);
+	}
 	for (i=0; i<nsect; i++)
 		for (j=0; j<sizeof(sh[i]); j++)
 			cput(((char*)&sh[i])[j]);
 	strnput("", PERESERVE-0x400);
+}
+
+// peimports lays out the .idata section and defines an __imp_<name>
+// linker symbol at each import's IAT slot. It runs from dope() (before
+// reloc()) so that "CALL __imp_WriteFile(SB)" style references resolve
+// to the IAT slot address. The bytes are written later by
+// add_import_table() during asmbpe().
+static void
+peimports(void)
+{
+	struct importfunc *f;
+	uint32 size, va;
+	int thunksize, n;
+
+	// PE32+ import address table entries are 8 bytes wide, not 4; the
+	// hint/name entries an entry points at are RVAs and stay 4 bytes.
+	thunksize = pe64 ? 8 : 4;
+
+	size = 0;
+	memset(importds, 0, sizeof(importds));
+	size += sizeof(importds);
+	importds[0].Name = size;
+	size += strlen(importdllname) + 1;
+	for(f=importfuncs; f->name; f++) {
+		f->thunkrva = size;
+		size += sizeof(uint16) + strlen(f->name) + 1;
+	}
+	importds[0].FirstThunk = size;
+	importiatrva = size;
+	for(f=importfuncs; f->name; f++)
+		size += thunksize;
+	size += thunksize;	// null terminator for the IAT
+	importsize = size;
+
+	importsect = new_section(".idata", size, 0);
+	importsect->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA|
+		IMAGE_SCN_MEM_READ|IMAGE_SCN_MEM_WRITE;
+
+	va = importsect->VirtualAddress;
+	oh.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress = va;
+	oh.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size = importsect->VirtualSize;
+
+	importds[0].Name += va;
+	importds[0].FirstThunk += va;
+	for(f=importfuncs; f->name; f++)
+		f->thunkrva += va;
+	importiatrva += va;
+
+	// Define __imp_<name> at the (image-absolute) IAT slot. The slot
+	// holds the resolved function pointer once the loader binds it, so
+	// "CALL __imp_<name>(SB)" is an indirect call through the thunk.
+	n = 0;
+	for(f=importfuncs; f->name; f++, n++) {
+		Sym *s;
+		s = lookup(smprint("__imp_%s", f->name), 0);
+		s->type = SFIXED;
+		s->value = PEBASE + importiatrva + n*thunksize;
+		s->reachable = 1;
+	}
 }
 
 void
@@ -107,15 +192,25 @@ dope(void)
 		IMAGE_SCN_CNT_INITIALIZED_DATA|
 		IMAGE_SCN_MEM_EXECUTE|IMAGE_SCN_MEM_READ;
 
-	datsect = new_section(".data", segdata.filelen, 0);
-	datsect->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA|
-		IMAGE_SCN_MEM_READ|IMAGE_SCN_MEM_WRITE;
-	if(INITDAT != PEBASE+datsect->VirtualAddress)
-		diag("INITDAT = %#llux, want %#llux", (vlong)INITDAT, (vlong)(PEBASE+datsect->VirtualAddress));
+	// Only emit .data/.bss when non-empty: a zero-size section does not
+	// advance the virtual address cursor, so the following section would
+	// end up with a duplicate VirtualAddress and the image would be
+	// rejected by the loader ("Bad EXE format").
+	if(segdata.filelen > 0) {
+		datsect = new_section(".data", segdata.filelen, 0);
+		datsect->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA|
+			IMAGE_SCN_MEM_READ|IMAGE_SCN_MEM_WRITE;
+		if(INITDAT != PEBASE+datsect->VirtualAddress)
+			diag("INITDAT = %#llux, want %#llux", (vlong)INITDAT, (vlong)(PEBASE+datsect->VirtualAddress));
+	}
 
-	bsssect = new_section(".bss", segdata.len - segdata.filelen, 1);
-	bsssect->Characteristics = IMAGE_SCN_CNT_UNINITIALIZED_DATA|
-		IMAGE_SCN_MEM_READ|IMAGE_SCN_MEM_WRITE;
+	if(segdata.len - segdata.filelen > 0) {
+		bsssect = new_section(".bss", segdata.len - segdata.filelen, 1);
+		bsssect->Characteristics = IMAGE_SCN_CNT_UNINITIALIZED_DATA|
+			IMAGE_SCN_MEM_READ|IMAGE_SCN_MEM_WRITE;
+	}
+
+	peimports();
 }
 
 static void
@@ -126,66 +221,47 @@ strput(char *s)
 	cput('\0');
 }
 
+// add_import_table writes the .idata bytes laid out earlier by
+// peimports(). It appends to the end of the file (the .idata raw data is
+// the last section) and restores the file position.
 static void
 add_import_table(void)
 {
-	IMAGE_IMPORT_DESCRIPTOR ds[2], *d;
-	char *dllname = "kernel32.dll";
-	struct {
-		char *name;
-		uint32 thunk;
-	} *f, fs[] = {
-		{ "GetProcAddress", 0 },
-		{ "LoadLibraryExA", 0 },
-		{ 0, 0 }
-	};
+	struct importfunc *f;
+	IMAGE_IMPORT_DESCRIPTOR *d;
+	vlong off;
 
-	uint32 size = 0;
-	memset(ds, 0, sizeof(ds));
-	size += sizeof(ds);
-	ds[0].Name = size;
-	size += strlen(dllname) + 1;
-	for(f=fs; f->name; f++) {
-		f->thunk = size;
-		size += sizeof(uint16) + strlen(f->name) + 1;
-	}
-	ds[0].FirstThunk = size;
-	for(f=fs; f->name; f++)
-		size += sizeof(fs[0].thunk);
-
-	IMAGE_SECTION_HEADER *isect;
-	isect = new_section(".idata", size, 0);
-	isect->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA|
-		IMAGE_SCN_MEM_READ|IMAGE_SCN_MEM_WRITE;
-	
-	uint32 va = isect->VirtualAddress;
-	oh.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress = va;
-	oh.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size = isect->VirtualSize;
-
-	ds[0].Name += va;
-	ds[0].FirstThunk += va;
-	for(f=fs; f->name; f++)
-		f->thunk += va;
-
-	vlong off = seek(cout, 0, 1);
-	seek(cout, 0, 2);
-	for(d=ds; ; d++) {
+	// Write at the section's raw-data offset, not the current EOF: with a
+	// non-empty .data the file position here is not page-aligned, whereas
+	// PointerToRawData is, so appending would leave the .idata bytes short
+	// of where the section header points ("file probably truncated").
+	off = seek(cout, 0, 1);
+	seek(cout, importsect->PointerToRawData, 0);
+	for(d=importds; ; d++) {
 		lputl(d->OriginalFirstThunk);
 		lputl(d->TimeDateStamp);
 		lputl(d->ForwarderChain);
 		lputl(d->Name);
 		lputl(d->FirstThunk);
-		if(!d->Name) 
+		if(!d->Name)
 			break;
 	}
-	strput(dllname);
-	for(f=fs; f->name; f++) {
+	strput(importdllname);
+	for(f=importfuncs; f->name; f++) {
 		wputl(0);
 		strput(f->name);
 	}
-	for(f=fs; f->name; f++)
-		lputl(f->thunk);
-	strnput("", isect->SizeOfRawData - size);
+	// import address table: each entry is an RVA to a hint/name entry,
+	// 4 bytes for PE32 and 8 bytes for PE32+, terminated by a zero entry.
+	for(f=importfuncs; f->name; f++) {
+		lputl(f->thunkrva);
+		if(pe64)
+			lputl(0);
+	}
+	lputl(0);		// IAT null terminator (low half)
+	if(pe64)
+		lputl(0);	// IAT null terminator (high half)
+	strnput("", importsect->SizeOfRawData - importsize);
 	cflush();
 	seek(cout, off, 0);
 }
@@ -216,30 +292,36 @@ asmbpe(void)
 
 	fh.NumberOfSections = nsect;
 	fh.TimeDateStamp = time(0);
-	fh.SizeOfOptionalHeader = sizeof(oh);
+	fh.SizeOfOptionalHeader = pe64 ? sizeof(oh64) : sizeof(oh);
 	fh.Characteristics = IMAGE_FILE_RELOCS_STRIPPED|
 		IMAGE_FILE_EXECUTABLE_IMAGE|IMAGE_FILE_DEBUG_STRIPPED;
-	if(thechar == '8')
+	if(pe64)
+		fh.Characteristics |= IMAGE_FILE_LARGE_ADDRESS_AWARE;
+	else
 		fh.Characteristics |= IMAGE_FILE_32BIT_MACHINE;
 
-	oh.Magic = 0x10b;	// PE32
+	// oh (PE32) is filled unconditionally; for PE32+ it is copied field
+	// by field into oh64 below (ImageBase and the stack/heap sizes widen).
+	oh.Magic = pe64 ? IMAGE_NT_OPTIONAL_HDR64_MAGIC : IMAGE_NT_OPTIONAL_HDR32_MAGIC;
 	oh.MajorLinkerVersion = 1;
 	oh.MinorLinkerVersion = 0;
 	oh.SizeOfCode = textsect->SizeOfRawData;
-	oh.SizeOfInitializedData = datsect->SizeOfRawData;
-	oh.SizeOfUninitializedData = bsssect->SizeOfRawData;
+	oh.SizeOfInitializedData = datsect ? datsect->SizeOfRawData : 0;
+	oh.SizeOfUninitializedData = bsssect ? bsssect->SizeOfRawData : 0;
 	oh.AddressOfEntryPoint = entryvalue()-PEBASE;
 	oh.BaseOfCode = textsect->VirtualAddress;
-	oh.BaseOfData = datsect->VirtualAddress;
+	oh.BaseOfData = datsect ? datsect->VirtualAddress : 0;	// absent in PE32+
 
 	oh.ImageBase = PEBASE;
 	oh.SectionAlignment = 0x00001000;
 	oh.FileAlignment = PEALIGN;
-	oh.MajorOperatingSystemVersion = 4;
+	// 64-bit Windows predates subsystem version 4.0; use 6.0 (Vista era)
+	// for PE32+, keep 4.0 for the legacy PE32 (386) output.
+	oh.MajorOperatingSystemVersion = pe64 ? 6 : 4;
 	oh.MinorOperatingSystemVersion = 0;
 	oh.MajorImageVersion = 1;
 	oh.MinorImageVersion = 0;
-	oh.MajorSubsystemVersion = 4;
+	oh.MajorSubsystemVersion = pe64 ? 6 : 4;
 	oh.MinorSubsystemVersion = 0;
 	oh.SizeOfImage = sect_virt_begin;
 	oh.SizeOfHeaders = PERESERVE;
@@ -249,6 +331,39 @@ asmbpe(void)
 	oh.SizeOfHeapReserve = 0x00100000;
 	oh.SizeOfHeapCommit = 0x00001000;
 	oh.NumberOfRvaAndSizes = 16;
+
+	if(pe64) {
+		oh64.Magic = oh.Magic;
+		oh64.MajorLinkerVersion = oh.MajorLinkerVersion;
+		oh64.MinorLinkerVersion = oh.MinorLinkerVersion;
+		oh64.SizeOfCode = oh.SizeOfCode;
+		oh64.SizeOfInitializedData = oh.SizeOfInitializedData;
+		oh64.SizeOfUninitializedData = oh.SizeOfUninitializedData;
+		oh64.AddressOfEntryPoint = oh.AddressOfEntryPoint;
+		oh64.BaseOfCode = oh.BaseOfCode;
+		oh64.ImageBase = oh.ImageBase;
+		oh64.SectionAlignment = oh.SectionAlignment;
+		oh64.FileAlignment = oh.FileAlignment;
+		oh64.MajorOperatingSystemVersion = oh.MajorOperatingSystemVersion;
+		oh64.MinorOperatingSystemVersion = oh.MinorOperatingSystemVersion;
+		oh64.MajorImageVersion = oh.MajorImageVersion;
+		oh64.MinorImageVersion = oh.MinorImageVersion;
+		oh64.MajorSubsystemVersion = oh.MajorSubsystemVersion;
+		oh64.MinorSubsystemVersion = oh.MinorSubsystemVersion;
+		oh64.Win32VersionValue = oh.Win32VersionValue;
+		oh64.SizeOfImage = oh.SizeOfImage;
+		oh64.SizeOfHeaders = oh.SizeOfHeaders;
+		oh64.CheckSum = oh.CheckSum;
+		oh64.Subsystem = oh.Subsystem;
+		oh64.DllCharacteristics = oh.DllCharacteristics;
+		oh64.SizeOfStackReserve = oh.SizeOfStackReserve;
+		oh64.SizeOfStackCommit = oh.SizeOfStackCommit;
+		oh64.SizeOfHeapReserve = oh.SizeOfHeapReserve;
+		oh64.SizeOfHeapCommit = oh.SizeOfHeapCommit;
+		oh64.LoaderFlags = oh.LoaderFlags;
+		oh64.NumberOfRvaAndSizes = oh.NumberOfRvaAndSizes;
+		memmove(oh64.DataDirectory, oh.DataDirectory, sizeof(oh.DataDirectory));
+	}
 
 	pewrite();
 }
