@@ -57,6 +57,11 @@ main(int argc, char *argv[])
 		if(a)
 			INITENTRY = a;
 		break;
+	case 'L':
+		a = ARGF();
+		if(a)
+			addlibpath(a);
+		break;
 	case 'T':
 		a = ARGF();
 		if(a)
@@ -483,15 +488,54 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	return c;
 }
 
+/* claude: -L search path, ported from the go-era 7l linker (pobj.c). The
+ * #pragma lib autolibs (e.g. "libmini.a") arrive here without a / or .
+ * prefix; instead of the old hardcoded /usr/ilib default, look for them in
+ * each -L directory so `il -L. ...` finds ./libmini.a like 7l does. */
+void
+addlibpath(char *arg)
+{
+	static int maxlibdir = 0;
+	char **p;
+
+	if(nlibdir >= maxlibdir) {
+		maxlibdir = maxlibdir ? maxlibdir*2 : 8;
+		p = malloc(maxlibdir*sizeof(*p));
+		if(p == nil) {
+			diag("out of memory");
+			errorexit();
+		}
+		memmove(p, libdir, nlibdir*sizeof(*p));
+		free(libdir);
+		libdir = p;
+	}
+	libdir[nlibdir++] = strdup(arg);
+}
+
+static char*
+findlib(char *file)
+{
+	int i;
+	char name[1024];
+
+	for(i = 0; i < nlibdir; i++) {
+		snprint(name, sizeof(name), "%s/%s", libdir[i], file);
+		if(access(name, 0) >= 0)
+			return libdir[i];
+	}
+	return nil;
+}
+
 void
 addlib(char *obj)
 {
 	char name[1024], comp[256], *p;
-	int i;
+	int i, search;
 
 	if(histfrogp <= 0)
 		return;
 
+	search = 0;
 	if(histfrog[0]->name[1] == '/') {
 		sprint(name, "");
 		i = 1;
@@ -500,11 +544,10 @@ addlib(char *obj)
 		sprint(name, ".");
 		i = 0;
 	} else {
-		if(debug['9'])
-			sprint(name, "/%s/lib", thestring);
-		else
-			sprint(name, "/usr/%clib", thechar);
+		/* claude: build a bare name and search the -L dirs below */
+		sprint(name, "");
 		i = 0;
+		search = 1;
 	}
 
 	for(; i<histfrogp; i++) {
@@ -531,8 +574,19 @@ addlib(char *obj)
 			diag("library component too long");
 			return;
 		}
-		strcat(name, "/");
+		/* claude: no leading '/' when searching (name starts empty) */
+		if(i > 0 || !search)
+			strcat(name, "/");
 		strcat(name, comp);
+	}
+	/* claude: resolve the bare autolib name against the -L dirs */
+	if(search) {
+		p = findlib(name);
+		if(p != nil) {
+			char full[1024];
+			snprint(full, sizeof(full), "%s/%s", p, name);
+			strcpy(name, full);
+		}
 	}
 	for(i=0; i<libraryp; i++)
 		if(strcmp(name, library[i]) == 0)

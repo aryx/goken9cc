@@ -30,6 +30,7 @@ OFILES=\
 	7obj.$O\
 	8obj.$O\
         vobj.$O\
+        iobj.$O\
         $GOOS.$O\
 
 #ifneq ($(GOOS),windows)

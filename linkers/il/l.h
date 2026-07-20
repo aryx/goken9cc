@@ -229,6 +229,8 @@ EXTERN	int	histgen;
 EXTERN	char*	library[50];
 EXTERN	char*	libraryobj[50];
 EXTERN	int	libraryp;
+EXTERN	char**	libdir;		/* -L search path for #pragma lib autolibs */
+EXTERN	int	nlibdir;
 EXTERN	int	xrefresolv;
 EXTERN	char*	hunk;
 EXTERN	char	inuxi1[1];
@@ -288,6 +290,7 @@ int	Pconv(Fmt*);
 int	Sconv(Fmt*);
 int	aclass(Adr*);
 void	addhist(int32, int);
+void	addlibpath(char*);
 void	append(Prog*, Prog*);
 void	asmb(void);
 int	asmcompressed(Prog*, Optab*, int, int);

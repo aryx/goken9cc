@@ -1423,7 +1423,7 @@ schar	ewidth[NTYPE] =
 	SZ_VLONG,	/* [TUVLONG] */
 	SZ_FLOAT,	/* [TFLOAT] */
 	SZ_DOUBLE,	/* [TDOUBLE] */
-	0,		/* [TIND] - set to 4 or 8 in main */
+	SZ_IND,		/* [TIND] (rv32=4; ginit still overwrites for -j/rv64) */
 	0,		/* [TFUNC] */
 	-1,		/* [TARRAY] */
 	0,		/* [TVOID] */

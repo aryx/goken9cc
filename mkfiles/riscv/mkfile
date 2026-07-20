@@ -1,0 +1,14 @@
+<$TOP/mkfiles/mkfile.proto
+
+# See mkfiles/arm64/mkfile for the flag rationale (-fsigned-char, gnu89, ...).
+CC=gcc -c --std=gnu89 -Wno-cpp -fsigned-char
+LD=gcc
+AS=gcc
+O=o
+
+# used in tests/: the RISC-V (rv32) lineage, ic/ia/il, object ext .i
+O_=i
+CC_=ic
+LD_=il
+AS_=ia
+AR_=ar_

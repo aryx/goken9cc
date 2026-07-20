@@ -109,6 +109,7 @@ enum
 	ObjArm,			/* .5 */
 	ObjAmd64,		/* .6 */
     ObjArm64, // .7
+    ObjRiscv, // .i
 	Maxobjtype,
 
     /* symbol table classes */
