@@ -58,6 +58,23 @@ for cross compiling.
 
 ---
 
+## Architecture Naming Convention
+
+Plan 9 uses single-character codes for architectures. Each tool is prefixed with this code:
+
+| Code | Arch | Compiler | Assembler | Linker | Object ext |
+|------|------|----------|-----------|--------|------------|
+| 5 | arm | 5c | 5a | 5l | .5 |
+| 7 | arm64 | 7c | 7a | 7l | .7 |
+| 8 | x86 (386) | 8c | 8a | 8l | .8 |
+| 6 | amd64 | 6c | 6a | 6l | .6 |
+| v | mips | vc | va | vl | .v |
+| i | riscv | ic | ia | il | .i |
+
+Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X.out`
+
+---
+
 ## History
 
 This is a fork of the assemblers, linkers, and C compilers
