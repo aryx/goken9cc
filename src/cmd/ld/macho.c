@@ -16,6 +16,61 @@ static	MachoLoad	load[16];
 static	MachoSeg	seg[16];
 static	MachoDebug	xdebug[16];
 static	int	nload, nseg, ndebug, nsect;
+static	uint32	machoflags = 1;	/* MH_NOUNDEFS; modern path ORs in DYLDLINK|TWOLEVEL */
+
+/*
+ * Dynamic imports declared via "6l -I got:remote:lib": the program defines a
+ * GOT pointer slot `got` (8 bytes of zero in __DATA) and calls through it; the
+ * linker emits an LC_DYLD_INFO non-lazy bind that makes dyld resolve `remote`
+ * from `lib` into that slot at load. Only libSystem (dylib ordinal 1) is wired.
+ */
+static struct {
+	char	*got;
+	char	*remote;
+	char	*lib;
+} dynimp[16];
+static int ndynimp;
+static uchar	machobind[1024];
+static int	nmachobind;
+static vlong	machobindoff;
+
+void
+adddynimp(char *spec)
+{
+	char *s, *p, *q;
+
+	if(ndynimp >= nelem(dynimp)) {
+		diag("too many -I imports");
+		errorexit();
+	}
+	s = strdup(spec);
+	p = utfrune(s, ':');
+	q = p ? utfrune(p+1, ':') : nil;
+	if(p == nil || q == nil) {
+		diag("bad -I import (want got:remote:lib): %s", spec);
+		errorexit();
+	}
+	*p = '\0';
+	*q = '\0';
+	dynimp[ndynimp].got = s;
+	dynimp[ndynimp].remote = p+1;
+	dynimp[ndynimp].lib = q+1;
+	ndynimp++;
+}
+
+static void
+binduleb(vlong v)
+{
+	uchar b;
+
+	do {
+		b = v & 0x7f;
+		v >>= 7;
+		if(v)
+			b |= 0x80;
+		machobind[nmachobind++] = b;
+	} while(v);
+}
 
 void
 machoinit(void)
@@ -156,7 +211,7 @@ machowrite(void)
 	LPUT(2);	/* file type - mach executable */
 	LPUT(nload+nseg+ndebug);
 	LPUT(loadsize);
-	LPUT(1);	/* flags - no undefines */
+	LPUT(machoflags);	/* flags */
 	if(macho64)
 		LPUT(0);	/* reserved */
 
@@ -445,6 +500,7 @@ asmbmacho(vlong symdatva, vlong symo)
 {
 	vlong v, w;
 	vlong va;
+	vlong entryoff;
 	int a, i, ptrsize;
 	char *pkgroot;
 	MachoHdr *mh;
@@ -534,11 +590,23 @@ asmbmacho(vlong symdatva, vlong symo)
 		diag("unknown macho architecture");
 		errorexit();
 	case '6':
-		ml = newMachoLoad(5, 42+2);	/* unix thread */
-		ml->data[0] = 4;	/* thread type */
-		ml->data[1] = 42;	/* word count */
-		ml->data[2+32] = entryvalue();	/* start pc */
-		ml->data[2+32+1] = entryvalue()>>16>>16;	// hide >>32 for 8l
+		/*
+		 * Modern macOS: LC_MAIN (an entry-point file offset) replaces the
+		 * old LC_UNIXTHREAD register-state entry. dyld runs first, then calls
+		 * this offset. Also flag the binary as dynamically linked + two-level
+		 * (MH_DYLDLINK|MH_TWOLEVEL|MH_PIE) as ld64 does. amd64 uses
+		 * RIP-relative addressing for symbol references under -H6 (see
+		 * asmandsz), so the image is position-independent and dyld can slide
+		 * it under ASLR. __PAGEZERO stays at 1MB (not 4GB) because 6l's text
+		 * layout doesn't yet handle __TEXT >= 4GB -- separate work.
+		 */
+		machoflags = 1 | 4 | 0x80 | 0x200000;	/* MH_NOUNDEFS|MH_DYLDLINK|MH_TWOLEVEL|MH_PIE */
+		entryoff = entryvalue() - (INITTEXT - HEADR);	/* file offset of entry */
+		ml = newMachoLoad(0x80000028, 4);	/* LC_MAIN */
+		ml->data[0] = entryoff;			/* entryoff low */
+		ml->data[1] = entryoff>>16>>16;		/* entryoff high */
+		ml->data[2] = 0;			/* stacksize low */
+		ml->data[3] = 0;			/* stacksize high */
 		break;
 	case '8':
 		ml = newMachoLoad(5, 16+2);	/* unix thread */
@@ -548,6 +616,55 @@ asmbmacho(vlong symdatva, vlong symo)
 		break;
 	}
 
+	if(thechar == '6') {
+		/* modern macOS metadata load commands */
+
+		/* build the non-lazy bind opcode stream for -I imports (libSystem, ord 1) */
+		nmachobind = 0;
+		machobindoff = 0;
+		if(ndynimp > 0) {
+			char *cp;
+			Sym *isym;
+
+			for(i=0; i<ndynimp; i++) {
+				isym = lookup(dynimp[i].got, 0);
+				machobind[nmachobind++] = 0x10 | 1;	/* SET_DYLIB_ORDINAL_IMM, libSystem */
+				machobind[nmachobind++] = 0x40;		/* SET_SYMBOL_TRAILING_FLAGS_IMM, 0 */
+				for(cp = dynimp[i].remote; *cp; cp++)
+					machobind[nmachobind++] = *cp;
+				machobind[nmachobind++] = 0;
+				machobind[nmachobind++] = 0x50 | 1;	/* SET_TYPE_IMM, BIND_TYPE_POINTER */
+				machobind[nmachobind++] = 0x70 | 2;	/* SET_SEGMENT_AND_OFFSET_ULEB, __DATA */
+				binduleb(symaddr(isym) - (va+v));	/* slot offset within __DATA */
+				machobind[nmachobind++] = 0x90;		/* DO_BIND */
+			}
+			machobind[nmachobind++] = 0x00;			/* DONE */
+			machobindoff = linkoff + nlinkdata + nstrtab;	/* after symtab/strtab */
+		}
+		ml = newMachoLoad(0x80000022, 10);	/* LC_DYLD_INFO_ONLY */
+		ml->data[2] = machobindoff;		/* bind_off */
+		ml->data[3] = nmachobind;		/* bind_size */
+
+		ml = newMachoLoad(0x1b, 4);		/* LC_UUID (deterministic placeholder) */
+		ml->data[0] = 0x6b636e6b;
+		ml->data[1] = 0x36303963;
+		ml->data[2] = 0x6f72636d;
+		ml->data[3] = 0x00000073;
+
+		ml = newMachoLoad(0x32, 4);		/* LC_BUILD_VERSION */
+		ml->data[0] = 1;			/* platform = PLATFORM_MACOS */
+		ml->data[1] = 0x000a0f00;		/* minos 10.15.0 */
+		ml->data[2] = 0x000a0f00;		/* sdk   10.15.0 */
+		ml->data[3] = 0;			/* ntools */
+
+		ml = newMachoLoad(12, 4+(strlen("/usr/lib/libSystem.B.dylib")+1+7)/8*2);	/* LC_LOAD_DYLIB */
+		ml->data[0] = 24;			/* name offset */
+		ml->data[1] = 2;			/* timestamp */
+		ml->data[2] = 0x051f0000;		/* current_version 1311.0.0 */
+		ml->data[3] = 0x00010000;		/* compatibility_version 1.0.0 */
+		strcpy((char*)&ml->data[4], "/usr/lib/libSystem.B.dylib");
+	}
+
 	if(!debug['d']) {
 		int nsym;
 
@@ -555,9 +672,9 @@ asmbmacho(vlong symdatva, vlong symo)
 
 		ms = newMachoSeg("__LINKEDIT", 0);
 		ms->vaddr = va+v+rnd(segdata.len, INITRND);
-		ms->vsize = nlinkdata+nstrtab;
+		ms->vsize = nlinkdata+nstrtab+nmachobind;
 		ms->fileoffset = linkoff;
-		ms->filesize = nlinkdata+nstrtab;
+		ms->filesize = nlinkdata+nstrtab+nmachobind;
 		ms->prot1 = 7;
 		ms->prot2 = 3;
 
@@ -630,4 +747,15 @@ asmbmacho(vlong symdatva, vlong symo)
 	a = machowrite();
 	if(a > MACHORESERVE)
 		diag("MACHORESERVE too small: %d > %d", a, MACHORESERVE);
+
+	/*
+	 * Append the dyld bind opcode stream at the end of __LINKEDIT.
+	 * machowrite() buffers the header via LPUT; flush it to disk first so
+	 * these direct seek/ewrite calls don't race the buffered output.
+	 */
+	if(nmachobind > 0) {
+		cflush();
+		seek(cout, machobindoff, 0);
+		ewrite(cout, machobind, nmachobind);
+	}
 }

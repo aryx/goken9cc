@@ -75,3 +75,4 @@ enum {
 void	domacho(void);
 vlong	domacholink(void);
 void	asmbmacho(vlong, vlong);
+void	adddynimp(char*);

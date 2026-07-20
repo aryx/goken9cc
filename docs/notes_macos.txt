@@ -197,3 +197,64 @@ The kernel kills at exec() silently, so work hypothesis-by-hypothesis:
   goldmine when suspecting a codegen bug: both 7c fixes found on this
   branch (gtext frame size, vlong first-arg spill) have counterparts
   visible by diffing goken against 9front.
+
+Producing macOS amd64 executables (6l -H6)
+------------------------------------------
+
+Follow-up to the arm64 story above, added while updating 6l -H6 (which
+had been sitting on an unmodernised LC_UNIXTHREAD/static path). Tested
+against darling on a Linux host, since a raw x86 Mac is inconvenient.
+
+The kernel is more forgiving than arm64: unsigned and non-PIE amd64
+binaries still run on real macOS (XNU). But darling refuses to load
+non-PIE, unsigned, static Mach-Os and mostly refuses to translate raw
+Darwin syscalls to Linux ones, so to actually exercise the output on a
+Linux CI host the same modernisation as 7l applies:
+
+- LC_MAIN entry (a file offset into __TEXT) instead of LC_UNIXTHREAD.
+  dyld runs first, calls that offset like a C function, and treats
+  the return value as exit(). Compute the offset from entryvalue():
+  entryoff = entryvalue - (INITTEXT - HEADR). See src/cmd/ld/macho.c
+  `case '6'` in asmbmacho().
+
+- MH_DYLDLINK | MH_TWOLEVEL | MH_PIE in the header, plus a libSystem
+  LC_LOAD_DYLIB (/usr/lib/libSystem.B.dylib, ordinal 1). LC_UUID and
+  LC_BUILD_VERSION so dyld doesn't complain.
+
+- RIP-relative symbol references. Under -H6, asmandsz() emits the
+  [rip+disp32] form (mod=00, rm=101) with a D_PCREL reloc instead of
+  the absolute disp32 SIB form; doasm() then subtracts the trailing
+  bytes of the instruction from the reloc addend, since RIP points at
+  the end of the whole instruction (not the end of the disp32). Gated
+  on HEADTYPE==6 so ELF and Plan 9 targets are byte-identical.
+
+- Optional "-I got:remote:lib" imports (adddynimp()). The program
+  defines a __DATA GOT slot `got` and calls through it; the linker
+  emits an LC_DYLD_INFO non-lazy bind opcode stream in __LINKEDIT so
+  dyld resolves `remote` from `lib` into that slot at load. This is
+  what lets the amd64 hello work under darling: raw amd64 Darwin
+  syscalls (movq $0x2000004, rax; syscall) fail there because darling
+  emulates Darwin via Linux libc.
+
+Two intentional simplifications:
+
+- No ad-hoc code signing (unlike 7l): XNU on amd64 still runs unsigned
+  executables. If a user later runs the binary through codesign(1) they
+  can pick up the arm64 rules for free (LINKEDIT has room; nothing
+  needs to move).
+
+- __PAGEZERO stays at 1MB, not Apple's 4GB. 6l's text layout uses
+  int32 offsets, so INITTEXT >= 4GB truncates during placement. With
+  MH_PIE the loader can slide the image regardless, so the deviation
+  from a stock macOS binary is cosmetic. Lifting this would need
+  widening INITTEXT / the text placement code in 6l -- same shape as
+  the arm64 change in ba7132b7e (mirroring 9front 869a08f08).
+
+Verifying an amd64 build on a Linux host:
+
+    (cd tests/s/mini && mk hello_macos_libc_amd64.exe hello_macos_amd64.exe)
+    file hello_macos_libc_amd64.exe   # expect: NOUNDEFS|DYLDLINK|TWOLEVEL|PIE
+    darling shell ./hello_macos_libc_amd64.exe   # prints "Hello, world"
+
+    # raw-syscall variant: real macOS runs it, darling does not
+    # (translates libSystem calls, not raw amd64 syscalls).
