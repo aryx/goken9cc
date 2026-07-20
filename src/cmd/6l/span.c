@@ -394,6 +394,20 @@ oclass(Adr *a)
 				switch(a->index) {
 				case D_EXTERN:
 				case D_STATIC:
+					/*
+					 * macOS (-H6) is always PIE (see asmandsz's
+					 * HEADTYPE==6 case): "MOV $sym(SB), R" can not be
+					 * an absolute 32-bit immediate baked in at link
+					 * time, since ASLR slides the image at exec().
+					 * Route it through the same Zaut_r (built-in LEA)
+					 * path already used for "MOV $auto-8(SP), R" and
+					 * for plain "LEAQ sym(SB), R" -- both go through
+					 * asmandsz, which already emits a RIP-relative
+					 * disp32 for HEADTYPE==6. Other -H targets keep
+					 * the proven absolute-immediate encoding.
+					 */
+					if(HEADTYPE == 6)
+						return Yiauto;
 					return Yi32;	/* TO DO: Yi64 */
 				case D_AUTO:
 				case D_PARAM:

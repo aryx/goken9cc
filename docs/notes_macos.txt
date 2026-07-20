@@ -258,3 +258,34 @@ Verifying an amd64 build on a Linux host:
 
     # raw-syscall variant: real macOS runs it, darling does not
     # (translates libSystem calls, not raw amd64 syscalls).
+
+6c-compiled code still used absolute addresses (found via tests/c/mini)
+------------------------------------------------------------------------
+
+The RIP-relative fix above (asmandsz, gated on HEADTYPE==6) only covers
+"memory operand" symbol references -- what a hand-written LEAQ sym(SB), R
+compiles to. It does not cover "$sym(SB)", i.e. taking a symbol's address
+as an immediate constant, which is a different operand form (D_ADDR with
+index D_EXTERN/D_STATIC) handled entirely separately in oclass()/doasm().
+6c always compiles "address of a string/global" through this immediate
+form -- e.g. `xwrite("hi", 2)` in tests/c/mini/helloc.c becomes
+`MOVQ $.string<>+0(SB), AX` -- so any C program (as opposed to hand-written
+.s) linked with 6l -H6 got a link-time-absolute address baked into a
+read-only __TEXT instruction. Under MH_PIE that address is wrong once the
+kernel applies the ASLR slide; write() then fails silently (unchecked
+in xwrite/xexit) and the program exits 0 having printed nothing. No
+crash, no diagnostic -- same failure shape as the unsigned/non-PIE arm64
+SIGKILL case above, just quieter. Caught by tests/c/mini's
+test_macos_amd64, once that target was changed to check output content
+(cmp) instead of just exit status.
+
+Fix (src/cmd/6l/span.c, oclass()): when HEADTYPE==6, "$extern(SB)" /
+"$static(SB)" now classifies as Yiauto instead of Yi32, which routes it
+through the exact same Zaut_r ("built-in LEA") path already used for
+"$auto-8(SP), R" (address of a stack local) and for plain LEAQ sym(SB) --
+both go through asmand()/asmandsz(), which already had the HEADTYPE==6
+RIP-relative case. So the fix is one branch reusing existing, already-
+exercised machinery, not a new encoding. Gated strictly on HEADTYPE==6:
+verified byte-identical output for -H7 (Linux ELF) and -H10 (Windows PE)
+before/after (still the absolute MOVL $const,R form there, which is
+correct for non-PIE targets).
