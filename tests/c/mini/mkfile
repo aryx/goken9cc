@@ -20,15 +20,22 @@ helloc.exe: helloc.c
    $AR_ rc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
    $LD_ -L. -o $target -E _start helloc.$O_
 
-#TODO: 386 riscv
-ARCHS=amd64 arm arm64 mips
+ARCHS=386 amd64 arm arm64 mips riscv
 test:V:
         for (arch in $ARCHS) {
            echo $arch
            mk clean
            #alt: build 5.helloc 8.helloc
            mk 'objtype='$arch
-           qemu-$arch ./helloc.exe | cmp /dev/stdin helloc.expected.txt
+           # Some arches need a differently-named qemu binary (like the
+           # qemu-mips special case in tests/s/mini/mkfile): 386's is
+           # qemu-i386, and riscv's ELF32 image runs under qemu-riscv32.
+           if (~ $arch 386)
+              qemu-i386 ./helloc.exe | cmp /dev/stdin helloc.expected.txt
+           if not if (~ $arch riscv)
+              qemu-riscv32 ./helloc.exe | cmp /dev/stdin helloc.expected.txt
+           if not
+              qemu-$arch ./helloc.exe | cmp /dev/stdin helloc.expected.txt
         }
 	#alt: special if in for loop above
 	echo arm__

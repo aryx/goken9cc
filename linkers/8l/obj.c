@@ -255,7 +255,15 @@ main(int argc, char *argv[])
 
     /*s: [[main()]] adjust HEADTYPE if debug flags(x86) */
     if(HEADTYPE == -1) {
+      // claude: pick the default output format from the host OS, like 7l does
+      // via getgoos(): Linux -> ELF, otherwise Plan 9. This lets `8l foo.8`
+      // produce a runnable Linux binary without an explicit -H7, matching the
+      // ELF-by-default behavior of 6l and il.
+      char *goos;
       HEADTYPE = H_PLAN9;
+      goos = getgoos();
+      if(goos != nil && strcmp(goos, "linux") == 0)
+          HEADTYPE = H_ELF;
     }
     /*e: [[main()]] adjust HEADTYPE if debug flags(x86) */
     switch(HEADTYPE) {
