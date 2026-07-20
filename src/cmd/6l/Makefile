@@ -21,6 +21,7 @@ OFILES=\
 	obj.$O\
 	optab.$O\
 	pass.$O\
+	pe.$O\
 	prof.$O\
 	span.$O\
 	symtab.$O\
@@ -31,6 +32,7 @@ HFILES=\
 	../ld/lib.h\
 	../ld/elf.h\
 	../ld/macho.h\
+	../ld/pe.h\
 	../ld/dwarf.h\
 
 include ../../Make.ccmd
