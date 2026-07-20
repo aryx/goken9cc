@@ -38,6 +38,10 @@
       by the caller but never spilled by the callee (no-op for 5c/6c/8c
       which all have REGARG = -1)
     * runtime regression test with minimal repros: tests/c/mini2/regress7c.c
+- 7a/7c/7l Linux
+  * fix the tests/c/vlong/ and tests/c/float/ tests for arm64; adjust to
+    correct calling convention (start at FP+0 not FP+8 because return address
+    not saved in stack but in the link register LR)
 - 6l: modernise the amd64 -H6 (macOS Mach-O) output, mirror of the 7l arm64 work:
   * LC_MAIN entry point (not LC_UNIXTHREAD), MH_DYLDLINK|MH_TWOLEVEL|
     MH_PIE, libSystem LC_LOAD_DYLIB, and LC_DYLD_INFO_ONLY/BUILD_VERSION/
@@ -60,7 +64,7 @@
   * tests/s/mini/hello_macos_libc_amd64.s calls libSystem's _write via
     the GOT slot and runs under darling.
   * see docs/notes_macos.txt for the full story and darling recipe.
-- 6l/8l: support windows PE with -H10
+- 6l/8l: support windows PE with -H10, thx to rafael2knokia
 
 ** internals
 - rename 5a__/5l__/5c__ to 5a9/5l9/5c9
