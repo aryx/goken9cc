@@ -54,6 +54,7 @@ OFILES=\
 	7obj.$O\
 	8obj.$O\
         vobj.$O\
+        iobj.$O\
 
 ifneq ($(GOOS),windows)
 OFILES+=\
