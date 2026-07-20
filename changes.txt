@@ -76,6 +76,8 @@
   principia lineage vs kencc lineage for 386 and arm
 - start tests/c/variants to compare object and execs produced by the
   principia lineage vs kencc lineage for 386 and arm
+- more complete tests/s/mini/ and tests/c/mini/ supporting most archs and
+  most OSes
 
 * 0.3 (Q2 2026) (IWP9 presentation)
 
