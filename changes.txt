@@ -59,6 +59,10 @@
 - ed: fix segfault on macOS when realloc in 6l/mkenam; use new ptrdiff not int
   on 64 bit machine when computing (64bits) pointer differences
 
+** misc
+- presentation to IWP9 in Canada of goken9cc project (short talk, WIP)
+
+
 * 0.2 (Q1 2026) (pcc, ASAN, dosfstools, IWP9 paper)
 
 ** toolchain
