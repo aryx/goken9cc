@@ -103,6 +103,9 @@ main(int argc, char *argv[])
 	case 'L':
 		Lflag(EARGF(usage()));
 		break;
+	case 'I':	/* -I got:remote:lib  declare a Mach-O dynamic import (libSystem) */
+		adddynimp(EARGF(usage()));
+		break;
 	case 'T':
 		INITTEXT = atolwhex(EARGF(usage()));
 		break;
@@ -184,7 +187,10 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		if(INITTEXT == -1)
-			INITTEXT = 4096+HEADR;
+			INITTEXT = 0x100000+HEADR;	/* __TEXT >= 1MB: clears Linux mmap_min_addr so the
+						 * image loads (e.g. under darling); stays < 2GB for the
+						 * amd64 32-bit-absolute addressing. (Apple uses a 4GB
+						 * __PAGEZERO, which our codegen can't reach.) */
 		if(INITDAT == -1)
 			INITDAT = 0;
 		break;

@@ -3,6 +3,29 @@
 * 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 7a/7c/7l macOS Mach-O)
 
 ** toolchain
+- 6l: modernise the amd64 -H6 (macOS Mach-O) output, mirror of the 7l
+  arm64 work of ba7132b7e:
+  * LC_MAIN entry point (not LC_UNIXTHREAD), MH_DYLDLINK|MH_TWOLEVEL|
+    MH_PIE, libSystem LC_LOAD_DYLIB, and LC_DYLD_INFO_ONLY/BUILD_VERSION/
+    UUID -- dyld now loads the binary instead of the kernel doing a
+    static exec.
+  * PIE / RIP-relative addressing: MOV $sym(SB) is encoded [rip+disp32]
+    with a D_PCREL reloc under -H6; ELF (-H7) and Plan 9 (-H2) keep the
+    absolute SIB encoding (Linux output byte-identical).
+  * "6l -I got:remote:lib": declare a Mach-O dynamic import.  The
+    program defines an 8-byte GOT slot in __DATA and calls through it;
+    the linker emits an LC_DYLD_INFO non-lazy bind so dyld resolves
+    remote@lib into that slot at load.  Enables calling libSystem
+    functions (which darling can translate on Linux) instead of raw
+    amd64 Darwin syscalls (which darling can't).
+  * default INITTEXT for -H6 raised from 4096+HEADR to 0x100000+HEADR
+    (clears Linux mmap_min_addr; stays < 2GB for the 32-bit-absolute
+    addressing).  __PAGEZERO is 1MB rather than Apple's 4GB because
+    6l's text layout uses int32 offsets -- MH_PIE lets dyld slide the
+    image regardless.
+  * tests/s/mini/hello_macos_libc_amd64.s calls libSystem's _write via
+    the GOT slot and runs under darling.
+  * see docs/notes_macos.txt for the full story and darling recipe.
 - import 5a/5c/5l and 8a/7c/8l from principia (and rename the 5a/5l/5c
   and 8a/8l/8c that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
 - fix regressions/mismatch between the principia and kencc variants
