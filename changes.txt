@@ -51,6 +51,36 @@
   * PIE / RIP-relative addressing: MOV $sym(SB) is encoded [rip+disp32]
     with a D_PCREL reloc under -H6; ELF (-H7) and Plan 9 (-H2) keep the
     absolute SIB encoding (Linux output byte-identical).
+    (Terminology: PIC, position-independent code, is the general technique
+    -- refer to symbols pc-relatively / through a GOT so the code works at
+    any load address, originally for shared libraries mapped at a different
+    address in every process.  PIE, a position-independent *executable*, is
+    that same technique applied to a main program so the kernel can load it
+    at a random base for ASLR.  Our -H6 output is a self-contained PIE: it
+    uses direct RIP-relative refs for its own symbols -- no GOT -- plus the
+    dyld rebase below for absolute pointers in data, and a GOT/bind only for
+    the optional -I libSystem imports.)
+  * dyld rebase (LC_DYLD_INFO_ONLY rebase_off/size, src/cmd/ld/macho.c
+    machorebase()): the ASLR slide is added by dyld to every __DATA slot
+    holding a link-time-absolute pointer -- each D_ADDR reloc on a data
+    symbol, e.g. a C global "static char *dig = \"0123...\";".  Such a
+    pointer lives in writable data and can not be made pc-relative like a
+    code reference.  Ports 7l's linkers/lk/macho.c machorebase() to 6l's
+    Reloc data model.  (Symptom before: reads through such a pointer -- the
+    %x/%d formatting in tests/c/mini2 -- faulted under a nonzero slide but
+    "worked" under lldb, which forces slide 0.)
+  * 6c -z (position-independent code) for the parts the -H6 linker
+    encoding can not fix on its own, since an x86 [rip+disp] operand can
+    not also carry an index register:
+    - src/cmd/6c/cgen.c hardconst(): stop folding "$sym(SB)" (addable==13)
+      into an arithmetic-instruction immediate; load it into a register
+      (-> RIP-relative LEA) instead.  Fixes "(char*)buf + i" which used to
+      compile to "ADDQ $buf(SB), AX".
+    - src/cmd/6c/txt.c doindex()/naddr(): the base of an indexed global,
+      "sym(SB)(index)", is materialized into a register first, giving
+      "MOVQ $sym(SB),R; op (R)(index)" (fixes global buf[i] loads/stores).
+    Gated on -z (companion of 6l -H6); non-PIE builds are byte-identical.
+    tests/c/mini2 now runs natively on macOS amd64 (helloprintf + regress7c).
   * "6l -I got:remote:lib": declare a Mach-O dynamic import.  The
     program defines an 8-byte GOT slot in __DATA and calls through it;
     the linker emits an LC_DYLD_INFO non-lazy bind so dyld resolves

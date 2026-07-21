@@ -289,3 +289,50 @@ exercised machinery, not a new encoding. Gated strictly on HEADTYPE==6:
 verified byte-identical output for -H7 (Linux ELF) and -H10 (Windows PE)
 before/after (still the absolute MOVL $const,R form there, which is
 correct for non-PIE targets).
+
+
+The rest of PIE: what the linker can't fix, and rebasing data pointers
+----------------------------------------------------------------------
+
+The oclass() fix above makes tests/c/mini work, but tests/c/mini2 (which
+does real formatting through a global char buf[100] and a "static char
+*dig") needed more. Two problems the LINKER can not paper over, because an
+x86 [rip+disp32] operand physically can not also carry an index register:
+
+  1. "(char*)buf + i" compiled to "ADDQ $buf(SB), AX": a symbol address
+     used as an arithmetic immediate. Once MOV $sym(SB) was rerouted to the
+     LEA path, 6l could not even encode this (no Yiauto row for ADDQ), so
+     it became a hard "doasm: notfound".
+
+  2. "buf[i]" compiled to "MOVB AX, buf(SB)(CX)" / "LEAQ buf(SB)(CX), AX":
+     a global used as an ABSOLUTE base with an index register. There is no
+     RIP-relative form of this, so 6l keeps the absolute base disp32, wrong
+     under the slide.
+
+Both are really code-generation choices, so the fix is in 6c, gated on a
+new "-z" flag (position-independent code; see cc.h) that the mkfile passes
+alongside 6l -H6. arm64's 7c never hits either case -- AArch64 can not put
+a 64-bit address in an ADD or use an absolute indexed base, so 7c is forced
+to materialize addresses into a register (ADRP/ADD) for free. -z makes 6c
+do the same on the two x86 shortcuts:
+  - cgen.c hardconst(): treat "$sym(SB)" (addable==13) as "hard" so every
+    operand-fold site loads it into a register (-> RIP-relative LEA) rather
+    than folding it into an instruction immediate.
+  - txt.c doindex()+naddr(): when an indexed base is a global address,
+    materialize it into a register first and index off the register:
+    "MOVQ $buf(SB),DX; MOVB AX,(DX)(CX)".
+Non-PIE builds (no -z) are byte-identical; verified the -H7/-H10 objects
+are unchanged.
+
+Finally, pointers that live in initialized DATA can not be made pc-relative
+at all (they are data, not code). "static char *dig = \"0123...\";" stores
+the absolute address of the string; under a nonzero slide that stored
+pointer is wrong, so dig[v%16] faulted (and, classically, "worked" under
+lldb because lldb forces slide 0). dyld fixes these up at load time from a
+"rebase" opcode stream if the linker provides one. 6l did not (it only
+emitted the bind stream for -I imports), so src/cmd/ld/macho.c gained
+machorebase(), a port of 7l's linkers/lk/macho.c version to 6l's Reloc
+model: it walks datap, collects every 8-byte D_ADDR reloc's __DATA offset,
+and emits SET_SEGMENT_AND_OFFSET/DO_REBASE opcodes into LC_DYLD_INFO_ONLY's
+rebase_off/size. With all three in place tests/c/mini2 (helloprintf +
+regress7c) runs natively on macOS amd64.

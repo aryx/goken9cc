@@ -72,6 +72,97 @@ binduleb(vlong v)
 	} while(v);
 }
 
+/*
+ * dyld "rebase" opcode stream (LC_DYLD_INFO_ONLY rebase_off/size). A PIE image
+ * is slid by ASLR at load, so every __DATA slot holding a link-time-absolute
+ * pointer -- i.e. every D_ADDR reloc on a data symbol, e.g. a C global
+ * 'static char *dig = "...";' -- must have the slide added by dyld: such a
+ * pointer lives in writable data and can not be made pc-relative like a code
+ * reference (see the RIP-relative $sym(SB) handling in span.c). This mirrors
+ * 7l's linkers/lk/macho.c machorebase(), adapted to 6l's Reloc data model.
+ * Only emitted for thechar=='6' (macOS -H6).
+ */
+static uchar	*machorebasep;	/* opcode stream (malloc'd) */
+static int	nmachorebase;
+static vlong	machorebaseoff;
+
+static int
+rebaseuleb(vlong v, uchar *p)
+{
+	int n;
+
+	n = 0;
+	do {
+		p[n] = v & 0x7f;
+		v >>= 7;
+		if(v)
+			p[n] |= 0x80;
+		n++;
+	} while(v);
+	return n;
+}
+
+/* datbase is the __DATA segment vmaddr (va+v in asmbmacho) */
+static void
+machorebase(vlong datbase)
+{
+	Sym *s;
+	Reloc *r;
+	vlong *off;
+	int noff, moff, i, j;
+	vlong o;
+	uchar *buf;
+	int n, m;
+
+	off = nil;
+	noff = 0;
+	moff = 0;
+	for(s = datap; s != S; s = s->next) {
+		for(r = s->r; r < s->r + s->nr; r++) {
+			if(r->type != D_ADDR)
+				continue;
+			if(r->siz != PtrSize) {
+				diag("PIE: %d-byte address reloc in data (%s+%d) can not be rebased",
+					r->siz, s->name, r->off);
+				continue;
+			}
+			if(noff >= moff) {
+				moff = 2*moff + 64;
+				off = realloc(off, moff*sizeof off[0]);
+			}
+			off[noff++] = symaddr(s) + r->off - datbase;
+		}
+	}
+	if(noff == 0)
+		return;
+
+	/* dyld wants ascending offsets within the segment */
+	for(i = 1; i < noff; i++) {
+		o = off[i];
+		for(j = i; j > 0 && off[j-1] > o; j--)
+			off[j] = off[j-1];
+		off[j] = o;
+	}
+
+	/* worst case: SET_SEGMENT opcode + 10-byte uleb + DO_REBASE per ptr */
+	m = 2 + noff*12 + 8;
+	buf = malloc(m);
+	n = 0;
+	buf[n++] = 0x10 | 1;		/* REBASE_OPCODE_SET_TYPE_IMM | POINTER */
+	for(i = 0; i < noff; i++) {
+		buf[n++] = 0x20 | 2;	/* SET_SEGMENT_AND_OFFSET_ULEB, seg 2 = __DATA */
+		n += rebaseuleb(off[i], buf+n);
+		buf[n++] = 0x50 | 1;	/* DO_REBASE_IMM_TIMES, 1 */
+	}
+	buf[n++] = 0x00;		/* REBASE_OPCODE_DONE */
+	while(n & 7)
+		buf[n++] = 0x00;	/* pad to 8 bytes */
+
+	machorebasep = buf;
+	nmachorebase = n;
+	free(off);
+}
+
 void
 machoinit(void)
 {
@@ -619,6 +710,18 @@ asmbmacho(vlong symdatva, vlong symo)
 	if(thechar == '6') {
 		/* modern macOS metadata load commands */
 
+		/*
+		 * Rebase stream: __DATA pointers dyld must slide (ASLR). Laid out
+		 * first in the __LINKEDIT tail slack, right after symtab/strtab; the
+		 * bind stream (if any) follows it. Both fit in the page-rounding slack
+		 * that domacholink() left before __SYMDAT (see its rnd()).
+		 */
+		nmachorebase = 0;
+		machorebaseoff = 0;
+		machorebase(va+v);
+		if(nmachorebase > 0)
+			machorebaseoff = linkoff + nlinkdata + nstrtab;	/* after symtab/strtab */
+
 		/* build the non-lazy bind opcode stream for -I imports (libSystem, ord 1) */
 		nmachobind = 0;
 		machobindoff = 0;
@@ -639,9 +742,12 @@ asmbmacho(vlong symdatva, vlong symo)
 				machobind[nmachobind++] = 0x90;		/* DO_BIND */
 			}
 			machobind[nmachobind++] = 0x00;			/* DONE */
-			machobindoff = linkoff + nlinkdata + nstrtab;	/* after symtab/strtab */
+			/* after symtab/strtab and the rebase stream */
+			machobindoff = linkoff + nlinkdata + nstrtab + nmachorebase;
 		}
 		ml = newMachoLoad(0x80000022, 10);	/* LC_DYLD_INFO_ONLY */
+		ml->data[0] = machorebaseoff;		/* rebase_off */
+		ml->data[1] = nmachorebase;		/* rebase_size */
 		ml->data[2] = machobindoff;		/* bind_off */
 		ml->data[3] = nmachobind;		/* bind_size */
 
@@ -672,9 +778,9 @@ asmbmacho(vlong symdatva, vlong symo)
 
 		ms = newMachoSeg("__LINKEDIT", 0);
 		ms->vaddr = va+v+rnd(segdata.len, INITRND);
-		ms->vsize = nlinkdata+nstrtab+nmachobind;
+		ms->vsize = nlinkdata+nstrtab+nmachorebase+nmachobind;
 		ms->fileoffset = linkoff;
-		ms->filesize = nlinkdata+nstrtab+nmachobind;
+		ms->filesize = nlinkdata+nstrtab+nmachorebase+nmachobind;
 		ms->prot1 = 7;
 		ms->prot2 = 3;
 
@@ -753,6 +859,11 @@ asmbmacho(vlong symdatva, vlong symo)
 	 * machowrite() buffers the header via LPUT; flush it to disk first so
 	 * these direct seek/ewrite calls don't race the buffered output.
 	 */
+	if(nmachorebase > 0) {
+		cflush();
+		seek(cout, machorebaseoff, 0);
+		ewrite(cout, machorebasep, nmachorebase);
+	}
 	if(nmachobind > 0) {
 		cflush();
 		seek(cout, machobindoff, 0);

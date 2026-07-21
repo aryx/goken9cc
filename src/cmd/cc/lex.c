@@ -132,6 +132,10 @@ main(int argc, char *argv[])
 		p = ARGF();
 		setinclude(p);
 		break;
+
+	case 'z':		/* position-independent code (PIE), see cc.h */
+		pie = 1;
+		break;
 	} ARGEND
 	if(argc < 1 && outfile == 0) {
 		print("usage: %cc [-options] files\n", thechar);

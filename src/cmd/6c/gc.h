@@ -242,6 +242,7 @@ void	noretval(int);
 void	usedset(Node*, int);
 void	xcom(Node*);
 void	indx(Node*);
+int	addrofext(Node*);
 int	bcomplex(Node*, Node*);
 Prog*	gtext(Sym*, int32);
 vlong	argsize(void);
