@@ -20,11 +20,11 @@ helloprintf.exe: helloprintf.c
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ test.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
-#TODO: arm_ 386 riscv
+#TODO: arm_ riscv
 #TODO: arm__: works, but if use -DDEBUG then segfault and weird output
 #TODO: arm_: works for the bool and hexa but not for 42; segfault
 #TODO: mips: gives weird output, 'false' instead of 'true'
-ARCHS=amd64 arm arm64 arm__ mips
+ARCHS=amd64 386 arm arm64 arm__ mips
 test:V:
         for (arch in $ARCHS) {
            echo $arch
@@ -32,6 +32,8 @@ test:V:
            mk 'objtype='$arch
 	   if (~ $arch arm__)
 	      qemu-armhf ./helloprintf.exe
+           if not if (~ $arch 386)
+	      qemu-i386 ./helloprintf.exe
            if not
 	      qemu-$arch ./helloprintf.exe
         }
