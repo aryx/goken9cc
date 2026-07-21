@@ -1,3 +1,5 @@
+# Few test files using GNU toolchain to compare with
+# what the goken toolchain should aim for, to help debug things.
 
 all:V: hello64 hello32
 

@@ -1,0 +1,7 @@
+TOP=../..
+<$TOP/mkconfig
+
+# float/ contains just temporary tests
+DIRS=exit mini variants
+
+<$TOP/mkfiles/mkdirs

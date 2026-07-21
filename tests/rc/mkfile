@@ -1,6 +1,7 @@
 TOP=../..
 <$TOP/mkconfig
 
+# backquote.rc?
 test:V:
 	bash glob_long_filenames.sh
 	bash backquote.sh
