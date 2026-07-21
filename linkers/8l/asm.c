@@ -227,7 +227,17 @@ asmb(void)
             break;
         //case H_PLAN9:
         case H_ELF:
-            seek(cout, HEADR+textsize+datsize, 0);
+            // claude: like the data section's own seek a few lines up in
+            // this same function, the symbol table must follow the data
+            // section at its REAL (page-rounded) end, not at the
+            // unrounded HEADR+textsize+datsize. Without rnd(), this seek
+            // lands *before* the data section (which was actually written
+            // starting at rnd(HEADR+textsize,INITRND)), so asmsym()'s
+            // output overwrites the tail of the just-written data section
+            // -- confirmed by dumping a linked 386 binary and finding
+            // compiler debug-symbol strings ("frame"/"lv"/"rv") sitting at
+            // the address a string literal should have been.
+            seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
             break;
         case H_COM:
         case H_EXE:
@@ -254,7 +264,9 @@ asmb(void)
     } else {
         /*s: [[asmb()]] if dynamic module and no symbol table generation */
         if(dlm){
-            seek(cout, HEADR+textsize+datsize, 0);
+            // claude: same rnd() fix as the H_ELF case above -- see there
+            // for why the unrounded HEADR+textsize+datsize is wrong.
+            seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
             asmdyn();
             cflush();
         }

@@ -11,23 +11,13 @@ test_one:V: all
 CPP_FLAGS=-D$objtype
 
 # can use -v for verbose mode to help debug
-#
-# claude: $LD_ below passes -s (strip symbols), working around a real 8l
-# bug: with an unstripped ELF, 8l's debug/symbol-table data lands inside the
-# loaded .data segment and collides with our own string-literal data --
-# confirmed by dumping the linked binary and finding compiler-internal
-# strings like "frame"/"lv"/"rv" sitting at the address our code reads
-# "X\n" from. Only 386 is affected (amd64/arm/arm64/mips/riscv are fine
-# unstripped); it's specific to 8l's ELF writer, a path principia's own x86
-# builds don't exercise since those link natively as -H2 Plan9 binaries,
-# not ELF.
 helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c vlrt.c
    $CC_ $CPP_FLAGS -c print.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ vlrt.$O_
-   $LD_ -s -L. -o $target -E _main helloprintf.$O_
+   $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm_
 ARCHS=amd64 arm arm64 arm__ mips riscv 386

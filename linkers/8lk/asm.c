@@ -199,8 +199,18 @@ asmb(void)
 			seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
 			break;
 		case 2:
-		case 7:
 			seek(cout, HEADR+textsize+datsize, 0);
+			break;
+		case 7:
+			// claude: same rnd() as the data-section seek above (case 7
+			// there): the data section for ELF was actually written
+			// starting at rnd(HEADR+textsize,INITRND), not the
+			// unrounded HEADR+textsize, so the symbol table that
+			// follows it must account for that same rounding or its
+			// write position lands *before* the data section actually
+			// ends, and asmsym()'s output overwrites the tail of the
+			// data section already on disk.
+			seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
 			break;
 		case 3:
 		case 4:

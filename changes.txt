@@ -3,14 +3,23 @@
 * 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE)
 
 ** toolchain
-- 8l: fix a real ELF-writer bug found via tests/c/vlong and tests/c/float:
-  an unstripped 8l executable lands its debug/symbol-table data inside the
-  loaded .data segment, colliding with the program's own string-literal
-  data (confirmed by dumping a linked binary and finding compiler-internal
-  strings like "frame"/"lv"/"rv" sitting at the address a "X\n" literal
-  should have been). Worked around in the affected test mkfiles with -s
-  (strip); principia's own x86 builds never hit this since they link as
-  -H2 native Plan9 binaries, not ELF (thx to Claude)
+- 8l/8lk: fix a real ELF-writer bug found via tests/c/vlong and
+  tests/c/float: an unstripped executable's debug/symbol-table data landed
+  inside the loaded .data segment, colliding with the program's own
+  string-literal data (confirmed by dumping a linked binary and finding
+  compiler-internal strings like "frame"/"lv"/"rv" sitting at the address a
+  "X\n" literal should have been). Root cause: asmb()'s H_ELF case seeks to
+  the symbol table's write position using the unrounded HEADR+textsize+
+  datsize, but the data section right before it was actually written at
+  the page-rounded rnd(HEADR+textsize,INITRND)+datsize (needed so the ELF
+  vaddr/file-offset page-alignment constraint holds) -- so the symbol
+  table's seek lands *before* the data section really ends and overwrites
+  its tail. Fixed in both linkers/8l/asm.c (principia lineage) and
+  linkers/8lk/asm.c (kencc lineage, kept in sync per the byte-identical
+  goal of tests/s/variants) and regenerated the 386 -S goldens in
+  tests/s/variants/expected/ to match the corrected (and now-matching)
+  output. principia's own x86 builds never hit this since they link as -H2
+  native Plan9 binaries, not ELF (thx to Claude)
 - import 5a/5c/5l and 8a/7c/8l from principia (and rename the 5a/5l/5c
   and 8a/8l/8c that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
 - fix the many regressions/mismatch between the principia and kencc variants

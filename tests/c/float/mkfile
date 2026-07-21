@@ -12,10 +12,6 @@ CPP_FLAGS=-D$objtype
 
 # can use -v for verbose mode to help debug
 #LATER: add rune.$O_ in libprint.a? and use functions from it?
-#
-# claude: $LD_ below passes -s (strip symbols) -- see tests/c/vlong/mkfile
-# for the full writeup of the 8l bug this works around (unstripped ELF
-# symbol-table data lands inside the loaded .data segment on 386, only).
 helloprintf.exe: helloprintf.c
    #$CC_ $CPP_FLAGS -c rune.c
    $CC_ $CPP_FLAGS -c vlrt.c
@@ -24,7 +20,7 @@ helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_
-   $LD_ -s -L. -o $target -E _main helloprintf.$O_
+   $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm_
 #TODO: arm/arm__: qemu-arm's legacy ARM FPA "FIX" (float64->int32, used by
