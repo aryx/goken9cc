@@ -1,4 +1,7 @@
-# add -v to some linker command to debug
+# Minimal hello world like programs in assembly for many architectures
+# and also many OSes!
+# Good to test the very basic features of a toolchain (assembler and linker).
+# You can add -v to some linker command to help debug.
 
 LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
           hello_linux_arm.exe hello_linux_arm64.exe \
@@ -8,7 +11,7 @@ MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe \
           hello_macos_libc_amd64.exe
 WINDOWSBINS=hello_windows_386.exe hello_windows_amd64.exe
 PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
-#TODO: hello_xv6_386.exe hello_xv6_riscv.exe
+#TODO: hello_xv6_386.exe hello_xv6_riscv.exe and possibly hello_xv6_arm.exe
 XV6BINS=
 
 all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
@@ -20,8 +23,8 @@ all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 # one can use simply ./$i below to run the test, but unfortunately for mips
 # we need some special code because qemu-mips32sn is used instead
 # of qemu-mips which is weird so we have to force the use of qemu-mips.
-# TODO: cmp with "Hello world" string
 # (the exit(42) programs moved to tests/s/exit, which asserts their code)
+# TODO: cmp with "Hello world" string
 test:V: all
       for (i in $LINUXBINS) {
          echo $i

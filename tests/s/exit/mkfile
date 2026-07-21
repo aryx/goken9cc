@@ -2,8 +2,10 @@
 # segment, which makes them the simplest thing to assemble/link/run when
 # troubleshooting a new assembler or linker backend. Each is expected to
 # terminate the process with exit code 42.
+# To test rum simply the ./exit_linux_xxx.exe and then echo $? 
+# under bash (echo $status under rc), and check it's 42.
 #
-# Split out of tests/s/mini (which now stays focused on hello-world), see
+#history: split out of tests/s/mini (which now stays focused on hello-world), see
 # that mkfile for the toolchain-flag rationale (-H7 etc.).
 
 # arm and arm_ share exit_linux_arm.s but use different toolchain lineages
