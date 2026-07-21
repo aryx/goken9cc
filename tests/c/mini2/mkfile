@@ -6,7 +6,7 @@ all:V: helloprintf.exe
 clean:V:
 	rm -f *.[5678ijv] *.exe *.a
 test_one:V: all
-	./helloprintf.exe
+	./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
 
 #config: set -DDEBUG if needed
 CPP_FLAGS=-D$objtype # -DDEBUG
@@ -30,13 +30,13 @@ test:V:
            mk clean
            mk 'objtype='$arch
 	   if (~ $arch arm__)
-	      qemu-armhf ./helloprintf.exe
+	      qemu-armhf ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
            if not if (~ $arch 386)
-	      qemu-i386 ./helloprintf.exe
+	      qemu-i386 ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
            if not if (~ $arch riscv)
-	      qemu-riscv32 ./helloprintf.exe
+	      qemu-riscv32 ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
            if not
-	      qemu-$arch ./helloprintf.exe
+	      qemu-$arch ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
         }
 
 
@@ -60,7 +60,7 @@ regress7c_macos_arm64.exe: regress7c.c helloprintf_macos_arm64.exe
 
 # runs natively on Apple Silicon (no qemu needed)
 test_macos:V: helloprintf_macos_arm64.exe regress7c_macos_arm64.exe
-	./helloprintf_macos_arm64.exe
+	./helloprintf_macos_arm64.exe | cmp /dev/stdin helloprintf.expected.txt
 	./regress7c_macos_arm64.exe
 
 

@@ -1,0 +1,7 @@
+Hello World: true
+Hello World: 0x2a
+Hello World: 42
+Hello World: 42
+test
+fact(5) = 120
+fact_iter(5) = 120
