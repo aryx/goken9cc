@@ -23,7 +23,6 @@ helloprintf.exe: helloprintf.c
 #TODO: arm_ riscv
 #TODO: arm__: works, but if use -DDEBUG then segfault and weird output
 #TODO: arm_: works for the bool and hexa but not for 42; segfault
-#TODO: mips: gives weird output, 'false' instead of 'true'
 ARCHS=amd64 386 arm arm64 arm__ mips
 test:V:
         for (arch in $ARCHS) {

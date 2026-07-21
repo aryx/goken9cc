@@ -139,9 +139,28 @@ vprintf(int8 *s, byte *arg)
 		p++;
 		narg = nil;
 		switch(*p) {
+		// claude: %t (bool) needed adapting from the Go ABI to the C ABI.
+		// This printf is Rob Pike's Go runtime code (GO/pkg/runtime/
+		// print.c). It was written for the Go calling convention, in
+		// which a bool is a genuine 1-byte stack argument -- so the
+		// original advanced by only 1 byte:
+		//old:	case 't':
+		//old:		narg = arg + 1;
+		//old:		break;
+		// (compare the original sibling cases: +1 bool, +4 int32, +8
+		// int64 -- each is Go's natural type size.)
+		//
+		// Here printf is called from C compiled by the plan9 compilers.
+		// Under the C ABI, variadic arguments undergo the default
+		// argument promotions: a bool/char is widened to int, so it
+		// actually occupies a full 4-byte slot -- exactly like %d/%x.
+		// There is no portable way to pass a 1-byte value through "..."
+		// from C (the promotion is mandatory), so rather than match Rob's
+		// 1-byte assumption we adapt the reader to the promoted int: %t
+		// now shares the 4-byte, vrnd()-aligned advance with %d/%x. (The
+		// vrnd() alignment is itself a C-ABI adaptation already absent
+		// from the Go original.)
 		case 't':
-			narg = arg + 1;
-			break;
 		case 'd':	// 32-bit
 		case 'x':
 			arg = vrnd(arg, 4);
@@ -164,7 +183,19 @@ vprintf(int8 *s, byte *arg)
 			prints(*(int8**)arg);
 			break;
 		case 't':
-			·printbool(*(bool*)arg);
+			// claude: THIS read is the change that actually fixed the
+			// bug. Rob's original read the single byte at the lowest
+			// address of the arg slot:
+			//old:		·printbool(*(bool*)arg);
+			// With a real 1-byte Go bool that byte IS the value, on any
+			// endianness. But with the C ABI's 4-byte promoted int, the
+			// low-address byte is the value's LSB only on little-endian
+			// (amd64, arm, arm64) -- which is exactly why those "worked"
+			// while nobody noticed. On big-endian mips the low-address
+			// byte is the high-order 00, so true (0x00000001) printed as
+			// "false". Reading the whole promoted int and testing != 0
+			// is endian-safe and matches how %d/%x read their slot.
+			·printbool(*(int32*)arg != 0);
 			break;
 		case 'x':
 			·printhex(*(uint32*)arg);
