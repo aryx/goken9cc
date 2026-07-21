@@ -208,6 +208,11 @@ void
 main(int argc, char *argv[])
 {
     char *p1, *p2;
+    /* not L"a"/L"r": wchar_t is only 2 bytes on Windows/Cygwin, but
+     * globp is a Rune* (always 4 bytes), so a wide-string literal
+     * would be the wrong width there */
+    static Rune globp_a[] = {'a', 0};
+    static Rune globp_r[] = {'r', 0};
 
     Binit(&bcons, STDIN, OREAD);
     notify(notifyf);
@@ -234,7 +239,7 @@ main(int argc, char *argv[])
         p2 = savedfile;
         while(*p2++ = *p1++)
             ;
-        globp = L"a";
+        globp = globp_a;
     }
     /*e: [[main()]](ed.c) if [[oflag]] */
     else if(*argv) {
@@ -243,7 +248,7 @@ main(int argc, char *argv[])
         while(*p2++ = *p1++)
             if(p2 >= &savedfile[sizeof(savedfile)])
                 p2--;
-        globp = L"r";
+        globp = globp_r;
     }
     zero = malloc((nlall+5)*sizeof(int*)); // BUG should be sizeof(int)
     tfname = mktemp(template);

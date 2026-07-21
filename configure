@@ -75,6 +75,9 @@ case "$OS" in
     Darwin)
         GOOS=darwin
         ;;
+    CYGWIN*)
+        GOOS=cygwin
+        ;;
     *)
         echo "Unsupported OS: $OS" >&2
         exit 1

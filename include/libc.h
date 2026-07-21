@@ -579,7 +579,14 @@ extern	int	 canlock(Lock*);
 
 extern	void	p9longjmp(p9jmp_buf, int);
 extern	void	p9notejmp(void*, p9jmp_buf, int);
+// On Cygwin sigsetjmp() is a macro needing an addressable sigjmp_buf
+// lvalue (see lib9/jmp.c); elsewhere it's a plain function and the
+// original (void*) cast is unchanged.
+#ifdef __CYGWIN__
+#define p9setjmp(b)	sigsetjmp(*(sigjmp_buf*)(b), 1)
+#else
 #define p9setjmp(b)	sigsetjmp((void*)(b), 1)
+#endif
 
 //******************************************************************************
 // IPC
@@ -783,7 +790,8 @@ extern int pwrite(int fd, void *buf, int n, int off);
 #define mkdir(path, perm) mkdir(path)
 #define pipe(fd) _pipe(fd, 512, O_BINARY)
 
-#else
+#elif !defined(__CYGWIN__)
+/* Cygwin's fcntl.h already defines a real O_BINARY */
 #define O_BINARY 0
 #endif
 

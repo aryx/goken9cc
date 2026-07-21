@@ -72,6 +72,21 @@ THE SOFTWARE.
 #include <math.h>
 #include <ctype.h>	/* for tolower */
 #include <signal.h>
+#include <setjmp.h>
+
+#ifdef __CYGWIN__
+/* Cygwin's sig{set,long}jmp are GNU statement-expression macros whose
+ * bodies call plain setjmp()/longjmp(). Since libc.h #defines setjmp
+ * to p9setjmp (which itself expands to sigsetjmp(...)), that inner
+ * setjmp call loops back into p9setjmp, hits the macro-recursion
+ * guard, and is left unexpanded, giving an unresolved p9setjmp symbol
+ * at link time. Undef them here to fall back to Cygwin's real
+ * sigsetjmp/siglongjmp functions (also declared in <setjmp.h>, and
+ * available since Cygwin 2.2.0), which are plain calls, not macros,
+ * so there's no such collision. */
+#	undef sigsetjmp
+#	undef siglongjmp
+#endif
 
 //******************************************************************************
 // OS-specific crap
