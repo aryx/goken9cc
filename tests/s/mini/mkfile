@@ -24,14 +24,16 @@ all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 # we need some special code because qemu-mips32sn is used instead
 # of qemu-mips which is weird so we have to force the use of qemu-mips.
 # (the exit(42) programs moved to tests/s/exit, which asserts their code)
-# TODO: cmp with "Hello world" string
+# Every hello prints exactly "Hello, world\n"; cmp against hello.expected.txt
+# so a silently-wrong program (e.g. writing nothing, or a bad byte) fails the
+# test instead of passing on a bare "it ran" -- like tests/c/mini does.
 test:V: all
       for (i in $LINUXBINS) {
          echo $i
 	 if (~ $i hello_linux_mips.exe)
-	   qemu-mips ./$i
+	   qemu-mips ./$i | cmp /dev/stdin hello.expected.txt
 	 if not
-	    ./$i
+	    ./$i | cmp /dev/stdin hello.expected.txt
       }
 
 clean:V:
