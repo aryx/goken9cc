@@ -14,7 +14,7 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
 ## Features
 
 - **Portable:**
-  It can *build* on Linux, macOS, and Windows (TODO and Plan 9 and xv6) using gcc or clang (TODO or a boostrapped version of itself)
+  It can *build* on Linux, macOS, and Windows (WSL) (TODO Plan 9 and xv6) using gcc or clang (TODO or a boostrapped version of itself)
 - **Multi-OS support:** 
   Build C programs that can *run* on Linux, macOS, Windows, and Plan 9 (TODO xv6)
 - **Multi-architecture support:**
@@ -22,7 +22,7 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
   arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures (TODO Wasm)
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
-  (e.g., you can build from a Linux 386 machine a binary for amd64 macOS)
+  (e.g., you can build from a Linux 386 machine a binary for arm64 macOS)
 - **Compact and efficient:**
   A lightweight compiler toolchain designed for speed and simplicity.
 - **Heritage:**
@@ -33,8 +33,8 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
 - **Open and extensible:**
   Designed to be easy to understand, modify, and integrate into new projects,
   thanks to its reasonable size and the use of *Literate programming*, which
-  explains the code in depth. It takes more than just a license to make code
-  truly open.
+  explains the code in depth (see https://principia-softwarica.org).
+  It takes more than just a license to make code truly open.
 
 ---
 

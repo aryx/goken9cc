@@ -5,8 +5,9 @@
 ** toolchain
 - import 5a/5c/5l and 8a/7c/8l from principia (and rename the 5a/5l/5c
   and 8a/8l/8c that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
-- fix regressions/mismatch between the principia and kencc variants
-  for both the 386 and arm toolchains (was long)
+- fix the many regressions/mismatch between the principia and kencc variants
+  for both the 386 and arm toolchains (was long, mostly fixing errors in
+  principia variant due to old literate programming errors).
   see pad.org regression/mismatch section (big thx to Claude)
 - ar: add D flag like in GNU ar for "deterministic" builds (was
   hardcoded before with some //PAD: commented code for reproducible builds)
@@ -66,6 +67,12 @@
   * see docs/notes_macos.txt for the full story and darling recipe.
 - 6l/8l: support windows PE with -H10, thx to rafael2knokia
 
+** os
+- build on Windows Subsystem Linux (WSL)
+- Windows PE experimental support for 386 (8l -H10) and amd64 (6l -H10)
+- macOS Mach-O experimental support for amd64 (6l -H6) and arm64 (7l -H6)
+- better Linux ELF support for riscv, mips, arm64, 386
+
 ** internals
 - rename 5a__/5l__/5c__ to 5a9/5l9/5c9
   (5a__ was previously renamed from 5a_ that was originally imported
@@ -76,8 +83,8 @@
   principia lineage vs kencc lineage for 386 and arm
 - start tests/c/variants to compare object and execs produced by the
   principia lineage vs kencc lineage for 386 and arm
-- more complete tests/s/mini/ and tests/c/mini/ supporting most archs and
-  most OSes
+- more complete tests/s/mini/, tests/c/mini/, tests/c/mini2 supporting
+  most archs and most OSes
 
 * 0.3 (Q2 2026) (IWP9 presentation)
 
@@ -174,7 +181,6 @@
 - remove the need for -Wl,--allow-multiple-definition
 - fix the code so it can build with clang on macOS
 
-
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability
   for 5a_/5c_/5l_, va/vc/vl, ia/ic/il, 7a/7c/7l
@@ -201,6 +207,15 @@
    on my thelio astra which can run both arm64 and arm32 binaries)
 - import original 5a/5c/5l from 9cc/plan9 as 5a_/5c_/5l_ and
   extend also to ELF EABI and working hello_linux_arm_.exe
+
+** arch
+- experimental support for arm64
+- experimental support for riscv
+
+** os
+- build on Linux
+- build on macOS
+- generate ELF binaries for Linux for arm and arm64
 
 ** build
 - add mk and rc source code from principia softwarica so self-contained repo with
@@ -243,6 +258,13 @@ nm, etc.
   (not tested though)
 - add riscv toolchain ia/il/ic from https://github.com/inferno-os/inferno-os
   (not tested though)
+
+** arch
+- experimental mips support
+
+** os
+- build on Linux
+- generate binaries for Plan9 for mips
 
 ** internals
 - reorg code with Go related toolchain in GOSRC/ and the C toolchain in src/,
