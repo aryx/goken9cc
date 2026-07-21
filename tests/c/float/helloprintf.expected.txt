@@ -1,0 +1,10 @@
+Hello World: true
+Hello World: 0x2a
+Hello World: 42
+Hello World: 42
+NaN
++2.000000e+000
++2.200000e+000
+Hello World: +0.000000e+000
+Hello World: +3.000000e+000
+test

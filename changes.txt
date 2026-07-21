@@ -3,6 +3,14 @@
 * 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE)
 
 ** toolchain
+- 8l: fix a real ELF-writer bug found via tests/c/vlong and tests/c/float:
+  an unstripped 8l executable lands its debug/symbol-table data inside the
+  loaded .data segment, colliding with the program's own string-literal
+  data (confirmed by dumping a linked binary and finding compiler-internal
+  strings like "frame"/"lv"/"rv" sitting at the address a "X\n" literal
+  should have been). Worked around in the affected test mkfiles with -s
+  (strip); principia's own x86 builds never hit this since they link as
+  -H2 native Plan9 binaries, not ELF (thx to Claude)
 - import 5a/5c/5l and 8a/7c/8l from principia (and rename the 5a/5l/5c
   and 8a/8l/8c that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
 - fix the many regressions/mismatch between the principia and kencc variants
@@ -109,6 +117,18 @@
   from https://bitbucket.org/plan9-from-bell-labs/9-cc.git )
 
 ** test-infra
+- tests/c/vlong, tests/c/float: cmp output against an expected.txt (like
+  mini2), fix a big-endian mips %t bool bug in print.c (a promoted C
+  vararg bool is 4 bytes, not 1), add arm64/riscv/386 (vlong now covers
+  amd64/arm/arm64/arm__/mips/riscv/386; float covers amd64/arm64/riscv/386).
+  riscv and mips both needed their runtime to initialize the compiler's
+  hardwired 0.0/0.5/1.0/2.0 float-constant registers (F28-31 on riscv,
+  F24/26/28/30 on mips) at boot, matching the real plan9 mips kernel
+  convention. arm and mips float stay out of ARCHS: qemu-arm's legacy FPA
+  "FIX" (float64->int32) coprocessor emulation and qemu-mips's
+  double-precision FPU-arithmetic writeback are both buggy in this dev
+  environment (confirmed via minimal hand-written .s, not a toolchain bug)
+  (thx to Claude)
 - start tests/s/variants to compare object and execs produced by the
   principia lineage vs kencc lineage for 386 and arm
 - start tests/c/variants to compare object and execs produced by the

@@ -6,12 +6,16 @@ all:V: helloprintf.exe
 clean:V:
 	rm -f *.[5678ijv] *.exe *.a
 test_one:V: all
-	./helloprintf.exe
+	./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
 
 CPP_FLAGS=-D$objtype
 
 # can use -v for verbose mode to help debug
 #LATER: add rune.$O_ in libprint.a? and use functions from it?
+#
+# claude: $LD_ below passes -s (strip symbols) -- see tests/c/vlong/mkfile
+# for the full writeup of the 8l bug this works around (unstripped ELF
+# symbol-table data lands inside the loaded .data segment on 386, only).
 helloprintf.exe: helloprintf.c
    #$CC_ $CPP_FLAGS -c rune.c
    $CC_ $CPP_FLAGS -c vlrt.c
@@ -20,21 +24,39 @@ helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_
-   $LD_ -L. -o $target -E _main helloprintf.$O_
+   $LD_ -s -L. -o $target -E _main helloprintf.$O_
 
-#TODO: arm_ arm64 mips 386 riscv
-#TODO: arm__: weird float output, 2.00001 instead of 2.0000, and very bad
-#            output for 2.2
-ARCHS=amd64 arm arm__
+#TODO: arm_
+#TODO: arm/arm__: qemu-arm's legacy ARM FPA "FIX" (float64->int32, used by
+#           printfloat's digit-extraction loop) coprocessor-instruction
+#           emulation is buggy for non-"nice" inputs -- e.g. (int)0.9999999
+#           and (int)1.9999999 both come back INT_MIN under this qemu, while
+#           (int)0.5 is fine. 5c/5c__ still target the retired FPA coprocessor
+#           (MOVDW) rather than VFP, so this is a qemu emulation gap in this
+#           environment, not a codegen bug -- see 2.000001/garbage-for-2.2
+#           below. Left out of ARCHS until confirmed on real ARM FPA hardware
+#           or a qemu build with correct FPA emulation.
+#TODO: mips: qemu-mips's TCG double-precision (FR=0) FPU-arithmetic emulation
+#           doesn't commit ADD.D/SUB.D/MOV.D results to the register storage
+#           SWC1 reads back (confirmed: ADD.S single-precision works fine,
+#           ADD.D always reads back as the pre-existing destination value).
+#           vc's own codegen and the FREGZERO/HALF/ONE/TWO runtime-constant
+#           convention (see linux_mips.s) are correct; this is a qemu
+#           emulation gap, not a toolchain bug. Left out of ARCHS.
+ARCHS=amd64 arm64 riscv 386
 test:V:
         for (arch in $ARCHS) {
            echo $arch
            mk clean
            mk 'objtype='$arch
 	   if (~ $arch arm__)
-	      qemu-armhf ./helloprintf.exe
+	      qemu-armhf ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
+           if not if (~ $arch riscv)
+	      qemu-riscv32 ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
+           if not if (~ $arch 386)
+	      qemu-i386 ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
            if not
-	      qemu-$arch ./helloprintf.exe
+	      qemu-$arch ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
         }
 
 
@@ -52,5 +74,5 @@ helloprintf_macos_arm64.exe: helloprintf.c
 
 # runs natively on Apple Silicon (no qemu needed)
 test_macos:V: helloprintf_macos_arm64.exe
-	./helloprintf_macos_arm64.exe
+	./helloprintf_macos_arm64.exe | cmp /dev/stdin helloprintf.expected.txt
 

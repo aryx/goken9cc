@@ -4,6 +4,22 @@
 
 TEXT _main(SB), $0
 	MOVW $setR30(SB), R30
+
+	// claude: vc reuses F24/F26/F28/F30 as hardwired 0.0/0.5/1.0/2.0
+	// constants for common float literals (see compilers/vc/txt.c
+	// gmove()) instead of loading them from memory. On real hardware
+	// there is no such thing as a hardwired MIPS float register (unlike
+	// ARM's FPA, which has actual silicon-wired constants), so the
+	// kernel must initialize them once at boot -- see plan9-contrib
+	// sys/src/9/loongson/l.s. Without this, every "small" float
+	// constant (0.0, 0.5, 1.0, 2.0, 1.5, 2.5, 3.0, -1.0, -2.0, ...)
+	// silently reads as whatever garbage F24-F30 start with (0 under
+	// qemu-mips), which is why floats came out zeroed/looping.
+	MOVD	$0.5, F26
+	SUBD	F26, F26, F24
+	ADDD	F26, F26, F28
+	ADDD	F28, F28, F30
+
 	JAL main(SB)
 
 //extern void exit(uint32);
