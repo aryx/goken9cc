@@ -6,7 +6,7 @@ all:V: helloprintf.exe
 clean:V:
 	rm -f *.[5678ijv] *.exe *.a
 test_one:V: all
-	./helloprintf.exe
+	./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
 
 CPP_FLAGS=-D$objtype
 
@@ -19,18 +19,22 @@ helloprintf.exe: helloprintf.c
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ vlrt.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
-#TODO: arm_ arm64 mips 386 riscv
-#TODO: mips: give weird result, 0x00 and '*' instead of 42
-ARCHS=amd64 arm arm__ mips
+#TODO: arm_
+#TODO: 386: output is garbage (a separate 386 64-bit codegen issue, not the
+#           big-endian Vlong problem that used to break mips); needs its own
+#           linux_386.s stub once fixed.
+ARCHS=amd64 arm arm64 arm__ mips riscv
 test:V:
         for (arch in $ARCHS) {
            echo $arch
            mk clean
            mk 'objtype='$arch
 	   if (~ $arch arm__)
-	      qemu-armhf ./helloprintf.exe
+	      qemu-armhf ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
+           if not if (~ $arch riscv)
+	      qemu-riscv32 ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
            if not
-	      qemu-$arch ./helloprintf.exe
+	      qemu-$arch ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
         }
 
 
@@ -47,5 +51,5 @@ helloprintf_macos_arm64.exe: helloprintf.c
 
 # runs natively on Apple Silicon (no qemu needed)
 test_macos:V: helloprintf_macos_arm64.exe
-	./helloprintf_macos_arm64.exe
+	./helloprintf_macos_arm64.exe | cmp /dev/stdin helloprintf.expected.txt
 

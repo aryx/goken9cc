@@ -13,10 +13,23 @@ typedef unsigned long   ulong;
 #define SIGN(n) (1UL<<(n-1))
 
 typedef struct  Vlong   Vlong;
+// claude: the field order must match how the target compiler lays out a
+// native 64-bit value in memory, because the vlrt helpers reinterpret this
+// struct as the compiler's vlong (and vice versa). Little-endian arches
+// store the low word first; big-endian mips stores the high word first.
+// With the wrong order every conversion comes out word-swapped -- e.g. a
+// widened 42 became 0x2a00000000, so printf %x/%d printed "0x00" / '*' on
+// mips. (This file was copied from the little-endian arm vlrt.c, hence the
+// original lo/hi order was only right for little-endian targets.)
 struct  Vlong
 {
+#ifdef mips	// the only big-endian target here; add other BE archs as needed
+    ulong   hi;
+    ulong   lo;
+#else
     ulong   lo;
     ulong   hi;
+#endif
 };
 
 void    abort(void);

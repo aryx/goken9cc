@@ -79,9 +79,15 @@ vprintf(int8 *s, byte *arg)
 		p++;
 		narg = nil;
 		switch(*p) {
+		// claude: a bool arg is promoted to int in C varargs, so it
+		// occupies a full 4-byte slot like %d/%x (this printf is Rob
+		// Pike's Go-runtime code, whose Go ABI passed a genuine 1-byte
+		// bool -- hence the original "narg = arg + 1"). See tests/c/
+		// mini2/print_nofloat_no64.c for the full write-up.
+		//old:	case 't':
+		//old:		narg = arg + 1;
+		//old:		break;
 		case 't':
-			narg = arg + 1;
-			break;
 		case 'd':	// 32-bit
 		case 'x':
 			arg = vrnd(arg, 4);
@@ -149,7 +155,12 @@ vprintf(int8 *s, byte *arg)
 		//	·printstring(*(String*)arg);
 		//	break;
 		case 't':
-			·printbool(*(bool*)arg);
+			// claude: read the whole promoted int (endian-safe). The
+			//old: ·printbool(*(bool*)arg);
+			// read only the low-address byte, which is the value's LSB
+			// only on little-endian; on big-endian mips it was the
+			// high-order 00, so true printed as "false".
+			·printbool(*(int32*)arg != 0);
 			break;
 		case 'U':
 			·printuint(*(uint64*)arg);
