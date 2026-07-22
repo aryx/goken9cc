@@ -1066,7 +1066,14 @@ zname(char *n, int t, int s)
 void
 zaddr(Gen *a, int s)
 {
-	long l;
+	/* claude: was `long l`. Same bug as compilers/6c/swt.c's zaddr():
+	 * on our 64-bit host `long` is 64 bits, so `l = a->offset;
+	 * if((vlong)l != a->offset)` never differs and T_64 was never set,
+	 * silently truncating any hand-assembled 64-bit immediate (e.g.
+	 * MOVQ $0x7FF0000000000001,CX) down to its low 32 bits. Go-era's
+	 * own 6a (src/cmd/6a/lex.c zaddr()) already uses int32 here.
+	 */
+	int32 l;
 	int i, t;
 	char *n;
 	Ieee e;

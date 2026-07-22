@@ -33,10 +33,14 @@ TESTSARM=hello_arm swi_line_arm addr_arm call_arm
 # the vcmp/vgold split used for those.
 TESTSAMD64=riprel_amd64
 TESTSPE64=pe_amd64
+# runtime-behavior regression (as opposed to the golden-exe-byte-diffs
+# above): runs under qemu and diffs real output, since the whole point
+# is that the wrong bytes reached the CPU at runtime. See const_amd64.s.
+TESTSRUN64=const_amd64
 
 test:V: test386 testarm testamd64 testgolden
 
-testamd64:V: ${TESTSAMD64:%=%.vgold6} ${TESTSPE64:%=%.vgoldpe}
+testamd64:V: ${TESTSAMD64:%=%.vgold6} ${TESTSPE64:%=%.vgoldpe} ${TESTSRUN64:%=%.vrun6}
 
 # byte-compare object files and executables produced by the two lineages
 test386:V: ${TESTS386:%=%.vcmp8}
@@ -150,6 +154,11 @@ golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5} ${TESTSAMD64:%=%.mkgol
 %.mkgoldpe:V:
 	6a -c $stem.s
 	6l -H10 -o expected/$stem.exe -E _start $stem.6
+
+%.vrun6:V:
+	6a -c $stem.s
+	6l -H7 -o $stem.exe -E _main $stem.6
+	../../../scripts/qemu-runner amd64 ./$stem.exe | cmp /dev/stdin $stem.expected.bin
 
 clean nuke:V:
 	rm -f *.[568] *.exe *.uexe
