@@ -11,4 +11,4 @@ O_=i
 CC_=ic
 LD_=il
 AS_=ia
-AR_=arg
+AR_=iar

@@ -3,26 +3,6 @@
 #include "a.h"
 #include "y.tab.h"
 
-//goken: was partially in a.h before
-enum				/* keep in synch with ../cc/cc.h */
-{
-	Plan9	= 1<<0,
-	Unix	= 1<<1,
-	Windows	= 1<<2
-};
-int
-systemtype(int sys)
-{
-	return sys&Plan9;
-}
-//goken: was in 6a but not 5a, so let's be consistent
-int
-pathchar(void)
-{
-	return '/';
-}
-
-
 void
 main(int argc, char *argv[])
 {
@@ -37,15 +17,10 @@ main(int argc, char *argv[])
 		p++;
 	if(*p == 'j')
 		thechar = 'j';
-
-	ensuresymb(NSYMB);
-
 	memset(debug, 0, sizeof(debug));
 	cinit();
 	outfile = 0;
-	//include[ninclude++] = ".";
-    setinclude(".");
-
+	include[ninclude++] = ".";
 	ARGBEGIN {
 	default:
 		c = ARGC();
@@ -87,20 +62,16 @@ main(int argc, char *argv[])
 		c = 0;
 		nout = 0;
 		for(;;) {
-
-            Waitmsg *w;
-
 			while(nout < nproc && argc > 0) {
-				i = fork();
+				i = myfork();
 				if(i < 0) {
-					//i = mywait(&status);
-					//if(i < 0)
-                        fprint(2, "fork: %r\n");
+					i = mywait(&status);
+					if(i < 0)
 						errorexit();
-					//if(status)
-					//	c++;
-					//nout--;
-					//continue;
+					if(status)
+						c++;
+					nout--;
+					continue;
 				}
 				if(i == 0) {
 					print("%s:\n", *argv);
@@ -112,16 +83,13 @@ main(int argc, char *argv[])
 				argc--;
 				argv++;
 			}
-			//i = mywait(&status);
-			//if(i < 0) {
-            w = wait();
-            if(w == nil) {
+			i = mywait(&status);
+			if(i < 0) {
 				if(c)
 					errorexit();
 				exits(0);
 			}
-			//if(status)
-            if(w->msg[0])
+			if(status)
 				c++;
 			nout--;
 		}
@@ -168,7 +136,7 @@ assemble(char *file)
 		}
 	}
 
-    of = create(outfile, OWRITE, 0664);
+	of = mycreat(outfile, 0664);
 	if(of < 0) {
 		yyerror("%ca: cannot create %s", thechar, outfile);
 		errorexit();
@@ -177,9 +145,6 @@ assemble(char *file)
 
 	pass = 1;
 	pinit(file);
-
-	Bprint(&obuf, "%s\n", thestring);
-
 	if(thechar == 'j')
 		dodefine("XLEN=8");
 	else
@@ -191,8 +156,6 @@ assemble(char *file)
 		cclean();
 		return nerrors;
 	}
-
-	Bprint(&obuf, "\n!\n");
 
 	pass = 2;
 	outhist();
@@ -675,5 +638,6 @@ outhist(void)
 	}
 }
 
-#include "../../src/cmd/cc/lexbody"
-#include "../../src/cmd/cc/macbody"
+#include "../../compilers/cck/lexbody"
+#include "../../compilers/cck/macbody"
+#include "../../compilers/cck/compat"

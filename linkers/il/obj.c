@@ -718,7 +718,6 @@ ldobj(int f, int32 c, char *pn)
 	static int files;
 	static char **filen;
 	char **nfilen;
-    int hlen;
 
 	if((files&15) == 0){
 		nfilen = malloc((files+16)*sizeof(char*));
@@ -731,11 +730,6 @@ ldobj(int f, int32 c, char *pn)
 	bsize = buf.xbuf;
 	bloc = buf.xbuf;
 	di = S;
-
-    //coupling: ia/lex.c and and ic/swt.c
-    hlen = strlen("riscv\n\n!\n");
-    seek(f, hlen, SEEK__CUR);
-    c-=hlen;
 
 newloop:
 	memset(h, 0, sizeof(h));
