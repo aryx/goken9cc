@@ -197,6 +197,18 @@ lookup(void)
 	return s;
 }
 
+/*
+ * claude: isalpha(3) alone rejects UTF-8 continuation bytes (>= 0x80),
+ * so identifiers like the Go/9front "pkg·func" convention (a literal
+ * middle dot, U+00B7) never enter the aloop/talph identifier path and
+ * the parser sees a syntax error instead. src/cmd/cc/lexbody's yylex
+ * already had this ISALPHA(c) = isalpha(c) || c>=Runeself extension;
+ * this file was missing it, breaking tests/c/float/linux_arm64.s's
+ * "TEXT ·getcallerpc(SB), $0" once 7a switched from src/cmd/cc/lexbody
+ * to this file.
+ */
+#define ISALPHA(c) (isalpha(c) || (uchar)(c) >= Runeself)
+
 int
 yylex(void)
 {
@@ -224,7 +236,7 @@ l1:
 		}
 		goto l0;
 	}
-	if(isalpha(c))
+	if(ISALPHA(c))
 		goto talph;
 	if(isdigit(c))
 		goto tnum;
@@ -240,7 +252,7 @@ l1:
 
 	case '.':
 		c = GETC();
-		if(isalpha(c)) {
+		if(ISALPHA(c)) {
 			cp = symb;
 			*cp++ = '.';
 			goto aloop;
@@ -261,7 +273,7 @@ l1:
 	aloop:
 		*cp++ = c;
 		c = GETC();
-		if(isalpha(c) || isdigit(c) || c == '_' || c == '$')
+		if(ISALPHA(c) || isdigit(c) || c == '_' || c == '$')
 			goto aloop;
 		*cp = 0;
 		peekc = c;
