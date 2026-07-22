@@ -22,9 +22,11 @@ enum
 int /* in [$OS].c */
 	_is5(char*),
 	_is6(char*),
+	_is7(char*),
 	_is8(char*),
 	_read5(Biobuf*, Prog*),
 	_read6(Biobuf*, Prog*),
+	_read7(Biobuf*, Prog*),
 	_read8(Biobuf*, Prog*);
 
 typedef struct Obj	Obj;
@@ -37,25 +39,23 @@ struct	Obj		/* functions to handle each intermediate (.$O) file */
 	int	(*read)(Biobuf*, Prog*);	/* read for each type of $O file*/
 };
 
-static Obj	obj[] =
+/*
+ * claude: explicit "[Maxobjtype]" size, not just "[]": a designated
+ * initializer list without an explicit array size takes its size from
+ * the highest index used, so a "[]" declaration here would stop at
+ * ObjAmd64 (index 3) even though Maxobjtype (mach.h) is 6 -- objtype()'s
+ * "for(i=0;i<Maxobjtype;i++)" would then read two indices past the end
+ * of the array and call whatever garbage bytes it found there as a
+ * function pointer (a SIGBUS crash in iar/ar on any .7 file). ObjMips/
+ * ObjRiscv stay unset (0) since this directory has no vobj.c/iobj.c yet;
+ * the existing "if(obj[i].is && ...)" check skips a null entry safely.
+ */
+static Obj	obj[Maxobjtype] =
 {			/* functions to identify and parse each type of obj */
-	/*
-	 * claude: designated initializers (matching src/libmach/obj.c's
-	 * already-correct version of this same table), not a flat
-	 * positional list: the previous "386 .8", "arm .5", 0, 0" only
-	 * filled array indices 0-2, but Maxobjtype (mach.h) is 6, so
-	 * objtype()'s "for(i=0;i<Maxobjtype;i++)" read three indices past
-	 * the end of the array and called whatever garbage bytes it found
-	 * there as a function pointer -- a SIGBUS crash in iar/ar on any
-	 * .6 (amd64) file, since ObjAmd64 was never listed at all despite
-	 * 6obj.c (_is6/_read6) already being compiled into this library.
-	 * ObjMips/ObjArm64/ObjRiscv stay unset (0) since this directory
-	 * has no vobj.c/7obj.c/iobj.c yet; the existing
-	 * "if(obj[i].is && ...)" check already skips a null entry safely.
-	 */
 	[Obj386]	"386 .8",	_is8, _read8,
 	[ObjArm]	"arm .5",	_is5, _read5,
 	[ObjAmd64]	"amd64 .6",	_is6, _read6,
+	[ObjArm64]	"arm64 .7",	_is7, _read7,
 };
 
 struct	Symtab
