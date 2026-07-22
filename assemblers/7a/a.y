@@ -542,9 +542,10 @@ ioreg:
 	}
 |	'(' sreg ')' con '!'
 	{
-        //TODO: take fix from cinap in 9front
+		$$ = nullgen;
 		$$.type = D_XPOST;
-		$$.offset = $2;
+		$$.reg = $2;
+		$$.offset = $4;
 	}
 |	'(' sreg ')' '(' indexreg ')'
 	{

@@ -6,9 +6,6 @@
 #include <bio.h>
 #include "../../linkers/7l/7.out.h"
 
-//goken: use of int32 instead of long
-//goken: old: typedef vlong int64;
-
 #ifndef	EXTERN
 #define	EXTERN	extern
 #endif
@@ -23,7 +20,7 @@ typedef	struct	Hist	Hist;
 #define	NSYMB		8192
 #define	BUFSIZ		8192
 #define	HISTSZ		20
-//goken: #define	NINCLUDE	10
+#define	NINCLUDE	10
 #define	NHUNK		10000
 #define	EOF		(-1)
 #define	IGN		(-2)
@@ -103,8 +100,7 @@ EXTERN	Hist*	ehist;
 EXTERN	int	newflag;
 EXTERN	Hist*	hist;
 EXTERN	char*	hunk;
-//goken: EXTERN	char*	include[NINCLUDE];
-EXTERN  char** include;
+EXTERN	char*	include[NINCLUDE];
 EXTERN	Io*	iofree;
 EXTERN	Io*	ionext;
 EXTERN	Io*	iostack;
@@ -112,11 +108,6 @@ EXTERN	int32	lineno;
 EXTERN	int	nerrors;
 EXTERN	int32	nhunk;
 EXTERN	int	ninclude;
-
-//goken: new
-EXTERN	int32	nsymb;
-
-
 EXTERN	Gen	nullgen;
 EXTERN	char*	outfile;
 EXTERN	int	pass;
@@ -124,19 +115,14 @@ EXTERN	char*	pathname;
 EXTERN	int32	pc;
 EXTERN	int	peekc;
 EXTERN	int	sym;
-//goken: EXTERN	char	symb[NSYMB];
-EXTERN  char* symb;
+EXTERN	char	symb[NSYMB];
 EXTERN	int	thechar;
 EXTERN	char*	thestring;
 EXTERN	int32	thunk;
 EXTERN	Biobuf	obuf;
 
-void*	alloc(int32);
-void*	allocn(void*, int32, int32);
-
-//goken: new
-void	ensuresymb(int32);
-
+void*	alloc(long);
+void*	allocn(void*, long, long);
 void	errorexit(void);
 void	pushio(void);
 void	newio(void);
@@ -172,11 +158,30 @@ void	macif(int);
 void	macend(void);
 void	outhist(void);
 void	dodefine(char*);
-
-void	prfile(int32);
+void	prfile(long);
 void	linehist(char*, int);
 void	gethunk(void);
 void	yyerror(char*, ...);
 int	yyparse(void);
 void	setinclude(char*);
 int	assemble(char*);
+
+/*
+ *	Posix.c/Inferno.c/Nt.c
+ */
+enum	/* keep in synch with ../cc/cc.h */
+{
+	Plan9	= 1<<0,
+	Unix	= 1<<1,
+	Windows	= 1<<2
+};
+int	mywait(int*);
+int	mycreat(char*, int);
+int	systemtype(int);
+int	pathchar(void);
+char*	mygetwd(char*, int);
+int	myexec(char*, char*[]);
+int	mydup(int, int);
+int	myfork(void);
+int	mypipe(int*);
+void*	mysbrk(ulong);

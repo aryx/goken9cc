@@ -387,7 +387,6 @@ ldobj(fdt f, int32 c, char *pn)
 	static int files;
 	static char **filen;
 	char **nfilen;
-    int hlen;
 
 	if((files&15) == 0){
 		nfilen = malloc((files+16)*sizeof(char*));
@@ -400,11 +399,6 @@ ldobj(fdt f, int32 c, char *pn)
 	bsize = buf.xbuf;
 	bloc = buf.xbuf;
 	di = S;
-
-    //coupling: 7a/lex.c and and 7c/swt.c
-    hlen = strlen("arm64\n\n!\n");
-    seek(f, hlen, SEEK__CUR);
-    c-=hlen;
 
 newloop:
 	memset(h, 0, sizeof(h));

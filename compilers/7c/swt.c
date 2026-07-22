@@ -337,10 +337,6 @@ outcode(void)
 				pc++;
 		}
 	}
-    Bprint(&outbuf, "%s\n", thestring);
-    // TODO? nothing between?
-    Bprint(&outbuf, "\n!\n");
-
 	outhist(&outbuf);
 	for(sym=0; sym<NSYM; sym++) {
 		h[sym].sym = S;
