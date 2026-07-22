@@ -61,9 +61,6 @@ extern	Mach	mamd64;
 extern	Mach	marm;
 extern	Mach	marm64;
 
-/* BUG: FIX THESE WHEN NEEDED */
-Mach	mmips;
-
 ExecTable exectab[] =
 {
 	{ V_MAGIC,			/* Mips v.out */
