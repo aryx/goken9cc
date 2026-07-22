@@ -11,8 +11,9 @@
 #
 # Note: running this binary to full completion (':c') currently faults
 # with a TLB miss -- tests/s/mini/hello_plan9_mips.exe's crackhdr()
-# result has txtaddr=0x20 but entry=0x4020 (unlike the arm binary,
-# where txtaddr==entry), so machines/vi/vi.c's
+# result has txtaddr=0x1020 (mach->pgsize 0x1000 + sizeof(Exec) 0x20,
+# adotout()'s layout for FMIPS) but entry=0x4020 (unlike the arm
+# binary, where txtaddr==entry), so machines/vi/vi.c's
 # `s->base = fhdr.txtaddr - fhdr.hdrsz` text-segment formula doesn't
 # cover the real entry point. Confirmed via a throwaway crackhdr-only
 # harness that this is identical under -lmach_ (src/libmach,
@@ -40,10 +41,10 @@ if [ ! -f "$EXE" ]; then
 fi
 
 # --- disassemble the real first instruction of the real text segment
-# (crackhdr reports txtaddr=0x20 for this binary). hello_plan9_mips.s
+# (crackhdr reports txtaddr=0x1020 for this binary). hello_plan9_mips.s
 # opens with a stack-frame-adjusting addi, same instruction the
 # assembler/linker actually emitted. ---
-out=$(printf '0x20?i\n$q\n' | timeout 5 "$VI" "$EXE" 2>&1)
+out=$(printf '0x1020?i\n$q\n' | timeout 5 "$VI" "$EXE" 2>&1)
 if echo "$out" | grep -qi "addi.*r29"; then
     ok "vi: disassembles real first instruction of the text segment"
 else
