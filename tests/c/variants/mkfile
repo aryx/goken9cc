@@ -19,8 +19,15 @@ CTESTS=unsigned_long manyvars not_byte float_parse label_if
 CTESTSMISC=f_1_e_126 minus_one_index switch_hex float vlong_max
 # arm C tests: kencc 5ck vs principia 5c (principia is the plain-name default)
 CTESTSARM=reg_alloc_arm float_cmp_arm
+# amd64 has no second lineage to cross-check against (unlike 386/arm
+# above), and no macOS/darling execution available in this environment
+# either, so just golden-diff a linked -H6 exe -- see tests/s/variants
+# for the same pattern applied to hand-written assembly.
+CTESTSPIE64=pievar_amd64
 
-test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testgolden
+test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testpie64 testgolden
+
+testpie64:V: ${CTESTSPIE64:%=%.vgoldpie}
 
 testarm:V: ${CTESTSARM:%=%.vcmp5} bigfunc_arm
 
@@ -53,6 +60,20 @@ testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm} ${CTESTSARM:%=%.vgold
 %.mkgold5:V:
 	5ck -r -o expected/$stem.5 $stem.c
 
+# 6c has no -r (reproducible) flag, so its object file embeds the
+# build cwd and isn't byte-comparable across checkouts; only
+# golden-diff the linked exe (-H6 always strips the symbol table, so
+# no history/path data reaches it either -- see tests/s/variants'
+# %.vgold6 for the same reasoning).
+%.vgoldpie:V:
+	6c -z $stem.c
+	6l -H6 -o $stem.exe -E digit $stem.6
+	cmp $stem.exe expected/$stem.exe
+
+%.mkgoldpie:V:
+	6c -z $stem.c
+	6l -H6 -o expected/$stem.exe -E digit $stem.6
+
 %.vcmp:V:
 	8ck -r -o $stem.k.8 $stem.c
 	8c  -r -o $stem.p.8 $stem.c
@@ -74,7 +95,7 @@ testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm} ${CTESTSARM:%=%.vgold
 
 # Regenerate the golden reference outputs from the kencc lineage.
 # Only run this deliberately, after verifying the new outputs are correct.
-golden:V: ${CTESTS:%=%.mkgold} ${CTESTSMISC:%=%.mkgoldm} ${CTESTSARM:%=%.mkgold5}
+golden:V: ${CTESTS:%=%.mkgold} ${CTESTSMISC:%=%.mkgoldm} ${CTESTSARM:%=%.mkgold5} ${CTESTSPIE64:%=%.mkgoldpie}
 
 %.mkgold:V:
 	8ck -r -o expected/$stem.8 $stem.c
@@ -83,4 +104,4 @@ golden:V: ${CTESTS:%=%.mkgold} ${CTESTSMISC:%=%.mkgoldm} ${CTESTSARM:%=%.mkgold5
 	8ck -r -o expected/$stem.8 ../misc/$stem.c
 
 clean nuke:V:
-	rm -f *.[58] *.exe bigfunc_arm.c
+	rm -f *.[568] *.exe bigfunc_arm.c

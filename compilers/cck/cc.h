@@ -436,6 +436,22 @@ EXTERN	long	autoffset;
 EXTERN	int	blockno;
 EXTERN	Decl*	dclstack;
 EXTERN	char	debug[256];
+/*
+ * pie: set by the -z flag, this asks 6c to emit position-independent
+ * code (PIC) -- code whose own symbol references work no matter where
+ * it ends up loaded -- so that 6l can in turn produce a
+ * position-independent executable (PIE), one the kernel can load at a
+ * randomized address (ASLR) each run. Under PIE the final image is
+ * slid at load, so the address of a global can not be baked into an
+ * instruction as a link-time-absolute immediate; it must be computed
+ * at run time. 6c consults this in hardconst() to stop folding
+ * "$sym(SB)" (addable==13) into arithmetic instructions, loading it
+ * into a register instead (which 6l -H6 encodes RIP-relative).
+ * Companion of the linker's -H6 (macOS Mach-O); harmless/ignored by
+ * the other compilers sharing this cc.h (5ck/8ck), which never
+ * consult it.
+ */
+EXTERN	int	pie;
 EXTERN	Hist*	ehist;
 EXTERN	long	firstbit;
 EXTERN	Sym*	firstarg;

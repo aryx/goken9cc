@@ -115,7 +115,7 @@ machorebase(void)
 	Prog *p;
 	Sym *v;
 	vlong *off;
-	int noff, moff, i, j;
+	int noff, moff, i, j, tt;
 	vlong o, t;
 	uchar *buf;
 	int32 n, m;
@@ -130,7 +130,20 @@ machorebase(void)
 			continue;
 		if(p->from.sym->type == SSTRING)
 			continue;
-		if(p->to.type != D_CONST)
+		/*
+		 * claude: a symbolic DATA value ("DATA x(SB)/8, $y(SB)") is
+		 * D_CONST directly in some ?l data models, but this vanilla
+		 * 6l boxes it as D_ADDR with the real type stashed in .index
+		 * (see vaddr()'s own "if(t == D_ADDR) t = a->index;"
+		 * unwrapping in span.c). Accept both so a pointer initializer
+		 * like "static char *dig = "0123...";" is still found and
+		 * rebased -- found via tests/c/variants/pievar_amd64.c, which
+		 * has one.
+		 */
+		tt = p->to.type;
+		if(tt == D_ADDR)
+			tt = p->to.index;
+		if(tt != D_CONST && tt != D_STATIC && tt != D_EXTERN)
 			continue;
 		v = p->to.sym;
 		if(v == S)

@@ -485,7 +485,16 @@ naddr(Node *n, Adr *a)
 
 	case OINDEX:
 		a->type = idx.ptr;
-		if(n->left->op == OADDR || n->left->op == OCONST)
+		/*
+		 * Normally an OADDR/OCONST base is re-derived here as a direct
+		 * symbolic operand (e.g. "sym(SB)(index)"). But under -z
+		 * doindex() materialized a global base into a register
+		 * (idx.ptr), because an absolute base can not be indexed
+		 * pc-relatively; in that case keep the register and use
+		 * "(reg)(index)" instead of overwriting it.
+		 */
+		if((n->left->op == OADDR || n->left->op == OCONST)
+		&& !(idx.ptr >= D_AX && idx.ptr <= D_R15))
 			naddr(n->left, a);
 		if(a->type >= D_AX && a->type <= D_R15)
 			a->type += D_INDIR;
@@ -1135,7 +1144,17 @@ print("botch in doindex\n");
 		idx.ptr = D_CONST;
 	else if(n->left->op == OREGISTER)
 		idx.ptr = n->left->reg;
-	else if(n->left->op != OADDR) {
+	else if(n->left->op != OADDR || (pie && addrofext(n->left))) {
+		/*
+		 * Normally the base of an indexed reference stays a direct
+		 * operand: for "$sym(SB)" that yields "sym(SB)(index)", an
+		 * absolute base displacement. Under -z (see cc.h) the base of
+		 * a global can not be an absolute address, and [rip+disp]
+		 * addressing can not also carry an index register, so
+		 * materialize the base into a register first (cgen -> RIP-
+		 * relative LEA under 6l -H6) and use "(reg)(index)". OADDR of
+		 * an auto/param is SP-relative and stays a direct base.
+		 */
 		reg[D_BP]++;	// cant be used as a base
 		regalloc(&nod1, &qregnode, Z);
 		cgen(n->left, &nod1);
@@ -1146,6 +1165,24 @@ print("botch in doindex\n");
 	idx.reg = nod.reg;
 	regfree(&nod);
 	constnode.vconst = v;
+}
+
+/*
+ * Is n "$sym(SB)" for an external/static symbol (an absolute global
+ * address)? Used to spot the position-independent-code-unsafe indexed-
+ * base case in doindex(). naddr() has no side effects, so probing a
+ * scratch Adr is safe.
+ */
+int
+addrofext(Node *n)
+{
+	Adr a;
+
+	if(n->op != OADDR)
+		return 0;
+	a = zprog.from;		/* empty Adr: type/index = D_NONE, as naddr expects */
+	naddr(n, &a);
+	return a.type == D_ADDR && (a.index == D_EXTERN || a.index == D_STATIC);
 }
 
 void

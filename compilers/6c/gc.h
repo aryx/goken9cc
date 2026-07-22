@@ -225,6 +225,7 @@ void	sugen(Node*, Node*, long);
 int	needreg(Node*, int);
 int	hardconst(Node*);
 int	immconst(Node*);
+int	addrofext(Node*);
 
 /*
  * cgen64.c

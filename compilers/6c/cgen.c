@@ -1838,6 +1838,23 @@ immconst(Node *n)
 int
 hardconst(Node *n)
 {
+	/*
+	 * Under -z (position-independent code, companion of 6l -H6's
+	 * position-independent executable output), the address of a
+	 * global -- "$sym(SB)", which xcom() tags as addable==13 ("address
+	 * of external that becomes constant") -- can not be a link-time-
+	 * absolute immediate baked into an instruction, because ASLR
+	 * slides the image at load. Treating it as "hard" makes every fold
+	 * site (see the callers, all guarded by !hardconst) load it into a
+	 * register via cgen() instead, which 6l -H6 encodes as a RIP-
+	 * relative LEA. Without this, e.g. "(char*)buf + i" compiled to
+	 * "ADDQ $buf(SB), AX" -- an absolute address that is wrong once
+	 * slid (and that 6l could not even encode once MOV $sym(SB) was
+	 * rerouted to the LEA path). Builds without -z are unaffected
+	 * (byte-identical).
+	 */
+	if(pie && n->addable == 13)
+		return 1;
 	return n->op == OCONST && !immconst(n);
 }
 
