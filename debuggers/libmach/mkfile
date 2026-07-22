@@ -16,6 +16,7 @@ OFILES=\
 	6obj.$O\
 	7obj.$O\
 	8obj.$O\
+	vobj.$O\
 	obj.$O\
 	swap.$O\
 	setmach.$O\
