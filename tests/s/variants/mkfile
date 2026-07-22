@@ -33,13 +33,13 @@ test:V: test386 testarm testgolden
 
 # byte-compare object files and executables produced by the two lineages
 test386:V: ${TESTS386:%=%.vcmp8}
-	./hello_386.k.exe
+	../../../scripts/qemu-runner 386 ./hello_386.k.exe
 
 # The arm lineages agree since the 5.out.h merge: both share
 # include/5.out.h (principia numbering), with linkers/5lk/5.out.h a
 # thin compat wrapper for the kencc-only identifiers.
 testarm:V: ${TESTSARM:%=%.vcmp5} mixaddr_arm
-	./hello_arm.k.exe
+	../../../scripts/qemu-runner arm ./hello_arm.k.exe
 
 # mixaddr_arm: a symbol whose address is taken by BOTH the assembler
 # ($shared(SB) -> D_ADDR) and the compiler (&shared -> D_CONST+name),
