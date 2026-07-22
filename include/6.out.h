@@ -833,12 +833,19 @@ enum
 
 /*
  * this is the simulated IEEE floating point
+ * claude: was `long l, h;`. Must be int32, not long: the linkers copy
+ * the raw bytes of this struct into the data segment (datblk() D_FCONST),
+ * so 64-bit longs corrupt the emitted doubles on our 64-bit hosts. Same
+ * bug, same fix already applied to the shared include/common.out.h (used
+ * by 5l/8l) and already correct in the older linkers/8lk/6.out.h copy --
+ * this freshly-imported vanilla header just still had the original
+ * 32-bit-host `long`.
  */
 typedef	struct	ieee	Ieee;
 struct	ieee
 {
-	long	l;	/* contains ls-man	0xffffffff */
-	long	h;	/* contains sign	0x80000000
+	int32	l;	/* contains ls-man	0xffffffff */
+	int32	h;	/* contains sign	0x80000000
 				    exp		0x7ff00000
 				    ms-man	0x000fffff */
 };

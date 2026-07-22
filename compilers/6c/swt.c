@@ -360,7 +360,14 @@ zname(Biobuf *b, Sym *s, int t)
 void
 zaddr(Biobuf *b, Adr *a, int s)
 {
-	long l;
+	/* claude: was `long l`. On our 64-bit host `long` is 64 bits, so
+	 * `l = a->offset; if((vlong)l != a->offset)` never differs and
+	 * T_64 was never set, silently truncating any constant that
+	 * doesn't fit in 32 bits down to its low 32 bits. Go-era's own
+	 * 6g (GO/cmd/6g/gobj.c, zaddr()) already uses int32 here for
+	 * exactly this reason -- matching it.
+	 */
+	int32 l;
 	int i, t;
 	char *n;
 	Ieee e;
