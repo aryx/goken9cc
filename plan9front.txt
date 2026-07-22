@@ -9,3 +9,16 @@ Some code and fixes comes also from 9front at https://github.com/9front/9front
 such as:
  - 7a/7c/7l:
  - 6a/6c/6l:
+
+Some fixes were found independently in both 9front and this repo's own
+principia-softwarica lineage:
+ - vc (mips): align()'s Aaut3 case ("total align of automatic") never
+   set `w`, so stack "safe" spill-temp regions (regsalloc(), used e.g.
+   when marshaling a call whose argument itself contains another call)
+   were not rounded up to a MIPS word, skewing the whole function's
+   frame size by a non-word amount. The 5c/7c (arm/arm64) backends
+   already carried the fix (imported from principia-softwarica, itself
+   independent of 9front); ported the same one-line fix to vc. 9front
+   found and fixed the identical bug in their vc, independently:
+     e8c8f5d82 vc: word align automatics
+   See tests/c/regressions/mips_aut3_align.c.

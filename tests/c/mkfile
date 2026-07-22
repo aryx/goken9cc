@@ -2,6 +2,6 @@ TOP=../..
 <$TOP/mkconfig
 
 # misc/? rune/?
-DIRS=mini mini2 vlong float variants
+DIRS=mini mini2 vlong float variants regressions
 
 <$TOP/mkfiles/mkdirs

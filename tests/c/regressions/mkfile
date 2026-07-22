@@ -1,0 +1,20 @@
+# Minimal repros for compiler/assembler/linker bugs found while diffing
+# the mips toolchain (vc/va/vl) against other kencc-derived repos (see
+# scripts/diff.rc); as opposed to tests/c/features, which is for ported
+# functionality rather than bug fixes. Each .c file documents its own
+# bug, root cause and origin in a comment at the top; see also
+# ../../../plan9front.txt for the running credits list.
+
+# mips_aut3_align: no runtime crash to check (see the comment in the
+# .c file for why) -- instead greps vc -A's own alignment trace and
+# checks the "aut3" (total align of automatic) result is a multiple of
+# a MIPS word (4 bytes).
+test:V: mips_aut3_align.check
+
+mips_aut3_align.check:V: mips_aut3_align.c
+	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
+	awk '/align aut3/ { if ($NF % 4 != 0) { print "misaligned: " $0; bad=1 } } END { if (bad) exit 1 }' /tmp/mips_aut3_align.$pid.trace
+	rm -f /tmp/mips_aut3_align.$pid.trace
+
+clean:V:
+	rm -f *.v *.o o.out
