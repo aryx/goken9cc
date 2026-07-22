@@ -9,7 +9,7 @@ TEXT    panic(SB), $0
 
 
 // was called exit1 in runtime/linux/amd64/sys.s
-TEXT	exit(SB), $0-8
+TEXT	exit(SB), $0
 	MOVL	8(SP), DI
 	MOVL	$60, AX	// exit - exit the current os thread
 	SYSCALL
@@ -22,7 +22,7 @@ TEXT	exit(SB), $0-8
 //        XORQ    DI, DI
 //        SYSCALL
 
-TEXT	open(SB), $0-16
+TEXT	open(SB), $0
 	MOVQ	8(SP), DI
 	MOVL	16(SP), SI
 	MOVL	20(SP), DX
@@ -30,7 +30,7 @@ TEXT	open(SB), $0-16
 	SYSCALL
 	RET
 
-TEXT	write(SB), $0-24
+TEXT	write(SB), $0
 	MOVL	8(SP), DI
 	MOVQ	16(SP), SI
 	MOVL	24(SP), DX
@@ -62,12 +62,12 @@ TEXT	gettime(SB), $32
 	MOVL	BX, (DI)
 	RET
 
-TEXT	·getcallerpc+0(SB), $0
+TEXT	getcallerpc+0(SB), $0
 	MOVQ	x+0(FP),AX		// addr of first arg
 	MOVQ	-8(AX),AX		// get calling pc
 	RET
 
-TEXT	·setcallerpc+0(SB), $0
+TEXT	setcallerpc+0(SB), $0
 	MOVQ	x+0(FP),AX		// addr of first arg
 	MOVQ	x+8(FP), BX
 	MOVQ	BX, -8(AX)		// set calling pc
