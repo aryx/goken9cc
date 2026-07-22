@@ -21,13 +21,8 @@ base=9cc
 #base=inferno # for ia/ic/il as 9cc does not have them
 #base=myplan9old
 
-dirs1=(9cc 9colombier inferno) #   kencc-riscv mykencc) # inferno-old
-dirs2=(plan9) # myplan9old
-#dirs3=(9base plan9port)
-#dirs4=(goold goken)
-dirs5=(9front) # myplan9
-
-dirs=($dirs1 $dirs2 $dirs3 $dirs4 $dirs5)
+dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv goken goold 9front)
+#dirs=(9base plan9port)
 
 # goken comparisons
 #base=goken
