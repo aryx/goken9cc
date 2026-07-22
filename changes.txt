@@ -3,7 +3,7 @@
 * 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE)
 
 ** toolchain
-- import 5a/5c/5l and 8a/7c/8l from principia (and rename the 5a/5l/5c
+- import 5a/5c/5l and 8a/8c/8l from principia (and rename the 5a/5l/5c
   and 8a/8l/8c that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
 - fix the many regressions/mismatch between the principia and kencc variants
   for both the 386 and arm toolchains (was long, mostly fixing errors in
