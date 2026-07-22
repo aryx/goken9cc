@@ -9,6 +9,7 @@ LIBNAME=libmach.a
 OFILES=\
         5.$O\
 	6.$O\
+	7.$O\
 	8.$O\
 	5db.$O\
 	8db.$O\
@@ -33,6 +34,7 @@ OFILES=\
 
 HFILES=	$TOP/include/mach.h\
 	$TOP/include/ureg_mips.h\
+	$TOP/include/ureg_arm64.h\
 	bootexec.h\
 	elf.h\
 	ureg5.h\

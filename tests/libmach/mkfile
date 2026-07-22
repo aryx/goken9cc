@@ -1,0 +1,18 @@
+TOP=../..
+<$TOP/mkconfig
+
+# Regression tests for lib_toolchain/libmach's consumers (linkers/ar,
+# debuggers/acid, machines/5i, machines/vi). See smoke.sh for why.
+#
+# Builds each consumer directly (not relying on `mk install` / PATH)
+# so this test is self-contained, plus the two upstream test dirs
+# whose real object/executable fixtures it reuses.
+test:V:
+	@{cd $TOP/lib_toolchain/libmach; mk}
+	@{cd $TOP/linkers/ar; mk}
+	@{cd $TOP/debuggers/acid; mk}
+	@{cd $TOP/machines/5i; mk}
+	@{cd $TOP/machines/vi; mk}
+	@{cd ../s/exit; mk exit_linux_arm.exe}
+	@{cd ../s/mini; mk hello_plan9_arm.exe hello_plan9_mips.exe}
+	IAR=$TOP/linkers/ar/o.out ACID=$TOP/debuggers/acid/o.out FIVEI=$TOP/machines/5i/o.out VI=$TOP/machines/vi/o.out bash smoke.sh

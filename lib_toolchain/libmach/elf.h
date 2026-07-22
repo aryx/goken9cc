@@ -1,46 +1,88 @@
 /*
- *	Definitions needed for  accessing Irix ELF headers
+ *	Definitions needed for  accessing ELF headers.
+ *	32-bit and 64-bit structs differ.
  */
 typedef struct {
-	unsigned char	ident[16];	/* ident bytes */
-	ushort		type;		/* file type */
-	ushort		machine;	/* target machine */
-	int		version;	/* file version */
-	ulong		elfentry;	/* start address */
-	ulong		phoff;		/* phdr file offset */
-	ulong		shoff;		/* shdr file offset */
-	int		flags;		/* file flags */
-	ushort		ehsize;		/* sizeof ehdr */
-	ushort		phentsize;	/* sizeof phdr */
-	ushort		phnum;		/* number phdrs */
-	ushort		shentsize;	/* sizeof shdr */
-	ushort		shnum;		/* number shdrs */
-	ushort		shstrndx;	/* shdr string index */
-} Ehdr;
+	uchar	ident[16];	/* ident bytes */
+	ushort	type;		/* file type */
+	ushort	machine;	/* target machine */
+	int	version;	/* file version */
+	uint32	elfentry;	/* start address */
+	uint32	phoff;		/* phdr file offset */
+	uint32	shoff;		/* shdr file offset */
+	int	flags;		/* file flags */
+	ushort	ehsize;		/* sizeof ehdr */
+	ushort	phentsize;	/* sizeof phdr */
+	ushort	phnum;		/* number phdrs */
+	ushort	shentsize;	/* sizeof shdr */
+	ushort	shnum;		/* number shdrs */
+	ushort	shstrndx;	/* shdr string index */
+} Ehdr32;
+
+typedef struct {
+	uchar	ident[16];	/* ident bytes */
+	ushort	type;		/* file type */
+	ushort	machine;	/* target machine */
+	int	version;	/* file version */
+	uvlong	elfentry;	/* start address */
+	uvlong	phoff;		/* phdr file offset */
+	uvlong	shoff;		/* shdr file offset */
+	int	flags;		/* file flags */
+	ushort	ehsize;		/* sizeof ehdr */
+	ushort	phentsize;	/* sizeof phdr */
+	ushort	phnum;		/* number phdrs */
+	ushort	shentsize;	/* sizeof shdr */
+	ushort	shnum;		/* number shdrs */
+	ushort	shstrndx;	/* shdr string index */
+} Ehdr64;
 
 typedef struct {
 	int	type;		/* entry type */
-	ulong	offset;		/* file offset */
-	ulong	vaddr;		/* virtual address */
-	ulong	paddr;		/* physical address */
+	uint32	offset;		/* file offset */
+	uint32	vaddr;		/* virtual address */
+	uint32	paddr;		/* physical address */
 	int	filesz;		/* file size */
-	ulong	memsz;		/* memory size */
+	uint32	memsz;		/* memory size */
 	int	flags;		/* entry flags */
 	int	align;		/* memory/file alignment */
-} Phdr;
+} Phdr32;
 
 typedef struct {
-	ulong	name;		/* section name */
-	ulong	type;		/* SHT_... */
-	ulong	flags;		/* SHF_... */
-	ulong	addr;		/* virtual address */
-	ulong	offset;		/* file offset */
-	ulong	size;		/* section size */
-	ulong	link;		/* misc info */
-	ulong	info;		/* misc info */
-	ulong	addralign;	/* memory alignment */
-	ulong	entsize;	/* entry size if table */
-} Shdr;
+	int	type;		/* entry type */
+	int	flags;		/* entry flags */
+	uvlong	offset;		/* file offset */
+	uvlong	vaddr;		/* virtual address */
+	uvlong	paddr;		/* physical address */
+	uvlong	filesz;		/* file size */
+	uvlong	memsz;		/* memory size */
+	uvlong	align;		/* memory/file alignment */
+} Phdr64;
+
+typedef struct {
+	uint32	name;		/* section name */
+	uint32	type;		/* SHT_... */
+	uint32	flags;		/* SHF_... */
+	uint32	addr;		/* virtual address */
+	uint32	offset;		/* file offset */
+	uint32	size;		/* section size */
+	uint32	link;		/* misc info */
+	uint32	info;		/* misc info */
+	uint32	addralign;	/* memory alignment */
+	uint32	entsize;	/* entry size if table */
+} Shdr32;
+
+typedef struct {
+	uint32	name;		/* section name */
+	uint32	type;		/* SHT_... */
+	uvlong	flags;		/* SHF_... */
+	uvlong	addr;		/* virtual address */
+	uvlong	offset;		/* file offset */
+	uvlong	size;		/* section size */
+	uint32	link;		/* misc info */
+	uint32	info;		/* misc info */
+	uvlong	addralign;	/* memory alignment */
+	uvlong	entsize;	/* entry size if table */
+} Shdr64;
 
 enum {
 	/* Ehdr codes */
@@ -78,8 +120,11 @@ enum {
 	I860 = 7,		/* Intel i860 */
 	MIPS = 8,		/* Mips R2000 */
 	S370 = 9,		/* Amdhal	*/
+	SPARC64 = 18,		/* Sun SPARC v9 */
 	POWER = 20,		/* PowerPC */
+	ARM = 40,			/* ARM */
 	AMD64 = 62,		/* Amd64 */
+    //TODO? ARM64 ???
 
 	NO_VERSION = 0,		/* version, ident[VERSION] */
 	CURRENT = 1,
@@ -96,6 +141,15 @@ enum {
 	R = 0x4,		/* flags */
 	W = 0x2,
 	X = 0x1,
+
+	/* Shdr Codes */
+	Progbits = 1,	/* section types */
+	Strtab = 3,
+	Nobits = 8,
+
+	Swrite = 1,	/* section attributes */
+	Salloc = 2,
+	Sexec = 4,
 };
 
 #define	ELF_MAG		((0x7f<<24) | ('E'<<16) | ('L'<<8) | 'F')

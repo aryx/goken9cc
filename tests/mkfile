@@ -1,6 +1,6 @@
 TOP=..
 <$TOP/mkconfig
 
-DIRS=s c rc
+DIRS=s c rc libmach
 
 <$TOP/mkfiles/mkdirs
