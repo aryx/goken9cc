@@ -95,7 +95,7 @@ asmb(void)
 	long v, magic;
 	int a;
 	uchar *op1;
-	vlong vl;
+	vlong vl, rest;
 
 	if(debug['v'])
 		Bprint(&bso, "%5.2f asmb\n", cputime());
@@ -143,11 +143,13 @@ asmb(void)
 		seek(cout, HEADR+textsize, 0);
 		break;
 	case 5:
+	case 6:
 	case 7:
-		/* claude: ELF requires vaddr modulo page == file offset modulo
-		 * page, so round up to a page boundary here to match INITDAT
-		 * (see obj.c) and the PT_LOAD file offset in lk/elf.c (same
-		 * fix as linkers/8l/asm.c's H_ELF case) */
+		/* claude: ELF and Mach-O both require vaddr modulo page ==
+		 * file offset modulo page, so round up to a page boundary
+		 * here to match INITDAT (see obj.c) and the PT_LOAD/segment
+		 * file offset in lk/elf.c and lk/macho.c (same fix as
+		 * linkers/8l/asm.c's H_ELF case) */
 		seek(cout, rnd(HEADR+textsize, INITRND), 0);
 		break;
 	}
@@ -170,6 +172,24 @@ asmb(void)
 			datblk(v, datsize-v);
 	}
 
+	if(HEADTYPE == 6) {
+		/* claude: pad the file up to a page boundary so the
+		 * __LINKEDIT segment (dyld rebase info) starts page-aligned
+		 * (must match the __LINKEDIT fileoffset in lk/macho.c), then
+		 * write the dyld rebase stream for pointers in initialized
+		 * data (see lk/macho.c machorebase()) */
+		rest = rnd(datsize, INITRND) - datsize;
+		memset(buf.dbuf, 0, MAXIO);
+		while(rest > 0) {
+			if(rest > MAXIO)
+				write(cout, buf.dbuf, MAXIO);
+			else
+				write(cout, buf.dbuf, rest);
+			rest -= MAXIO;
+		}
+		machorebase();
+	}
+
 	symsize = 0;
 	spsize = 0;
 	lcsize = 0;
@@ -189,6 +209,13 @@ asmb(void)
 			 * HEADR+textsize+datsize, same reasoning as the seek
 			 * before datblk() above */
 			seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
+			break;
+		case 6:
+			/* claude: no symbol table for Mach-O yet (would need a
+			 * proper __LINKEDIT symtab, but modern XNU kernels are
+			 * strict about segments so simplest to skip, matching
+			 * linkers/7l/asm.c's HEADTYPE 6 case) */
+			debug['s'] = 1;
 			break;
 		}
 		if(!debug['s'])
@@ -237,6 +264,9 @@ asmb(void)
 		break;
 	case 7:
 		elf64(AMD64, ELFDATA2LSB, 0, nil);
+		break;
+	case 6:
+		asmbmacho();
 		break;
 	}
 	cflush();

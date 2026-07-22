@@ -3,6 +3,7 @@
 #include	<bio.h>
 #include	<6.out.h>
 #include	"../lk/elf.h"
+#include	"../lk/macho.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -67,6 +68,11 @@ struct	Prog
 	short	as;
 	char	width;		/* fake for DATA */
 	char	mode;	/* 16, 32, or 64 */
+	uchar	reg;	/* claude: mirrors from.scale for ADATA Progs, only
+			 * so lk/macho.c's machorebase() (shared with 7l,
+			 * which stores this in Prog.reg natively) can check
+			 * the byte width of a pointer stored in initialized
+			 * data */
 };
 struct	Auto
 {
@@ -117,6 +123,14 @@ enum
 
 	SIMPORT,
 	SEXPORT,
+
+	/* claude: SLEAF and SSTRING don't exist as distinct symbol types
+	 * in this vanilla 6l (unlike 7l, which marks leaf functions and
+	 * string constants separately); added as unused-but-distinct enum
+	 * values purely so lk/macho.c's machorebase() switch (shared with
+	 * 7l) compiles here too -- nothing in 6a/6c/6l ever assigns them */
+	SLEAF,
+	SSTRING,
 
 	NHASH		= 10007,
 	NHUNK		= 100000,
@@ -300,6 +314,7 @@ EXTERN	long	nhunk;
 EXTERN	long	nsymbol;
 EXTERN	char*	noname;
 EXTERN	char*	outfile;
+EXTERN	char	thechar;
 EXTERN	vlong	pc;
 EXTERN	long	spsize;
 EXTERN	Sym*	symlist;
@@ -379,6 +394,7 @@ void	lputl(int32);
 void	main(int, char*[]);
 void	mkfwd(void);
 void*	mysbrk(ulong);
+void*	halloc(ulong);
 void	nuxiinit(void);
 void	objfile(char*);
 int	opsize(Prog*);

@@ -136,16 +136,17 @@ main(int argc, char *argv[])
 	snprint(name, sizeof(name), "%s/%s/lib", a, thestring);
 	addlibpath(name);
 	if(HEADTYPE == -1) {
-		/* claude: pick the default output format from the host OS, like
-		 * 7l/8l do via getgoos(): Linux -> ELF, otherwise Plan 9. This
-		 * lets `6l foo.6` produce a runnable Linux binary without an
-		 * explicit -H7. (macOS Mach-O is not implemented yet in this
-		 * vanilla 6l, so darwin is not special-cased here yet.) */
+		/* claude: pick the default output format from the host OS,
+		 * like 7l/8l do via getgoos(): Linux -> ELF, Darwin -> Mach-O,
+		 * otherwise Plan 9. This lets `6l foo.6` produce a runnable
+		 * Linux or macOS binary without an explicit -H7/-H6. */
 		char *goos;
 		HEADTYPE = 2;
 		goos = getgoos();
 		if(goos != nil && strcmp(goos, "linux") == 0)
 			HEADTYPE = 7;
+		else if(goos != nil && strcmp(goos, "darwin") == 0)
+			HEADTYPE = 6;
 	}
 	switch(HEADTYPE) {
 	default:
@@ -169,8 +170,7 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
-	case 7:	/* ELF64 executable, e.g. Linux amd64 (6 is reserved for a
-		 * future macOS Mach-O, matching 7l's HEADTYPE numbering) */
+	case 7:	/* ELF64 executable, e.g. Linux amd64 */
 		HEADR = rnd(Ehdr64sz+3*Phdr64sz, 16);
 		if(INITTEXT == -1)
 			INITTEXT = 0x200000+HEADR;
@@ -178,6 +178,22 @@ main(int argc, char *argv[])
 			INITDAT = 0;
 		if(INITRND == -1)
 			INITRND = 0x200000;
+		break;
+	case 6:	/* apple MACH, e.g. macOS amd64 (matching 7l's HEADTYPE
+		 * numbering, where 6 is Mach-O and 7 is ELF) */
+		HEADR = MACHORESERVE;
+		if(INITRND == -1)
+			INITRND = 4096;
+		if(INITTEXT == -1)
+			/* claude: __TEXT >= 1MB clears Linux mmap_min_addr (so
+			 * the image loads e.g. under darling) and stays < 2GB
+			 * for the amd64 32-bit-absolute addressing used by
+			 * non-PIE targets; Apple's own 4GB __PAGEZERO is out of
+			 * reach for this int32-offset-based 6l (see the same
+			 * tradeoff already made by src/cmd/6l for -H6). */
+			INITTEXT = 0x100000+HEADR;
+		if(INITDAT == -1)
+			INITDAT = 0;
 		break;
 	}
 	if (INITTEXTP == -1)
@@ -1039,6 +1055,7 @@ loop:
 
 	case ADATA:
 	data:
+		p->reg = p->from.scale;	/* claude: see l.h Prog.reg comment */
 		if(edatap == P)
 			datap = p;
 		else
@@ -1128,6 +1145,7 @@ loop:
 				t->from.type = D_EXTERN;
 				t->from.sym = s;
 				t->from.scale = 4;
+				t->reg = 4;
 				t->to = p->from;
 				if(edatap == P)
 					datap = t;
@@ -1174,6 +1192,7 @@ loop:
 				t->from.type = D_EXTERN;
 				t->from.sym = s;
 				t->from.scale = 8;
+				t->reg = 8;
 				t->to = p->from;
 				if(edatap == P)
 					datap = t;

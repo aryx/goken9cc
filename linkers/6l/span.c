@@ -3,6 +3,45 @@
 static int	rexflag;
 static int	asmode;
 
+/*
+ * claude: PIC/PIE/RIP, and why -H6 needs this.
+ *
+ * PIC (Position-Independent Code) refers to its own symbols relative
+ * to wherever the code actually ends up in memory (via the current
+ * instruction pointer, or a GOT), instead of baking in absolute
+ * addresses. It was invented for shared libraries, since a .so gets
+ * mapped at a different address in every process that loads it.
+ *
+ * PIE (Position-Independent Executable) is the same technique applied
+ * to the main executable, not just libraries, so the kernel can load
+ * it at a random base address each run (ASLR, a security hardening
+ * measure). macOS effectively requires PIE for executables (strictly
+ * on arm64; expected on amd64 too), unlike Linux (-H7) or Plan 9 (-H2)
+ * here, which keep absolute addresses.
+ *
+ * RIP is the x86-64 instruction pointer register. "RIP-relative
+ * addressing" ([rip+disp32]) means an operand's address is encoded as
+ * an offset from wherever the CPU's instruction pointer will be right
+ * after this instruction -- i.e. it's relative to where the code
+ * itself is running, not to a fixed absolute address, which is
+ * exactly PIC/PIE's requirement.
+ *
+ * So under -H6, a "$sym(SB)" address emitted by asmandsz() below is
+ * encoded RIP-relative ([rip+disp32], mod=00 rm=101, no SIB byte)
+ * instead of the absolute disp32 SIB form used by every other -H
+ * target. curppc holds the current instruction's own pc (doasm()
+ * doesn't otherwise have it, since asmandsz() isn't passed the Prog*),
+ * for computing the disp32 as target - (pc + bytes-emitted-so-far).
+ * riprelfix then records the and[] offset right after that disp32 so
+ * asmins() can correct it once the whole instruction is known: RIP
+ * points at the end of the WHOLE instruction (any trailing immediate
+ * operand, plus a REX prefix if one gets inserted), not just at the
+ * end of the disp32, so those extra bytes must be subtracted from it.
+ * 0 means "nothing to fix".
+ */
+static vlong	curppc;
+static int	riprelfix;
+
 void
 span(void)
 {
@@ -737,6 +776,18 @@ asmandsz(Adr *a, int r, int rex, int m64)
 				put4(v);
 				return;
 			}
+			if(HEADTYPE == 6) {
+				/* claude: macOS PIE (see file-top comment): RIP-
+				 * relative [rip+disp32] instead of the absolute
+				 * disp32 SIB form below. disp32 = target - (address
+				 * right after this disp32), assuming no more bytes
+				 * follow in this instruction; doasm() corrects that
+				 * assumption once the whole instruction is known. */
+				*andptr++ = (0 << 6) | (5 << 0) | (r << 3);
+				put4(v - (curppc + (andptr - and) + 4));
+				riprelfix = (andptr - and) + 1;
+				return;
+			}
 			/* temporary */
 			*andptr++ = (0 <<  6) | (4 << 0) | (r << 3);	/* sib present */
 			*andptr++ = (0 << 6) | (4 << 3) | (5 << 0);	/* DS:d32 */
@@ -1025,6 +1076,9 @@ doasm(Prog *p)
 	Movtab *mo;
 	int z, op, ft, tt, xo, l;
 	vlong v;
+
+	curppc = p->pc;
+	riprelfix = 0;
 
 	o = opindex[p->as];
 	if(o == nil) {
@@ -1597,6 +1651,38 @@ asmins(Prog *p)
 		memmove(and+np+1, and+np, n-np);
 		and[np] = 0x40 | rexflag;
 		andptr++;
+	}
+	if(riprelfix) {
+		/*
+		 * claude: see the riprelfix/curppc comment atop this file.
+		 * asmandsz() assumed the instruction ends right after the
+		 * disp32 (length "prepos", not counting a REX byte since
+		 * none was inserted yet); "extra" is how much longer the
+		 * instruction actually turned out, from that same
+		 * before-any-shift baseline -- whether the extra bytes are a
+		 * REX prefix, a trailing immediate operand, or both, so no
+		 * separate accounting for each is needed.
+		 * The disp32's bytes themselves, though, physically moved:
+		 * REX insertion (always before the opcode, hence before the
+		 * disp32) memmove()s them by one, so locating them to patch
+		 * needs that shift added back in.
+		 */
+		int32 d, extra, prepos, patchpos;
+		uchar *dp;
+
+		prepos = riprelfix - 1;
+		extra = (andptr - and) - prepos;
+		if(extra) {
+			patchpos = prepos + (rexflag ? 1 : 0);
+			dp = and + patchpos - 4;
+			d = dp[0] | dp[1]<<8 | dp[2]<<16 | dp[3]<<24;
+			d -= extra;
+			dp[0] = d;
+			dp[1] = d>>8;
+			dp[2] = d>>16;
+			dp[3] = d>>24;
+		}
+		riprelfix = 0;
 	}
 }
 

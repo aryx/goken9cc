@@ -28,8 +28,14 @@
 # paths (ieee float encoding, large/negative constants), see changes.txt.
 TESTS386=hello_386 float_386 const_386 macro_386
 TESTSARM=hello_arm swi_line_arm addr_arm call_arm
+# amd64 has no second lineage to cross-check against yet (unlike 386/arm
+# above), so just golden-diff against a checked-in reference instead of
+# the vcmp/vgold split used for those.
+TESTSAMD64=riprel_amd64
 
-test:V: test386 testarm testgolden
+test:V: test386 testarm testamd64 testgolden
+
+testamd64:V: ${TESTSAMD64:%=%.vgold6}
 
 # byte-compare object files and executables produced by the two lineages
 test386:V: ${TESTS386:%=%.vcmp8}
@@ -107,10 +113,19 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 	5lk -s -H7 -E _start -o $stem.g.exe $stem.g.5
 	cmp $stem.g.exe expected/$stem.exe
 
+# amd64's 6a has no -r (reproducible) flag, so its object file embeds
+# the build cwd and isn't byte-comparable across checkouts; only
+# golden-diff the linked exe. That's fine here because -H6 always
+# strips the symbol table (no history/path data reaches the Mach-O).
+%.vgold6:V:
+	6a -c $stem.s
+	6l -H6 -o $stem.exe -E _start $stem.6
+	cmp $stem.exe expected/$stem.exe
+
 # Regenerate the golden reference outputs from the kencc lineage.
 # Only run this deliberately, after verifying the new outputs are correct
 # (e.g. the executables still run).
-golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5}
+golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5} ${TESTSAMD64:%=%.mkgold6}
 
 %.mkgold8:V:
 	8ak -r -c -o expected/$stem.8 $stem.s
@@ -121,5 +136,9 @@ golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5}
 	5ak -r -c -o expected/$stem.5 $stem.s
 	5lk -s -H7 -E _start -o expected/$stem.exe expected/$stem.5
 
+%.mkgold6:V:
+	6a -c $stem.s
+	6l -H6 -o expected/$stem.exe -E _start $stem.6
+
 clean nuke:V:
-	rm -f *.[58] *.exe *.uexe
+	rm -f *.[568] *.exe *.uexe

@@ -274,6 +274,10 @@ asmbmacho(void)
 		mh->cpu = MACHO_CPU_ARM64;
 		mh->subcpu = MACHO_SUBCPU_ARM64_ALL;
 		break;
+	case '6':
+		mh->cpu = MACHO_CPU_AMD64;
+		mh->subcpu = MACHO_SUBCPU_X86;
+		break;
 	}
 	/*
 	 * the arm64 XNU kernel kills (SIGKILL, no diagnostic) any main
