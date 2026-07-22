@@ -1,0 +1,37 @@
+# Minimal repros for assembler/linker bugs found while diffing the mips
+# toolchain (va/vc/vl) against other kencc-derived repos (see
+# scripts/diff.rc); as opposed to tests/s/features, which is for ported
+# functionality rather than bug fixes. See ../../../plan9front.txt for
+# the running credits list.
+#
+# mips_long_filename: va's assemble() (assemblers/va/lex.c) used to
+# copy its filename argument into a fixed `char ofile[100]` with a raw
+# strcpy(), and derived the include-path buffer the same way -- no
+# bounds check. Any source path >=100 bytes overflowed that stack
+# buffer. Fixed by switching to strdup()/smprint() (dynamically sized),
+# following 9front's va. The filename is generated at test time (150
+# 'x's + ".s") rather than committed, since a literal 150-char filename
+# in the repo would be its own kind of nuisance.
+#
+# Confirmed this actually crashes pre-fix: glibc's stack protector
+# catches it ("*** stack smashing detected ***", SIGABRT) rather than
+# silently corrupting memory, so this is a reliable, deterministic
+# regression check, not a "sometimes" bug.
+
+LONG=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+test:V:
+	cp mips_long_filename.s.tmpl $LONG.s
+	va -c $LONG.s
+	vl -o $LONG.exe -E _start $LONG.v
+	st=`{ ../../../scripts/qemu-runner mips ./$LONG.exe; echo $status }
+	if (~ $st 42)
+		echo 'ok: '$LONG'.exe exit 42 (no stack smash on a long filename)'
+	if not {
+		echo 'FAILED: '$LONG'.exe (got '$st')'
+		exit failed
+	}
+	rm -f $LONG.s $LONG.v $LONG.exe
+
+clean:V:
+	rm -f xxx*.[v] xxx*.exe xxx*.s

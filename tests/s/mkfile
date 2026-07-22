@@ -2,6 +2,6 @@ TOP=../..
 <$TOP/mkconfig
 
 # float/ contains just temporary tests
-DIRS=exit features mini variants
+DIRS=exit features mini regressions variants
 
 <$TOP/mkfiles/mkdirs
