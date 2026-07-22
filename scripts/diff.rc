@@ -13,19 +13,20 @@ flags=(-u -p -b -B -r -x mkfile)
 # missing: 
 # - 9base: no compiler toolchain
 # - plan9port: no compiler toolchain
-# - 9cc: no riscv (ia/ic/il), no 5i, no vi
+# - 9cc: no riscv (ia/ic/il), no 5i/vi
 # - 9front: no riscv
-
-dirs1=(9cc 9colombier inferno mykencc kencc-riscv) # xinferno-old
-dirs2=(myplan9old plan9) 
-#dirs3=(9base plan9port)
-dirs4=(goold goken)
-dirs5=(9front) # myplan9  9front
 
 # big comparisons
 base=9cc
-#base=inferno # for ia/ic/il as x9cc does not have them
+#base=inferno # for ia/ic/il as 9cc does not have them
 #base=myplan9old
+
+dirs1=(9cc 9colombier inferno) #   kencc-riscv mykencc) # inferno-old
+dirs2=(plan9) # myplan9old
+#dirs3=(9base plan9port)
+#dirs4=(goold goken)
+dirs5=(9front) # myplan9
+
 dirs=($dirs1 $dirs2 $dirs3 $dirs4 $dirs5)
 
 # goken comparisons
