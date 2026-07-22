@@ -17,13 +17,13 @@ TEXT	panic(SB), $0
 	XORQ	DI, DI
 	SYSCALL
 
-TEXT	exit(SB), $0-8
+TEXT	exit(SB), $0
 	MOVL	8(SP), DI		// status (int)
 	MOVQ	$(0x2000000+1), AX	// exit
 	SYSCALL
 	RET
 
-TEXT	write(SB), $0-24
+TEXT	write(SB), $0
 	MOVL	8(SP), DI		// fd (int)
 	MOVQ	16(SP), SI		// buf (pointer)
 	MOVL	24(SP), DX		// count (int)

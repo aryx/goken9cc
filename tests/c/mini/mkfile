@@ -63,23 +63,31 @@ test_macos_amd64:V: helloc_macos_amd64.exe
 # start_amd64.s is OS-independent so it is reused as-is. Runs
 # natively on Intel Macs.
 #
-# 6cg compiles "xwrite(\"str\", n)" into "MOVQ $sym(SB), R" -- the address
-# of the string constant loaded as a link-time absolute immediate. That is
-# fine for non-PIE ELF/PE, but 6lg -H6 always sets MH_PIE, so the kernel
-# slides the image at exec() and the baked-in address is wrong; write()
-# then silently fails (unchecked in xwrite) and the program exits 0 having
-# printed nothing. Fixed in src/cmd/6l/span.c oclass(): when HEADTYPE==6,
-# "$extern(SB)" now routes through the same Zaut_r/asmand "built-in LEA"
-# path already used for LEAQ and for stack-local addresses, which already
-# had PIE-aware RIP-relative encoding (see asmandsz's HEADTYPE==6 case).
-# See also docs/notes_macos.txt.
+# 6cg used to compile "xwrite(\"str\", n)" into "MOVQ $sym(SB), R" --
+# the address of the string constant loaded as a link-time absolute
+# immediate. That is fine for non-PIE ELF/PE, but 6lg -H6 always sets
+# MH_PIE, so the kernel slides the image at exec() and the baked-in
+# address is wrong; write() then silently fails (unchecked in xwrite)
+# and the program exits 0 having printed nothing. 6cg's own linker
+# (src/cmd/6l/span.c oclass()) worked around this at the HEADTYPE==6
+# case without needing a compiler flag. This project's own 6c/6l (see
+# tests/c/mini2's helloprintf_macos_amd64.exe) instead requires -z on
+# the compiler side for PIE-safe codegen, same as pievar_amd64.c in
+# tests/c/variants -- see docs/notes_macos.txt.
+#
+# claude: switched from 6cg/6ag/6lg/arg to this project's own 6c/6a/6l/
+# iar -- unverified since there's no macOS/darling execution available
+# in this environment. Please run test_macos_amd64 on real hardware to
+# confirm before relying on it (see the comment on that target above:
+# a bare "it ran" check is not enough, a real 6lg bug once linked, ran,
+# and exited 0 while writing nothing at all).
 helloc_macos_amd64.exe: helloc.c
-   6cg -Damd64 -c helloc.c
-   6ag -Damd64 -c start_amd64.s
-   6ag -Damd64 -c xwrite_macos_amd64.s
-   6ag -Damd64 -c xexit_macos_amd64.s
-   arg rc libmini.a start_amd64.6 xwrite_macos_amd64.6 xexit_macos_amd64.6
-   6lg -s -H6 -L. -o $target -E _start helloc.6
+   6c -z -Damd64 -c helloc.c
+   6a -Damd64 -c start_amd64.s
+   6a -Damd64 -c xwrite_macos_amd64.s
+   6a -Damd64 -c xexit_macos_amd64.s
+   iar rc libmini.a start_amd64.6 xwrite_macos_amd64.6 xexit_macos_amd64.6
+   6l -s -H6 -L. -o $target -E _start helloc.6
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
 
