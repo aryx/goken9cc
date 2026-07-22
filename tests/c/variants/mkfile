@@ -28,8 +28,9 @@ CTESTSPIE64=pievar_amd64
 # codegen above): these run under qemu and diff real program output,
 # since the whole point is that the wrong bytes reached the CPU at
 # runtime, not just that the object file bytes differ from a golden
-# reference. See regarg_amd64.c and fconst64_amd64.c for the bugs.
-CTESTSRUN64=regarg_amd64 fconst64_amd64
+# reference. See regarg_amd64.c, fconst64_amd64.c and vlongimm_amd64.c
+# for the bugs.
+CTESTSRUN64=regarg_amd64 fconst64_amd64 vlongimm_amd64
 
 test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testpie64 testrun64 testgolden
 

@@ -1820,11 +1820,19 @@ layout(Node *f, Node *t, int c, int cv, Node *cn)
 
 /*
  * constant is not vlong or fits as 32-bit signed immediate
+ * claude: was `long v`. On our 64-bit host `long` is 64 bits, so
+ * `v = n->vconst; n->vconst == (vlong)v` never differs and this always
+ * returned true, even for vlong constants that don't fit in 32 bits --
+ * e.g. comparing against 1099511627818LL (2^40+42) generated an
+ * unencodable "CMPQ reg,$1099511627818" (x86-64 has no 64-bit-immediate
+ * CMP form) instead of routing through hardconst()'s register-
+ * materializing path. Go-era's own 6c (src/cmd/6c/cgen.c immconst())
+ * already uses int32 here for exactly this reason -- matching it.
  */
 int
 immconst(Node *n)
 {
-	long v;
+	int32 v;
 
 	if(n->op != OCONST || !typechlpv[n->type->etype])
 		return 0;
