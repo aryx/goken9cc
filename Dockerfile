@@ -62,9 +62,15 @@ FROM build AS test
 # RUN apt-get install -y libc6:i386 libc6:armhf
 # RUN apt install gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
 
-# qemu-user-binfmt allows to execute binaries directly without
-# prepending qemu-xxx before (but does not always work unfortunately).
-RUN apt-get install -y qemu-user qemu-user-binfmt
+# qemu-user provides the qemu-xxx per-arch emulator binaries used by
+# scripts/qemu-runner. We deliberately do NOT install qemu-user-binfmt:
+# it registers qemu as a kernel binfmt_misc interpreter so foreign ELF
+# binaries can be run directly as ./foo, but that registration is
+# host-global, invisible from inside the container, and unreliable
+# across CI setups (see scripts/qemu-runner for the history, e.g. it
+# used to make mips binaries run under qemu-mipsn32 instead of
+# qemu-mips). Tests instead invoke the right qemu-xxx explicitly.
+RUN apt-get install -y qemu-user
 
 # Run tests
 RUN mk test

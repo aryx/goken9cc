@@ -17,12 +17,9 @@ XV6BINS=
 all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 
 # This target is part of mk test CI regression check in Dockerfile and GHA
-# (it requires dpkg --add-architecture i386 for _386.exe to run
-#  or qemu-user and qemu-user-binfmt).
-# Most archs are supported by qemu-user-binfmt in docker GHA, and so
-# one can use simply ./$i below to run the test, but unfortunately for mips
-# we need some special code because qemu-mips32sn is used instead
-# of qemu-mips which is weird so we have to force the use of qemu-mips.
+# (it requires just qemu-user; see ../../../scripts/qemu-runner for why we
+# no longer rely on qemu-user-binfmt / binfmt_misc, which used to need
+# forcing for mips since it picked qemu-mips32sn instead of qemu-mips).
 # (the exit(42) programs moved to tests/s/exit, which asserts their code)
 # Every hello prints exactly "Hello, world\n"; cmp against hello.expected.txt
 # so a silently-wrong program (e.g. writing nothing, or a bad byte) fails the
@@ -30,10 +27,8 @@ all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 test:V: all
       for (i in $LINUXBINS) {
          echo $i
-	 if (~ $i hello_linux_mips.exe)
-	   qemu-mips ./$i | cmp /dev/stdin hello.expected.txt
-	 if not
-	    ./$i | cmp /dev/stdin hello.expected.txt
+         arch=`{echo $i | sed 's/^hello_linux_//; s/\.exe$//'}
+         ../../../scripts/qemu-runner $arch ./$i | cmp /dev/stdin hello.expected.txt
       }
 
 clean:V:

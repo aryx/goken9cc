@@ -27,21 +27,13 @@ test:V:
            mk clean
            #alt: build 5.helloc 8.helloc
            mk 'objtype='$arch
-           # Some arches need a differently-named qemu binary (like the
-           # qemu-mips special case in tests/s/mini/mkfile): 386's is
-           # qemu-i386, and riscv's ELF32 image runs under qemu-riscv32.
-           if (~ $arch 386)
-              qemu-i386 ./helloc.exe | cmp /dev/stdin helloc.expected.txt
-           if not if (~ $arch riscv)
-              qemu-riscv32 ./helloc.exe | cmp /dev/stdin helloc.expected.txt
-           if not
-              qemu-$arch ./helloc.exe | cmp /dev/stdin helloc.expected.txt
+           $TOP/scripts/qemu-runner $arch ./helloc.exe | cmp /dev/stdin helloc.expected.txt
         }
 	#alt: special if in for loop above
 	echo arm__
 	mk clean
 	mk helloc_arm__.exe
-	qemu-arm ./helloc_arm__.exe | cmp /dev/stdin helloc.expected.txt
+	$TOP/scripts/qemu-runner arm__ ./helloc_arm__.exe | cmp /dev/stdin helloc.expected.txt
 
 
 # runs natively on Apple Silicon (no qemu needed)

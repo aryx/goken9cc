@@ -45,14 +45,7 @@ test:V:
            echo $arch
            mk clean
            mk 'objtype='$arch
-	   if (~ $arch arm__)
-	      qemu-armhf ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
-           if not if (~ $arch riscv)
-	      qemu-riscv32 ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
-           if not if (~ $arch 386)
-	      qemu-i386 ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
-           if not
-	      qemu-$arch ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
+           $TOP/scripts/qemu-runner $arch ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
         }
 
 

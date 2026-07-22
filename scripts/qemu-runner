@@ -1,0 +1,47 @@
+#!/bin/sh
+# Run a cross-compiled Linux test binary under the right qemu-user
+# emulator for its architecture.
+#
+# This exists so tests/*/mkfile do not each reimplement the "which
+# qemu-xxx binary does this arch need" mapping (qemu-mips vs qemu-mips32sn,
+# qemu-riscv32, qemu-i386, ...), and so tests do not rely on
+# qemu-user-binfmt (binfmt_misc registration of qemu as an interpreter
+# for foreign ELF binaries). binfmt_misc is host/CI-global state -- it
+# depends on what setup-qemu-action or multiarch/qemu-user-static did
+# to the *host* kernel, is invisible from inside a container, and has
+# repeatedly picked the wrong emulator (e.g. qemu-mipsn32 instead of
+# qemu-mips, see git history of tests/s/mini/mkfile). Invoking the
+# qemu-xxx binary directly, for every arch including the host's own,
+# sidesteps all of that: it only needs qemu-user installed, nothing
+# kernel-registered. (Also seen: under Docker Desktop on macOS, binfmt_misc
+# has no riscv32 handler registered at all, so ./foo for a riscv32 binary
+# just fails outright instead of running under qemu.)
+#
+# Usage: qemu-runner <arch> <binary> [args...]
+#
+# <arch> is one of goken's arch tokens, as used for $objtype or as the
+# _<arch> suffix on tests/s/*/*.s file names: 386 386_ amd64 arm arm_
+# arm__ arm64 mips riscv. The '_'/'__' suffixed variants select a
+# different toolchain lineage (e.g. kencc-derived 5a_/5l_) but produce
+# code for the same real machine, so they share a qemu binary with
+# their base arch.
+
+set -e
+
+arch=$1
+shift
+
+case $arch in
+386|386_)       qemu=qemu-i386 ;;
+amd64)          qemu=qemu-x86_64 ;;
+arm|arm_|arm__) qemu=qemu-arm ;;
+arm64)          qemu=qemu-aarch64 ;;
+mips)           qemu=qemu-mips ;;
+riscv)          qemu=qemu-riscv32 ;;
+*)
+	echo "qemu-runner: unknown arch '$arch'" >&2
+	exit 1
+	;;
+esac
+
+exec "$qemu" "$@"

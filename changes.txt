@@ -145,6 +145,9 @@
   principia lineage vs kencc lineage for 386 and arm
 - more complete tests/s/mini/, tests/c/mini/, tests/c/mini2 supporting
   most archs and most OSes
+- remove the use of qemu-user-binfmt, not consistent across OSes (Linux vs macOS)
+  and environment (local vs CI) and add a qemu runner wrapper script instead
+  to factorize things in tests/.../mkfile
 
 * 0.3 (Q2 2026) (IWP9 presentation)
 

@@ -16,20 +16,18 @@ EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm_.exe \
 
 all:V: $EXITLINUXBINS
 
-# Part of the mk test CI regression check (see tests/mkfile DIRS). qemu-mips
-# needs forcing the same way tests/s/mini does; the other arches run via
-# ./$i (natively or through qemu-user-binfmt). Every program must exit(42).
-# The run is wrapped in `{...} so its expected non-zero (42) exit is captured
-# into $st instead of aborting the recipe, which mk would do on any non-zero
-# command status.
+# Part of the mk test CI regression check (see tests/mkfile DIRS). Every
+# arch runs through ../../../scripts/qemu-runner (see that script for why:
+# no reliance on qemu-user-binfmt / binfmt_misc). Every program must
+# exit(42). The run is wrapped in `{...} so its expected non-zero (42)
+# exit is captured into $st instead of aborting the recipe, which mk
+# would do on any non-zero command status.
 test:V: all
       fail=()
       for (i in $EXITLINUXBINS) {
          echo $i
-         if (~ $i exit_linux_mips.exe)
-            st=`{ qemu-mips ./$i; echo $status }
-         if not
-            st=`{ ./$i; echo $status }
+         arch=`{echo $i | sed 's/^exit_linux_//; s/\.exe$//'}
+         st=`{ ../../../scripts/qemu-runner $arch ./$i; echo $status }
          if (~ $st 42)
             echo '  ok: exit 42'
          if not

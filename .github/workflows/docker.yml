@@ -15,29 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      ## For qemu-user-binfmt (used inside the Dockerfile) to work
-      ## for arm/arm64 (but does not work for mips)
-      #- name: Register QEMU for some common arches
-      #  uses: docker/setup-qemu-action@v3
-      #  with:
-      #    platforms: all
-      #    # this actually does not work; only a few archs are supported
-      #    # platforms: arm,arm64,mips,386,amd64
-
-      # For qemu-user-binfmt (used inside the Dockerfile) to work.
-      # This will install qemu-mips, but for weird reason it selects
-      # qemu-mipsn32 instead of qemu-mips when inside the docker container.
-      # I tried to deinstall qemu-mipsn32 so it picks a better default
-      # but failed so right now I am explicitely calling qemu-mips
-      # in mk test
-      - name: Register QEMU for all arches (including MIPS)
-        run: |
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-      - name: Debugging QEMU mips choice
-        run: |
-          cat /proc/sys/fs/binfmt_misc/qemu-mips
-          #ls -al /usr/bin/
-          #ln -sf /usr/bin/qemu-mips-static /usr/bin/qemu-mips
+      # No qemu-user-binfmt / binfmt_misc host registration needed anymore:
+      # the Dockerfile installs qemu-user, and tests/*/mkfile call the
+      # right qemu-xxx binary directly via scripts/qemu-runner instead of
+      # relying on the kernel to auto-detect foreign binaries (that
+      # registration was host-global, invisible from inside the
+      # container, and picked the wrong emulator for mips).
       #- uses: docker/setup-buildx-action@v3
       - run: docker build -f Dockerfile --tag goken9cc --target build .
       - run: docker build -f Dockerfile --tag goken9cc-test --target test .
