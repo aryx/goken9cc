@@ -8,9 +8,7 @@
 #history: split out of tests/s/mini (which now stays focused on hello-world), see
 # that mkfile for the toolchain-flag rationale (-H7 etc.).
 
-# arm and arm_ share exit_linux_arm.s but use different toolchain lineages
-# (5a_/5l_ vs 5a__/5l__), handled by the generic %.exe / %_.exe rules below.
-EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm_.exe \
+EXITLINUXBINS=exit_linux_arm.exe \
               exit_linux_arm64.exe \
               exit_linux_mips.exe exit_linux_riscv.exe
 
@@ -56,7 +54,3 @@ exit_linux_riscv.exe: exit_linux_riscv.s
 %.exe: %.s
    5a_ -c $prereq
    5l_ -o $target -E _start $stem.5
-
-%_.exe: %.s
-   5a__ -c $prereq
-   5l__ -H7 -o $target -E _start $stem.5

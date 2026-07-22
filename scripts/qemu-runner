@@ -21,10 +21,9 @@
 #
 # <arch> is one of goken's arch tokens, as used for $objtype or as the
 # _<arch> suffix on tests/s/*/*.s file names: 386 386_ amd64 arm arm_
-# arm__ arm64 mips riscv. The '_'/'__' suffixed variants select a
-# different toolchain lineage (e.g. kencc-derived 5a_/5l_) but produce
-# code for the same real machine, so they share a qemu binary with
-# their base arch.
+# arm64 mips riscv. The '_' suffixed variants select a different
+# toolchain lineage (e.g. kencc-derived 5a_/5l_) but produce code for
+# the same real machine, so they share a qemu binary with their base arch.
 
 set -e
 
@@ -34,7 +33,7 @@ shift
 case $arch in
 386|386_)       qemu=qemu-i386 ;;
 amd64)          qemu=qemu-x86_64 ;;
-arm|arm_|arm__) qemu=qemu-arm ;;
+arm|arm_)       qemu=qemu-arm ;;
 arm64)          qemu=qemu-aarch64 ;;
 mips)           qemu=qemu-mips ;;
 riscv)          qemu=qemu-riscv32 ;;

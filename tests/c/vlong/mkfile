@@ -20,7 +20,7 @@ helloprintf.exe: helloprintf.c
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm_
-ARCHS=386 amd64 arm arm64 arm__ mips riscv
+ARCHS=386 amd64 arm arm64 mips riscv
 test:V:
         for (arch in $ARCHS) {
            echo $arch

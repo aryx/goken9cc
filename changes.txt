@@ -126,6 +126,9 @@
   https://bitbucket.org/plan9-from-bell-labs/9-cc.git; superseded by
   the kencc (5ak/5ck/5lk) and principia (5a/5c/5l) lineages, now
   reconciled and unused by any test/build
+- also remove mkfiles/arm__ and the "arm__" test variant (tests/c/mini,
+  tests/c/mini2, tests/c/vlong, tests/s/mini) that exercised the
+  now-deleted 5a9/5c9/5l9 lineage under its old 5a__/5c__/5l__ TARG names
 
 ** test-infra
 - tests/c/vlong, tests/c/float: cmp output against an expected.txt (like

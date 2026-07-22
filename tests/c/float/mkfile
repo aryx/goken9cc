@@ -23,11 +23,11 @@ helloprintf.exe: helloprintf.c
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm_
-#TODO: arm/arm__: qemu-arm's legacy ARM FPA "FIX" (float64->int32, used by
+#TODO: arm: qemu-arm's legacy ARM FPA "FIX" (float64->int32, used by
 #           printfloat's digit-extraction loop) coprocessor-instruction
 #           emulation is buggy for non-"nice" inputs -- e.g. (int)0.9999999
 #           and (int)1.9999999 both come back INT_MIN under this qemu, while
-#           (int)0.5 is fine. 5c/5c__ still target the retired FPA coprocessor
+#           (int)0.5 is fine. 5c still targets the retired FPA coprocessor
 #           (MOVDW) rather than VFP, so this is a qemu emulation gap in this
 #           environment, not a codegen bug -- see 2.000001/garbage-for-2.2
 #           below. Left out of ARCHS until confirmed on real ARM FPA hardware

@@ -10,7 +10,7 @@ TEXT _main(SB), $0
 
 
 TEXT    exit+0(SB), $0
-	//with 5c (and 5c__), the first arg is already passed via R0
+	//with 5c, the first arg is already passed via R0
 #ifdef arm_
         MOVW    status+0(FP), R0
 #endif

@@ -6,7 +6,7 @@
 LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
           hello_linux_arm.exe hello_linux_arm64.exe \
           hello_linux_mips.exe hello_linux_riscv.exe \
-                 hello_linux_386_.exe hello_linux_arm_.exe hello_linux_arm__.exe
+                 hello_linux_386_.exe hello_linux_arm_.exe
 MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe \
           hello_macos_libc_amd64.exe
 WINDOWSBINS=hello_windows_386.exe hello_windows_amd64.exe
@@ -51,9 +51,6 @@ hello_linux_arm.exe: hello_linux_arm.s
 hello_linux_arm_.exe: hello_linux_arm_.s
    5a_ -c $prereq
    5l_ -o $target -E _start hello_linux_arm_.5
-hello_linux_arm__.exe: hello_linux_arm__.s
-   5a__ -c $prereq
-   5l__ -H7 -o $target -E _start hello_linux_arm__.5
 hello_linux_arm64.exe: hello_linux_arm64.s
    7a -c $prereq
    7l -H7 -o $target -E _start hello_linux_arm64.7

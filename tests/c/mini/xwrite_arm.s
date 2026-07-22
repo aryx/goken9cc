@@ -2,7 +2,7 @@
 
 TEXT xwrite+0(SB), $0
 	//with 5c_, all args are passed in the stack (use 5c -S on helloc.c)
-	//with 5c (and 5c__), the first arg is passed via R0
+	//with 5c, the first arg is passed via R0
 #ifdef arm_
         MOVW    buf+0(FP), R1   // buf pointer (first arg)
 #else

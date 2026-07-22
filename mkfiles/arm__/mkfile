@@ -1,8 +1,0 @@
-<$TOP/mkfiles/mkfile.proto
-
-# used in tests/
-O_=5
-CC_=5c__
-LD_=5l__
-AS_=5a__
-AR_=ar_

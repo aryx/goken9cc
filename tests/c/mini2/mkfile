@@ -21,9 +21,8 @@ helloprintf.exe: helloprintf.c
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
 #TODO: arm_
-#TODO: arm__: works, but if use -DDEBUG then segfault and weird output
 #TODO: arm_: works for the bool and hexa but not for 42; segfault
-ARCHS=386 amd64 arm arm64 arm__ mips riscv
+ARCHS=386 amd64 arm arm64 mips riscv
 test:V:
         for (arch in $ARCHS) {
            echo $arch
@@ -97,9 +96,3 @@ helloprintf_nofloat_no64.exe: helloprintf.c
    $AS_ $CPP_FLAGS -c linux_$objtype.s
    #$AR_ rc libprint.a linux_$objtype.$O_ print_nofloat_no64.$O_
    $LD_ -L. -o $target -E main helloprintf.$O_ linux_$objtype.$O_ print_nofloat_no64.$O_
-
-helloprintf_arm_nofloat_no64.exe: helloprintf.c
-   5c__ -Darm_ -c print_nofloat_no64.c
-   5c__ -Darm_ -c helloprintf.c
-   5a__ -Darm_ -c linux_arm.s
-   5l__ -H7 -o $target -E _start helloprintf.5 linux_arm.5 print_nofloat_no64.5
