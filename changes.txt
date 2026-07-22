@@ -122,9 +122,10 @@
 - better Linux ELF support for riscv, mips, arm64, 386
 
 ** internals
-- rename 5a__/5l__/5c__ to 5a9/5l9/5c9
-  (5a__ was previously renamed from 5a_ that was originally imported
-  from https://bitbucket.org/plan9-from-bell-labs/9-cc.git )
+- remove 5a9/5c9/5l9, the original arm toolchain imported from
+  https://bitbucket.org/plan9-from-bell-labs/9-cc.git; superseded by
+  the kencc (5ak/5ck/5lk) and principia (5a/5c/5l) lineages, now
+  reconciled and unused by any test/build
 
 ** test-infra
 - tests/c/vlong, tests/c/float: cmp output against an expected.txt (like
@@ -246,7 +247,7 @@
 
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability
-  for 5a_/5c_/5l_, va/vc/vl, ia/ic/il, 7a/7c/7l
+  for va/vc/vl, ia/ic/il, 7a/7c/7l
   TODO: undo and do the minimum like I did for 5c/8c enough to compile/run
   principia
 - convert a few long -> int32 for the kencc imported 5a/5c/6l, 8a/8c/8l
@@ -268,8 +269,6 @@
 - adapt 5a/5c/5l to generate valid arm32 Linux binaries (EABI)
   (working hello_linux_arm.exe, helloc.exe, and helloprintf.exe also
    on my thelio astra which can run both arm64 and arm32 binaries)
-- import original 5a/5c/5l from 9cc/plan9 as 5a_/5c_/5l_ and
-  extend also to ELF EABI and working hello_linux_arm_.exe
 
 ** arch
 - experimental support for arm64

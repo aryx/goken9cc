@@ -11,7 +11,6 @@ DIRS=\
   src/libmach src/cmd/nm src/cmd/ar \
   compilers/cc compilers/cck src/cmd/cc compilers/pcc \
   assemblers/5ak linkers/5lk compilers/5ck   machines/5i \
-  assemblers/5a9 linkers/5l9 compilers/5c9 \
   assemblers/5a linkers/5l compilers/5c \
   assemblers/7a linkers/7l compilers/7c \
   assemblers/8ak linkers/8lk compilers/8ck \
