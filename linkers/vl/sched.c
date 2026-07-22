@@ -90,7 +90,7 @@ sched(Prog *p0, Prog *pe)
 		for(t=s+1; t<=se; t++) {
 			if(!(t->p.mark & LOAD))
 				continue;
-			if(t->p.mark & BRANCH)
+			if(t->p.mark & BRANCH || t->set.ireg & (1<<REGSP))
 				break;
 			if(conflict(s, t))
 				break;
@@ -107,7 +107,7 @@ sched(Prog *p0, Prog *pe)
 
 		/* put schedule fodder above load */
 		for(t=s+1; t<=se; t++) {
-			if(t->p.mark & BRANCH)
+			if(t->p.mark & BRANCH || t->set.ireg & (1<<REGSP))
 				break;
 			if(s > sch && conflict(s-1, t))
 				continue;

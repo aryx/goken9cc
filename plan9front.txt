@@ -9,6 +9,13 @@ Some code and fixes comes also from 9front at https://github.com/9front/9front
 such as:
  - 7a/7c/7l:
  - 6a/6c/6l:
+ - vl (mips): linker instruction scheduler could hoist a stack-pointer
+   -adjusting instruction above an earlier load in the same window,
+   changing the load's effective address if reordered -- ported from
+   9front's sys/src/cmd/vl/sched.c, by cinap_lenrek:
+     40ed531364 vl: prevent stack altering instructions to be hoisted above loads
+   (found via a libmemdraw bug on real 9front; no dedicated minimal
+   test in this repo yet -- see linkers/vl/sched.c sched().)
 
 Some fixes were found independently in both 9front and this repo's own
 principia-softwarica lineage:
