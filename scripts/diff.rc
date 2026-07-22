@@ -21,7 +21,7 @@ base=9cc
 #base=inferno # for ia/ic/il as 9cc does not have them
 #base=myplan9old
 
-dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv goken goold 9front)
+dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv goken goold goken-go-variant 9front)
 #dirs=(9base plan9port)
 
 # goken comparisons
