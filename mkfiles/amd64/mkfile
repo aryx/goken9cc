@@ -7,7 +7,7 @@ O=o
 
 # used in tests/
 O_=6
-CC_=6cg
-LD_=6lg
-AS_=6ag
-AR_=arg
+CC_=6c
+LD_=6l
+AS_=6a
+AR_=iar
