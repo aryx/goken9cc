@@ -28,22 +28,23 @@ entryvalue(void)
 	return s->value;
 }
 
-/* these need to take long arguments to be compatible with elf.c */void
-wputl(long w)
+/* these need to take int32 arguments to be compatible with elf.c's Putl */
+void
+wputl(int32 w)
 {
 	cput(w);
 	cput(w>>8);
 }
 
 void
-wput(long w)
+wput(int32 w)
 {
 	cput(w>>8);
 	cput(w);
 }
 
 void
-lput(long l)
+lput(int32 l)
 {
 	cput(l>>24);
 	cput(l>>16);
@@ -59,7 +60,7 @@ llput(vlong v)
 }
 
 void
-lputl(long l)
+lputl(int32 l)
 {
 	cput(l);
 	cput(l>>8);

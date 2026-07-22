@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "../6c/6.out.h"
+#include <6.out.h>
 
 
 #ifndef	EXTERN
@@ -139,7 +139,7 @@ void	newfile(char*, int);
 Sym*	slookup(char*);
 Sym*	lookup(void);
 void	syminit(Sym*);
-long	yylex(void);
+int	yylex(void);
 int	getc(void);
 int	getnsc(void);
 void	unget(int);

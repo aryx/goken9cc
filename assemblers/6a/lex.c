@@ -1284,6 +1284,6 @@ outhist(void)
 	}
 }
 
-#include "../cc/lexbody"
-#include "../cc/macbody"
-#include "../cc/compat"
+#include "../../compilers/cck/lexbody"
+#include "../../compilers/cck/macbody"
+#include "../../compilers/cck/compat"

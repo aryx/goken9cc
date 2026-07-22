@@ -1,8 +1,8 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
-#include	"../6c/6.out.h"
-#include	"../8l/elf.h"
+#include	<6.out.h>
+#include	"../lk/elf.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -358,7 +358,7 @@ void	dynreloc(Sym*, ulong, int);
 vlong	entryvalue(void);
 void	errorexit(void);
 void	export(void);
-int	fileexists(char*);
+//bool	fileexists(char*);
 int	find1(long, int);
 int	find2(long, int);
 char*	findlib(char*);
@@ -374,8 +374,8 @@ void	listinit(void);
 Sym*	lookup(char*, int);
 void	llput(vlong v);
 void	llputl(vlong v);
-void	lput(long);
-void	lputl(long);
+void	lput(int32);
+void	lputl(int32);
 void	main(int, char*[]);
 void	mkfwd(void);
 void*	mysbrk(ulong);
@@ -393,8 +393,8 @@ void	strnput(char*, int);
 void	undef(void);
 void	undefsym(Sym*);
 vlong	vaddr(Adr*);
-void	wput(long);
-void	wputl(long);
+void	wput(int32);
+void	wputl(int32);
 void	xdefine(char*, int, vlong);
 void	xfol(Prog*);
 int	zaddr(uchar*, Adr*, Sym*[]);

@@ -1,6 +1,9 @@
-</$objtype/mkfile
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=6l
+LDLIBS=-lbio -l9 -lm
 OFILES=\
 	asm.$O\
 	obj.$O\
@@ -14,22 +17,12 @@ OFILES=\
 
 HFILES=\
 	l.h\
-	../6c/6.out.h\
-	../8l/elf.h\
+	$TOP/include/6.out.h\
+	../lk/elf.h\
 
-BIN=/$objtype/bin
-CFLAGS=$CFLAGS -. -I.
-CFILES=${OFILES:%.$O=%.c}
-CFILES=${CFILES:enam.c=../6c/enam.c}
-UPDATE=\
-	mkfile\
-	$HFILES\
-	$CFILES\
-	${TARG:%=/386/bin/%}\
+<$TOP/mkfiles/mkone
 
-</sys/src/cmd/mkone
-
-enam.$O:	../6c/enam.c
-	$CC $CFLAGS ../6c/enam.c
-elf.$O:	../8l/elf.c
-	$CC $CFLAGS ../8l/elf.c
+enam.$O:	$TOP/compilers/6c/enam.c
+	$CC $CFLAGS $TOP/compilers/6c/enam.c
+elf.$O:	../lk/elf.c
+	$CC $CFLAGS ../lk/elf.c

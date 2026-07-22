@@ -1,5 +1,5 @@
-#include	"../cc/cc.h"
-#include	"../6c/6.out.h"
+#include	"../cck/cc.h"
+#include	<6.out.h>
 
 /*
  * 6c/amd64

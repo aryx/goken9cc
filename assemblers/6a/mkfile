@@ -1,26 +1,18 @@
-</$objtype/mkfile
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=6a
+LDLIBS=-lbio -l9 -lm
 OFILES=\
 	y.tab.$O\
 	lex.$O\
 
-HFILES=\
-	../6c/6.out.h\
-	y.tab.h\
-	a.h\
+HFILES=	$TOP/include/6.out.h y.tab.h	a.h
 
-YFILES=a.y\
-
-BIN=/$objtype/bin
-UPDATE=\
-	mkfile\
-	a.y\
-	lex.c\
-	a.h\
-	${TARG:%=/386/bin/%}\
-
-< /sys/src/cmd/mkone
+YFILES=a.y
 YFLAGS=-D1 -d
 
-lex.$O:	../cc/macbody ../cc/lexbody ../cc/compat
+<$TOP/mkfiles/mkone
+
+lex.$O:	$TOP/compilers/cck/macbody $TOP/compilers/cck/lexbody $TOP/compilers/cck/compat

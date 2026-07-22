@@ -1,6 +1,10 @@
-</$objtype/mkfile
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=6c
+LDLIBS=-lbio -l9 -lm
+
 OFILES=\
 	cgen.$O\
 	enam.$O\
@@ -16,23 +20,11 @@ OFILES=\
 	div.$O\
 	mul.$O\
 
-HFILES=\
-	gc.h\
-	6.out.h\
-	../cc/cc.h\
+HFILES=	gc.h $TOP/include/6.out.h $TOP/compilers/cck/cc.h
 
-LIB=../cc/cc.a$O
+LIB=$TOP/compilers/cck/cc.a
 
-BIN=/$objtype/bin
-</sys/src/cmd/mkone
+<$TOP/mkfiles/mkone
 
-$LIB:
-	cd ../cc
-	mk install
-	mk clean
-
-%.$O: ../cc/%.c
-	$CC $CFLAGS ../cc/$stem.c
-
-bound.$O:	bound.h
-
+p%.$O: $TOP/compilers/cck/p%.c
+	$CC $CFLAGS $TOP/compilers/cck/p$stem.c

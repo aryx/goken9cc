@@ -11,6 +11,8 @@
   see pad.org regression/mismatch section (big thx to Claude)
 - ar: add D flag like in GNU ar for "deterministic" builds (was
   hardcoded before with some //PAD: commented code for reproducible builds)
+- import 6a/6c/6l from https://github.com/plan9foundation/plan9.git as new
+  starting point for amd64 (and rename the go-era variant to 6ag/6cg/6lg)
 - 7a/7c/7l: produce macOS arm64 Mach-O executables with -H6
   (big thx to Claude)
   * 7l: add linkers/lk/macho.c, adapted from the old Go-era src/cmd/ld/macho.c
