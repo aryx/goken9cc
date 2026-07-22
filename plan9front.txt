@@ -24,6 +24,14 @@ such as:
      40ed531364 vl: prevent stack altering instructions to be hoisted above loads
    (found via a libmemdraw bug on real 9front; no dedicated minimal
    test in this repo yet -- see linkers/vl/sched.c sched().)
+ - vc (mips): register allocator's regopt() used a fixed
+   Rgn region[600] array and gave up (warn + stop optimizing further,
+   not a crash) past 600 candidate regions -- ported 9front's growable
+   version (region starts at 300, doubles via allocn() as needed). No
+   dedicated test: NVAR=160 caps distinct tracked variables, and
+   reaching 600 *regions* needs enough control-flow complexity that a
+   cheap synthetic generator (2000 statements, 700 distinct locals)
+   still didn't trigger the old cap in testing.
 
 Some fixes were found independently in both 9front and this repo's own
 principia-softwarica lineage:
