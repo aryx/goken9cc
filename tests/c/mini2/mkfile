@@ -39,7 +39,7 @@ helloprintf_macos_arm64.exe: helloprintf.c
    7c -Darm64 -c print_nofloat_no64.c
    7c -Darm64 -c helloprintf.c
    7a -Darm64 -c macos_arm64.s
-   ar_ rc libprint.a macos_arm64.7 print*.7 test.7
+   arg rc libprint.a macos_arm64.7 print*.7 test.7
    7l -H6 -L. -o $target -E _main helloprintf.7
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
@@ -59,25 +59,25 @@ test_macos:V: helloprintf_macos_arm64.exe regress7c_macos_arm64.exe
 
 
 # macOS amd64: Darwin syscall stubs (BSD syscall numbers OR'd with the
-# 0x2000000 Unix class bit), Mach-O (-H6). 6l -H6 is always PIE, so 6c
+# 0x2000000 Unix class bit), Mach-O (-H6). 6lg -H6 is always PIE, so 6cg
 # needs -z (position-independent code: no absolute $sym(SB) immediates in
-# arithmetic, e.g. "(char*)buf + i") and 6l needs the RIP-relative fix in
+# arithmetic, e.g. "(char*)buf + i") and 6lg needs the RIP-relative fix in
 # src/cmd/6l/span.c; see docs/notes_macos.txt. Runs natively on Intel Macs.
 helloprintf_macos_amd64.exe: helloprintf.c
-   6c -z -Damd64 -c test.c
-   6c -z -Damd64 -c print_nofloat_no64.c
-   6c -z -Damd64 -c helloprintf.c
-   6a -Damd64 -c macos_amd64.s
-   ar_ rc libprint.a macos_amd64.6 print*.6 test.6
-   6l -s -H6 -L. -o $target -E _main helloprintf.6
+   6cg -z -Damd64 -c test.c
+   6cg -z -Damd64 -c print_nofloat_no64.c
+   6cg -z -Damd64 -c helloprintf.c
+   6ag -Damd64 -c macos_amd64.s
+   arg rc libprint.a macos_amd64.6 print*.6 test.6
+   6lg -s -H6 -L. -o $target -E _main helloprintf.6
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
 
-# 6c code generation regression test (reuses the print/stub objects
+# 6cg code generation regression test (reuses the print/stub objects
 # built by the helloprintf rule above); same regress7c.c as arm64
 regress7c_macos_amd64.exe: regress7c.c helloprintf_macos_amd64.exe
-   6c -z -Damd64 -c regress7c.c
-   6l -s -H6 -L. -o $target -E _main regress7c.6
+   6cg -z -Damd64 -c regress7c.c
+   6lg -s -H6 -L. -o $target -E _main regress7c.6
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
 

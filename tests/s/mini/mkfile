@@ -40,17 +40,17 @@ hello_linux_386.exe: hello_linux_386.s
    8a -c $prereq
    8l -H7 -o $target -E _start hello_linux_386.8
 hello_linux_386_.exe: hello_linux_386_.s
-   8a_ -c $prereq
-   8l_ -o $target -E _start hello_linux_386_.8
+   8ag -c $prereq
+   8lg -o $target -E _start hello_linux_386_.8
 hello_linux_amd64.exe: hello_linux_amd64.s
-   6a -c $prereq
-   6l -o $target -E _start hello_linux_amd64.6
+   6ag -c $prereq
+   6lg -o $target -E _start hello_linux_amd64.6
 hello_linux_arm.exe: hello_linux_arm.s
    5a -c $prereq
    5l -H7 -o $target -E _start hello_linux_arm.5
 hello_linux_arm_.exe: hello_linux_arm_.s
-   5a_ -c $prereq
-   5l_ -o $target -E _start hello_linux_arm_.5
+   5ag -c $prereq
+   5lg -o $target -E _start hello_linux_arm_.5
 hello_linux_arm64.exe: hello_linux_arm64.s
    7a -c $prereq
    7l -H7 -o $target -E _start hello_linux_arm64.7
@@ -63,14 +63,14 @@ hello_linux_mips.exe: hello_linux_mips.s
 			
 
 # macOS
-# -H6 selects the apple MACH (Mach-O) header. 6l now emits the modern format:
+# -H6 selects the apple MACH (Mach-O) header. 6lg now emits the modern format:
 # LC_MAIN entry (not LC_UNIXTHREAD), MH_DYLDLINK|MH_TWOLEVEL|MH_PIE, links
 # /usr/lib/libSystem.B.dylib, and carries LC_DYLD_INFO_ONLY, LC_BUILD_VERSION
 # and LC_UUID.  (-s drops the __SYMDAT/__DWARF segments -- keeps the binary
 # darling-loadable; codesign(1) then covers the whole image.)
 hello_macos_amd64.exe: hello_macos_amd64.s
-   6a -c $prereq
-   6l -s -H6 -o $target -E _start hello_macos_amd64.6
+   6ag -c $prereq
+   6lg -s -H6 -o $target -E _start hello_macos_amd64.6
 
 # the codesign step is mandatory on arm64 macOS: the kernel SIGKILLs
 # unsigned (or non-PIE, or static) arm64 executables at exec() time.
@@ -83,21 +83,21 @@ hello_macos_arm64.exe: hello_macos_arm64.s
    if not true
 
 # Same as hello_macos_amd64 but calls libSystem's _write instead of a raw
-# syscall: -I declares the import, 6l binds it (LC_DYLD_INFO) into the writep
+# syscall: -I declares the import, 6lg binds it (LC_DYLD_INFO) into the writep
 # GOT slot. This is the variant that actually runs under darling (which
 # emulates Darwin via libSystem and does not translate raw syscalls).
 hello_macos_libc_amd64.exe: hello_macos_libc_amd64.s
-   6a -c $prereq
-   6l -s -H6 -I writep:_write:/usr/lib/libSystem.B.dylib -o $target -E _start hello_macos_libc_amd64.6
+   6ag -c $prereq
+   6lg -s -H6 -I writep:_write:/usr/lib/libSystem.B.dylib -o $target -E _start hello_macos_libc_amd64.6
 
 # Plan9
 # -H 2 this time and -E _main
 hello_plan9_386.exe: hello_plan9_386.s
-   8a_ -c $prereq
-   8l_ -o $target -H 2 -E _main hello_plan9_386.8
+   8ag -c $prereq
+   8lg -o $target -H 2 -E _main hello_plan9_386.8
 hello_plan9_arm.exe: hello_plan9_arm.s
-   5a_ -c $prereq
-   5l_ -o $target -H 2 -E _main hello_plan9_arm.5
+   5ag -c $prereq
+   5lg -o $target -H 2 -E _main hello_plan9_arm.5
 # actually no need -X; va/vc/vl are new and were not "go-ized"
 # actually -X would print the assembly on stdout in vl ...
 hello_plan9_mips.exe: hello_plan9_mips.s
@@ -109,12 +109,12 @@ hello_plan9_mips.exe: hello_plan9_mips.s
 # print. See src/cmd/ld/pe.c. -s because there is no PE symbol table path
 # yet. Test under wine on Linux hosts.
 #
-# 386 uses 8l_ (kencc lineage): the principia 8l in linkers/8l/ does not
-# have -H 10 wired. amd64 uses 6l -H 10, which emits a PE32+ (64-bit)
-# optional header.
+# 386 uses 8lg (goken/src-cmd lineage): the principia 8l in linkers/8l/
+# does not have -H 10 wired. amd64 uses 6lg -H 10, which emits a PE32+
+# (64-bit) optional header.
 hello_windows_386.exe: hello_windows_386.s
-   8a_ $prereq
-   8l_ -s -H 10 -o $target -E _start hello_windows_386.8
+   8ag $prereq
+   8lg -s -H 10 -o $target -E _start hello_windows_386.8
 hello_windows_amd64.exe: hello_windows_amd64.s
-   6a -c $prereq
-   6l -s -H 10 -o $target -E _start hello_windows_amd64.6
+   6ag -c $prereq
+   6lg -s -H 10 -o $target -E _start hello_windows_amd64.6

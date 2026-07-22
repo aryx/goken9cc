@@ -52,5 +52,5 @@ exit_linux_riscv.exe: exit_linux_riscv.s
    il -o $target -E _start exit_linux_riscv.i
 
 %.exe: %.s
-   5a_ -c $prereq
-   5l_ -o $target -E _start $stem.5
+   5ag -c $prereq
+   5lg -o $target -E _start $stem.5

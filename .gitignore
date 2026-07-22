@@ -69,12 +69,12 @@ y.debug
 /linkers/8lk/enam.c
 /linkers/5lk/enam.c
 
-/src/cmd/6a/6a
-/src/cmd/6c/6c
-/src/cmd/6l/6l
-/src/cmd/8a/8a
-/src/cmd/8c/8c
-/src/cmd/8l/8l
+/src/cmd/6a/6ag
+/src/cmd/6c/6cg
+/src/cmd/6l/6lg
+/src/cmd/8a/8ag
+/src/cmd/8c/8cg
+/src/cmd/8l/8lg
 /src/cmd/va/va
 /src/cmd/nm/6nm
 /src/cmd/prof/6prof

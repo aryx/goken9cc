@@ -11,11 +11,11 @@ CC=gcc -c --std=gnu89 -Wno-cpp -fsigned-char
 LD=gcc
 AS=gcc
 O=o
-#LATER: principia: alt: CC=6c LD=6l O=6 AS=6a
+#LATER: principia: alt: CC=6cg LD=6lg O=6 AS=6ag
 
 # used in tests/
 O_=7
 CC_=7c
 LD_=7l
 AS_=7a
-AR_=ar_
+AR_=arg

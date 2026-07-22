@@ -44,14 +44,14 @@ helloc_macos_arm64.exe: helloc.c
    7a -Darm64 -c start_arm64.s
    7a -Darm64 -c xwrite_macos_arm64.s
    7a -Darm64 -c xexit_macos_arm64.s
-   ar_ rc libmini.a start_arm64.7 xwrite_macos_arm64.7 xexit_macos_arm64.7
+   arg rc libmini.a start_arm64.7 xwrite_macos_arm64.7 xexit_macos_arm64.7
    7l -H6 -L. -o $target -E _start helloc.7
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
 
 # runs natively on Intel Macs (no qemu needed)
 # the cmp is not just belt-and-suspenders here: this target is what caught
-# a real 6l bug (see the comment on helloc_macos_amd64.exe below) where the
+# a real 6lg bug (see the comment on helloc_macos_amd64.exe below) where the
 # binary linked, ran, and exited 0 while writing nothing at all -- a bare
 # "it ran" check would have passed.
 test_macos_amd64:V: helloc_macos_amd64.exe
@@ -63,9 +63,9 @@ test_macos_amd64:V: helloc_macos_amd64.exe
 # start_amd64.s is OS-independent so it is reused as-is. Runs
 # natively on Intel Macs.
 #
-# 6c compiles "xwrite(\"str\", n)" into "MOVQ $sym(SB), R" -- the address
+# 6cg compiles "xwrite(\"str\", n)" into "MOVQ $sym(SB), R" -- the address
 # of the string constant loaded as a link-time absolute immediate. That is
-# fine for non-PIE ELF/PE, but 6l -H6 always sets MH_PIE, so the kernel
+# fine for non-PIE ELF/PE, but 6lg -H6 always sets MH_PIE, so the kernel
 # slides the image at exec() and the baked-in address is wrong; write()
 # then silently fails (unchecked in xwrite) and the program exits 0 having
 # printed nothing. Fixed in src/cmd/6l/span.c oclass(): when HEADTYPE==6,
@@ -74,12 +74,12 @@ test_macos_amd64:V: helloc_macos_amd64.exe
 # had PIE-aware RIP-relative encoding (see asmandsz's HEADTYPE==6 case).
 # See also docs/notes_macos.txt.
 helloc_macos_amd64.exe: helloc.c
-   6c -Damd64 -c helloc.c
-   6a -Damd64 -c start_amd64.s
-   6a -Damd64 -c xwrite_macos_amd64.s
-   6a -Damd64 -c xexit_macos_amd64.s
-   ar_ rc libmini.a start_amd64.6 xwrite_macos_amd64.6 xexit_macos_amd64.6
-   6l -s -H6 -L. -o $target -E _start helloc.6
+   6cg -Damd64 -c helloc.c
+   6ag -Damd64 -c start_amd64.s
+   6ag -Damd64 -c xwrite_macos_amd64.s
+   6ag -Damd64 -c xexit_macos_amd64.s
+   arg rc libmini.a start_amd64.6 xwrite_macos_amd64.6 xexit_macos_amd64.6
+   6lg -s -H6 -L. -o $target -E _start helloc.6
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
 

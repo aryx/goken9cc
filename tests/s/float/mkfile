@@ -5,8 +5,8 @@ all:V: float_arm_.exe float_arm.exe
    5l -o $target -E _start $stem.5
 
 %_.exe: %.s
-   5a_ -c $prereq
-   5l_ -H7 -o $target -E _start $stem.5
+   5ag -c $prereq
+   5lg -H7 -o $target -E _start $stem.5
 
 clean:V:
 	rm -f *.exe *.[5678vi] *.a
