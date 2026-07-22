@@ -371,6 +371,27 @@ oclass(Adr *a)
 				switch(a->index) {
 				case D_EXTERN:
 				case D_STATIC:
+					/*
+					 * claude: macOS (-H6) is always PIE (see
+					 * asmandsz's HEADTYPE==6 case): "MOV $sym(SB), R"
+					 * can not be an absolute 32-bit immediate baked
+					 * in at link time, since ASLR slides the image
+					 * at exec() (and even without ASLR, macOS's
+					 * 0x100000000 default load address itself
+					 * doesn't fit 32 bits). Route it through the
+					 * same Zaut_r (built-in LEA) path already used
+					 * for "MOV $auto-8(SP), R" and for plain "LEAQ
+					 * sym(SB), R" -- both go through asmandsz, which
+					 * already emits a RIP-relative disp32 for
+					 * HEADTYPE==6. Other -H targets keep the proven
+					 * absolute-immediate encoding. Same fix already
+					 * applied to src/cmd/6l/span.c (Go-era 6lg)
+					 * earlier this session -- ported here since
+					 * this vanilla-imported copy still had the
+					 * original "TO DO: Yi64" gap.
+					 */
+					if(HEADTYPE == 6)
+						return Yiauto;
 					return Yi32;	/* TO DO: Yi64 */
 				case D_AUTO:
 				case D_PARAM:
