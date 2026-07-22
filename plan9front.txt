@@ -32,6 +32,15 @@ such as:
    reaching 600 *regions* needs enough control-flow complexity that a
    cheap synthetic generator (2000 statements, 700 distinct locals)
    still didn't trigger the old cap in testing.
+ - vc (mips): mkvar() excluded every "."-prefixed pseudo-symbol from
+   register-allocator tracking, including ".ret" (the function
+   return-value pseudo-variable, see compilers/vc/txt.c ginit()) --
+   ported 9front's carve-out so ".ret" specifically stays eligible for
+   optimization like any other variable. Not a correctness bug, purely
+   a missed optimization; no dedicated test (nothing to observably
+   fail, just a quality difference in generated code that would need a
+   golden-object diff to show, and this repo doesn't otherwise
+   golden-diff vc's own register allocator's choices).
 
 Some fixes were found independently in both 9front and this repo's own
 principia-softwarica lineage:
