@@ -45,6 +45,10 @@ struct	Adr
 	char	index;
 	char	scale;
 };
+/* claude: tells lk/macho.c's machorebase() (shared with 7l, whose Adr
+ * has no .index field) that it can unwrap a D_ADDR-boxed type via
+ * .index here -- see the ADR_HAS_INDEX comment there */
+#define ADR_HAS_INDEX
 
 #define	offset	u0.u0offset
 #define	scon	u0.u0scon

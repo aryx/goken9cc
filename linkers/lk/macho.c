@@ -132,17 +132,21 @@ machorebase(void)
 			continue;
 		/*
 		 * claude: a symbolic DATA value ("DATA x(SB)/8, $y(SB)") is
-		 * D_CONST directly in some ?l data models, but this vanilla
-		 * 6l boxes it as D_ADDR with the real type stashed in .index
-		 * (see vaddr()'s own "if(t == D_ADDR) t = a->index;"
-		 * unwrapping in span.c). Accept both so a pointer initializer
-		 * like "static char *dig = "0123...";" is still found and
-		 * rebased -- found via tests/c/variants/pievar_amd64.c, which
-		 * has one.
+		 * D_CONST directly in some ?l data models (7l's Adr has no
+		 * .index field at all), but this vanilla 6l boxes it as
+		 * D_ADDR with the real type stashed in .index (see vaddr()'s
+		 * own "if(t == D_ADDR) t = a->index;" unwrapping in span.c).
+		 * Accept both -- gated on ADR_HAS_INDEX (defined by 6l/l.h
+		 * only) so this compiles for both linkers sharing this file
+		 * -- so a pointer initializer like "static char *dig =
+		 * "0123...";" is still found and rebased -- found via
+		 * tests/c/variants/pievar_amd64.c, which has one.
 		 */
 		tt = p->to.type;
+#ifdef ADR_HAS_INDEX
 		if(tt == D_ADDR)
 			tt = p->to.index;
+#endif
 		if(tt != D_CONST && tt != D_STATIC && tt != D_EXTERN)
 			continue;
 		v = p->to.sym;
