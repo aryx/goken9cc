@@ -281,6 +281,7 @@ cgen(Node *n, Node *nn)
 		break;
 
 	case OFUNC:
+		l = uncomma(l);
 		if(l->complex >= FNX) {
 			if(l->op != OIND)
 				diag(n, "bad function call");

@@ -41,6 +41,22 @@ such as:
    fail, just a quality difference in generated code that would need a
    golden-object diff to show, and this repo doesn't otherwise
    golden-diff vc's own register allocator's choices).
+ - vc (mips): cgen()'s OFUNC case didn't strip a leading comma
+   expression from the callee before checking it's a plain indirect
+   call (l->op == OIND), e.g. a function pointer reached through
+   `(sideeffect(), fp)(args)` -- so a complex-enough comma-wrapped
+   callee hit "diag(n, "bad function call")" or miscompiled instead
+   of working. Fixed with `l = uncomma(l);` (uncomma() already exists
+   in shared cc/ code, and compilers/8ck/cgen.c, compilers/8c/cgen.c
+   and compilers/7c/cgen.c all already have this exact call -- vc was
+   the odd one out). No dedicated test: getting the compiler down this
+   specific "complex indirect call through a comma expression" branch
+   with a small snippet didn't work within this pass's budget (a
+   `(g(), fp)()` -style test compiled to identical code with and
+   without the fix, meaning it wasn't taking the intended path);
+   applied on the strength of the fix being a verified no-op unless
+   l->op == OCOMMA, and already proven correct by 3 sibling backends
+   in this same repo.
 
 Some fixes were found independently in both 9front and this repo's own
 principia-softwarica lineage:
