@@ -598,6 +598,7 @@ buildop(void)
 			oprange[ATLBR] = oprange[r];
 			oprange[ATLBWI] = oprange[r];
 			oprange[ATLBWR] = oprange[r];
+			oprange[ASYNC] = oprange[r];
 			break;
 		case ACMPEQF:
 			oprange[ACMPGTF] = oprange[r];
@@ -626,6 +627,8 @@ buildop(void)
 		case AMOVV:
 			buildrep(8, AMOVV);
 			break;
+		case ALL:
+		case ASC:
 		case ABREAK:
 		case AWORD:
 		case ARFE:

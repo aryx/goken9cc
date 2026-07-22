@@ -1130,6 +1130,22 @@ asmout(Prog *p, Optab *o, int aflag)
 			v = p->cond->pc;
 		o1 = v;
 		break;
+
+	case 47:	/* sc r, soreg */
+		r = p->to.reg;
+		if(r == NREG)
+			r = o->param;
+		v = regoff(&p->to);
+		o1 = OP_IRR(opirr(p->as), v, r, p->from.reg);
+		break;
+
+	case 48:	/* ll soreg, r */
+		r = p->from.reg;
+		if(r == NREG)
+			r = o->param;
+		v = regoff(&p->from);
+		o1 = OP_IRR(opirr(p->as), v, r, p->to.reg);
+		break;
 	}
 	if(aflag)
 		return o1;
@@ -1237,6 +1253,7 @@ oprrr(int a)
 
 	case ABREAK:	return OP(1,5);
 	case ASYSCALL:	return OP(1,4);
+	case ASYNC:	return OP(1,7);
 	case ATLBP:	return MMU(1,0);
 	case ATLBR:	return MMU(0,1);
 	case ATLBWI:	return MMU(0,2);
@@ -1347,6 +1364,9 @@ opirr(int a)
 
 	case AADDV:		return SP(3,0);
 	case AADDVU:		return SP(3,1);
+
+	case ALL:	return SP(6,0);
+	case ASC:	return SP(7,0);
 	}
 	diag("bad irr %d", a);
 abort();

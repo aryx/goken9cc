@@ -1,0 +1,32 @@
+# Minimal hand-written assembly programs that exercise a single
+# toolchain feature ported from elsewhere (as opposed to tests/s/regressions,
+# which exercises a bug fix). Each program documents its own origin
+# (source repo + commit) in a comment at the top; see also
+# ../../../plan9front.txt for the running credits list.
+#
+# Every program here is expected to exit() with a specific code that
+# only a correct implementation of the feature produces; a silently
+# wrong encoding, opcode, or scheduling would exit with something else
+# (or hang), not merely fail to build.
+
+FEATURES=mips_atomic_llsc.exe
+
+all:V: $FEATURES
+
+# mips_atomic_llsc is mips-only for now; extend this loop with a
+# name->arch mapping if features get added for other architectures.
+test:V: all
+      st=`{ ../../../scripts/qemu-runner mips ./mips_atomic_llsc.exe; echo $status }
+      if (~ $st 11)
+         echo 'ok: mips_atomic_llsc.exe exit 11'
+      if not {
+         echo 'FAILED: mips_atomic_llsc.exe (got '$st')'
+         exit failed
+      }
+
+clean:V:
+	rm -f *.[5678iv] *.exe
+
+mips_atomic_llsc.exe: mips_atomic_llsc.s
+   va -c $prereq
+   vl -o $target -E _start mips_atomic_llsc.v

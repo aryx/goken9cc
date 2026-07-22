@@ -228,5 +228,8 @@ Optab	optab[] =
 	{ ACASE,	C_REG,	C_NONE,	C_NONE,		 45, 28, 0 },
 	{ ABCASE,	C_LCON,	C_NONE,	C_LBRA,		 46, 4, 0 },
 
+	{ ASC,		C_REG,	C_NONE,	C_SOREG,	 47, 4, 0 },
+	{ ALL,		C_SOREG,	C_NONE,	C_REG,	 48, 4, 0 },
+
 	{ AXXX,		C_NONE,	C_NONE,	C_NONE,		 0, 4, 0 },
 };

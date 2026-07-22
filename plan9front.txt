@@ -9,6 +9,14 @@ Some code and fixes comes also from 9front at https://github.com/9front/9front
 such as:
  - 7a/7c/7l:
  - 6a/6c/6l:
+ - va/vc/vl (mips): LL (load-linked) / SC (store-conditional) / SYNC
+   (memory barrier) atomic instructions, needed for spinlocks/mutexes
+   on MIPS -- ported from 9front's sys/src/cmd/v[al]/*, by mia soweli:
+     10f1eeb7d v[al], libmach: add LL (load-linked) and SC (store-conditional)
+     ca2589a11 v[al]: add SYNC (memory barrier)
+     e7d099ac4 vl: LL operand order and scheduling
+     2eb28f43e vl: atomic instruction scheduling
+   See tests/s/features/mips_atomic_llsc.s.
  - vl (mips): linker instruction scheduler could hoist a stack-pointer
    -adjusting instruction above an earlier load in the same window,
    changing the load's effective address if reordered -- ported from
