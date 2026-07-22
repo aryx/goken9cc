@@ -792,7 +792,31 @@ enum
 	T_SCONST	= 1<<5,
 	T_64	= 1<<6,
 
-	REGARG		= D_BP,	/* MIGHT CHANGE */
+	/*
+	 * claude: was D_BP. This isn't a vanilla-plan9 bug so much as a
+	 * calling-convention mismatch with this project: on native Plan9,
+	 * REGARG lets the first argument of an eligible call pass in a
+	 * register instead of on the stack, with caller and callee
+	 * cooperating -- 5c genuinely uses this for arm (REGARG=D_R0=0,
+	 * see compilers/5c/txt.c), where both compiled and hand-written
+	 * amd64/arm callees were written expecting it. Every assembly
+	 * stub we've written for this project instead assumes the plain
+	 * all-on-the-stack convention (matching 8c, REGARG=-1, and every
+	 * hand-assembled .s test here) -- none of them know to look in BP
+	 * for the first argument. So 6c's caller side faithfully computed
+	 * the value into BP (garg1() in compilers/6c/txt.c), but nothing
+	 * ever read it from there or spilled it to the stack, so e.g.
+	 * write(fd, buf, len) silently used whatever garbage was on the
+	 * stack as fd. -1 disables the optimization, so every argument
+	 * passes on the stack uniformly, matching 8c and everything else
+	 * in this project -- see the same REGARG>=0 guards 8c/5c already
+	 * use throughout compilers/6c/{cgen,txt,peep}.c. Even the Go-era
+	 * 6cg (src/cmd/6c) agrees: it also sets REGARG=-1 (src/cmd/6l/
+	 * 6.out.h) and already uses the >=0 guard everywhere (plus a
+	 * "regaalloc1 and REGARG<0" sanity diag() in its txt.c) -- so
+	 * every amd64 6c that ever actually shipped made this same call.
+	 */
+	REGARG		= -1,
 	REGRET		= D_AX,
 	FREGRET		= D_X0,
 	REGSP		= D_SP,

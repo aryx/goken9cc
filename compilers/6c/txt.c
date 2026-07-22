@@ -225,7 +225,7 @@ garg1(Node *n, Node *tn1, Node *tn2, int f, Node **fnxp)
 			sugen(n, tn2, n->type->width);
 		return;
 	}
-	if(REGARG && curarg == 0 && typechlpv[n->type->etype]) {
+	if(REGARG >= 0 && curarg == 0 && typechlpv[n->type->etype]) {
 		regaalloc1(tn1, n);
 		if(n->complex >= FNX) {
 			cgen(*fnxp, tn1);
@@ -415,6 +415,8 @@ regsalloc(Node *n, Node *nn)
 void
 regaalloc1(Node *n, Node *nn)
 {
+	if(REGARG < 0)
+		diag(n, "regaalloc1 and REGARG<0");
 	nodreg(n, nn, REGARG);
 	reg[REGARG]++;
 	curarg = align(curarg, nn->type, Aarg1);

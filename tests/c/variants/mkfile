@@ -24,10 +24,18 @@ CTESTSARM=reg_alloc_arm float_cmp_arm
 # either, so just golden-diff a linked -H6 exe -- see tests/s/variants
 # for the same pattern applied to hand-written assembly.
 CTESTSPIE64=pievar_amd64
+# amd64 runtime-behavior regressions (as opposed to the -z/-H6 PIE
+# codegen above): these run under qemu and diff real program output,
+# since the whole point is that the wrong bytes reached the CPU at
+# runtime, not just that the object file bytes differ from a golden
+# reference. See regarg_amd64.c for the bug.
+CTESTSRUN64=regarg_amd64
 
-test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testpie64 testgolden
+test:V: ${CTESTS:%=%.vcmp} ${CTESTSMISC:%=%.vcmpm} testarm testpie64 testrun64 testgolden
 
 testpie64:V: ${CTESTSPIE64:%=%.vgoldpie}
+
+testrun64:V: ${CTESTSRUN64:%=%.vrun64}
 
 testarm:V: ${CTESTSARM:%=%.vcmp5} bigfunc_arm
 
@@ -73,6 +81,12 @@ testgolden:V: ${CTESTS:%=%.vgold} ${CTESTSMISC:%=%.vgoldm} ${CTESTSARM:%=%.vgold
 %.mkgoldpie:V:
 	6c -z $stem.c
 	6l -H6 -o expected/$stem.exe -E digit $stem.6
+
+%.vrun64:V:
+	6c $stem.c
+	6a linux_amd64.s
+	6l -o $stem.exe -E _main $stem.6 linux_amd64.6
+	../../../scripts/qemu-runner amd64 ./$stem.exe | cmp /dev/stdin $stem.expected.txt
 
 %.vcmp:V:
 	8ck -r -o $stem.k.8 $stem.c

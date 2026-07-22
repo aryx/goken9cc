@@ -18,6 +18,14 @@
 // in that D_ADDR-unwrapping fix, or in the -z (position-independent
 // code) compiler-side work (hardconst()/doindex()/naddr() in cgen.c/
 // txt.c) that produces the RIP-relative reference to "dig" itself.
+//
+// expected/pievar_amd64.exe was regenerated after the REGARG=-1 fix
+// (see include/6.out.h): digit(int i)'s single int parameter used to
+// be read out of BP under the old REGARG=D_BP convention (never
+// actually spilled there by any real caller, so effectively garbage);
+// it's now correctly read off the stack like every other argument in
+// this project, changing digit()'s compiled bytes. See regarg_amd64.c
+// for the bug itself.
 
 char *dig = "0123456789";
 
