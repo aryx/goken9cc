@@ -6,3 +6,11 @@
 *.a
 *.[5678iv]
 *.ao
+# pad's test files -- without these, a leftover local build of e.g.
+# tests/s/mini/hello_macos_arm64.exe gets copied into the build
+# context via COPY, and mk sees the target already up to date and
+# skips its recipe -- silently masking recipe bugs (like a broken
+# `if` as a recipe's last line) that a genuinely clean CI checkout
+# would catch.
+*.exe
+*.uexe
