@@ -54,9 +54,10 @@ Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X
 - **linkers/** — per-arch linkers + `ar` archiver
 - **lib_core/** — `lib9/` (Plan 9 POSIX adaptation), `libbio/` (buffered I/O), `libc/` (minimal C lib with OS/ and ARCH/ branches)
 - **lib_strings/** — `libregexp/`, `libstring/`, `libflate/`
+- **lib_toolchain/** — `libmach/` (object file/binary format parsing, used by `ar`, `acid`, and the emulators — not just debuggers)
 - **include/** — master headers (`u.h`, `libc.h`, `bio.h`, `mach.h`), plus `ARCH/` and `OS/` subdirs
 - **machines/** — `5i` (ARM emulator), `vi` (MIPS emulator)
-- **debuggers/** — `acid` (Plan 9 debugger), `libmach` (debug support)
+- **debuggers/** — `acid` (Plan 9 debugger)
 - **generators/** — `lex`, `yacc`
 - **mk/** — Plan 9 mk build tool (bootstrapped from shell)
 - **rc/** — Plan 9 rc shell
