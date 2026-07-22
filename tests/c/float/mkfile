@@ -67,6 +67,7 @@ helloprintf_macos_arm64.exe: helloprintf.c
    ar_ rc libprint.a macos_arm64.7 print*.7 float*.7 vlrt.7
    7l -H6 -L. -o $target -E _main helloprintf.7
    if(~ `{uname} Darwin) codesign -s - -f $target
+   if not true
 
 # runs natively on Apple Silicon (no qemu needed)
 test_macos:V: helloprintf_macos_arm64.exe

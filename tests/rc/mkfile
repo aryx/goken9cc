@@ -5,3 +5,4 @@ TOP=../..
 test:V:
 	bash glob_long_filenames.sh
 	bash backquote.sh
+	bash if_no_else_status.sh

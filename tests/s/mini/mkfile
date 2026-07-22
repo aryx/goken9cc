@@ -88,6 +88,7 @@ hello_macos_arm64.exe: hello_macos_arm64.s
    7a -c $prereq
    7l -H6 -o $target -E _start hello_macos_arm64.7
    if(~ `{uname} Darwin) codesign -s - -f $target
+   if not true
 
 # Same as hello_macos_amd64 but calls libSystem's _write instead of a raw
 # syscall: -I declares the import, 6l binds it (LC_DYLD_INFO) into the writep

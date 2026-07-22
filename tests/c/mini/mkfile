@@ -60,6 +60,7 @@ helloc_macos_arm64.exe: helloc.c
    ar_ rc libmini.a start_arm64.7 xwrite_macos_arm64.7 xexit_macos_arm64.7
    7l -H6 -L. -o $target -E _start helloc.7
    if(~ `{uname} Darwin) codesign -s - -f $target
+   if not true
 
 # runs natively on Intel Macs (no qemu needed)
 # the cmp is not just belt-and-suspenders here: this target is what caught
@@ -93,6 +94,7 @@ helloc_macos_amd64.exe: helloc.c
    ar_ rc libmini.a start_amd64.6 xwrite_macos_amd64.6 xexit_macos_amd64.6
    6l -s -H6 -L. -o $target -E _start helloc.6
    if(~ `{uname} Darwin) codesign -s - -f $target
+   if not true
 
 #alt: 5l_ -H7 -L. -o $target -E _start helloc.5 xwrite_arm.5 xexit_arm.5 start_arm.5
 # when ar_ is not working
