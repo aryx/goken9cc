@@ -5,13 +5,12 @@
 #   see https://abstractexpr.com/2023/04/30/the-anomaly-of-the-char-type-in-c/
 # - the --std=gnu89 is needed because recent gcc have too many warnings
 #   by default that prevents to compile goken
-# - the -Wno-cpp to avoid certain errors
+# - the -Wno-cpp is to avoid certain errors
 #alt: CC=quietgcc -c ...
 CC=gcc -c --std=gnu89 -Wno-cpp -fsigned-char
 LD=gcc
 AS=gcc
 O=o
-#LATER: principia: alt: CC=6cg LD=6lg O=6 AS=6ag
 
 # used in tests/
 O_=7

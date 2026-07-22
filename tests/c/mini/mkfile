@@ -25,7 +25,6 @@ test:V:
         for (arch in $ARCHS) {
            echo $arch
            mk clean
-           #alt: build 5.helloc 8.helloc
            mk 'objtype='$arch
            $TOP/scripts/qemu-runner $arch ./helloc.exe | cmp /dev/stdin helloc.expected.txt
         }
@@ -74,13 +73,7 @@ test_macos_amd64:V: helloc_macos_amd64.exe
 # tests/c/mini2's helloprintf_macos_amd64.exe) instead requires -z on
 # the compiler side for PIE-safe codegen, same as pievar_amd64.c in
 # tests/c/variants -- see docs/notes_macos.txt.
-#
-# claude: switched from 6cg/6ag/6lg/arg to this project's own 6c/6a/6l/
-# iar -- unverified since there's no macOS/darling execution available
-# in this environment. Please run test_macos_amd64 on real hardware to
-# confirm before relying on it (see the comment on that target above:
-# a bare "it ran" check is not enough, a real 6lg bug once linked, ran,
-# and exited 0 while writing nothing at all).
+
 helloc_macos_amd64.exe: helloc.c
    6c -z -Damd64 -c helloc.c
    6a -Damd64 -c start_amd64.s

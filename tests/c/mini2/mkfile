@@ -63,13 +63,7 @@ test_macos:V: helloprintf_macos_arm64.exe regress7c_macos_arm64.exe
 # needs -z (position-independent code: no absolute $sym(SB) immediates in
 # arithmetic, e.g. "(char*)buf + i") and 6l needs the RIP-relative fix in
 # linkers/6l/span.c; see docs/notes_macos.txt. Runs natively on Intel Macs.
-#
-# claude: switched from 6cg/6ag/6lg/arg to this project's own 6c/6a/6l/
-# iar -- unverified since there's no macOS/darling execution available
-# in this environment (byte-diff/golden testing isn't meaningful here
-# either, unlike tests/c/variants, since this target's whole point is
-# running natively on real hardware). Please run test_macos_amd64 on
-# real hardware to confirm before relying on it.
+# TODO? install darling to run macos binaries from Linux
 helloprintf_macos_amd64.exe: helloprintf.c
    6c -z -Damd64 -c test.c
    6c -z -Damd64 -c print_nofloat_no64.c
