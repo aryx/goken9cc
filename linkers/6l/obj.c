@@ -2,10 +2,6 @@
 #include	"l.h"
 #include	<ar.h>
 
-#ifndef	DEFAULT
-#define	DEFAULT	'9'
-#endif
-
 char	*noname		= "<none>";
 char	symname[]	= SYMDEF;
 char	thechar		= '6';
@@ -129,8 +125,6 @@ main(int argc, char *argv[])
 	USED(argc);
 	if(*argv == 0)
 		usage();
-	if(!debug['9'] && !debug['U'] && !debug['B'])
-		debug[DEFAULT] = 1;
 	a = getenv("ccroot");
 	if(a != nil && *a != '\0') {
 		if(!fileexists(a)) {
@@ -142,10 +136,16 @@ main(int argc, char *argv[])
 	snprint(name, sizeof(name), "%s/%s/lib", a, thestring);
 	addlibpath(name);
 	if(HEADTYPE == -1) {
-		if(debug['B'])
-			HEADTYPE = 2;
-		if(debug['9'])
-			HEADTYPE = 2;
+		/* claude: pick the default output format from the host OS, like
+		 * 7l/8l do via getgoos(): Linux -> ELF, otherwise Plan 9. This
+		 * lets `6l foo.6` produce a runnable Linux binary without an
+		 * explicit -H7. (macOS Mach-O is not implemented yet in this
+		 * vanilla 6l, so darwin is not special-cased here yet.) */
+		char *goos;
+		HEADTYPE = 2;
+		goos = getgoos();
+		if(goos != nil && strcmp(goos, "linux") == 0)
+			HEADTYPE = 7;
 	}
 	switch(HEADTYPE) {
 	default:
@@ -169,7 +169,8 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
-	case 6:	/* ELF64 executable */
+	case 7:	/* ELF64 executable, e.g. Linux amd64 (6 is reserved for a
+		 * future macOS Mach-O, matching 7l's HEADTYPE numbering) */
 		HEADR = rnd(Ehdr64sz+3*Phdr64sz, 16);
 		if(INITTEXT == -1)
 			INITTEXT = 0x200000+HEADR;

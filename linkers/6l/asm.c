@@ -140,9 +140,15 @@ asmb(void)
 	default:
 		diag("unknown header type %ld", HEADTYPE);
 	case 2:
-	case 5:
-	case 6:
 		seek(cout, HEADR+textsize, 0);
+		break;
+	case 5:
+	case 7:
+		/* claude: ELF requires vaddr modulo page == file offset modulo
+		 * page, so round up to a page boundary here to match INITDAT
+		 * (see obj.c) and the PT_LOAD file offset in lk/elf.c (same
+		 * fix as linkers/8l/asm.c's H_ELF case) */
+		seek(cout, rnd(HEADR+textsize, INITRND), 0);
 		break;
 	}
 
@@ -174,9 +180,15 @@ asmb(void)
 		switch(HEADTYPE) {
 		default:
 		case 2:
-		case 5:
-		case 6:
 			seek(cout, HEADR+textsize+datsize, 0);
+			break;
+		case 5:
+		case 7:
+			/* claude: the symbol table must follow the data section
+			 * at its real (page-rounded) end, not at the unrounded
+			 * HEADR+textsize+datsize, same reasoning as the seek
+			 * before datblk() above */
+			seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
 			break;
 		}
 		if(!debug['s'])
@@ -223,7 +235,7 @@ asmb(void)
 	case 5:
 		elf32(debug['8']? I386: AMD64, ELFDATA2LSB, 0, nil);
 		break;
-	case 6:
+	case 7:
 		elf64(AMD64, ELFDATA2LSB, 0, nil);
 		break;
 	}

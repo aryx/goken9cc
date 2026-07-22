@@ -134,7 +134,7 @@ putsymb(char *s, int t, vlong v, int ver)
 		if(debug['8'])
 			break;
 	case 2:
-	case 6:
+	case 7:
 		lput(v>>32);
 		l = 8;
 		break;
