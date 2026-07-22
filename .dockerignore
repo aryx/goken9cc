@@ -2,3 +2,6 @@
 .git
 
 # partial copy of .gitignore
+*.o
+*.a
+*.[5678iv]
