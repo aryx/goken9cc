@@ -39,7 +39,7 @@ helloprintf.exe: helloprintf.c
 #           vc's own codegen and the FREGZERO/HALF/ONE/TWO runtime-constant
 #           convention (see linux_mips.s) are correct; this is a qemu
 #           emulation gap, not a toolchain bug. Left out of ARCHS.
-ARCHS=amd64 arm64 riscv 386
+ARCHS=386 amd64 arm64 riscv
 test:V:
         for (arch in $ARCHS) {
            echo $arch
