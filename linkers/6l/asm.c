@@ -145,11 +145,13 @@ asmb(void)
 	case 5:
 	case 6:
 	case 7:
-		/* claude: ELF and Mach-O both require vaddr modulo page ==
+	case 10:
+		/* claude: ELF, Mach-O and PE all require vaddr modulo page ==
 		 * file offset modulo page, so round up to a page boundary
-		 * here to match INITDAT (see obj.c) and the PT_LOAD/segment
-		 * file offset in lk/elf.c and lk/macho.c (same fix as
-		 * linkers/8l/asm.c's H_ELF case) */
+		 * here to match INITDAT (see obj.c) and the PT_LOAD/segment/
+		 * PointerToRawData file offset in lk/elf.c, lk/macho.c and
+		 * lk/pe.c's new_section() (same fix as linkers/8l/asm.c's
+		 * H_ELF case) */
 		seek(cout, rnd(HEADR+textsize, INITRND), 0);
 		break;
 	}
@@ -217,6 +219,11 @@ asmb(void)
 			 * linkers/7l/asm.c's HEADTYPE 6 case) */
 			debug['s'] = 1;
 			break;
+		case 10:
+			/* claude: no symbol table for PE yet (lk/pe.c has no
+			 * .symdat writer), matching what src/cmd/6l did for -H10 */
+			debug['s'] = 1;
+			break;
 		}
 		if(!debug['s'])
 			asmsym();
@@ -267,6 +274,9 @@ asmb(void)
 		break;
 	case 6:
 		asmbmacho();
+		break;
+	case 10:
+		asmbpe();
 		break;
 	}
 	cflush();

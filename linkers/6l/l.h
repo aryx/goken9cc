@@ -4,6 +4,7 @@
 #include	<6.out.h>
 #include	"../lk/elf.h"
 #include	"../lk/macho.h"
+#include	"../lk/pe.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -131,6 +132,11 @@ enum
 	 * 7l) compiles here too -- nothing in 6a/6c/6l ever assigns them */
 	SLEAF,
 	SSTRING,
+
+	/* claude: a symbol whose value is already a final absolute address,
+	 * not an offset from INITDAT like plain SDATA/SBSS -- used for the
+	 * PE __imp_* import-table symbols lk/pe.c defines (see vaddr()) */
+	SFIXED,
 
 	NHASH		= 10007,
 	NHUNK		= 100000,

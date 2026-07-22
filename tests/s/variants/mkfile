@@ -32,10 +32,11 @@ TESTSARM=hello_arm swi_line_arm addr_arm call_arm
 # above), so just golden-diff against a checked-in reference instead of
 # the vcmp/vgold split used for those.
 TESTSAMD64=riprel_amd64
+TESTSPE64=pe_amd64
 
 test:V: test386 testarm testamd64 testgolden
 
-testamd64:V: ${TESTSAMD64:%=%.vgold6}
+testamd64:V: ${TESTSAMD64:%=%.vgold6} ${TESTSPE64:%=%.vgoldpe}
 
 # byte-compare object files and executables produced by the two lineages
 test386:V: ${TESTS386:%=%.vcmp8}
@@ -122,10 +123,16 @@ testgolden:V: ${TESTS386:%=%.vgold8} ${TESTSARM:%=%.vgold5}
 	6l -H6 -o $stem.exe -E _start $stem.6
 	cmp $stem.exe expected/$stem.exe
 
+# same reproducibility caveat as %.vgold6 above
+%.vgoldpe:V:
+	6a -c $stem.s
+	6l -H10 -o $stem.exe -E _start $stem.6
+	cmp $stem.exe expected/$stem.exe
+
 # Regenerate the golden reference outputs from the kencc lineage.
 # Only run this deliberately, after verifying the new outputs are correct
 # (e.g. the executables still run).
-golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5} ${TESTSAMD64:%=%.mkgold6}
+golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5} ${TESTSAMD64:%=%.mkgold6} ${TESTSPE64:%=%.mkgoldpe}
 
 %.mkgold8:V:
 	8ak -r -c -o expected/$stem.8 $stem.s
@@ -139,6 +146,10 @@ golden:V: ${TESTS386:%=%.mkgold8} ${TESTSARM:%=%.mkgold5} ${TESTSAMD64:%=%.mkgol
 %.mkgold6:V:
 	6a -c $stem.s
 	6l -H6 -o expected/$stem.exe -E _start $stem.6
+
+%.mkgoldpe:V:
+	6a -c $stem.s
+	6l -H10 -o expected/$stem.exe -E _start $stem.6
 
 clean nuke:V:
 	rm -f *.[568] *.exe *.uexe

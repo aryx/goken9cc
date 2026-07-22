@@ -698,6 +698,9 @@ vaddr(Adr *a)
 					v += INITTEXT;	/* TO DO */
 				v += s->value;
 				break;
+			case SFIXED:
+				v += s->value;
+				break;
 			default:
 				v += INITDAT + s->value;
 			}
