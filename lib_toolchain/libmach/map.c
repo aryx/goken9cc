@@ -1,3 +1,36 @@
+// Derived from Inferno libmach/map.c and
+// Plan 9 from User Space src/libmach/map.c
+//
+// http://code.swtch.com/plan9port/src/tip/src/libmach/map.c
+// http://code.google.com/p/inferno-os/source/browse/utils/libmach/map.c
+//
+//
+//	Copyright © 1994-1999 Lucent Technologies Inc.
+//	Power PC support Copyright © 1995-2004 C H Forsyth (forsyth@terzarima.net).
+//	Portions Copyright © 1997-1999 Vita Nuova Limited.
+//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com).
+//	Revisions Copyright © 2000-2004 Lucent Technologies Inc. and others.
+//	Portions Copyright © 2001-2007 Russ Cox.
+//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 /*
  * file map routines
  */
@@ -24,12 +57,12 @@ newmap(Map *map, int n)
 	return map;
 }
 
-int
-setmap(Map *map, int fd, uvlong b, uvlong e, vlong f, char *name)
+error0
+setmap(Map *map, int fd, uvlong b, uvlong e, vlong f, char *name, Maprw *rw)
 {
 	int i;
 
-	if (map == 0)
+	if (map == nil)
 		return 0;
 	for (i = 0; i < map->nsegs; i++)
 		if (!map->seg[i].inuse)
@@ -42,10 +75,12 @@ setmap(Map *map, int fd, uvlong b, uvlong e, vlong f, char *name)
 	map->seg[i].inuse = 1;
 	map->seg[i].name = name;
 	map->seg[i].fd = fd;
+	map->seg[i].rw = rw;
 	return 1;
 }
 
-static ulong
+/*
+static uvlong
 stacktop(int pid)
 {
 	char buf[64];
@@ -53,7 +88,7 @@ stacktop(int pid)
 	int n;
 	char *cp;
 
-	sprint(buf, "/proc/%d/segment", pid);
+	snprint(buf, sizeof(buf), "/proc/%d/segment", pid);
 	fd = open(buf, 0);
 	if (fd < 0)
 		return 0;
@@ -73,61 +108,10 @@ stacktop(int pid)
 		cp++;
 	if (!*cp)
 		return 0;
-	return strtoul(cp, 0, 16);
+	return strtoull(cp, 0, 16);
 }
+*/
 
-Map*
-attachproc(int pid, int kflag, int corefd, Fhdr *fp)
-{
-	char buf[64], *regs;
-	int fd;
-	Map *map;
-	ulong n;
-	int mode;
-
-	map = newmap(0, 4);
-	if (!map)
-		return 0;
-	if(kflag) {
-		regs = "kregs";
-		mode = OREAD;
-	} else {
-		regs = "regs";
-		mode = ORDWR;
-	}
-	if (mach->regsize) {
-		sprint(buf, "/proc/%d/%s", pid, regs);
-		fd = open(buf, mode);
-		if(fd < 0) {
-			free(map);
-			return 0;
-		}
-		setmap(map, fd, 0, mach->regsize, 0, "regs");
-	}
-	if (mach->fpregsize) {
-		sprint(buf, "/proc/%d/fpregs", pid);
-		fd = open(buf, mode);
-		if(fd < 0) {
-			close(map->seg[0].fd);
-			free(map);
-			return 0;
-		}
-		setmap(map, fd, mach->regsize, mach->regsize+mach->fpregsize, 0, "fpregs");
-	}
-	setmap(map, corefd, fp->txtaddr, fp->txtaddr+fp->txtsz, fp->txtaddr, "text");
-	if(kflag || (ulong) fp->dataddr >= 0x7fffffff) {
-		setmap(map, corefd, fp->dataddr, 0xffffffff, fp->dataddr, "data");
-		return map;
-	}
-	n = stacktop(pid);
-	if (n == 0) {
-		setmap(map, corefd, fp->dataddr, 0x7fffffff, fp->dataddr, "data");
-		return map;
-	}
-	setmap(map, corefd, fp->dataddr, n, fp->dataddr, "data");
-	return map;
-}
-	
 int
 findseg(Map *map, char *name)
 {
@@ -148,28 +132,28 @@ unusemap(Map *map, int i)
 		map->seg[i].inuse = 0;
 }
 
-Map*
-attachremt(int fd, Fhdr *f)
+int
+fdrw(Map *map, Seg *s, uvlong addr, void *v, uint n, int isread)
 {
-	Map *m;
-	ulong txt;
+	int tot, m;
 
-	m = newmap(0, 3);
-	if (m == 0)
-		return 0;
-
-	/* Space for mach structures */
-	txt = f->txtaddr;
-	if(txt > 8*4096)
-		txt -= 8*4096;
-
-	setmap(m, fd, txt, f->txtaddr+f->txtsz, txt, "*text");
-	/*setmap(m, fd, f->dataddr, 0xffffffff, f->dataddr, "*data");*/ /* pc heap is < KTZERO */
-	setmap(m, fd, 4096, 0xffffffff, 4096, "*data");
-	setmap(m, fd, 0x0, mach->regsize, 0, "kreg");
-
-	return m;
+	for(tot=0; tot<n; tot+=m){
+		if(isread)
+			m = pread(s->fd, (uchar*)v+tot, n-tot, addr+tot);
+		else
+			m = pwrite(s->fd, (uchar*)v+tot, n-tot, addr+tot);
+		if(m == 0){
+			werrstr("short %s", isread ? "read" : "write");
+			return -1;
+		}
+		if(m < 0){
+			werrstr("%s %d at %#llux (+%#llux): %r", isread ? "read" : "write", n, addr, s->f);
+			return -1;
+		}
+	}
+	return 0;
 }
+
 
 Map*
 loadmap(Map *map, int fd, Fhdr *fp)
@@ -184,20 +168,13 @@ loadmap(Map *map, int fd, Fhdr *fp)
 	map->seg[0].fd = fd;
 	map->seg[0].inuse = 1;
 	map->seg[0].name = "text";
+	map->seg[0].rw = fdrw;
 	map->seg[1].b = fp->dataddr;
 	map->seg[1].e = fp->dataddr+fp->datsz;
 	map->seg[1].f = fp->datoff;
 	map->seg[1].fd = fd;
 	map->seg[1].inuse = 1;
 	map->seg[1].name = "data";
+	map->seg[0].rw = fdrw;
 	return map;
-}
-
-void
-setmapio(Map *map, int i, Rsegio get, Rsegio put)
-{
-	if (map != 0 && 0 <= i && i < map->nsegs) {
-		map->seg[i].mget = get;
-		map->seg[i].mput = put;
-	}
 }

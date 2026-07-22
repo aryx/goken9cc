@@ -22,14 +22,17 @@ OFILES=\
 	swap.$O\
 	setmach.$O\
 	executable.$O\
-
-#TODO:
-#	map.$O\
-#	sym.$O\
-#	access.$O\
-#	machdata.$O\
+	map.$O\
+	sym.$O\
+	access.$O\
+	machdata.$O\
+	v.$O\
+	vdb.$O\
+	vcodas.$O\
+	linux.$O\
 
 HFILES=	$TOP/include/mach.h\
+	$TOP/include/ureg_mips.h\
 	bootexec.h\
 	elf.h\
 	ureg5.h\

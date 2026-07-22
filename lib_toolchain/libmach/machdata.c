@@ -10,17 +10,16 @@
 #define PROFSYM		"_mainp"
 #define	FRAMENAME	".frame"
 
-extern	Machdata	i386mach;
+extern	Machdata	mipsmach;
 
-int	asstype = AI386;		/* disassembler type */
+int	asstype = AMIPS;		/* disassembler type */
 Machdata *machdata;		/* machine-dependent functions */
 
 int
-localaddr(Map *map, char *fn, char *var, long *r, Rgetter rget)
+localaddr(Map *map, char *fn, char *var, uvlong *r, Rgetter rget)
 {
 	Symbol s;
-	ulong fp;
-	ulong pc, sp, link;
+	uvlong fp, pc, sp, link;
 
 	if (!lookup(fn, 0, &s)) {
 		werrstr("function not found");
@@ -63,14 +62,14 @@ localaddr(Map *map, char *fn, char *var, long *r, Rgetter rget)
 }
 
 /*
- * Print value v as name[+offset] and then the string s.
+ * Print value v as s.name[+offset] if possible, or just v.
  */
 int
-symoff(char *buf, int n, long v, int space)
+symoff(char *buf, int n, uvlong v, int space)
 {
 	Symbol s;
 	int r;
-	long delta;
+	int32 delta;
 
 	r = delta = 0;		/* to shut compiler up */
 	if (v) {
@@ -81,16 +80,15 @@ symoff(char *buf, int n, long v, int space)
 			delta = -delta;
 	}
 	if (v == 0 || r == 0)
-		return snprint(buf, n, "%lux", v);
+		return snprint(buf, n, "%llux", v);
 	if (s.type != 't' && s.type != 'T' && delta >= 4096)
-		return snprint(buf, n, "%lux", v);
-	if (strcmp(s.name, ".string") == 0)
-		return snprint(buf, n, "%lux", v);
-	if (delta)
-		return snprint(buf, n, "%s+%lux", s.name, v-s.value);
+		return snprint(buf, n, "%llux", v);
+	else if (delta)
+		return snprint(buf, n, "%s+%#lux", s.name, delta);
 	else
 		return snprint(buf, n, "%s", s.name);
 }
+
 /*
  *	Format floating point registers
  *
@@ -105,7 +103,7 @@ int
 fpformat(Map *map, Reglist *rp, char *buf, int n, int modif)
 {
 	char reg[12];
-	long r;
+	uint32 r;
 
 	switch(rp->rformat)
 	{
@@ -116,12 +114,14 @@ fpformat(Map *map, Reglist *rp, char *buf, int n, int modif)
 		break;
 	case 'F':	/* first reg of double reg pair */
 		if (modif == 'F')
-		if (((rp+1)->rflags&RFLT) && (rp+1)->rformat == 'f') {
+		if ((rp->rformat=='F') || (((rp+1)->rflags&RFLT) && (rp+1)->rformat == 'f')) {
 			if (get1(map, rp->roffs, (uchar *)reg, 8) < 0)
 				return -1;
 			machdata->dftos(buf, n, reg);
+			if (rp->rformat == 'F')
+				return 1;
 			return 2;
-		}	
+		}
 			/* treat it like 'f' */
 		if (get1(map, rp->roffs, (uchar *)reg, 4) < 0)
 			return -1;
@@ -151,9 +151,9 @@ fpformat(Map *map, Reglist *rp, char *buf, int n, int modif)
 }
 
 char *
-_hexify(char *buf, ulong p, int zeros)
+_hexify(char *buf, uint32 p, int zeros)
 {
-	ulong d;
+	uint32 d;
 
 	d = p/16;
 	if(d)
@@ -171,7 +171,7 @@ _hexify(char *buf, ulong p, int zeros)
  * double format.  Naive but workable, probably.
  */
 int
-ieeedftos(char *buf, int n, ulong h, ulong l)
+ieeedftos(char *buf, int n, uint32 h, uint32 l)
 {
 	double fr;
 	int exp;
@@ -209,7 +209,7 @@ ieeedftos(char *buf, int n, ulong h, ulong l)
 }
 
 int
-ieeesftos(char *buf, int n, ulong h)
+ieeesftos(char *buf, int n, uint32 h)
 {
 	double fr;
 	int exp;
@@ -244,25 +244,25 @@ ieeesftos(char *buf, int n, ulong h)
 int
 beieeesftos(char *buf, int n, void *s)
 {
-	return ieeesftos(buf, n, beswal(*(ulong*)s));
+	return ieeesftos(buf, n, beswal(*(uint32*)s));
 }
 
 int
 beieeedftos(char *buf, int n, void *s)
 {
-	return ieeedftos(buf, n, beswal(*(ulong*)s), beswal(((ulong*)(s))[1]));
+	return ieeedftos(buf, n, beswal(*(uint32*)s), beswal(((uint32*)(s))[1]));
 }
 
 int
 leieeesftos(char *buf, int n, void *s)
 {
-	return ieeesftos(buf, n, leswal(*(ulong*)s));
+	return ieeesftos(buf, n, leswal(*(uint32*)s));
 }
 
 int
 leieeedftos(char *buf, int n, void *s)
 {
-	return ieeedftos(buf, n, leswal(((ulong*)(s))[1]), leswal(*(ulong*)s));
+	return ieeedftos(buf, n, leswal(((uint32*)(s))[1]), leswal(*(uint32*)s));
 }
 
 /* packed in 12 bytes, with s[2]==s[3]==0; mantissa starts at s[4]*/
@@ -271,7 +271,7 @@ beieee80ftos(char *buf, int n, void *s)
 {
 	uchar *reg = (uchar*)s;
 	int i;
-	ulong x;
+	uint32 x;
 	uchar ieee[8+8];	/* room for slop */
 	uchar *p, *q;
 
@@ -316,7 +316,6 @@ beieee80ftos(char *buf, int n, void *s)
 	return beieeedftos(buf, n, (void*)ieee);
 }
 
-
 int
 leieee80ftos(char *buf, int n, void *s)
 {
@@ -331,19 +330,18 @@ leieee80ftos(char *buf, int n, void *s)
 }
 
 int
-cisctrace(Map *map, ulong pc, ulong sp, ulong link, Tracer trace)
+cisctrace(Map *map, uvlong pc, uvlong sp, uvlong link, Tracer trace)
 {
 	Symbol s;
-	int found;
-	ulong opc;
-	long moved, j;
+	int found, i;
+	uvlong opc, moved;
 
 	USED(link);
-	j = 0;
+	i = 0;
 	opc = 0;
 	while(pc && opc != pc) {
 		moved = pc2sp(pc);
-		if (moved == -1)
+		if (moved == ~0)
 			break;
 		found = findsym(pc, CTEXT, &s);
 		if (!found)
@@ -353,22 +351,22 @@ cisctrace(Map *map, ulong pc, ulong sp, ulong link, Tracer trace)
 
 		sp += moved;
 		opc = pc;
-		if (get4(map, sp, (long *)&pc) < 0)
+		if (geta(map, sp, &pc) < 0)
 			break;
 		(*trace)(map, pc, sp, &s);
 		sp += mach->szaddr;	/*assumes address size = stack width*/
-		if(++j > 40)
+		if(++i > 40)
 			break;
 	}
-	return j;
+	return i;
 }
 
 int
-risctrace(Map *map, ulong pc, ulong sp, ulong link, Tracer trace)
+risctrace(Map *map, uvlong pc, uvlong sp, uvlong link, Tracer trace)
 {
 	int i;
 	Symbol s, f;
-	ulong oldpc;
+	uvlong oldpc;
 
 	i = 0;
 	while(findsym(pc, CTEXT, &s)) {
@@ -384,7 +382,7 @@ risctrace(Map *map, ulong pc, ulong sp, ulong link, Tracer trace)
 		if(s.type == 'L' || s.type == 'l' || pc <= s.value+mach->pcquant)
 			pc = link;
 		else
-			if (get4(map, sp, (long *) &pc) < 0)
+			if (geta(map, sp, &pc) < 0)
 				break;
 
 		if(pc == 0 || (pc == oldpc && f.value == 0))
@@ -399,30 +397,30 @@ risctrace(Map *map, ulong pc, ulong sp, ulong link, Tracer trace)
 	return i;
 }
 
-ulong
-ciscframe(Map *map, ulong addr, ulong pc, ulong sp, ulong link)
+uvlong
+ciscframe(Map *map, uvlong addr, uvlong pc, uvlong sp, uvlong link)
 {
 	Symbol s;
-	int moved;
+	uvlong moved;
 
 	USED(link);
 	for(;;) {
 		moved = pc2sp(pc);
-		if (moved  == -1)
+		if (moved  == ~0)
 			break;
 		sp += moved;
 		findsym(pc, CTEXT, &s);
 		if (addr == s.value)
 			return sp;
-		if (get4(map, sp, (long *) &pc) < 0)
+		if (geta(map, sp, &pc) < 0)
 			break;
 		sp += mach->szaddr;	/*assumes sizeof(addr) = stack width*/
 	}
 	return 0;
 }
 
-ulong
-riscframe(Map *map, ulong addr, ulong pc, ulong sp, ulong link)
+uvlong
+riscframe(Map *map, uvlong addr, uvlong pc, uvlong sp, uvlong link)
 {
 	Symbol s, f;
 
@@ -443,7 +441,7 @@ riscframe(Map *map, ulong addr, ulong pc, ulong sp, ulong link)
 		if (s.type == 'L' || s.type == 'l' || pc-s.value <= mach->szaddr*2)
 			pc = link;
 		else
-		if (get4(map, sp-f.value, (long *)&pc) < 0)
+		if (geta(map, sp-f.value, &pc) < 0)
 			break;
 	}
 	return 0;
