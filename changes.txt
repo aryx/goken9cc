@@ -231,11 +231,12 @@
 - more complete tests/s/mini/, tests/c/mini/, tests/c/mini2 supporting
   most archs and most OSes
 - remove the use of qemu-user-binfmt, not consistent across OSes (Linux vs macOS)
-  and environment (local vs CI) and add a qemu runner wrapper script instead
+  and environment (local vs CI) and add a scripts/qemu-runner wrapper instead
   to factorize things in tests/.../mkfile
 - start tests/s/features and tests/s/regressions covering features added
   by the "unification" of the many kencc-derived repo (especially 9front)
 - multi-os testing thanks to wine (see tests/s/mini and hello_windows_xxx tests)
+- wasm testing thanks to node (see tests/s/mini and scripts/wasm-runner)
 
 * 0.3 (Q2 2026) (IWP9 presentation)
 
