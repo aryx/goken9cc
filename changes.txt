@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.4 (Q3 2026) ([58][alc] synced/fixed/used with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, big kenccs unification)
+* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, big kenccs unification, wasm ea/el)
 
 ** toolchain
 - import 5a/5c/5l and 8a/8c/8l from principia (and rename the 5a/5l/5c
@@ -193,11 +193,11 @@
   working at least on Windows 10
 - macOS Mach-O experimental support for amd64 (6l -H6) and arm64 (7l -H6)
   working on recent macOS (e.g., macOS 26 Tahoe)
-- better Linux ELF support for 386, amd64, arm, arm64, riscv, mips
+- better Linux ELF support for 386, amd64, arm, arm64, riscv, riscv64, mips
   with more tests (float and vlong and basic helloprintf working)
 
 ** arch
-- real support for 386, amd64, arm, arm64, riscv, mips
+- real support for 386, amd64, arm, arm64, riscv, riscv64, mips
   with basic helloprintf.exe working on all those archs, at least on Linux
 - experimental support for riscv64
 - experimental support for wasm: assembler+linker only (ea/el), no
