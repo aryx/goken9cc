@@ -176,8 +176,21 @@ main(int argc, char *argv[])
 			INITTEXT = 0x200000+HEADR;
 		if(INITDAT == -1)
 			INITDAT = 0;
+		/* claude: was INITRND = 0x200000 (2MB), copied verbatim from
+		 * the plan9 case above when this case was added to give 6l a
+		 * native Linux ELF target. 9front's own 6l (sys/src/cmd/6l/
+		 * obj.c) only ever has that 2MB round for its *own* -H2 plan9
+		 * format -- it has no ELF/Linux case at all, so there was no
+		 * upstream precedent to inherit here. Every sibling linker's
+		 * ELF/Linux case picked its own small alignment instead
+		 * (8l, vl, il: 4096; 7l's Linux case: 4096) -- 6l's case 7
+		 * was just never revisited after the copy. The 2MB gap between
+		 * text and data is physically written into the output file
+		 * (see asm.c's "write(cout, buf, INITDAT-textsize)"), so it
+		 * inflates every amd64 Linux binary 6l produces by ~2MB
+		 * regardless of actual content size. */
 		if(INITRND == -1)
-			INITRND = 0x200000;
+			INITRND = 4096;
 		break;
 	case 6:	/* apple MACH, e.g. macOS amd64 (matching 7l's HEADTYPE
 		 * numbering, where 6 is Mach-O and 7 is ELF) */

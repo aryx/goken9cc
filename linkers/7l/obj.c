@@ -126,12 +126,25 @@ main(int argc, char *argv[])
 		break;
 	case 2:	/* plan 9 */
 		HEADR = 40L;
+		/* claude: was INITTEXT = 0x100000+HEADR, INITRND = 0x100000
+		 * (1MB). This 7l descends from Go's own arm64 linker port
+		 * (src/cmd/7l), not from 9front's native arm64 target -- see
+		 * "7a/7c/7l: revert go-era src/cmd adaptations, switch arm64
+		 * to iar" in git history. Real 9front's 7l (sys/src/cmd/7l/
+		 * obj.c) uses INITTEXT = 0x10000+HEADR and INITRND = 0x10000
+		 * (64K) for this same -H2 plan9 case -- 64K covers all three
+		 * ARM64 MMU translation granule sizes (4K/16K/64K), which is
+		 * presumably why 9front picked it. Nothing in this repo
+		 * currently links with -H2 on arm64 (principia-softwarica has
+		 * no arm64 kernel yet), so there's no existing boot layout
+		 * depending on the old 1MB round; matching 9front's actual
+		 * value here instead of Go's leftover one. */
 		if(INITTEXT == -1)
-			INITTEXT = 0x100000+HEADR;
+			INITTEXT = 0x10000+HEADR;
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)
-			INITRND = 0x100000;
+			INITRND = 0x10000;
 		break;
 	case 6:	/* apple MACH */ // macOS arm64
 		HEADR = MACHORESERVE;
