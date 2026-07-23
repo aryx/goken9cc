@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE)
+* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, big kenccs unification)
 
 ** toolchain
 - import 5a/5c/5l and 8a/8c/8l from principia (and rename the 5a/5l/5c
@@ -12,12 +12,17 @@
 - ar: add D flag like in GNU ar for "deterministic" builds (was
   hardcoded before with some //PAD: commented code for reproducible builds)
 - import 6a/6c/6l from https://github.com/plan9foundation/plan9.git as new
-  starting point for amd64 (and rename the go-era variant to 6ag/6cg/6lg)
+  starting point for amd64 (and rename the go-era binaries variant to 6ag/6cg/6lg)
+- 7a/7c/7l Linux
+  * fix the tests/c/vlong/ and tests/c/float/ tests for arm64; adjust to
+    correct calling convention (start at FP+0 not FP+8 because return address
+    not saved in stack but in the link register LR)
 - 7a/7c/7l: produce macOS arm64 Mach-O executables with -H6
   (big thx to Claude)
   * 7l: add linkers/lk/macho.c, adapted from the old Go-era src/cmd/ld/macho.c
-    of 6l. Modern arm64 macOS requires signed, dynamic (dyld + LC_MAIN), PIE
-    executables, so 7l also generates
+    of 6l. Modern arm64 macOS requires signed, dynamic (dyld + LC_MAIN), 
+    PIE (Position Independent Executable, similar to PIC) executables, so 7l
+    also generates
     pc-relative ADRP/ADD pairs for MOV $sym(SB) and the mkfile runs codesign;
     see docs/notes_macos.txt and tests/s/mini/hello_macos_arm64.s
   * 7l -H6: dyld rebase info (LC_DYLD_INFO_ONLY) for pointers stored in
@@ -32,19 +37,15 @@
   * 7c: fix two long-standing 7c code generation bugs, found by running
     tests/c/mini2, vlong and float natively on macOS arm64 (all three now
     work there, and should now work on Linux arm64 too):
-    * 7c/sgen.c gtext() overwrote the frame size with 0, so stack locals
+    - 7c/sgen.c gtext() overwrote the frame size with 0, so stack locals
       overlapped the outgoing-argument area and were corrupted by any
       call with 3+ arguments (the old "arm64 segfault" TODOs of mini2)
-    * cc/pgen.c used typechlp instead of the per-compiler typeword table
+    - cc/pgen.c used typechlp instead of the per-compiler typeword table
       (like 9front does) to decide whether to spill the first argument
       register to the stack, so a vlong first argument was passed in R0
       by the caller but never spilled by the callee (no-op for 5c/6c/8c
       which all have REGARG = -1)
-    * runtime regression test with minimal repros: tests/c/mini2/regress7c.c
-- 7a/7c/7l Linux
-  * fix the tests/c/vlong/ and tests/c/float/ tests for arm64; adjust to
-    correct calling convention (start at FP+0 not FP+8 because return address
-    not saved in stack but in the link register LR)
+    - runtime regression test with minimal repros: tests/c/mini2/regress7c.c
 - 6l: modernise the amd64 -H6 (macOS Mach-O) output, mirror of the 7l arm64 work:
   * LC_MAIN entry point (not LC_UNIXTHREAD), MH_DYLDLINK|MH_TWOLEVEL|
     MH_PIE, libSystem LC_LOAD_DYLIB, and LC_DYLD_INFO_ONLY/BUILD_VERSION/
@@ -97,7 +98,7 @@
   * tests/s/mini/hello_macos_libc_amd64.s calls libSystem's _write via
     the GOT slot and runs under darling.
   * see docs/notes_macos.txt for the full story and darling recipe.
-- 6l/8l: support windows PE with -H10, thx to rafael2knokia
+- 6l/8l: support windows PE with -H10, thx to rafael2knokia (and Claude probably)
 - 8l/8lk: fix a real ELF-writer bug found via tests/c/vlong and
   tests/c/float: an unstripped executable's debug/symbol-table data landed
   inside the loaded .data segment, colliding with the program's own
@@ -115,19 +116,23 @@
   tests/s/variants/expected/ to match the corrected (and now-matching)
   output. principia's own x86 builds never hit this since they link as -H2
   native Plan9 binaries, not ELF (thx to Claude)
+- va/vc/vl: started big unification of different kenccs derived repo,
+  especially 9front
+- 7a/7c/7l: started big unification of different kenccs derived repo,
+  especially 9front
 
 ** os
 - build on Windows Subsystem Linux (WSL)
 - build on Windows Cygwin
 - Windows PE experimental support for 386 (8l -H10) and amd64 (6l -H10)
 - macOS Mach-O experimental support for amd64 (6l -H6) and arm64 (7l -H6)
-- better Linux ELF support for riscv, mips, arm64, 386
+- better Linux ELF support for 386, amd64, arm, arm64, riscv, mips
+  with more tests
 
 ** internals
 - remove 5a9/5c9/5l9, the original arm toolchain imported from
   https://bitbucket.org/plan9-from-bell-labs/9-cc.git; superseded by
-  the kencc (5ak/5ck/5lk) and principia (5a/5c/5l) lineages, now
-  reconciled and unused by any test/build
+  the kencc (5ak/5ck/5lk) and principia (5a/5c/5l) lineages reconciled
 - also remove mkfiles/arm__ and the "arm__" test variant (tests/c/mini,
   tests/c/mini2, tests/c/vlong, tests/s/mini) that exercised the
   now-deleted 5a9/5c9/5l9 lineage under its old 5a__/5c__/5l__ TARG names
@@ -154,6 +159,8 @@
 - remove the use of qemu-user-binfmt, not consistent across OSes (Linux vs macOS)
   and environment (local vs CI) and add a qemu runner wrapper script instead
   to factorize things in tests/.../mkfile
+- start tests/s/features and tests/s/regressions covering features added
+  by the "unification" of the many kencc-derived repo (especially 9front)
 
 * 0.3 (Q2 2026) (IWP9 presentation)
 
