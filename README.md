@@ -14,13 +14,11 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
 ## Features
 
 - **Portable:**
-  It can *build* on Linux, macOS, and Windows (WSL, Cygwin) (TODO Plan 9 and xv6) using gcc or clang (TODO or a boostrapped version of itself)
+  It can *build* on Linux, macOS, and Windows (WSL, Cygwin) (TODO Plan 9 and xv6) using gcc or clang (TODO or a boostrapped version of itself), on 32 bits or 64 bits machines
 - **Multi-OS support:** 
   Link C and assembly programs that can *run* on Linux, macOS, Windows, and Plan 9 (TODO xv6)
 - **Multi-architecture support:**
-  Build C and assembly programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
-  arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures, plus an
-  experimental WebAssembly (wasm) assembler and linker (TODO: wasm compiler)
+  Build C and assembly programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm, arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures, plus experimental WebAssembly (wasm) support
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
   (e.g., you can build from a Linux 386 machine a binary for arm64 macOS)
@@ -71,6 +69,7 @@ Plan 9 (and goken9cc) uses single-character codes for architectures. Each tool i
 | 6 | amd64 | 6c | 6a | 6l | .6 |
 | v | mips | vc | va | vl | .v |
 | i | riscv | ic | ia | il | .i |
+| j | riscv64 | jc | ja | jl | .j |
 | e | wasm | *(TODO)* | ea | el | .e |
 
 Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X.out`
@@ -101,14 +100,14 @@ syscalls to those different operating systems. Another nice improvement
 was the support for the DWARF debugging format so the generated binaries
 could be debugged using gdb (instead of just the Plan9 acid debugger).
 
-This fork was then further extended to add more architectures
-such as arm64 (thanks to the work of Charles Forsyth) and riscv (thanks
-to the work of Richard Miller) that were not in the Go repo but
-scattered around in "kencc-derived" repositories.
+This fork was then further extended to add more architectures such as
+arm64 (thanks to the work of Charles Forsyth) and
+riscv (thanks to the work of Richard Miller) that
+were not in the Go repo but scattered around in "kencc-derived" repositories.
 
 More work was done then to make all of this work together,
 to support the latest Linux, macOS, and Windows to reach
-a point where one could use goken9cc to compile goken9cc
+a point where one could use goken9cc to compile goken9cc itself
 on many architectures and many operating systems.
 
 ---
