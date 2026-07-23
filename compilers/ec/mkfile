@@ -1,0 +1,31 @@
+TOP=../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=ec
+LDLIBS=-lbio -l9 -lm
+
+OFILES=\
+	cgen.$O\
+	list.$O\
+	machcap.$O\
+	reg.$O\
+	sgen.$O\
+	swt.$O\
+	txt.$O\
+	\
+	pgen.$O\
+	pswt.$O\
+
+HFILES=	gc.h $TOP/include/e.out.h $TOP/compilers/cck/cc.h
+
+LIB=$TOP/compilers/cck/cc.a
+
+<$TOP/mkfiles/mkone
+
+$LIB:
+	cd $TOP/compilers/cck
+	mk all
+
+p%.$O: $TOP/compilers/cck/p%.c
+	$CC $CFLAGS $TOP/compilers/cck/p$stem.c

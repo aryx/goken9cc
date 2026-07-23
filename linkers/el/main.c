@@ -71,13 +71,23 @@ main(int argc, char *argv[])
     } ARGEND
 
     if(*argv == '\0') {
-        print("usage: el [-o out] [-I symbol=module.field] file.e\n");
+        print("usage: el [-o out] [-I symbol=module.field] file.e ...\n");
         errorexit();
     }
     if(outfile == nil)
         outfile = "e.out";
 
-    readobj(argv[0]);
+    /*
+     * claude: readobj()'s only per-file state is its own local h[NSYM]
+     * symidx cache (reset on each call); hash[]/firsttext/datarelocs
+     * are file-scope globals that naturally accumulate across calls,
+     * so linking several object files together needs nothing more
+     * than calling it once per file -- no archive support (-l libs)
+     * yet, see l.h.
+     */
+    USED(argc);
+    for(; *argv != nil; argv++)
+        readobj(*argv);
     if(nerrors) {
         fprint(2, "el: %d error(s), not writing %s\n", nerrors, outfile);
         errorexit();

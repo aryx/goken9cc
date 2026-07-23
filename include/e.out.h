@@ -398,6 +398,21 @@ enum	as
 	ASIGNAME,
 	AGOK,
 
+	/*
+	 * claude: wasm-only, no equivalent on any other arch. A real
+	 * CPU's calling convention is fixed and ABI-uniform, so no other
+	 * arch's linker needs to know a function's C signature at all --
+	 * that's purely a wasm requirement (every function needs a type-
+	 * section entry: exact param/result value types). ATEXT's own
+	 * `reg` byte already means something else (NOPROF/DUPOK) on every
+	 * arch including this one, so this is a dedicated pseudo-op
+	 * rather than overloading that field with new meaning. One
+	 * operand, D_SCONST: one char per parameter ('W'=i32/'Q'=i64/
+	 * 'F'=f32/'D'=f64), then a result-type char or 'V' for void.
+	 * Emitted by ec's gtext() right after ATEXT for the same symbol.
+	 */
+	ASIGNATURE,
+
 	ALAST,
 };
 

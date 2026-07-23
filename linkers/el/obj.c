@@ -60,6 +60,7 @@ newtext(Sym *sym)
     t = malloc(sizeof(Text));
     memset(t, 0, sizeof(Text));
     t->sym = sym;
+    t->sig[0] = 'V';	/* default: no params, void result -- see l.h's comment */
     if(firsttext == nil)
         firsttext = t;
     else
@@ -293,6 +294,16 @@ readobj(char *file)
                 from.sym->type = STEXT;
                 curtext = newtext(from.sym);
                 curtext->framesize = to.offset;
+                break;
+
+            case ASIGNATURE:
+                /* claude: ec-only metadata, see e.out.h's comment --
+                 * always immediately follows the ATEXT it describes. */
+                if(curtext == nil || curtext->sym != from.sym) {
+                    diag("ASIGNATURE without a matching preceding TEXT");
+                    errorexit();
+                }
+                memmove(curtext->sig, to.sval, NSNAME);
                 break;
 
             case AGLOBL:

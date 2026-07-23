@@ -113,6 +113,71 @@ emitsection(int id, Bytebuf *bb)
     memset(bb, 0, sizeof(*bb));
 }
 
+/* ---- function signatures (real per-function types, from ec's ASIGNATURE) ---- */
+
+/*
+ * claude: a signature string is exactly what l.h's Text.sig comment
+ * describes: one value-type char per parameter, then the result type
+ * or 'V' for void -- used directly (no separate parsed struct needed)
+ * as the dedup key, since two Texts with the identical string need
+ * the identical wasm type-section entry.
+ */
+#define	MAXSIG	64
+static char sigtab[MAXSIG][NSNAME];
+static int nsigs;
+
+/* the one shape v1 needs for imports (WASI fd_write); see l.h's Import comment */
+#define	IMPORTSIG	"WWWWW"
+
+static int
+valtype(int c)
+{
+    switch(c) {
+    case 'W': return 0x7F;	/* i32 */
+    case 'Q': return 0x7E;	/* i64 */
+    case 'F': return 0x7D;	/* f32 */
+    case 'D': return 0x7C;	/* f64 */
+    }
+    diag("bad signature type char '%c'", c);
+    errorexit();
+    return 0;
+}
+
+static int
+sigindex(char *sig)
+{
+    int i;
+
+    for(i = 0; i < nsigs; i++)
+        if(strcmp(sigtab[i], sig) == 0)
+            return i;
+    if(nsigs >= MAXSIG) {
+        diag("too many distinct function signatures (max %d)", MAXSIG);
+        errorexit();
+    }
+    strncpy(sigtab[nsigs], sig, NSNAME);
+    return nsigs++;
+}
+
+static void
+emittype(Bytebuf *bb, char *sig)
+{
+    char *p;
+    int nparam;
+
+    nparam = strlen(sig) - 1;
+    bbput(bb, 0x60);
+    bbuleb(bb, nparam);
+    for(p = sig; p < sig+nparam; p++)
+        bbput(bb, valtype(*p));
+    if(sig[nparam] == 'V') {
+        bbuleb(bb, 0);
+    } else {
+        bbuleb(bb, 1);
+        bbput(bb, valtype(sig[nparam]));
+    }
+}
+
 /* ---- symbol resolution ---- */
 
 /*
@@ -298,18 +363,24 @@ asmb(void)
     Bputc(&obuf, 1); Bputc(&obuf, 0); Bputc(&obuf, 0); Bputc(&obuf, 0);
 
     /*
-     * claude: exactly two types -- type 0 (void->void) for every
-     * locally-defined function, type 1 (4xi32 -> i32) for every
-     * import (see l.h's Import comment: v1 only supports WASI
-     * fd_write's shape). Once ec exists and functions have real
-     * signatures, this needs a proper type table instead.
+     * claude: a real, deduplicated type table -- one entry per
+     * distinct signature actually used, built from ec's ASIGNATURE
+     * records (l.h's Text.sig; 'V'/no-ASIGNATURE for a hand-written
+     * .s TEXT, which takes no arguments and returns nothing a caller
+     * could use, matching every hello_*.s's _start) plus the one
+     * hardcoded import shape (see l.h's Import comment).
      */
+    sigindex(IMPORTSIG);
+    for(t = firsttext; t != nil; t = t->link)
+        sigindex(t->sig);
+
     memset(&bb, 0, sizeof(bb));
-    bbuleb(&bb, 2);
-    bbput(&bb, 0x60); bbuleb(&bb, 0); bbuleb(&bb, 0);
-    bbput(&bb, 0x60); bbuleb(&bb, 4);
-    bbput(&bb, 0x7F); bbput(&bb, 0x7F); bbput(&bb, 0x7F); bbput(&bb, 0x7F);
-    bbuleb(&bb, 1); bbput(&bb, 0x7F);
+    bbuleb(&bb, nsigs);
+    {
+        int i;
+        for(i = 0; i < nsigs; i++)
+            emittype(&bb, sigtab[i]);
+    }
     emitsection(1, &bb);
 
     if(nimports > 0) {
@@ -319,7 +390,7 @@ asmb(void)
             bbname(&bb, im->module);
             bbname(&bb, im->field);
             bbput(&bb, 0x00);
-            bbuleb(&bb, 1);
+            bbuleb(&bb, sigindex(IMPORTSIG));
         }
         emitsection(2, &bb);
     }
@@ -327,7 +398,7 @@ asmb(void)
     memset(&bb, 0, sizeof(bb));
     bbuleb(&bb, ntexts);
     for(t = firsttext; t != nil; t = t->link)
-        bbuleb(&bb, 0);
+        bbuleb(&bb, sigindex(t->sig));
     emitsection(3, &bb);
 
     memset(&bb, 0, sizeof(bb));
@@ -345,13 +416,27 @@ asmb(void)
 
     memset(&bb, 0, sizeof(bb));
     {
+        /*
+         * claude: _start, same convention as every other arch's
+         * hello_*.s here (and every real Plan9 program: the C runtime
+         * itself is what calls main() from _start, not something a
+         * linker special-cases per language).
+         *
+         * Every other Text function is exported too, under its own
+         * name -- ec has no export-annotation mechanism yet, so
+         * "export everything" is the simplest useful default while
+         * bootstrapping (see docs/notes_wasm.txt): it's what lets a
+         * host (or a test harness) call e.g. a single compiled
+         * function directly, without needing a working _start/WASI
+         * path at all yet.
+         */
         Sym *startsym = lookup("_start");
-        int nexp = 1;
+        int idx;
+
         if(startsym->type != STEXT)
             startsym = nil;
-        else
-            nexp++;
-        bbuleb(&bb, nexp);
+
+        bbuleb(&bb, 1 + ntexts);	/* memory, plus one export per Text (_start included) */
         bbname(&bb, "memory");
         bbput(&bb, 0x02);
         bbuleb(&bb, 0);
@@ -359,6 +444,14 @@ asmb(void)
             bbname(&bb, "_start");
             bbput(&bb, 0x00);
             bbuleb(&bb, resolvecall(startsym));
+        }
+        idx = nimports;
+        for(t = firsttext; t != nil; t = t->link, idx++) {
+            if(t->sym == startsym)
+                continue;	/* already exported above */
+            bbname(&bb, t->sym->name);
+            bbput(&bb, 0x00);
+            bbuleb(&bb, idx);
         }
     }
     emitsection(7, &bb);

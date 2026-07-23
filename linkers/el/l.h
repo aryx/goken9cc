@@ -80,6 +80,16 @@ struct	Text
     Instr*	first;
     Instr*	last;
     Text*	link;
+
+    /* claude: from ASIGNATURE (see e.out.h's comment): one char per
+     * parameter ('W'=i32/'Q'=i64/'F'=f32/'D'=f64), then the result
+     * type or 'V' for void. Defaults to "V" (no params, void result)
+     * for a Text with no ASIGNATURE record -- i.e. hand-written .s
+     * TEXT (ea has no compiler-level notion of a signature; see
+     * tests/s/mini/hello_wasm.s's _start, which takes no arguments
+     * and returns nothing a caller could use anyway).
+     */
+    char	sig[NSNAME];
 };
 
 /* claude: one entry per -I flag: `-I symbol=module.field` tells el
