@@ -6,11 +6,11 @@ export PATH=`pwd`/bin:`pwd`/ROOT/amd64/bin:`pwd`/ROOT/arm64/bin:$PATH
 export MKSHELL=`pwd`/bin/rc
 # disable leak detection when built with --asan; many tools have harmless leaks
 export ASAN_OPTIONS=detect_leaks=0
-# for mk to use multiple processors
+# for mk to use multiple processors (macOS: install nproc homebrew package)
 export NPROC=`nproc`
 
-# old: not needed anymore thx to get9root.c and the use of #9/etc/...
-# alt: can also be overriden with setting GOROOT
+## old: not needed anymore thx to get9root.c and the use of #9/etc/...
+## alt: can also be overriden with setting GOROOT
 # for rc to find its init file
 # export RCMAIN=`pwd`/etc/rcmain.unix
 # for yacc to find its template file

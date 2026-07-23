@@ -1,18 +1,20 @@
 # -*- org -*-
 
-* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, big kenccs unification)
+* 0.4 (Q3 2026) ([58][alc] synced/fixed/used with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, big kenccs unification)
 
 ** toolchain
 - import 5a/5c/5l and 8a/8c/8l from principia (and rename the 5a/5l/5c
-  and 8a/8l/8c that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck)
-- fix the many regressions/mismatch between the principia and kencc variants
+  and 8a/8l/8c that were coming from my kencc to 5ak/5lk/5ck and 8ak/8lk/8ck) and
+  fix the many regressions/mismatch between the principia and kencc variants
   for both the 386 and arm toolchains (was long, mostly fixing errors in
   principia variant due to old literate programming errors).
   see pad.org regression/mismatch section (big thx to Claude)
 - ar: add D flag like in GNU ar for "deterministic" builds (was
-  hardcoded before with some //PAD: commented code for reproducible builds)
+  hardcoded before with some //PAD: commented code for reproducible builds),
+  which helped for the principia corpus arm and 386 mismatch detection
 - import 6a/6c/6l from https://github.com/plan9foundation/plan9.git as new
   starting point for amd64 (and rename the go-era binaries variant to 6ag/6cg/6lg)
+  and add all the good stuff from the go-era and recent improvements
 - 7a/7c/7l Linux
   * fix the tests/c/vlong/ and tests/c/float/ tests for arm64; adjust to
     correct calling convention (start at FP+0 not FP+8 because return address
@@ -116,7 +118,7 @@
   tests/s/variants/expected/ to match the corrected (and now-matching)
   output. principia's own x86 builds never hit this since they link as -H2
   native Plan9 binaries, not ELF (thx to Claude)
-- va/vc/vl: continued big unification with 9front: ported LL/SC/SYNC
+- va/vc/vl: start big unification with 9front: ported LL/SC/SYNC
   atomics, vl load-hoisting scheduler fix, va long-filename buffer
   overflow fix, vc growable regopt() regions, vc ".ret" register
   tracking, vc comma-expression indirect call fix, vc Aaut3 stack
@@ -131,7 +133,7 @@
   mach->pgsize == 0 and crashed vi with SIGFPE on amd64 CI (silently
   wrong on arm64 instead); also fixed the vi smoke test's now-stale
   txtaddr expectation after the pgsize fix
-- 7a/7c/7l: continued big unification with 9front: ported the
+- 7a/7c/7l: start big unification with 9front: ported the
   vlong/pointer-conversion fix, gmove() same-address guard fix,
   struct-copy trailing-byte fix, growable regopt() regions, ".ret"
   register tracking, LDAR/LDXR/STLR/STXR/STLXR atomics rework, and
@@ -142,12 +144,17 @@
   object support into lib_toolchain/libmach, fixing an obj[] OOB bug
 
 ** os
-- build on Windows Subsystem Linux (WSL)
-- build on Windows Cygwin
+- build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
 - Windows PE experimental support for 386 (8l -H10) and amd64 (6l -H10)
+  working at least on Windows 10
 - macOS Mach-O experimental support for amd64 (6l -H6) and arm64 (7l -H6)
+  working on recent macOS (e.g., macOS 26 Tahoe)
 - better Linux ELF support for 386, amd64, arm, arm64, riscv, mips
-  with more tests
+  with more tests (float and vlong and basic helloprintf working)
+
+** arch
+- real support for 386, amd64, arm, arm64, riscv, mips
+  with basic helloprintf.exe working on all those archs, at least on Linux
 
 ** internals
 - remove 5a9/5c9/5l9, the original arm toolchain imported from
@@ -214,7 +221,7 @@
   in the goken tools themselves (e.g., in rc, mk)
 
 ** docs
-- submit WIP to IWP9 (also submitted WIP on xix and full paper on principia)
+- submit WIP to IWP9 (also submitted full paper on principia and WIP on xix)
   with lots of Dockerfile improvements for principia paper and dosdisk.img
   extraction via dosfstools on Linux and macOS
 
@@ -227,6 +234,7 @@
   https://github.com/aryx/fork-kencc put in assemblers/, linkers/, compilers/
   as they are known to work on principia code and I got tired of trying
   to make the golang-origin toolchains working (which are still in src/cmd).
+  (update: later renamed to 8ak/8ck/8lk/5ak/5ck/5lk)
 - fix the imported 8a/8c/8l, ar, etc. by changing a few long->int32
   (cc/bits.c, x.out.h ieee float), and use -fsigned-char so it can compile
   principia softwarica from my arm64 machine!
@@ -247,6 +255,9 @@
   gdb fails on some of the goken9cc generated binaries) and binary
   exploration
 - add lex/yacc (generators)
+
+** arch
+- support for arm (32 bits, not arm64)
 
 ** lib9
 - import open.c/_p9dir.c from plan9port which fixed ls/du/tar bugs
@@ -281,8 +292,8 @@
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability
   for va/vc/vl, ia/ic/il, 7a/7c/7l
-  TODO: undo and do the minimum like I did for 5c/8c enough to compile/run
-  principia
+  (update: partially undo later and do the minimum like I did for 5c/8c enough to compile/run
+  principia)
 - convert a few long -> int32 for the kencc imported 5a/5c/6l, 8a/8c/8l
   (but very few; just in cc/bits.c, x.out.h, and a few other places)
 - move the different toolchains (ix, vx, ...) in assemblers/, linkers/,
@@ -297,11 +308,13 @@
 
 ** toolchain
 - adapt to goken 7a/7c/7l 
-  (working hello_linux_arm64.exe and helloc.exe on my thelio astra)
-- adapt to goken ia/ic/il (but not tested and actually still fail in Q4)
-- adapt 5a/5c/5l to generate valid arm32 Linux binaries (EABI)
-  (working hello_linux_arm.exe, helloc.exe, and helloprintf.exe also
-   on my thelio astra which can run both arm64 and arm32 binaries)
+  with working hello_linux_arm64.exe and helloc.exe on my thelio astra
+  (update: later undone because "adapt to goken" meant adapt to go-era)
+- adapt to goken ia/ic/il (but not tested and was failing)
+  (update: later undone because "adapt to goken" meant adapt to go-era)
+- adapt 5a/5c/5l to generate valid arm32 Linux binaries (EABI) with
+  working hello_linux_arm.exe, helloc.exe, and helloprintf.exe also
+   on my thelio astra which can run both arm64 and arm32 binaries
 
 ** arch
 - experimental support for arm64
@@ -356,6 +369,7 @@ nm, etc.
 
 ** arch
 - experimental mips support
+- support for x86 and amd64 (and in theory arm but not really tested)
 
 ** os
 - build on Linux
@@ -386,15 +400,15 @@ nm, etc.
 
 * Goken9cc Pre-history
 
-** TODO Cinap 9front: 2019-2025
-- many fixes to 7[alc]
+** SEMI Cinap 9front: 2019-2026
+- many fixes to 7[alc] and 6[alc]
 
 ** Richard Miller: 2018
 - cmd/z[alc]/ for RISC-V (later renamed to i[alc] for riscv and j for riscv64)
 in https://9p.io/sources/contrib/miller/
 
 ** Charles Forsyth: 2014
-- cmd/7[alc] for arm64
+- cmd/7[alc] for arm64 and apparently also cmd/6[alc]
 in https://bitbucket.org/plan9-from-bell-labs/9-cc/src/master/
 
 ** Go pre 1.0: 2008-2010
@@ -405,7 +419,7 @@ in https://bitbucket.org/plan9-from-bell-labs/9-cc/src/master/
 fork Go at the October 2010 time to start goken9cc (in May 2025).
 
 *** linker
-+ ELF for Linux
++ ELF for Linux (was started in Plan 9 and inferno)
 + Mach-O for macOS
 + PE for Windows
 

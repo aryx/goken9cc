@@ -10,15 +10,15 @@ set -eu
 # of packages that are needed to then compile and install goken itself.
 #
 # The goal is also to use a single command that can work on all platforms:
-#  - Linux (Alpine for Docker, Ubuntu for Github Actions, Nix/Arch/...)
-#  - macOS (HomeBrew, Nix)
+#  - Linux (Alpine for Docker, Ubuntu for Github Actions, Arch/Nix/...)
+#  - macOS (native, HomeBrew, macPort, Nix)
 #  - Windows (Cygwin, Mingw, WSL)
 # and that setup everything (e.g., gcc/clang, mk/rc).
 #
 # This is reminescent of the classic "configure; make; make install"
 # trifecta of building and installing GNU packages, but adapted to the
 # new world of software development with powerful package managers and
-# software written using multiple programming languages.
+# software possibly written using multiple programming languages.
 #
 # This script currently assumes that gcc (and binutils) as well as
 # a few other utilities (e.g., make, bash) have already been installed.

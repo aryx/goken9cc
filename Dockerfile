@@ -63,20 +63,21 @@ FROM build AS test
 # RUN apt install gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
 
 # qemu-user provides the qemu-xxx per-arch emulator binaries used by
-# scripts/qemu-runner. We deliberately do NOT install qemu-user-binfmt:
+# scripts/qemu-runner.
+RUN apt-get install -y qemu-user
+# We deliberately do NOT install qemu-user-binfmt:
 # it registers qemu as a kernel binfmt_misc interpreter so foreign ELF
 # binaries can be run directly as ./foo, but that registration is
 # host-global, invisible from inside the container, and unreliable
 # across CI setups (see scripts/qemu-runner for the history, e.g. it
 # used to make mips binaries run under qemu-mipsn32 instead of
 # qemu-mips). Tests instead invoke the right qemu-xxx explicitly.
-RUN apt-get install -y qemu-user
 
 # Run tests
 RUN mk test
 
 ###############################################################################
-# Test on amd64/arm64 using the 386/arm plan9 toolchain (8c/5c)
+# Build principia on amd64/arm64 using the 386/arm plan9 toolchain (8c/5c)
 ###############################################################################
 
 FROM build AS principia
@@ -91,3 +92,5 @@ RUN mk && mk install && mk kernel
 # arm
 RUN cp mkconfig.pi mkconfig
 RUN mk && mk install && mk kernel
+
+#TODO: ideally we would want to run some 'mk test' running regression tests

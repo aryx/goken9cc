@@ -12,7 +12,7 @@ different sources:
  - inferno-os by Vita Nuova Holdings Limited, see the copyright note below
  - Charles Forsyth (arm64 support)
  - Richard Miller (riscv support)
- - 9front (arm64 libmach support)
+ - 9front (arm64 libmach support and more, see plan9front.txt)
  - Yoann Padioleau (mostly packaging and documentation work)
 
 See also "Goken9cc Pre-history" notes in changes.txt for more info.

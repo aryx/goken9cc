@@ -10,6 +10,10 @@
 # (and tests) exercise a lot the C toolchain.
 # Actually right now we only really exercise 6a/6c/6l in CI, but we
 # could also exercise 8a/8c/8l and on arm machines 5a/5c/5l (or use qemu).
+#
+# update: actually the go-era toolchain is now isolated under src/cmd and
+# differ from the one under assemblers/ compilers/ linkers/ so
+# we could get rid of this Dockerfile really.
 
 FROM ubuntu:22.04
 
