@@ -1278,18 +1278,38 @@ buildop(void)
 		case AMSR:
 			break;
 
+		case ALDAR:
+			oprange[ALDARW] = t;
+			oprange[ALDARH] = t;
+			oprange[ALDARB] = t;
+			break;
 		case ALDXR:
 			oprange[ALDXRB] = t;
 			oprange[ALDXRH] = t;
 			oprange[ALDXRW] = t;
 			break;
+		case ALDAXR:
+			oprange[ALDAXRW] = t;
+			oprange[ALDAXRH] = t;
+			oprange[ALDAXRB] = t;
+			break;
 		case ALDXP:
 			oprange[ALDXPW] = t;
+			break;
+		case ASTLR:
+			oprange[ASTLRW] = t;
+			oprange[ASTLRH] = t;
+			oprange[ASTLRB] = t;
 			break;
 		case ASTXR:
 			oprange[ASTXRB] = t;
 			oprange[ASTXRH] = t;
 			oprange[ASTXRW] = t;
+			break;
+		case ASTLXR:
+			oprange[ASTLXRW] = t;
+			oprange[ASTLXRH] = t;
+			oprange[ASTLXRB] = t;
 			break;
 		case ASTXP:
 			oprange[ASTXPW] = t;

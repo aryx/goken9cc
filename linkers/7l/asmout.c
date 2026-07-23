@@ -806,12 +806,12 @@ asmout(Prog *p, Optab *o)
 
 	case 59:	/* stxr */
 		o1 = opstore(p->as);
-		o1 |= p->reg << 16;
-		if(p->from3.type != D_NONE)
-			o1 |= p->from3.reg<<10;
-		else
-			o1 |= 0x1F<<10;
+		o1 |= 0x1F<<10;
 		o1 |= p->to.reg<<5;
+		if(p->reg != NREG)
+			o1 |= p->reg<<16;
+		else
+			o1 |= 0x1F<<16;
 		o1 |= p->from.reg;
 		break;
 
@@ -1436,20 +1436,25 @@ opload(int a)
 	switch(a){
 	case ALDAR:	return LDSTX(3,1,1,0,1) | 0x1F<<10;
 	case ALDARW:	return LDSTX(2,1,1,0,1) | 0x1F<<10;
-	case ALDARB:	return LDSTX(0,1,1,0,1) | 0x1F<<10;
 	case ALDARH:	return LDSTX(1,1,1,0,1) | 0x1F<<10;
+	case ALDARB:	return LDSTX(0,1,1,0,1) | 0x1F<<10;
+
 	case ALDAXP:	return LDSTX(3,0,1,1,1);
 	case ALDAXPW:	return LDSTX(2,0,1,1,1);
+
 	case ALDAXR:	return LDSTX(3,0,1,0,1) | 0x1F<<10;
-	case ALDAXRW:	return LDSTX(2,1,1,0,1) | 0x1F<<10;
-	case ALDAXRB:	return LDSTX(0,0,1,0,1) | 0x1F<<10;
+	case ALDAXRW:	return LDSTX(2,0,1,0,1) | 0x1F<<10;
 	case ALDAXRH:	return LDSTX(1,0,1,0,1) | 0x1F<<10;
-	case ALDXR:		return LDSTX(3,0,1,0,0) | 0x1F<<10;
-	case ALDXRB:		return LDSTX(0,0,1,0,0) | 0x1F<<10;
-	case ALDXRH:		return LDSTX(1,0,1,0,0) | 0x1F<<10;
-	case ALDXRW:		return LDSTX(2,0,1,0,0) | 0x1F<<10;
-	case ALDXP:		return LDSTX(3,0,1,1,0);
-	case ALDXPW:		return LDSTX(2,0,1,1,0);
+	case ALDAXRB:	return LDSTX(0,0,1,0,1) | 0x1F<<10;
+
+	case ALDXR:	return LDSTX(3,0,1,0,0) | 0x1F<<10;
+	case ALDXRW:	return LDSTX(2,0,1,0,0) | 0x1F<<10;
+	case ALDXRH:	return LDSTX(1,0,1,0,0) | 0x1F<<10;
+	case ALDXRB:	return LDSTX(0,0,1,0,0) | 0x1F<<10;
+
+	case ALDXP:	return LDSTX(3,0,1,1,0);
+	case ALDXPW:	return LDSTX(2,0,1,1,0);
+
 	case AMOVNP:	return S64 | 0<<30 | 5<<27 | 0<<26 | 0<<23 | 1<<22;
 	case AMOVNPW:	return S32 | 0<<30 | 5<<27 | 0<<26 | 0<<23 | 1<<22;
 	}
@@ -1462,23 +1467,26 @@ opstore(int a)
 {
 	switch(a){
 	case ASTLR:		return LDSTX(3,1,0,0,1) | 0x1F<<10;
-	case ASTLRB:		return LDSTX(0,1,0,0,1) | 0x1F<<10;
-	case ASTLRH:		return LDSTX(1,1,0,0,1) | 0x1F<<10;
-	case ASTLP:		return LDSTX(3,0,0,1,1);
-	case ASTLPW:		return LDSTX(2,0,0,1,1);
 	case ASTLRW:		return LDSTX(2,1,0,0,1) | 0x1F<<10;
-	case ASTLXP:		return LDSTX(2,0,0,1,1);
-	case ASTLXPW:		return LDSTX(3,0,0,1,1);
+	case ASTLRH:		return LDSTX(1,1,0,0,1) | 0x1F<<10;
+	case ASTLRB:		return LDSTX(0,1,0,0,1) | 0x1F<<10;
+
+	case ASTLXP:		return LDSTX(3,0,0,1,1);
+	case ASTLXPW:		return LDSTX(2,0,0,1,1);
+
 	case ASTLXR:		return LDSTX(3,0,0,0,1) | 0x1F<<10;
-	case ASTLXRB:		return LDSTX(0,0,0,0,1) | 0x1F<<10;
-	case ASTLXRH:		return LDSTX(1,0,0,0,1) | 0x1F<<10;
 	case ASTLXRW:		return LDSTX(2,0,0,0,1) | 0x1F<<10;
+	case ASTLXRH:		return LDSTX(1,0,0,0,1) | 0x1F<<10;
+	case ASTLXRB:		return LDSTX(0,0,0,0,1) | 0x1F<<10;
+
 	case ASTXR:		return LDSTX(3,0,0,0,0) | 0x1F<<10;
-	case ASTXRB:		return LDSTX(0,0,0,0,0) | 0x1F<<10;
+	case ASTXRW:		return LDSTX(2,0,0,0,0) | 0x1F<<10;
 	case ASTXRH:		return LDSTX(1,0,0,0,0) | 0x1F<<10;
+	case ASTXRB:		return LDSTX(0,0,0,0,0) | 0x1F<<10;
+
 	case ASTXP:		return LDSTX(3,0,0,1,0);
 	case ASTXPW:		return LDSTX(2,0,0,1,0);
-	case ASTXRW:		return LDSTX(2,0,0,0,0) | 0x1F<<10;
+
 	case AMOVNP:	return S64 | 0<<30 | 5<<27 | 0<<26 | 0<<23 | 1<<22;
 	case AMOVNPW:	return S32 | 0<<30 | 5<<27 | 0<<26 | 0<<23 | 1<<22;
 	}

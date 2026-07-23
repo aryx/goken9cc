@@ -9,18 +9,25 @@
 # wrong encoding, opcode, or scheduling would exit with something else
 # (or hang), not merely fail to build.
 
-FEATURES=mips_atomic_llsc.exe
+FEATURES=mips_atomic_llsc.exe arm64_atomic_ldxr_stxr.exe
 
 all:V: $FEATURES
 
-# mips_atomic_llsc is mips-only for now; extend this loop with a
-# name->arch mapping if features get added for other architectures.
 test:V: all
-      st=`{ ../../../scripts/qemu-runner mips ./mips_atomic_llsc.exe; echo $status }
-      if (~ $st 11)
-         echo 'ok: mips_atomic_llsc.exe exit 11'
+      fail=()
+      for (i in $FEATURES) {
+         echo $i
+         arch=`{echo $i | sed 's/^mips_.*/mips/; s/^arm64_.*/arm64/'}
+         st=`{ ../../../scripts/qemu-runner $arch ./$i; echo $status }
+         if (~ $st 11)
+            echo '  ok: '$i' exit 11'
+         if not
+            fail=($fail $i^'(got '^$st^')')
+      }
+      if (~ $#fail 0)
+         echo 'all feature tests passed'
       if not {
-         echo 'FAILED: mips_atomic_llsc.exe (got '$st')'
+         echo 'FAILED: '$fail
          exit failed
       }
 
@@ -30,3 +37,7 @@ clean:V:
 mips_atomic_llsc.exe: mips_atomic_llsc.s
    va -c $prereq
    vl -o $target -E _start mips_atomic_llsc.v
+
+arm64_atomic_ldxr_stxr.exe: arm64_atomic_ldxr_stxr.s
+   7a -c $prereq
+   7l -o $target -E _start arm64_atomic_ldxr_stxr.7

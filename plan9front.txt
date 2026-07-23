@@ -84,6 +84,50 @@ such as:
    upstream fix for an objectively-wrong computation, but no observed
    behavioral difference here). Confirmed to not regress the existing
    test suite.
+ - 7a/7l (arm64): LDAR/LDXR/LDAXR (load-acquire/load-exclusive/
+   load-exclusive-acquire) and STLR/STXR/STLXR (store-release/
+   store-exclusive/store-exclusive-release) -- the atomic primitives
+   needed for spinlocks/mutexes/CAS loops on arm64 -- were broken in
+   several independent ways:
+     - STLR/STLRB/STLRH/STLRW were grammared as the 3-operand
+       exclusive-store form (LSTXR, same grammar as STXR/STLXR, which
+       also return a status register) instead of the correct
+       2-operand plain store-release form (LTYPE3) -- `STLR R2, (R1)`
+       failed to parse.
+     - ALDAR/ALDAXR/ASTLR/ASTLXR had no linkers/7l/optab.c entries at
+       all, so even though 7a's lexer recognized the mnemonics (LDAR/
+       LDAXR were, STLR/STLXR weren't reachable due to the grammar bug
+       above), linking anything using them failed outright with no
+       matching optab entry.
+     - ALDAXRW was encoded with the wrong instruction-size bit in
+       opload() (same bit pattern as ALDARW) -- had it linked, it
+       would have silently executed as a plain load-acquire, dropping
+       the "exclusive" semantics a CAS loop depends on. ASTLXP/
+       ASTLXPW had their 32/64-bit size bits swapped in opstore().
+     - case 59 (stxr) in asmout.c encoded the status register from
+       p->from3, which doesn't apply to STLR (2-operand, no status
+       register) vs STXR/STLXR (3-operand, includes one) -- needed an
+       arity-aware rewrite.
+   Also dropped (matching 9front, not just left as silently-broken
+   placeholders): STLXP/STXP/STXPW/LDXP/LDXPW/LDAXP/LDAXPW, the
+   register-*pair* atomic ops, since those need a genuinely different
+   (4-operand) operand model this port doesn't have.
+   Ported from 9front, two commits combined (the second is what
+   actually made STLR usable; the first fixed LDAXR/STLXR earlier):
+     223e8ad00 7l, 7c: Remove STLP(W), finish LDAXR(W)/STLXR(W).
+     61f6376b1 7[al]: implement atomic register loads properly
+   tests/s/features/arm64_atomic_ldxr_stxr.s: a real LDXR/STXR
+   compare-and-retry increment loop (the same idiom lock code uses),
+   wrapped in an LDAR/STLR pair, linked and run under qemu-arm64,
+   checked against the expected post-increment exit code. Confirmed
+   the pre-fix build fails outright at *parse* time on `STLR R2, (R1)`
+   (syntax error) before ever reaching the encoding bugs -- a hard,
+   unambiguous regression check. Also discovered along the way (not a
+   9front thing, just how this codebase's `STXR data, (addr), status`
+   argument order works): the operand carrying the store-conditional
+   status result is the *third* operand, not the first, despite naming
+   conventions elsewhere in the assembly suggesting otherwise --
+   documented in the test's comments.
  - 7a (arm64): assemble() had the exact same fixed `char ofile[100]`/
    raw strcpy() stack buffer overflow as va's (see below) -- found
    organically when a feature-test source file happened to live at a

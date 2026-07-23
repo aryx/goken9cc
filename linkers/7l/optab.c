@@ -382,10 +382,13 @@ Optab	optab[] =
 	{ ADMB,		C_LCON,	C_NONE, 	C_NONE,		51, 4, 0 },
 	{ AHINT,		C_LCON,	C_NONE,	C_NONE,		52, 4, 0 },
 
+	{ ALDAR,		C_ZOREG,	C_NONE,	C_REG,		58, 4, 0 },
 	{ ALDXR,		C_ZOREG,	C_NONE,	C_REG,		58, 4, 0 },
-	{ ALDXP,		C_ZOREG,	C_REG,	C_REG,		58, 4, 0 },
+	{ ALDAXR,		C_ZOREG,	C_NONE, C_REG,		58, 4, 0 },
+
+	{ ASTLR,		C_REG,	C_NONE,	C_ZOREG,		59, 4, 0 },
 	{ ASTXR,		C_REG,	C_REG,	C_ZOREG,		59, 4, 0 },
-	{ ASTXP,		C_REG, C_REG,	C_ZOREG,		59, 4, 0 },
+	{ ASTLXR,		C_REG,	C_REG,	C_ZOREG,		59, 4, 0 },
 
 	{ AAESD,	C_VREG,	C_NONE,	C_VREG,	29, 4, 0 },
 	{ ASHA1C,	C_VREG,	C_REG,	C_VREG,	1, 4, 0 },
