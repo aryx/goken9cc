@@ -5,12 +5,12 @@
 TEXT _main(SB), $20
 	//TODO: port xdefine("setR12",...) from layout.c in principia to goken
 	//MOVW	$setR12(SB), R12
-        /* prepare the system call PWRITE(1,&hello,12, 00) */
+        /* prepare the system call PWRITE(1,&hello,13, 00) */
         MOVW $1, R1
         MOVW R1, 4(R13)
         MOVW $hello(SB), R1
         MOVW R1, 8(R13)
-        MOVW $12, R1
+        MOVW $13, R1
         MOVW R1, 12(R13)
         MOVW $0, R1
         MOVW R1, 16(R13)
@@ -32,6 +32,6 @@ TEXT exit(SB), $4
         SWI $0
         RET /* not reached */
 
-GLOBL   hello(SB), $12
-DATA    hello+0(SB)/8, $"hello wo"
-DATA    hello+8(SB)/4, $"rld\n"
+GLOBL   hello(SB), $13
+DATA    hello+0(SB)/8, $"Hello, w"
+DATA    hello+8(SB)/5, $"orld\n"

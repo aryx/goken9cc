@@ -45,7 +45,7 @@ fi
 # --- actually run the program to completion via the CPU emulator +
 # syscall.c, and confirm it reaches exits(). ---
 out=$(printf ':c\n$q\n' | timeout 5 "$VI" "$EXE" 2>&1)
-if echo "$out" | grep -q "hello world" && echo "$out" | grep -q "exits(0)"; then
+if echo "$out" | grep -q "Hello, world" && echo "$out" | grep -q "exits(0)"; then
     ok "vi: runs real Plan9/MIPS executable to completion (exit syscall reached)"
 else
     bad "vi: failed to run to completion (got: $out)"

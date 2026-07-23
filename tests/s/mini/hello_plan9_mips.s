@@ -6,12 +6,12 @@ TEXT _main(SB), $20
         // $hello(SB) below is translated in using R30 and some offset.
         // see also principia/libc/mips/main9.s
 	MOVW	$setR30(SB), R30
-        /* prepare the system call PWRITE(1,&hello,12, 00) */
+        /* prepare the system call PWRITE(1,&hello,13, 00) */
 	MOVW	$1,R1
 	MOVW    R1, 4(R29)
 	MOVW	$hello(SB),R2
 	MOVW	R2,8(R29)
-	MOVW	$12,R4
+	MOVW	$13,R4
 	MOVW	R4,12(R29)
 	MOVW	$16(R29),R6
 	MOVW	$0,0(R6)
@@ -31,6 +31,6 @@ TEXT exit(SB), $4
         SYSCALL
         RET /* not reached */
 
-GLOBL   hello(SB), $12
-DATA    hello+0(SB)/8, $"hello wo"
-DATA    hello+8(SB)/4, $"rld\n"
+GLOBL   hello(SB), $13
+DATA    hello+0(SB)/8, $"Hello, w"
+DATA    hello+8(SB)/5, $"orld\n"

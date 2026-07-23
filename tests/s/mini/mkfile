@@ -51,6 +51,26 @@ test:V: all
          echo $i
          ../../../scripts/wasm-runner ./$i | cmp /dev/stdin hello.expected.txt
       }
+      # Plan9 executables don't run on the host OS (different ABI/exec
+      # format from Linux/macOS/Windows), so there's no qemu-user
+      # equivalent for them; run them under machines/5i and machines/vi
+      # instead (assumed already built+installed on $PATH, same as the
+      # wine/qemu-user assumption above). Both are interactive
+      # debuggers, not one-shot interpreters: ':c' continues execution
+      # from the entry point main() already set up, and '$q' exits once
+      # stopped. Line 2 of the output is the program's own "Hello,
+      # world\n" (line 1 is the "5i"/"vi" startup banner); see
+      # tests/5i/smoke.sh and tests/vi/smoke.sh for more thorough
+      # (but less strict) coverage of these two emulators.
+      for (i in $PLAN9BINS) {
+         echo $i
+         if(~ $i hello_plan9_arm.exe)
+            printf ':c\n$q\n' | 5i ./$i | sed -n 2p | cmp /dev/stdin hello.expected.txt
+         if not if(~ $i hello_plan9_mips.exe)
+            printf ':c\n$q\n' | vi ./$i | sed -n 2p | cmp /dev/stdin hello.expected.txt
+         if not
+            echo 'skipping '$i': no plan9/386 emulator available (only 5i/vi exist)'
+      }
 
 clean:V:
 	rm -f *.[5678ivj] *.e *.exe *.wasm
@@ -109,6 +129,7 @@ hello_macos_arm64.exe: hello_macos_arm64.s
    7l -H6 -o $target -E _start hello_macos_arm64.7
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
+#`
 
 # Same as hello_macos_amd64 but calls libSystem's _write instead of a raw
 # syscall: -I declares the import, 6lg binds it (LC_DYLD_INFO) into the writep

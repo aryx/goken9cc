@@ -220,6 +220,13 @@
     limitation (hardcoded the wrong 0x1020 address, skipped ':c'); now
     asserts the real entry (0x4020) and runs to completion, like
     tests/5i/smoke.sh
+  * tests/s/mini/hello_plan9_{arm,mips}.s now print "Hello, world\n"
+    like every other hello test (was "hello world\n", no comma, its
+    own one-off convention); tests/s/mini/mkfile's main `test:` loop
+    (the same one that qemu-runner/wine drive for the other OSes) now
+    also runs these two through 5i/vi and cmp's the output against the
+    shared hello.expected.txt -- hello_plan9_386.exe stays build-only,
+    no x86 Plan9 emulator exists yet
 
 ** os
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
