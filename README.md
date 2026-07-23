@@ -16,9 +16,9 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
 - **Portable:**
   It can *build* on Linux, macOS, and Windows (WSL, Cygwin) (TODO Plan 9 and xv6) using gcc or clang (TODO or a boostrapped version of itself)
 - **Multi-OS support:** 
-  Link C programs that can *run* on Linux, macOS, Windows, and Plan 9 (TODO xv6)
+  Link C and assembly programs that can *run* on Linux, macOS, Windows, and Plan 9 (TODO xv6)
 - **Multi-architecture support:**
-  Build C programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
+  Build C and assembly programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
   arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures (TODO Wasm)
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
@@ -34,7 +34,7 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
   Designed to be easy to understand, modify, and integrate into new projects,
   thanks to its reasonable size and the use of *Literate programming*, which
   explains the code in depth (see https://principia-softwarica.org).
-  It takes more than just a license to make code truly open.
+  It takes more than a license to make code truly open.
 
 ---
 
@@ -60,7 +60,7 @@ for cross compiling.
 
 ## Architecture Naming Convention
 
-Plan 9 uses single-character codes for architectures. Each tool is prefixed with this code:
+Plan 9 (and goken9cc) uses single-character codes for architectures. Each tool is prefixed with this code:
 
 | Code | Arch | Compiler | Assembler | Linker | Object ext |
 |------|------|----------|-----------|--------|------------|
@@ -77,7 +77,7 @@ Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X
 
 ## History
 
-This is a fork of the assemblers, linkers, and C compilers
+This repository was originally a fork of the assemblers, linkers, and C compilers
 as well as supporting libraries (e.g., lib9, libmach, pkg/runtime)
 in the Go repository in October 2010 at this precise commit:
 https://github.com/golang/go/commit/99a10eff16b79cfb8ccf36e586532a40b17a203c
@@ -91,13 +91,23 @@ which both were themselves forks of the kencc toolchain in the plan9
 operating system at https://github.com/plan9foundation/plan9
 
 The main improvements in the Go repository to the C toolchain compared
-to the original kencc toolchain in Plan 9 are the support for other
+to the original kencc toolchain in Plan 9 were the support for other
 operating systems such as Linux, macOS, and Windows (and not just
 Plan9), with the management of binary formats such as ELF (for Linux),
 machO (for macOS), and PE (for Windows) as well as the management of
 syscalls to those different operating systems. Another nice improvement
 was the support for the DWARF debugging format so the generated binaries
 could be debugged using gdb (instead of just the Plan9 acid debugger).
+
+This fork was then further extended to add more architectures
+such as arm64 (thanks to the work of Charles Forsyth) and riscv (thanks
+to the work of Richard Miller) that were not in the Go repo but
+scattered around in "kencc-derived" repositories.
+
+More work was done then to make all of this work together,
+to support the latest Linux, macOS, and Windows to reach
+a point where one could use goken9cc to compile goken9cc
+on many architectures and many operating systems.
 
 ---
 
