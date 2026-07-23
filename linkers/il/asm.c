@@ -512,7 +512,7 @@ datblk(int32 s, int32 n, int str)
 				fl = ieeedtof(p->to.ieee);
 				cast = (char*)&fl;
 				for(; i<c; i++) {
-					buf.dbuf[l] = cast[fnuxi8[i+4]];
+					buf.dbuf[l] = cast[fnuxi8[i]];
 					l++;
 				}
 				break;

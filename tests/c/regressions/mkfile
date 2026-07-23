@@ -23,7 +23,19 @@
 # arithmetic shift), discarding the sign of "x >>= n" on plain (32-bit)
 # signed ints. Both riscv64 regressions share riscv64_ptr_width_start.s
 # as their minimal _main/exit runtime stub.
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check
+#
+# float_const_oob: not diff-derived -- found via internal cross-arch
+# consistency (il and vl were the only two backends with this bug; see
+# the comment in the .c file). A 4-byte-past-the-end stack overread when
+# writing a float (not double) global/static initializer, in il and vl's
+# datblk(). riscv (both widths) reliably reproduces it; the mips build
+# happens not to (same defect, but its build's adjacent stack bytes are
+# coincidentally benign) -- fixed there too on the strength of the
+# riscv sibling and the fix being verbatim-identical to what every other
+# backend (5l/5lk/6l/7l/8l/8lk) already does. riscv32 also reuses
+# riscv64_ptr_width_start.s (assembled with ia instead of ja): the stub
+# is width-agnostic.
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -54,5 +66,25 @@ riscv64_sraiw.check:V: riscv64_sraiw.c riscv64_ptr_width_start.s
 		exit failed
 	}
 
+float_const_oob.check:V: float_const_oob.c float_const_oob_start_mips.s riscv64_ptr_width_start.s
+	vc -Dmips -c float_const_oob.c
+	va -Dmips -c float_const_oob_start_mips.s
+	vl -o float_const_oob_mips.exe -E _main float_const_oob.v float_const_oob_start_mips.v
+	ic -Driscv -c float_const_oob.c
+	ia -Driscv -c riscv64_ptr_width_start.s
+	il -o float_const_oob_riscv.exe -E _main float_const_oob.i riscv64_ptr_width_start.i
+	jc -Driscv64 -c float_const_oob.c
+	ja -Driscv64 -c riscv64_ptr_width_start.s
+	jl -o float_const_oob_riscv64.exe -E _main float_const_oob.j riscv64_ptr_width_start.j
+	for (a in mips riscv riscv64) {
+		st=`{ ../../../scripts/qemu-runner $a ./float_const_oob_$a.exe; echo $status }
+		if (~ $st 0)
+			echo 'ok: float_const_oob_'$a'.exe exit 0'
+		if not {
+			echo 'FAILED: float_const_oob_'$a'.exe (got '$st')'
+			exit failed
+		}
+	}
+
 clean:V:
-	rm -f *.v *.j *.o o.out *.exe
+	rm -f *.v *.j *.i *.o o.out *.exe
