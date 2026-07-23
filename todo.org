@@ -146,6 +146,149 @@ sprint()" TODO under Last1/Last2 above -> vl-specific instance of that
 
 ** arm64 toolchain (7a/7c/7l)
 
+claude:
+found via /tmp/diff7a, /tmp/diff7c, /tmp/diff7l (diff of 7a/7c/7l across
+9cc/9colombier/kencc-riscv/goken/9front checkouts in ~/xxx/ -- the other
+lineages don't have an arm64 port at all, it postdates them). Much bigger
+diff than mips: 9front's arm64 backend is considerably more evolved than
+goken's own (already-extensive) arm64 work. Landed so far (see
+plan9front.txt and git log for the full writeup of each):
+vlong/pointer conversion + immediate-offset folding (b117d7014), the
+gmove() same-address-skip typo, struct-copy trailing-byte drop, regopt()
+NRGN growable array, mkvar() .ret tracking, and the LDAR/STLR/LDXR/STXR/
+LDAXR/STLXR atomics fix (223e8ad00 + 61f6376b1) with a real qemu-verified
+test. Remaining, not done:
+
+*** 7c (compiler)
+
+**** fix regalloc type-mismatch in compound multiply/divide/mod assign
+claude:
+compilers/7c/cgen.c:290,293 (case OASLMUL/OASLDIV/OASLMOD/OASMUL/OASDIV/
+OASMOD), `regalloc(&nod, n, nn); cgen(r, &nod);` sizes/classes `nod` from
+`n` (the whole expression's type) *before* r is evaluated into it, then
+reuses that same `nod` regardless of whether r turned out to be a
+different register class (float vs int) than l. 9front's fix (same
+commit as usableoffset() above) evaluates r into its own nod1 first,
+then explicitly compares nod1/nod2 (l's value) etypes to decide nod's
+class: `if(nod1.type->etype == nod2.type->etype || !typefd[nod1.type->etype])
+regalloc(&nod, &nod2, nn); else regalloc(&nod, &nod1, Z);`. Tried
+reproducing with `int x; double y; x *= y;` and the reverse (`double d;
+int i; d *= i;`) -- both already compute correctly on current goken, no
+observed difference, same pattern as several other 7c fixes this pass.
+Real logic difference from upstream nonetheless; low priority given no
+demonstrated impact
+
+**** verify/port boolgen() FP-vs-immediate-zero compare fix
+claude:
+compilers/7c/cgen.c:731 `gopcode(true ? o | BTRUE : o, nodfconst(0), &nod, Z)`
+passes a raw FCONST 0.0 as a compare operand directly. 9front's
+equivalent instead does `regalloc(&nod1, n, Z); gmove(nodfconst(0.0), &nod1);
+gopcode(..., &nod1, &nod, Z); regfree(&nod1);` -- loads 0.0 into a real
+register first. Not yet investigated whether asmout()'s FCMP encoding
+here actually requires a register operand (real arm64 FCMP does have a
+valid `Fn, #0.0` immediate-zero encoding, so this might be a no-op
+change already covered) or whether goken's specific encoding path needs
+it. Unexamined -- lowest-confidence item on this list
+
+**** LATER widen register allocator's usable range (REGMIN..REGMAX)
+claude:
+linkers/7l/7.out.h:15,18-19,22 REGMIN=9, REGMAX=15 (7 usable general
+registers, R9-R15), REGIRL=8 reserved but unused ("indirect result
+location (TO DO)"), REGTMP=REGIP1=17. 9front drops REGIRL and widens to
+REGMIN=9, REGMAX=23 (15 usable registers, R9-R23), with REGTMP=17 kept
+as a plain constant (no longer REGIP1) and matching bitmask-math changes
+in compilers/7c/reg.c RtoB()/BtoR() (mask width `1+REGMAX-REGMIN`,
+explicit REGTMP exclusion). Real codegen-quality win (roughly halves
+spill pressure) but touches ABI-adjacent register reservations across
+reg.c/txt.c -- needs testing against more than a unit snippet before
+trusting it, unlike the other mechanical ports on this list
+
+**** RELAX chipfloat()/case 54 immediate-float encoding is dead code
+claude:
+linkers/7l/asm.c:626 `if(p->l == e->l && p->h == e->h && 0) return n;`
+(the `&& 0` makes this always false) and asmout.c's case 54
+`if(rf < 0 || 1){ diag(...); rf = 0; }` (the `|| 1` makes this always
+diag) mean chipfloat() can never succeed and case 54's D_FCONST branch
+always errors. Confirmed via disassembly this is unreachable in
+practice: 7c always materializes float constants through a memory/
+symbol reference (`FMOVD $0.xxx+0(SB), F0`), never the immediate-encoded
+form this would service. 9front replaces chipfloat() with a real
+bit-pattern decoder, but fixing just that -- without also changing 7c's
+constant-loading strategy to actually attempt this path -- would be an
+unverifiable no-op. Skip unless someone wants to also port the codegen
+change that makes it reachable
+
+*** 7l (linker)
+
+**** fix isbitcon() accepting oversized 32-bit bitmask immediates
+claude:
+linkers/7l/span.c:324 `return findmask(v) != nil || (v>>32) == 0 &&
+findmask(v | (v<<32)) != nil;` doesn't check that the mask's bit-span
+actually fits a 32-bit (W-suffixed AND/ORR/EOR-immediate) encoding
+before accepting it as valid for either width. 9front splits this into
+isbitcon32()/isbitcon64() plus new C_BITCON32/C_BITCON64 operand classes
+threaded through optab.c (mask->s >= 32 rejection for the 32-bit case).
+This is the last Tier-1 item from the original plan; skipped so far
+because the fix isn't self-contained in span.c -- needs the paired
+optab.c entries and asmout.c consumers updated together, more invasive
+than the other Tier-1 fixes
+
+**** investigate: misaligned constant-offset global access fails to link
+claude:
+found while testing the usableoffset() fix (see plan9front.txt), *not*
+fixed by it: `*(long long*)(buf + 4099) = v;` on a global array fails to
+link outright with "internal: miscalculated offset" from
+linkers/7l/asmout.c:457,477 (case 30/31, long-displacement store/load).
+This goes through naddr()'s direct D_EXTERN+offset construction (a
+compile-time-constant address+offset, never passing through cgen.c's
+usableoffset()-guarded folding decision at all), so it's a genuinely
+separate bug from the one b117d7014 fixes. Real, reproducible, but root
+cause not yet identified -- needs tracing through how naddr() builds the
+Adr for a global+constant-offset expression and where the 12-bit-aligned
+high/low decomposition assumption in case 30/31 breaks for a misaligned
+offset
+
+**** RELAX LDXP/LDAXP/STXP/STLXP (128-bit exclusive load/store pair)
+claude:
+linkers/7l/7.out.h still has ALDXP/ALDXPW/ALDAXP/ALDAXPW/ASTXP/ASTXPW/
+ASTLXP/ASTLXPW enum values and opload()/opstore() case labels (kept,
+matching 9front, since they're harmless dead code once unreachable), but
+after the LDAR/STLR atomics fix they have no 7a mnemonic-table entries
+or linkers/7l/optab.c rows, so they can't actually be assembled. 9front
+dropped these deliberately (commit 61f6376b1: "i have also dropped
+atomic load and store register pair operations since they are wrong and
+we would need to deal with the four operand STLXP") rather than leaving
+them silently broken. Not implementing: would need a genuinely different
+4-operand Adr/Gen model (two destination registers) this port doesn't
+have; matches 9front's own call to just not support these
+
+**** LATER port peep.c's newer optimizations
+claude:
+9front's compilers/7c/peep.c has grown substantially beyond what goken
+carries (goken's peep.c: 1564 lines, structurally still close to the
+original 9cc version -- no isu32op()/independent()/storeprop() or the
+"software pipeline loads" pass 9front added). Includes: redundant-move
+elimination for same-typed sequential loads, ROR/RORW copy-propagation,
+SXTW simplification following byte/half/word loads, and a load-pipelining
+pass that reorders an independent instruction between a load and its
+first use. Real perf work, large surface area, many interacting cases --
+deserves its own review pass rather than a quick port, unlike the
+mechanical Tier-3-style fixes already landed
+
+**** LATER add missing instruction encodings
+claude:
+9front's linkers/7l/asmout.c has several instruction forms goken's
+optab.c/asmout.c don't: register-pair load/store (MOVP/MOVPS/MOVPD,
+case 66/67), register-offset indexed load/store (case 68/69, e.g.
+`MOVW R(R),R` addressing), proper 3-operand FMADD/FMSUB/FNMADD/FNMSUB
+encoding (case 70, FPOP3S), FMOV directly between integer and float
+registers (case 55, opfmovr()), and CBZ/CBNZ/TBZ/TBNZ branch-shrinking
+in gopcode() (zcmp(), replacing a CMP+Bcond pair with a single
+compare-and-branch when comparing against 0) -- the last one is coupled
+with a matching literal-pool-range fix in checkpool()/ispcdisp(), so do
+those two together if at all. Coherent "tighter/more complete codegen"
+project, not a bug fix; lower priority than the correctness items above
+
 ** riscv toolchain (ia/ic/il)
 
 *** try riscv hello-world?
