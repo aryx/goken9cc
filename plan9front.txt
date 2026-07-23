@@ -8,6 +8,43 @@ the 99a10eff16b79cfb8ccf36e586532a40b17a203c commit point
 Some code and fixes comes also from 9front at https://github.com/9front/9front
 such as:
  - 7a/7c/7l:
+ - 7c (arm64): gmove() moved a 32-bit int-family value into a
+   vlong/pointer-typed register with a plain 64-bit AMOV, which just
+   copies the raw register bits instead of sign/zero-extending them --
+   not every arm64 instruction leaves a properly extended 64-bit
+   result (e.g. NEGW zero-extends), so a negative int used as a
+   pointer offset could carry garbage in the high 32 bits. Also,
+   cgen()/reglcgen() folded a constant array/pointer offset directly
+   into a load/store's immediate field via ad hoc inline range checks
+   (`v >= -4096 && v < 4096`) instead of calling usableoffset()
+   (already declared in gc.h, but never actually called anywhere) --
+   and usableoffset() itself had an outright logic bug, `return
+   o >= -256 || o < 4095*s;` (should be `&&`), which is true for
+   essentially any offset, plus it never checked the offset is a
+   multiple of the access width as arm64's scaled immediate encoding
+   requires. Ported verbatim from 9front (cinap_lenrek):
+     b117d7014 7c: fix long to vlong/pointer conversion, avoid negative immediate offsets
+   (touches cgen.c, txt.c, and the peep.c/reg.c companion changes
+   teaching the peephole optimizer and register allocator about the
+   new ASXTW opcode this introduces). See compilers/7c/{cgen,txt,peep,reg}.c.
+   No dedicated test: extensive probing (misaligned/negative/large
+   constant offsets, through
+   globals, struct fields, and function parameters) never found a
+   reproducible pre/post behavioral difference in this codebase --
+   7l's own aclass()/asmout() addressing-mode selection appears to
+   self-correct regardless of what usableoffset() decides, so the
+   practical effect here may be limited to codegen quality rather than
+   correctness (matching the 9front commit message's own framing:
+   "not so optimal pointer arithmetic instructions"). Applied on the
+   strength of being a verbatim, well-reasoned upstream fix with an
+   objectively-wrong `||` in the original condition. Along the way,
+   found a *separate*, still-unfixed bug: a global array accessed at a
+   compile-time-constant misaligned offset, e.g.
+   `*(long long*)(buf + 4099) = v;`, fails to link entirely with
+   "internal: miscalculated offset" from 7l/asmout.c's case 30/31 --
+   this goes through naddr()'s direct D_EXTERN+offset construction,
+   not the usableoffset()-guarded paths this commit touches, so it's
+   unaddressed here.
  - 6a/6c/6l:
  - va (mips): assemble() copied its filename argument into a fixed
    `char ofile[100]` with a raw strcpy() and no bounds check --
