@@ -142,6 +142,27 @@
   to AR_=iar (same treatment as va/vc/vl); applied 9front's D_XPOST
   addressing-mode fix in a.y along the way, and ported arm64 (.7)
   object support into lib_toolchain/libmach, fixing an obj[] OOB bug
+- ia/ic/il: bring up riscv64 ('j') for real (ja/jc/jl were installed
+  as commented-out TODOs before, not working stubs): fixed an ELF
+  header-size miscalculation in il that crashed every -j-linked
+  binary on startup, a setSB/symbol-address bug that resolved every
+  SB-relative load to a near-zero pointer, and a stale-pointer-width
+  bug in ic's own dual-width ginit() (cinit() builds the canonical
+  pointer type before ic gets a chance to set ewidth[TIND]=8 for 'j',
+  so it stayed baked in at the 32-bit default and threw off stack-
+  argument layout). riscv64 now has real qemu-verified coverage in
+  tests/s/{exit,mini} and tests/c/mini2, same as the other archs
+- ia/ic/il: start big unification, this time with miller-riscv (9front
+  has no riscv port; miller-riscv is a maintained continuation of the
+  same dual 32-/64-bit lineage goken already uses): ported the fix for
+  SRAIW silently executing as SRLIW (discarding the sign of "x >>= n"
+  on signed ints); also fixed a float-constant stack overread (fnuxi8[]
+  byte-order table indexed out of range) found via cross-arch
+  consistency and shared with, and also fixed in, vl. See plan9front.txt
+  for details and todo.org for the remaining candidates (a boolgen()/
+  comrel() NaN-comparison bug that turned out deeper than expected, an
+  absolute-address-fed-to-auipc bug in the linker's long-jump case,
+  and the register-range widening also pending for 7a/7c/7l)
 - add an experimental wasm (WebAssembly) toolchain skeleton: ea/el
   (new arch letter 'e'), no compiler (ec) yet (thx to Claude)
   * include/e.out.h: new opcode/operand-kind header, modeled on
