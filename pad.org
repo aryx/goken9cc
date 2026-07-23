@@ -21,7 +21,7 @@ interacting with the different OSes).
 ** 2024: idea of goken9cc targeting also Linux, macOS, and Windows thx to Go project
 
 Principia and Plan9 are great but it is better if people can easily
-run and test the mk/rc/cc/... on their own platform and if we produce
+run and test the mk/rc/cc/as/ld/... on their own platform and if we produce
 something not just for education (Principia Softwarica) but possibly
 useful for other things.
 
@@ -184,7 +184,9 @@ git push -u origin master
 
 du -s -m gokencc is now 220M vs the 467M of the cloned go repo
 
-** regression/mismatch fixes reconciliation between principia and kencc variants
+** 2026: use Claude code to fix many regressions, mismatch, and unify all the kenccs
+
+*** regression/mismatch fixes reconciliation between principia and kencc variants
 of 8a/8c/8l
 
   ┌─────────────────────────────────┬─────────────────────────────────────┬────────────┐
@@ -345,3 +347,5 @@ Jun 2014, Go 1.3
 
 
 * Important commits in 9front history from https://github.com/9front/9front/
+
+see plan9front.txt now

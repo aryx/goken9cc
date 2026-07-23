@@ -30,7 +30,6 @@ DIRS=\
 test:
 	cd tests; mk test
 
-
 #TODO: LPDIRS like in principia
 sync:VQ:
 	echo TODO
