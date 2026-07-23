@@ -255,3 +255,29 @@ ported from anywhere, so it isn't listed here -- see git log instead.
    Confirmed real under qemu-riscv64 before landing the fix (an
    optab.c "type" field change, 2 -> 1, matching miller-riscv exactly).
    See tests/c/regressions/riscv64_sraiw.c.
+
+** amd64 (6a/6c/6l)
+
+ - 6l: linkers/6l/optab.c's APSLLQ (packed 64-bit shift-left-by-
+   immediate) entry used opcode byte 0x7e for its reg,imm8 encoding --
+   0x7e is MOVD/MOVQ, not a shift, and has no trailing immediate
+   operand, so "PSLLQ $imm, X" assembled to a MOVQ with the shift
+   count byte spilling into whatever came next. The sibling entries
+   (APSLLL, APSLLW, APSRLQ, and APSLLQ's own memory-operand form right
+   next to it) all correctly use 0x72/0x71/0x73. Confirmed real under
+   qemu-amd64 before landing the fix: "MOVQ $1,AX; MOVQ AX,X0; PSLLQ
+   $4,X0; MOVQ X0,DI" came back 0 (no-op) instead of 16. One-byte fix
+   (0x7e -> 0x73). See tests/s/regressions/amd64_psllq.s.
+
+ - 6c, and independently 8c/8ck: mulgen1() (the constant-multiply
+   strength-reduction search) never special-cased a multiplier of 0,
+   so "x *= 0;" failed to compile outright with "mulgen botch" (an
+   internal-error diagnostic), after already emitting code that just
+   left x unchanged instead of zeroing it. Ported 9front's fix: a
+   3-line early-out at the top of mulgen1(), "if(v == 0){ zeroregm(n);
+   return 1; }" (zeroregm() already existed in each compiler, used
+   elsewhere for the same "materialize a zero" purpose). Confirmed
+   real on all three backends before landing the fix ("6c/8c/8ck -c"
+   on a small "x *= 0;" repro all failed with "mulgen botch"; fixed,
+   they all compile and the linked binary correctly computes 0). See
+   tests/c/regressions/mulzero.c.

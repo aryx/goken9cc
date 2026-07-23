@@ -35,7 +35,12 @@
 # backend (5l/5lk/6l/7l/8l/8lk) already does. riscv32 also reuses
 # riscv64_ptr_width_start.s (assembled with ia instead of ja): the stub
 # is width-agnostic.
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check
+# mulzero: diff-derived (9front, see the comment in the .c file) -- "x
+# *= 0;" failed to compile ("mulgen botch") on 6c, and the identical
+# bug (independently) on 8c and 8ck. Checks both that it compiles at
+# all and that it computes the right (zeroed) runtime result on all
+# three, not just "it didn't error".
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -86,5 +91,36 @@ float_const_oob.check:V: float_const_oob.c float_const_oob_start_mips.s riscv64_
 		}
 	}
 
+mulzero.check:V: mulzero.c mulzero_start_amd64.s mulzero_start_386.s
+	6c -c mulzero.c
+	6a -c mulzero_start_amd64.s
+	6l -o mulzero_amd64.exe -E _main mulzero.6 mulzero_start_amd64.6
+	8a -c mulzero_start_386.s
+	8c -c mulzero.c
+	8l -o mulzero_8c_386.exe -E _main mulzero.8 mulzero_start_386.8
+	8ck -c mulzero.c
+	8l -o mulzero_8ck_386.exe -E _main mulzero.8 mulzero_start_386.8
+	st=`{ ../../../scripts/qemu-runner amd64 ./mulzero_amd64.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: mulzero_amd64.exe (6c) exit 0'
+	if not {
+		echo 'FAILED: mulzero_amd64.exe (6c) (got '$st')'
+		exit failed
+	}
+	st=`{ ../../../scripts/qemu-runner 386 ./mulzero_8c_386.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: mulzero_8c_386.exe (8c) exit 0'
+	if not {
+		echo 'FAILED: mulzero_8c_386.exe (8c) (got '$st')'
+		exit failed
+	}
+	st=`{ ../../../scripts/qemu-runner 386 ./mulzero_8ck_386.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: mulzero_8ck_386.exe (8ck) exit 0'
+	if not {
+		echo 'FAILED: mulzero_8ck_386.exe (8ck) (got '$st')'
+		exit failed
+	}
+
 clean:V:
-	rm -f *.v *.j *.i *.o o.out *.exe
+	rm -f *.v *.j *.i *.o *.6 *.8 o.out *.exe
