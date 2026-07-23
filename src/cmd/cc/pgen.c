@@ -98,7 +98,23 @@ codgen(Node *n, Node *nn)
 	 * isolate first argument
 	 */
 	if(REGARG >= 0 && !debug['X']) {
-		if(typesuv[thisfn->link->etype]) {
+		//old: was typesuv[...], but that table also flags TVLONG/
+		// TUVLONG (see sub.c's typesuvinit), so any function
+		// returning a plain int64/uint64 wrongly took this hidden-
+		// return-pointer branch: it spilled the incoming REGARG into
+		// nodret->left (the ".ret" pseudo-parameter) instead of into
+		// the real first argument's slot. On 7c/arm64 both happen to
+		// sit at the same 0(FP) offset, so this was silently
+		// harmless as long as the ".ret" write looked "live" to the
+		// optimizer -- until 2ebe88fa8 taught mkvar() to track
+		// ".ret" like any other variable, at which point reg.c
+		// started eliminating the write as a dead store (nothing
+		// reads ".ret" by name; the real read is through an aliased
+		// pointer), losing the spill for real. typecmplx is the
+		// correct table here (7c ginit() sets it to typesu, struct/
+		// union only) and matches the ORETURN check further below
+		// and cck/pgen.c's identical codgen().
+		if(typecmplx[thisfn->link->etype]) {
 			nod1 = *nodret->left;
 			nodreg(&nod, &nod1, REGARG);
 			gmove(&nod, &nod1);
