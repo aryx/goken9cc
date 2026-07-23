@@ -116,8 +116,21 @@
   tests/s/variants/expected/ to match the corrected (and now-matching)
   output. principia's own x86 builds never hit this since they link as -H2
   native Plan9 binaries, not ELF (thx to Claude)
-- va/vc/vl: started big unification of different kenccs derived repo,
-  especially 9front
+- va/vc/vl: continued big unification with 9front: ported LL/SC/SYNC
+  atomics, vl load-hoisting scheduler fix, va long-filename buffer
+  overflow fix, vc growable regopt() regions, vc ".ret" register
+  tracking, vc comma-expression indirect call fix, vc Aaut3 stack
+  alignment fix; see plan9front.txt for details
+- va/vc/vl: also reverted the go-era src/cmd adaptations back to the
+  plan9-era cck/compat abstraction and dropped a custom ar text-header
+  hack, switching mips to AR_=iar (matching 6a); needed porting mips
+  (.v) object support (vobj.c) into lib_toolchain/libmach so iar/acid/vi
+  could recognize .v objects again
+- lib_toolchain/libmach: fixed a duplicate mmips definition (executable.c
+  shadowed v.c's real Mach struct with an all-zero stub), which left
+  mach->pgsize == 0 and crashed vi with SIGFPE on amd64 CI (silently
+  wrong on arm64 instead); also fixed the vi smoke test's now-stale
+  txtaddr expectation after the pgsize fix
 - 7a/7c/7l: started big unification of different kenccs derived repo,
   especially 9front
 
@@ -176,6 +189,7 @@
 
 
 * 0.2 (Q1 2026) (pcc, ASAN, dosfstools, IWP9 paper)
+# started to use Claude in march, especially for ASAN
 
 ** toolchain
 - import pcc from my fork-kencc and adjust to goken (remove need
