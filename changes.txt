@@ -214,6 +214,7 @@
   to factorize things in tests/.../mkfile
 - start tests/s/features and tests/s/regressions covering features added
   by the "unification" of the many kencc-derived repo (especially 9front)
+- multi-os testing thanks to wine (see tests/s/mini and hello_windows_xxx tests)
 
 * 0.3 (Q2 2026) (IWP9 presentation)
 
