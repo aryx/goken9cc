@@ -61,6 +61,107 @@ update: better ../lk/
 
 but better wait to avoid diff.rc to show big diffs
 
+* Big Unify
+
+** mips toolchain (va/vc/vl)
+
+claude:
+found via /tmp/diffva, /tmp/diffvc, /tmp/diffvl (diff of va/vc/vl across
+9cc/9colombier/inferno/inferno-old/plan9/mykencc/myplan9/kencc-riscv/goken/
+goold/goken-go-variant/9front checkouts in ~/xxx/), cross-checked against
+current goken source
+
+*** va (assembler)
+
+**** RELAX remove dead '-L' little-endian mips flag
+claude:
+assemblers/va/lex.c:39-42 still sets thechar='0'/thestring="spim" but no
+0a/0l/0c tool exists anywhere in the tree. inferno-old already deletes it.
+same dead pattern duplicated in compilers/cck/lex.c:79, linkers/vl/obj.c:66,
+src/cmd/cc/lex.c:113 -> tree-wide cleanup, not va-only
+
+**** LATER RELAX drop legacy hunk/bump allocator in cck/lexbody
+claude:
+9front removes hunk/nhunk/thunk/gethunk() (assemblers/va/a.h:97,104,117,158,
+shared alloc/allocn in compilers/cck/lexbody:44-75, pulled in by va/lex.c)
+in favor of a normal allocator. extends the existing "simplify linker
+allocators" TODO (previously scoped to 5l/6l/7l/8l only) to va and every
+other frontend that includes cck/lexbody
+
+**** TODO bound macexpand() against overflow
+claude:
+compilers/cck/macbody:367-375,505 macexpand(Sym*, char*) does unbounded
+strcpy into a fixed char buf[2000], same bug class as the stack overflow
+already fixed in assemble() (commit 3a4ac6bb4). 9front adds a length param:
+int macexpand(Sym*, char*, int). shared cck code, pulled into va/lex.c
+via #include "../../compilers/cck/macbody" so it's live there too
+
+*** vc (compiler)
+
+**** TODO fix wrong regalloc template in constant compound-assign fast path
+claude:
+compilers/vc/cgen.c:209, case OASAND/OASADD/OASSUB/OASXOR/OASOR when RHS is
+OCONST: `regalloc(&nod, r, nn)` uses r (the constant) as the type/size
+template instead of l (the lvalue), unlike every neighboring case (see
+asbitop cases at lines 228-254, 256-270 which correctly key off l/n).
+9front fixed this to `regalloc(&nod, l, nn)`. small, low-risk, one-line fix
+
+**** TODO make struct-copy temp (nodrat) reentrant
+claude:
+compilers/vc/cgen.c: the global "rathole" temp (nodrat/nrathole/symrathole,
+declared gc.h:149,152,158, init'd txt.c:60-70,106) is not reentrant, and
+the code self-flags this with warn(n, "non-interruptable temporary") at
+cgen.c:405-410 (cgen ODOT), 916-921 (sugen ODOT), 1010-1015 (sugen OSTRUCT
+struct-to-struct assign), 1020 (sugen OFUNC, nn==Z). because nodrat is one
+shared global Node, nested expressions needing two struct-sized temps at
+once (e.g. a struct-valued dot-expr inside another struct copy) can
+silently clobber the first temp -> real correctness bug, not just a
+warning that never fires. 9front eliminates nodrat entirely, replacing
+each use with a per-call regsalloc()'d local Node. fix is mechanical:
+mirror 9front's cgen.c ODOT/OSTRUCT/OFUNC branches, then optionally drop
+the now-unused nodrat/nrathole/symrathole externs and their txt.c init
+
+**** RELAX drop spurious warning on discarded OCAST
+claude:
+compilers/vc/cgen.c:384, OCAST with nn==Z calls nullwarn(l, Z), which
+unconditionally prints "result of operation not used" even for a cast
+used purely for its side effects (e.g. (void)f();-style statements).
+9front just does cgen(l, Z) instead, still generating l's code but
+dropping the spurious warning. cosmetic/diagnostic-quality only
+
+*** vl (linker)
+
+**** LATER add ELF64/MIPSR4K support
+claude:
+plan9's vl adds HEADTYPE case 7 = elf64(MIPSR4K, ...) and widens pc,
+textsize, INITTEXT, INITDAT, INITRND, Sym.value from int32 to vlong
+throughout l.h/asm.c/pass.c/span.c. goken's linkers/vl/obj.c:140 and
+asm.c:329 only ever call elf32(), and l.h:63,192-195,238,242 still
+declares these as int32. elf64()/MIPSR4K already exist in the shared
+linkers/lk/elf.h (used by other linkers, e.g. 6l/8l) but vl never calls
+them -> real missing feature, only matters if MIPS64 output is wanted
+
+**** TODO honor DUPOK on data symbols in datblk()
+claude:
+linkers/vl/asm.c:588, the "multiple initialization" overlap check is
+`if(p->as != AINIT && p->as != ADYNT)` with no DUPOK test. TEXT symbols
+already respect DUPOK for redefinition (obj.c ~931, `if(p->reg & DUPOK)`)
+but DATA symbols don't get the same suppression. 9front adds a
+Sym.dupok field (set from p->reg & DUPOK on AGLOBL) and checks
+!p->from.sym->dupok in datblk(). can produce spurious "multiple
+initialization" diagnostics for legitimately duplicated DUPOK data
+(e.g. read-only tables emitted by more than one translation unit)
+
+**** RELAX remove sprint() in vl/list.c and vl/pass.c
+claude:
+vl/list.c (e.g. lines 31-210) and vl/pass.c (lines 136-150) still use
+unbounded sprint() into fixed buffers (str[STRINGSZ], literal[]) with
+symbol names of arbitrary length interpolated. 9front replaced these
+with snprint(..., sizeof ...) throughout list.c/pass.c/obj.c. same bug
+class as the va stack overflow already fixed (commit 3a4ac6bb4), not
+an observed crash here yet but matches the existing "RELAX remove
+sprint()" TODO under Last1/Last2 above -> vl-specific instance of that
+
 * Last
 
 ** Last2
