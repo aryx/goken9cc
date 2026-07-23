@@ -3,29 +3,27 @@
 ** TODO changes.txt
 
 ** Overview
-- libos (thin wrappers around syscalls) or lib_core/lib_syscall?
+- libsyscall (thin wrappers around syscalls) for linux/macos/windows/plan9/xv6
+- libc (or libos), again working for linux/macos/windows/plan9/xv6 (different from lib9,
+  rely instead on libsyscall)
+- bootstrap itself!!! (need libsyscall/libos first)
 - wasm toolchain
-- bootstrap itself!!!
 => simpler alt to gcc/clang for cross compiling C code! (ex: xv6-{x86,arm,riscv}!)
 
 ** Later
 
-*** LATER LONG try to boostrap itself; can compile 5c with 5c?
-need full libc and ELF in 5c/5l working for big C project, not just helloprintf.c
+*** LATER acid working on linux
+incorportate plan9port libmach so can get acid to work on Linux
+also DWARF binaries!
 
-*** LATER devdraw from plan9port to goken? can draw ? can port
-more stuff to unix? doomplan9?
+*** LATER dwarf support working for all elf targets, ported from 6c?
 
-maybe most of Graphics.nw can be tested on Linux?
-at least testdraw.c ?
-
-*** LATER SEMI try to unify all the kencc/inferno/plan9 before lpize (5a/5c/5l) again
+*** LATER SEMI try to unify all the kencc/inferno/plan9 for 5a/5c/5l
 diff5a diff5c diff5l are quite small across kencc/inferno/plan9 and goken
-so no big need to unify. can start from goken probably which has the biggest change
-
+so no big need to unify
 use my diff.rc
 
-*** LATER RELAX remove dead code like maxbecome/frame in linkers that was used for Alef
+*** still? LATER RELAX remove dead code like maxbecome/frame in linkers that was used for Alef
 tail-call opti
 
 *** LATER relax factorize in other linker ld.h like 7l
@@ -36,11 +34,14 @@ update: better ../lk/
 
 but better wait to avoid diff.rc to show big diffs
 
-*** LATER acid working on linux
-incorportate plan9port libmach so can get acid to work on Linux
-DWARF binaries!
+*** LATER LONG try to boostrap itself; can compile 5c with 5c?
+need full libc and ELF in 5c/5l working for big C project, not just helloprintf.c
 
-*** LATER dwarf support working for all elf targets, ported from 6c?
+*** LATER devdraw from plan9port to goken? can draw ? can port
+more stuff to unix? doomplan9?
+
+maybe most of Graphics.nw can be tested on Linux?
+at least testdraw.c ?
 
 * Big Unify
 
@@ -175,8 +176,6 @@ see comment in configure:
 at the same time nice to see explicitely the build-mk.sh in Dockerfile
 for iwp9 goken paper
 
-*** -----------------------------------------------------------
-
 *** add back -X to vc, ic, 7c? and also 5c/8c?
 
 ** Last1
@@ -216,17 +215,19 @@ pass length each time, safer
 
 * Components
 
-** C compilers: 5c/6c/8c/...
+** C compilers: 5c/6c/7c/8c/vc/ic
 
-** assemblers: 5a/6a/8a/...
+** assemblers: 5a/6a/7a/8a/va/ia
 
-** linkers: 6l/6l/8l/...
+** linkers: 6l/6l/7l/8l/vl/il
 
 ** mk/rc
 
 ** libs
 
-*** libos (libsyscall)
+*** libsyscall
+
+*** libc (or libos?) (relying on libsyscall)
 
 ** Arch
 
@@ -240,7 +241,6 @@ MOVF → VLDR/VMOV.F32/F64 + literal pool or immediate load).
 something that my Ampere Altra can run?
 
 look softfloat.c of 5l ? look 9front? more recent float instructions?
-
 
 *** arm64, 7a/7c/7l
 
@@ -327,14 +327,12 @@ and see the disassembled code.
 right now objdump and llvm-dump and gdb do not work :(
 (strace does at least)
 
-
 *** FUN Debuggers.nw, try understand acid? and libmach? and add in goken?
 there is a 9-cc/acid/ !
 so it might be portable!
 update: chatGPT says it actually can't debug live process :( or can just inspect
 its state
 maybe still useful though ...
-
 
 *** acid fixes
 # seems to work on 386, amd64, and arm hello_xxx binaries
@@ -367,16 +365,6 @@ maybe this is the cause?
 *** port also db to goken
 seems to be defined in plan9port
 
-** GO stuff
-
-*** FUN try run with qemu on bare hardware, try runtime/tiny target with qemu on x86
-see also DELETED/misc/arm/ and the use of adb and maybe android emulator
-
-**** try also the tiny/arm ? but no write :)
-
-*** still? rerun the mkdefs, mksyscall, ... to generate the updated zxxx?
-alt: take them from latest go repo and hope it's backward compatible?
-
 ** Rest (generators, utilities, typesetting)
 
 *** goken/generators
@@ -384,7 +372,7 @@ alt: take them from latest go repo and hope it's backward compatible?
 **** RELAX LPize yaccpar too, and yaccpars
 and sync in goken and principia
 
-**** try to remove dependency to bison?
+**** allow also to use bison?
 good though to also work with bison; it reports more bugs
 than plan9 yacc and it's good to be compatible, just like
 getting kencc to compile with gcc so easier to bootstrap.
@@ -474,17 +462,6 @@ and lp and tr2post
 
 *** use 5i/vi in mk test and in CI to run some hello_plan9_xxx programs?
 
-*** testinfra: try make golang work for arm32? use armhf gcc and
-compile the whole golang source tree and run the tests?
-=> good regression test infra at least
-see GO/all-arm and GO/tests/run-arm 
-
-it compiles code with gcc (arm64), and we could adjust to arm-linux-gnueabihf-gcc
-but I don't think it's the problem because then we get this error
-at compile-time and don't even reach the testing part:
-
-<epoch>: internal compiler error: betypeinit failed
-
 *** LATER: try to compile goken with goken9cc!!!
 
 *** More workflows! build_amd64_linux.yaml, build_amd64_windows
@@ -495,21 +472,11 @@ start multi GOOS and GOARCH in CI? in Docker can try all combinations?
 
 ** Build infra
 
-*** less: get rid of dependency to byacc? use the included generators/yacc/yacc.c
-
-
 *** switch to GOHOST and GOTARGET instead of GOARCH?
 or GOARCHHOST, GOARCHTARGET, GOOSTARGET ?
 
-*** still? switch from bison to yacc? so can work on plan9!
-anyway I get bad errors about yerr.h that we could fix by switching to regular yacc!
-update: seems to work already; I use yacc in my mkfile
-
 *** LATER: try to compile goken9cc on plan9!!!!!
 need VM then ... and need to find a way to transfer data from one to the other
-
-*** still? support native windows (in Nt/) like in the original kencc?
-needed?
 
 ** Bench infra
 
@@ -537,18 +504,6 @@ and restore the syntax/ from the testsuite and other few tests
 and abusing -Wno
 
 ** Internals
-
-*** update from plan9?
-
-*** update from inferno-os?
-looks like it contains the latest portable sources
-kencc and 9-cc seems not uptodate
-
-but at the same time, I don't think it has 5a/5c/... synced
-with the latest plan9 versions 
-(which I did sync to get a working raspberry pi build of plan9)
-
-*** update from 9front?
 
 * Docs
 

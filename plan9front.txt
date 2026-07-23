@@ -1,3 +1,5 @@
+# -*- org -*-
+
 Most of the code in goken9cc derives from code in Plan 9 4th edition
 available at https://9p.io/sources/plan9/sys/src/ and
 https://github.com/plan9foundation/plan9, as well as code from
@@ -5,10 +7,11 @@ https://code.google.com/p/ken-cc/ and https://github.com:golang/go/ at
 the 99a10eff16b79cfb8ccf36e586532a40b17a203c commit point
 (see pad.org for more info).
 
-Some code and fixes comes also from 9front at https://github.com/9front/9front
-such as:
- - 7a/7c/7l:
- - 7c (arm64): gmove() moved a 32-bit int-family value into a
+Some code and fixes come also from 9front at https://github.com/9front/9front
+
+** arm64 (7a/7c/7l)
+
+ - 7c: gmove() moved a 32-bit int-family value into a
    vlong/pointer-typed register with a plain 64-bit AMOV, which just
    copies the raw register bits instead of sign/zero-extending them --
    not every arm64 instruction leaves a properly extended 64-bit
@@ -45,7 +48,8 @@ such as:
    this goes through naddr()'s direct D_EXTERN+offset construction,
    not the usableoffset()-guarded paths this commit touches, so it's
    unaddressed here.
- - 7c (arm64): gmove()'s "skip the move if source and dest are
+
+ - 7c: gmove()'s "skip the move if source and dest are
    already the same address" fast-path guard had a missing `a ==`:
    `if(a == AMOV || (AMOVW || a == AMOVWU) && ewidth[ft] == ewidth[tt] || ...)`.
    `AMOVW` alone is a nonzero enum constant, so `(AMOVW || a == AMOVWU)`
@@ -63,7 +67,8 @@ such as:
    within this pass's budget; fixed on the strength of the boolean
    logic being unambiguously wrong as written, confirmed to not
    regress the existing test suite.
- - 7c (arm64): sugen()'s struct/union-copy fallback ("copy:", reached
+
+ - 7c: sugen()'s struct/union-copy fallback ("copy:", reached
    for any struct assignment where neither side is directly
    addressable, e.g. through a pointer) truncated the byte width via
    `w /= SZ_LONG;` before laying out the copy, with no handling for
@@ -84,7 +89,8 @@ such as:
    upstream fix for an objectively-wrong computation, but no observed
    behavioral difference here). Confirmed to not regress the existing
    test suite.
- - 7c (arm64): register allocator's regopt() used a fixed
+
+ - 7c: register allocator's regopt() used a fixed
    Rgn region[NRGN=1000] array (bumped from 600 "for paranoia.c" at
    some point in this repo's history) and gave up (warn + stop
    optimizing further, not a crash) past that many candidate regions
@@ -93,12 +99,14 @@ such as:
    NVAR caps distinct tracked variables and region count depends more
    on control-flow complexity than raw size, so a cheap synthetic
    generator didn't reliably trigger the old cap either.
- - 7c (arm64): mkvar() excluded every "."-prefixed pseudo-symbol from
+
+ - 7c: mkvar() excluded every "."-prefixed pseudo-symbol from
    register-allocator tracking, including ".ret" -- same fix, same
    reasoning, as vc's (mips) equivalent: carve out ".ret" specifically
    so it stays eligible for optimization like any other variable. Not
    a correctness bug, purely a missed optimization; no dedicated test.
- - 7a/7l (arm64): LDAR/LDXR/LDAXR (load-acquire/load-exclusive/
+
+ - 7a/7l: LDAR/LDXR/LDAXR (load-acquire/load-exclusive/
    load-exclusive-acquire) and STLR/STXR/STLXR (store-release/
    store-exclusive/store-exclusive-release) -- the atomic primitives
    needed for spinlocks/mutexes/CAS loops on arm64 -- were broken in
@@ -142,20 +150,25 @@ such as:
    status result is the *third* operand, not the first, despite naming
    conventions elsewhere in the assembly suggesting otherwise --
    documented in the test's comments.
- - 7a (arm64): assemble() had the exact same fixed `char ofile[100]`/
+
+ - 7a: assemble() had the exact same fixed `char ofile[100]`/
    raw strcpy() stack buffer overflow as va's (see below) -- found
    organically when a feature-test source file happened to live at a
    long scratch path and 7a crashed the same way ("*** stack smashing
    detected ***"). Same fix, same origin (9front): strdup()/smprint()
    instead of fixed buffers. See
    tests/s/regressions/arm64_long_filename.s.tmpl.
- - va (mips): assemble() copied its filename argument into a fixed
+
+** mips (va/vc/vl)
+
+ - va: assemble() copied its filename argument into a fixed
    `char ofile[100]` with a raw strcpy() and no bounds check --
    confirmed this crashes ("*** stack smashing detected ***", SIGABRT)
    on a source path >=100 bytes. Ported 9front's fix: dynamically
    sized via strdup()/smprint() instead. See
    tests/s/regressions/mips_long_filename.s.tmpl.
- - va/vc/vl (mips): LL (load-linked) / SC (store-conditional) / SYNC
+
+ - va/vc/vl: LL (load-linked) / SC (store-conditional) / SYNC
    (memory barrier) atomic instructions, needed for spinlocks/mutexes
    on MIPS -- ported from 9front's sys/src/cmd/v[al]/*, by mia soweli:
      10f1eeb7d v[al], libmach: add LL (load-linked) and SC (store-conditional)
@@ -163,14 +176,16 @@ such as:
      e7d099ac4 vl: LL operand order and scheduling
      2eb28f43e vl: atomic instruction scheduling
    See tests/s/features/mips_atomic_llsc.s.
- - vl (mips): linker instruction scheduler could hoist a stack-pointer
+
+ - vl: linker instruction scheduler could hoist a stack-pointer
    -adjusting instruction above an earlier load in the same window,
    changing the load's effective address if reordered -- ported from
    9front's sys/src/cmd/vl/sched.c, by cinap_lenrek:
      40ed531364 vl: prevent stack altering instructions to be hoisted above loads
    (found via a libmemdraw bug on real 9front; no dedicated minimal
    test in this repo yet -- see linkers/vl/sched.c sched().)
- - vc (mips): register allocator's regopt() used a fixed
+
+ - vc: register allocator's regopt() used a fixed
    Rgn region[600] array and gave up (warn + stop optimizing further,
    not a crash) past 600 candidate regions -- ported 9front's growable
    version (region starts at 300, doubles via allocn() as needed). No
@@ -178,7 +193,8 @@ such as:
    reaching 600 *regions* needs enough control-flow complexity that a
    cheap synthetic generator (2000 statements, 700 distinct locals)
    still didn't trigger the old cap in testing.
- - vc (mips): mkvar() excluded every "."-prefixed pseudo-symbol from
+
+ - vc: mkvar() excluded every "."-prefixed pseudo-symbol from
    register-allocator tracking, including ".ret" (the function
    return-value pseudo-variable, see compilers/vc/txt.c ginit()) --
    ported 9front's carve-out so ".ret" specifically stays eligible for
@@ -187,7 +203,8 @@ such as:
    fail, just a quality difference in generated code that would need a
    golden-object diff to show, and this repo doesn't otherwise
    golden-diff vc's own register allocator's choices).
- - vc (mips): cgen()'s OFUNC case didn't strip a leading comma
+
+ - vc: cgen()'s OFUNC case didn't strip a leading comma
    expression from the callee before checking it's a plain indirect
    call (l->op == OIND), e.g. a function pointer reached through
    `(sideeffect(), fp)(args)` -- so a complex-enough comma-wrapped
@@ -204,9 +221,7 @@ such as:
    l->op == OCOMMA, and already proven correct by 3 sibling backends
    in this same repo.
 
-Some fixes were found independently in both 9front and this repo's own
-principia-softwarica lineage:
- - vc (mips): align()'s Aaut3 case ("total align of automatic") never
+ - vc: align()'s Aaut3 case ("total align of automatic") never
    set `w`, so stack "safe" spill-temp regions (regsalloc(), used e.g.
    when marshaling a call whose argument itself contains another call)
    were not rounded up to a MIPS word, skewing the whole function's
