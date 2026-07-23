@@ -20,6 +20,13 @@ all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
 # (it requires just qemu-user; see ../../../scripts/qemu-runner for why we
 # no longer rely on qemu-user-binfmt / binfmt_misc, which used to need
 # forcing for mips since it picked qemu-mips32sn instead of qemu-mips).
+# Windows PE binaries are checked the same way, but under wine instead of
+# qemu-user: wine translates the Win32/kernel32.dll ABI in userspace, no
+# per-arch emulator binary needed (see the Dockerfile's `test` stage).
+# Unlike qemu-user, wine does not translate the CPU ISA, only the Win32
+# ABI, so it can only run these (x86/amd64) PE binaries natively on an
+# x86_64 host; skip on arm64 hosts, same spirit as the arm64/Darwin
+# codesign guard down in the hello_macos_arm64.exe recipe below.
 # (the exit(42) programs moved to tests/s/exit, which asserts their code)
 # Every hello prints exactly "Hello, world\n"; cmp against hello.expected.txt
 # so a silently-wrong program (e.g. writing nothing, or a bad byte) fails the
@@ -30,6 +37,12 @@ test:V: all
          arch=`{echo $i | sed 's/^hello_linux_//; s/\.exe$//'}
          ../../../scripts/qemu-runner $arch ./$i | cmp /dev/stdin hello.expected.txt
       }
+      if(~ `{uname -m} x86_64) for (i in $WINDOWSBINS) {
+         echo $i
+         WINEDEBUG=-all wine ./$i | cmp /dev/stdin hello.expected.txt
+      }
+      if not
+         echo 'skipping Windows/wine tests: wine only runs x86 PE natively on an x86_64 host'
 
 clean:V:
 	rm -f *.[5678iv] *.exe
@@ -114,7 +127,8 @@ hello_plan9_mips.exe: hello_plan9_mips.s
 # Windows (PE). Both link a kernel32.dll .idata (GetStdHandle, WriteFile,
 # ExitProcess) and expose the thunks as __imp_* symbols so the program can
 # print. See linkers/lk/pe.c. -s because there is no PE symbol table path
-# yet. Test under wine on Linux hosts.
+# yet. Run under wine on Linux hosts; the `test` target above does this
+# for both automatically as part of `mk test`.
 #
 # 386 uses 8lg (goken/src-cmd lineage): the principia 8l in linkers/8l/
 # does not have -H 10 wired. amd64 uses 6l -H 10 (linkers/lk/pe.c),

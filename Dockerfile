@@ -73,6 +73,24 @@ RUN apt-get install -y qemu-user
 # used to make mips binaries run under qemu-mipsn32 instead of
 # qemu-mips). Tests instead invoke the right qemu-xxx explicitly.
 
+# wine runs the PE (Windows) test binaries directly on the Linux host,
+# the same way qemu-user runs the foreign-arch Linux ELF binaries above.
+# Unlike qemu-user though, wine only translates the Win32 API/ABI, not the
+# x86 CPU ISA: on an amd64 host it can execute x86/amd64 PE code natively,
+# but on an arm64 host it can only run arm64 PE binaries (running x86 PE
+# under wine there needs an extra CPU-translation layer like box64/FEX-emu,
+# which is out of scope here -- comparable in weight to the Darling problem
+# for macOS binaries). i386 multiarch is also only available on amd64
+# hosts (ports.ubuntu.com, used on arm64, carries no i386 packages at all).
+# So only install wine when building on an amd64 host; the test target in
+# tests/s/mini/mkfile mirrors this by only invoking wine when `uname -m`
+# is x86_64.
+RUN if [ "$(dpkg --print-architecture)" = amd64 ]; then \
+      dpkg --add-architecture i386 && \
+      apt-get update && \
+      apt-get install -y wine wine64 wine32:i386; \
+    fi
+
 # Run tests
 RUN mk test
 
