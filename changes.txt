@@ -155,6 +155,7 @@
 ** arch
 - real support for 386, amd64, arm, arm64, riscv, mips
   with basic helloprintf.exe working on all those archs, at least on Linux
+- experimental support for riscv64
 
 ** internals
 - remove 5a9/5c9/5l9, the original arm toolchain imported from
