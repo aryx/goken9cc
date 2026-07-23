@@ -1,27 +1,14 @@
 * Big plan
 
 ** TODO changes.txt
-- SEMI fully working arm32 and arm64 mini2/
-- SEMI hello_linux_riscv.exe and exit_linux_riscv.exe
-- TODO revert the changes to va/vc/vl, ia/ic/il, 7a/7c/7l and switch
-  from golang cc/ to kencc-imported cc/
-- TODO switch acid, and 5i/vi from libmach_ to libmach
-
-- bootstrappable (can compile itself)
 
 ** Overview
-
-# fix float/64bits ops arm32 and arm64 tests/c/mini2
-# produce from hello.{s,c} binaries for SEMI (old) macos (amd64 TODO arm64), (386) windows
-# reLPize {Assembler,Linker,Compiler,Libcore}.nw and release (and maybe also {Debugger,Profiler}.nw) "principia-toolchain"!
-# add wasm arch later and bootstrap itself!!!
-# => simpler alt to gcc/clang for cross compiling C code! (ex: xv6-{x86,arm,riscv}!)
+- libos (thin wrappers around syscalls) or lib_core/lib_syscall?
+- wasm toolchain
+- bootstrap itself!!!
+=> simpler alt to gcc/clang for cross compiling C code! (ex: xv6-{x86,arm,riscv}!)
 
 ** Later
-
-*** try riscv hello-world?
-https://9fans.topicbox.com/groups/9fans/T3f252d4d7c5389ee/issue-compiling-hello-world-for-risc-v-on-plan-9-pc-resets
-
 
 *** LATER LONG try to boostrap itself; can compile 5c with 5c?
 need full libc and ELF in 5c/5l working for big C project, not just helloprintf.c
@@ -38,18 +25,6 @@ so no big need to unify. can start from goken probably which has the biggest cha
 
 use my diff.rc
 
-*** LATER: start lpize again, redo the work in {Assembler,Linker,Compiler}.nw
-relpize, resplit, but at least can reuse most of the thinking/splitting
-work done for plan9
-AND this time run regression tests first! to catch regression ASAP
-
-update: with 5a_/5c_/5l_ working pretty good, maybe don't have
- to relpize actually and try 5a__/5c__/5l__ from principia's book
- and diff and gradually converge and fix bugs
-
-alt: unless found bugs in plan9 toolchain and go towards merging with goken
-codebase instead
-
 *** LATER RELAX remove dead code like maxbecome/frame in linkers that was used for Alef
 tail-call opti
 
@@ -60,6 +35,12 @@ and factorize with other linkers
 update: better ../lk/
 
 but better wait to avoid diff.rc to show big diffs
+
+*** LATER acid working on linux
+incorportate plan9port libmach so can get acid to work on Linux
+DWARF binaries!
+
+*** LATER dwarf support working for all elf targets, ported from 6c?
 
 * Big Unify
 
@@ -80,7 +61,7 @@ assemblers/va/lex.c:39-42 still sets thechar='0'/thestring="spim" but no
 same dead pattern duplicated in compilers/cck/lex.c:79, linkers/vl/obj.c:66,
 src/cmd/cc/lex.c:113 -> tree-wide cleanup, not va-only
 
-**** LATER RELAX drop legacy hunk/bump allocator in cck/lexbody
+**** RELAX drop legacy hunk/bump allocator in cck/lexbody
 claude:
 9front removes hunk/nhunk/thunk/gethunk() (assemblers/va/a.h:97,104,117,158,
 shared alloc/allocn in compilers/cck/lexbody:44-75, pulled in by va/lex.c)
@@ -88,7 +69,7 @@ in favor of a normal allocator. extends the existing "simplify linker
 allocators" TODO (previously scoped to 5l/6l/7l/8l only) to va and every
 other frontend that includes cck/lexbody
 
-**** TODO bound macexpand() against overflow
+**** bound macexpand() against overflow
 claude:
 compilers/cck/macbody:367-375,505 macexpand(Sym*, char*) does unbounded
 strcpy into a fixed char buf[2000], same bug class as the stack overflow
@@ -98,7 +79,7 @@ via #include "../../compilers/cck/macbody" so it's live there too
 
 *** vc (compiler)
 
-**** TODO fix wrong regalloc template in constant compound-assign fast path
+**** fix wrong regalloc template in constant compound-assign fast path
 claude:
 compilers/vc/cgen.c:209, case OASAND/OASADD/OASSUB/OASXOR/OASOR when RHS is
 OCONST: `regalloc(&nod, r, nn)` uses r (the constant) as the type/size
@@ -106,7 +87,7 @@ template instead of l (the lvalue), unlike every neighboring case (see
 asbitop cases at lines 228-254, 256-270 which correctly key off l/n).
 9front fixed this to `regalloc(&nod, l, nn)`. small, low-risk, one-line fix
 
-**** TODO make struct-copy temp (nodrat) reentrant
+**** make struct-copy temp (nodrat) reentrant
 claude:
 compilers/vc/cgen.c: the global "rathole" temp (nodrat/nrathole/symrathole,
 declared gc.h:149,152,158, init'd txt.c:60-70,106) is not reentrant, and
@@ -141,7 +122,7 @@ declares these as int32. elf64()/MIPSR4K already exist in the shared
 linkers/lk/elf.h (used by other linkers, e.g. 6l/8l) but vl never calls
 them -> real missing feature, only matters if MIPS64 output is wanted
 
-**** TODO honor DUPOK on data symbols in datblk()
+**** honor DUPOK on data symbols in datblk()
 claude:
 linkers/vl/asm.c:588, the "multiple initialization" overlap check is
 `if(p->as != AINIT && p->as != ADYNT)` with no DUPOK test. TEXT symbols
@@ -162,22 +143,20 @@ class as the va stack overflow already fixed (commit 3a4ac6bb4), not
 an observed crash here yet but matches the existing "RELAX remove
 sprint()" TODO under Last1/Last2 above -> vl-specific instance of that
 
+** arm64 toolchain (7a/7c/7l)
+
+** riscv toolchain (ia/ic/il)
+
+*** try riscv hello-world?
+https://9fans.topicbox.com/groups/9fans/T3f252d4d7c5389ee/issue-compiling-hello-world-for-risc-v-on-plan-9-pc-resets
+
+
 * Last
 
 ** Last2
 
-*** incorportate plan9port libmach so can get acid to work on Linux
-DWARF binaries!
-
 *** pcc: improve -lxxx to look for libxxx.a in -L given path
 so then I can use more -lunix in xix mkconfig
-
-*** goken iwp9.nw refinments until March 9
-fix float
-start libos (thin syscalls wrappers)
-test support macOS 10.6
-add windows? too complex?
-talk about QEMU testing infra
 
 *** why order of -I matters?
 this does not work:
@@ -198,36 +177,17 @@ for iwp9 goken paper
 
 *** -----------------------------------------------------------
 
-*** undo changes to va/vc/vl, restore old code
-then add back elf, -X, and some long->int32 that are needed
-according to what we did for 5c/8c
-
-works better tests/c/mini2/ ? works better with -m32 on thinkstation?
-diff .v produced?
-
-*** undo changes to ia/ic/il
-*** undo changes to 7a/7c/7l
+*** add back -X to vc, ic, 7c? and also 5c/8c?
 
 ** Last1
 
-*** continue switch to kencc code in goken
-
-**** RELAX 5l/8l: cleanup the code like I did before with the '9',
-the many dead -H xxx
-
-**** RELAX add back -X to disable opti in 5c/8c
-and try it on principia? still works?
-
-**** use cc/ from kencc/plan9 instead of cc/ from golang cc/ for mips, arm64, riscv?
-solves some of the weird behavior I get? for mips? for riscv? for arm64?
-
 *** other goken PBS:
 
-**** principia x goken x macos: compilation error "out of memory" on libsec/aes.c :(
+**** still? principia x goken x macos: compilation error "out of memory" on libsec/aes.c :(
 
 ***** WAITING run qemu with mkconfig.pc on clang and macos
 
-**** principia x goken x thinkstation: pb mk nuke and bug in free() in rc
+**** still? principia x goken x thinkstation: pb mk nuke and bug in free() in rc
 weird pbs when running 'mk nuke'
 free(): invalid size
 
@@ -236,23 +196,6 @@ seems to be pb with 'rc' because export MKSHELL=/opt/plan9/bin/rc
 fixed the issue
 
 does not have the problem in docker
-
-**** mini2 x mips: pb for boolean showing false instead of true
-can debug the code?
-use cc_/ instead of cc/ ? better?
-
-**** mini2 x arm__: -DDEBUG fails why?
-happens with arm ?
-
-**** mini2 x arm__: even with qemu-armhf I get some weird output for some floats
-like 0.3333, or 20.0 that gets output as a super high float value, weird
-
-2.2 is printed as -2.4+344/e-185
-
-try kencc on it?
-compare binary output? compare -S
-
-seems to have same pb with arm arch :(
 
 *** bug: why mk pdf in principia/linkers does not do the full
 recipe and does not mv to generate Linker-7.pdf?
@@ -273,59 +216,24 @@ pass length each time, safer
 
 * Components
 
-** ARM (kencc-imported) toolchain: 5a/5c/5l
+** C compilers: 5c/6c/8c/...
 
-*** still pbs on tests/c/float :( like for 5l__
-weird float displayed
+** assemblers: 5a/6a/8a/...
 
-*** less: fix 5a to accept unicode like 5a_ and 5a__
-TEXT ·getcallerpc(SB), $-4
+** linkers: 6l/6l/8l/...
 
+** mk/rc
 
-*** test infra! run hello_plan9_arm.exe on raspberry pi2 via qemu?
-need port principia to raspberry pi2 first then!
+** libs
 
-*** LATER factorize ld.a lib? imitate what I've done in principia?
-hmm but l.h change each time so can do it?
+*** libos (libsyscall)
 
-*** LATER: merge with principia and fix regression in principia!
-easier when will have test infra via qemu-system-arm
+** Arch
 
-update: easier when goken 5a_/5c_/5l_ can work on linux
-and can compile itself on linux => that's a good test suite
+*** arm, 5a/5c/5l
 
-** hybrid ARM toolchain : 5a__/5c__/5l__
-
-*** last
-
-**** principia x goken x 5a__/5c__/5l__: pb dcl.c
-5c -FTVw -I../../include/arch/arm -I../../include/ALL dcl.c
-dcl.c:94 unknown vlong LIST
-dcl.c:94 unknown vlong COND
-
-reduce to minimal repro case? and then try kencc on it and compare
-output?
-
-better with cc_/ instead of cc/?
-
-works with goken/kencc 5c at least! 
-but then get back compilation error about floating
-point error with linker (but maybe this one can be solved by long vs int32?)
-
-**** diff 5l kencc vs 5l__ goken in obj.c
--	case AMOVDF:
--		if(!vfp || p->from.type != D_FCONST)
--			goto casedef;
--		p->as = AMOVF;
--		/* fall through */
- 	case AMOVF:
- 		if(skip)
- 			goto casedef;
-@@ -1225,7 +1191,7 @@ gethunk(void)
-
-also hintabsize set correctly? also need dbuf[1] fix?
-
-**** vfp set in 5l__ ? need -f ? for floating?
+**** test infra! run hello_plan9_arm.exe on raspberry pi1 via qemu?
+and do also for pi2 and qemu pi2?
 
 **** try use different VFP instructions for floats?
 MOVF → VLDR/VMOV.F32/F64 + literal pool or immediate load).
@@ -334,69 +242,7 @@ something that my Ampere Altra can run?
 look softfloat.c of 5l ? look 9front? more recent float instructions?
 
 
-** golang ARM toolchain : 5a_/5c_/5l_
-
-*** still? can't use 5c on principia libc code, weird!!!
-wait.c:33 unknown type 15 in zaddr
-can repro minimal case?
-set principia/env.sh to point to goken/ROOT/arm64/bin/?
-
-*** goken: get tests/c/mini2/helloprintf_nofloat_no64.exe working for 5a/5c/5l
-linux_arm.s syscalls
-but got segfault now :( even worse than before
-
-update: better now that I made it work with 5l_ ?
-
-** other golang toolchain
-
-*** 8a_/8c_/8l_
-
-**** principia x goken x 8a_/8c_/8l_: compilation error sysfatal.c
-8c -FTVw -I../../../include/arch/386 -I../../../include/ALL sysfatal.c
-sysfatal.c:27 rounding by 0
-
-
-** C compilers: 5c/6c/8c
-
-** assemblers: 5a/6a/8a
-
-** linkers: 6l/6l/8l
-
-** mk/rc
-
-*** rc
-
-**** regsub_ in Plan9.c and Posix.c
-alt: adapt libregexp in principia to match the one in goken/kencc
-right now in mk I need to adjust 
-
--                            regsub(pre->s, buf, /*sizeof(buf),*/ rmatch, NREGEXP);
-+                            regsub(pre->s, buf, sizeof(buf), rmatch, NREGEXP);
-
-**** LATER: port enough of :I: so can use goken mk for mk sync too!!!
-so don't need to switch back and forth between kencc/goken mk
-and xix mk
-
-** libs
-
-*** libcore
-
-** Arch
-
-*** arm_ (not arm__)
-
-**** tests/c/mini2: run mk objtype=arm_ test_one in c/mini2/ too, remove NOSPLIT check
-by using ifdef
-
-but then with 5l requires sfloat in vlop.s, then sfloat2 in softfloat.c
-and more stuff
-
-*** arm (not arm_, not arm__)
-
 *** arm64, 7a/7c/7l
-
-**** fix tests/c/mini2/, first segfault and then restore the
-local byte buf[100] in print_nofloat.c
 
 **** add commits from 9front after initial import
 lots of fixes from cinap probably worth taking
@@ -416,17 +262,11 @@ in 9-cc
 
 useful?
 
-**** get objdump to work on helloc_arm64.exe/helloc_arm_.exe too
+**** get objdump to work on helloc_arm64.exe/helloc_arm.exe too
 what special thing we need to add in the elf binary?
 it works for the arm32 binary with 5l but not 5l_
 
 *** mips
-
-**** tests/c/mini2: run mk objtype=mips test_one in c/mini2/
-need extend minilibc.h to state uintptr for mips arch
-and also need a linux_mips.s
-
-**** helloprintf for mips
 
 **** try vi on hello_plan9_mips.exe
 error "can't read 4 bytes of symbol table"
@@ -434,21 +274,10 @@ error "can't read 4 bytes of symbol table"
 **** can use acid to disassemble mips generated code and see it works?
 as I can't use objdump
 
-
 *** riscv 
 #riscv and plan9!
 # https://riscv.org/news/2020/10/a-plan-9-c-compiler-for-rv32gc-and-rv64gc/
 # also xv6-riscv?
-
-**** exit_linux_riscv.exe currently segfault
-
-***** exit_linux_riscv64.s ? better?
-
-
-**** riscv: hello_linux_riscv.exe (and test with qemu-riscv32)
-
-***** hello_linux_riscv32.S for binutils to see the diff
-with the one I'm generating
 
 **** riscv: RELAX add also libmach code for i arch (riscv)
 in 9front? in miller original tgz? in 9cc?
@@ -461,7 +290,25 @@ try acid on it?
 
 ** OSes
 
-*** plan9 and goken
+*** Linux
+
+*** Windows
+
+**** hello_windows_x86.c
+try make hello.c that link with a few sys.s for windows and link for windows
+maybe remove *.go in runtime/ and see if can build a runtime.a that
+I can then use then to link a simple hello.c calling print.c
+
+try rt0.8 and then 8l but then linking errors so missing stuff
+
+**** window.yml: try install mingw from windows-latest GHA job as experiment
+so later can try to compile goken9cc in CI!
+
+imitate some of the stuff in semgrep/.../build-windows-x86
+
+*** macOS
+
+*** Plan9
 
 **** try tests/c/hello_plan9_arm.exe from .c!
 mini libc
@@ -471,36 +318,11 @@ mini libc
 
 tests/c/mini2/ ?
 
-*** make goken compile on Windows 386
-
-**** make part of goken compile on windows
-until 6g at least; even though sad that get runtime error when running 6g
-
-***** fix weird compilation error in windows lib9/ that if you type make again
-then it works the second time
-
-**** hello_windows_x86.s
-no simple sys.s like for darwin and linux :(
-no interrupt and simple syscalls. Have to use this
-stdcall complex thing and kernel32.dll and maybe complex setup
-
-**** hello_windows_x86.c
-try make hello.c that link with a few sys.s for windows and link for windows
-maybe remove *.go in runtime/ and see if can build a runtime.a that
-I can then use then to link a simple hello.c calling print.c
-
-try rt0.8 and then 8l but then linking errors so missing stuff
-
-**** try to fix 6g on Windows? still betypeinit error?
-
-**** window.yml: try install mingw from windows-latest GHA job as experiment
-so later can try to compile goken9cc in CI!
-
-imitate some of the stuff in semgrep/.../build-windows-x86
+*** xv6
 
 ** Debugger
 
-*** SEMI port acid/ so can use it to dump the arm64/arm_ binaries!
+*** SEMI port acid/ so can use it to dump the arm64/arm binaries!
 and see the disassembled code.
 right now objdump and llvm-dump and gdb do not work :(
 (strace does at least)
@@ -515,7 +337,7 @@ maybe still useful though ...
 
 
 *** acid fixes
-# seems to work on 386, amd64, and arm_ hello_xxx binaries
+# seems to work on 386, amd64, and arm hello_xxx binaries
 arm64? 7db.c does not work?
 
 **** RELAX acid can't load hello_plan9_mips.exe
@@ -527,20 +349,20 @@ and exit_linux_...
 **** acid can't decode file header for hello_linux_arm.exe
 and exit_linux_...
 
-note that it can decode hello_linux_arm_.exe
+note that it can decode hello_linux_arm.exe
 
 weird because libmach relies on 5l/5.out.h, not 5l_/
 
 ***** merge 5l/ 5l_/ 5.out.h
 because used then in libmach!
 
-**** weird take long time to load on helloprintf_arm_.exe
+**** weird take long time to load on helloprintf_arm.exe
 and can't find any symbol except a weird "rue" ???
 
 note that the program has an illegal instruction at runtime,
 maybe this is the cause?
 
-**** weird, acid can't show symbols on helloc_arm_.exe
+**** weird, acid can't show symbols on helloc_arm.exe
 
 *** port also db to goken
 seems to be defined in plan9port
