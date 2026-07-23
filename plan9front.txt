@@ -84,6 +84,15 @@ such as:
    upstream fix for an objectively-wrong computation, but no observed
    behavioral difference here). Confirmed to not regress the existing
    test suite.
+ - 7c (arm64): register allocator's regopt() used a fixed
+   Rgn region[NRGN=1000] array (bumped from 600 "for paranoia.c" at
+   some point in this repo's history) and gave up (warn + stop
+   optimizing further, not a crash) past that many candidate regions
+   -- same fix as vc's: growable version (starts at 300, grows by 128
+   via allocn()). No dedicated test, same reasoning as vc's version:
+   NVAR caps distinct tracked variables and region count depends more
+   on control-flow complexity than raw size, so a cheap synthetic
+   generator didn't reliably trigger the old cap either.
  - 7a/7l (arm64): LDAR/LDXR/LDAXR (load-acquire/load-exclusive/
    load-exclusive-acquire) and STLR/STXR/STLXR (store-release/
    store-exclusive/store-exclusive-release) -- the atomic primitives
