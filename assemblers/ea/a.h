@@ -54,6 +54,7 @@ extern	Biobuf	obuf;
 
 // for a.y
 long	yylex(void);
+void	cinit(void);
 void	outcode(int, Gen*, int, Gen*);
 
 int	escchar(int);
