@@ -17,6 +17,11 @@
 # catches it ("*** stack smashing detected ***", SIGABRT) rather than
 # silently corrupting memory, so this is a reliable, deterministic
 # regression check, not a "sometimes" bug.
+#
+# arm64_long_filename: same bug, same fix, in 7a's assemble()
+# (assemblers/7a/lex.c) instead of va's. Found it organically while
+# building an unrelated feature test whose source lived at a long
+# scratch path -- 7a crashed the same way.
 
 LONG=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -26,12 +31,23 @@ test:V:
 	vl -o $LONG.exe -E _start $LONG.v
 	st=`{ ../../../scripts/qemu-runner mips ./$LONG.exe; echo $status }
 	if (~ $st 42)
-		echo 'ok: '$LONG'.exe exit 42 (no stack smash on a long filename)'
+		echo 'ok: '$LONG'.exe (mips) exit 42 (no stack smash on a long filename)'
 	if not {
-		echo 'FAILED: '$LONG'.exe (got '$st')'
+		echo 'FAILED: '$LONG'.exe (mips) (got '$st')'
 		exit failed
 	}
 	rm -f $LONG.s $LONG.v $LONG.exe
+	cp arm64_long_filename.s.tmpl $LONG.s
+	7a -c $LONG.s
+	7l -o $LONG.exe -E _start $LONG.7
+	st=`{ ../../../scripts/qemu-runner arm64 ./$LONG.exe; echo $status }
+	if (~ $st 42)
+		echo 'ok: '$LONG'.exe (arm64) exit 42 (no stack smash on a long filename)'
+	if not {
+		echo 'FAILED: '$LONG'.exe (arm64) (got '$st')'
+		exit failed
+	}
+	rm -f $LONG.s $LONG.7 $LONG.exe
 
 clean:V:
-	rm -f xxx*.[v] xxx*.exe xxx*.s
+	rm -f xxx*.[v7] xxx*.exe xxx*.s

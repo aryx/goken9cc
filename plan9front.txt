@@ -84,6 +84,13 @@ such as:
    upstream fix for an objectively-wrong computation, but no observed
    behavioral difference here). Confirmed to not regress the existing
    test suite.
+ - 7a (arm64): assemble() had the exact same fixed `char ofile[100]`/
+   raw strcpy() stack buffer overflow as va's (see below) -- found
+   organically when a feature-test source file happened to live at a
+   long scratch path and 7a crashed the same way ("*** stack smashing
+   detected ***"). Same fix, same origin (9front): strdup()/smprint()
+   instead of fixed buffers. See
+   tests/s/regressions/arm64_long_filename.s.tmpl.
  - va (mips): assemble() copied its filename argument into a fixed
    `char ofile[100]` with a raw strcpy() and no bounds check --
    confirmed this crashes ("*** stack smashing detected ***", SIGABRT)

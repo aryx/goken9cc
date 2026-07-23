@@ -1,0 +1,8 @@
+// Template copied to a >=100-byte filename by mkfile before assembling
+// -- see the comment there. Content is the same minimal exit(42)
+// program as tests/s/exit/exit_linux_arm64.s.
+
+TEXT _start(SB), $0
+    MOV    $42, R0         // status = 42
+    MOV    $93, R8         // syscall number: exit
+    SVC    $0
