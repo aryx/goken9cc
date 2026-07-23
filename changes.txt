@@ -142,6 +142,29 @@
   to AR_=iar (same treatment as va/vc/vl); applied 9front's D_XPOST
   addressing-mode fix in a.y along the way, and ported arm64 (.7)
   object support into lib_toolchain/libmach, fixing an obj[] OOB bug
+- add an experimental wasm (WebAssembly) toolchain skeleton: ea/el
+  (new arch letter 'e'), no compiler (ec) yet (thx to Claude)
+  * include/e.out.h: new opcode/operand-kind header, modeled on
+    5.out.h/8.out.h and on v.out.h/i.out.h's combined D_* enum;
+    locals/globals stand in for a register file (wasm has none), and
+    branch targets are structured-control label depths instead of
+    PC-relative displacements
+  * assemblers/ea: built on the shared assemblers/as/aa.a library
+    like 5a/8a (not the older self-contained ia/va style); a.y
+    tracks block/loop/if nesting itself to resolve BR/BRIF targets
+    to depths (the one part with no equivalent on any other arch);
+    keeps the Plan9 virtual-MOV convention (one AMOVx mnemonic for
+    const/load/store/local/global, direction inferred from operand
+    kind, same spirit as 5a/ia's own AMOVx)
+  * linkers/el: table-driven (Optab/oplook(), like every other arch)
+    linker emitting a real .wasm binary (type/import/function/
+    memory/global/export/code/data sections); -I symbol=module.field
+    wires an undefined CALL target to a wasm import, playing the
+    same role -I plays for 6lg's Mach-O dynamic imports
+  * tests/s/mini/hello_wasm.s: a real WASI (wasi_snapshot_preview1.
+    fd_write) hello world, run under Node's WASI implementation via
+    the new scripts/wasm-runner (the wasm counterpart of
+    scripts/qemu-runner); verified byte-identical to hello.expected.txt
 
 ** os
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
@@ -156,6 +179,8 @@
 - real support for 386, amd64, arm, arm64, riscv, mips
   with basic helloprintf.exe working on all those archs, at least on Linux
 - experimental support for riscv64
+- experimental support for wasm: assembler+linker only (ea/el), no
+  compiler yet, hello world (WASI fd_write) working
 
 ** internals
 - remove 5a9/5c9/5l9, the original arm toolchain imported from

@@ -44,6 +44,7 @@ Plan 9 uses single-character codes for architectures. Each tool is prefixed with
 | 6 | amd64 | 6c | 6a | 6l | .6 |
 | v | mips | vc | va | vl | .v |
 | i | riscv | ic | ia | il | .i |
+| e | wasm | *(TODO)* | ea | el | .e |
 
 Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X.out`
 

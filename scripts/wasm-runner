@@ -1,0 +1,12 @@
+#!/bin/sh
+# Run a .wasm module (produced by linkers/el) under Node's WASI
+# implementation. See scripts/qemu-runner for the analogous role on
+# the cross-compiled Linux binaries, and scripts/wasm-runner.js for
+# why the actual WASI wiring lives in JS rather than here.
+#
+# Usage: wasm-runner <file.wasm>
+
+set -e
+
+dir=$(dirname "$0")
+exec node "$dir/wasm-runner.js" "$1"

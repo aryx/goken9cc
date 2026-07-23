@@ -13,8 +13,12 @@ WINDOWSBINS=hello_windows_386.exe hello_windows_amd64.exe
 PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
 #TODO: hello_xv6_386.exe hello_xv6_riscv.exe and possibly hello_xv6_arm.exe
 XV6BINS=
+# claude: .wasm, not .exe -- unlike every other target here this isn't
+# a native-OS executable at all, and naming it .wasm is what makes a
+# reader (or a tool) recognize it as one immediately.
+WASMBINS=hello_wasm.wasm
 
-all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS
+all:V: $LINUXBINS $MACOSBINS $WINDOWSBINS $PLAN9BINS $XV6BINS $WASMBINS
 
 # This target is part of mk test CI regression check in Dockerfile and GHA
 # (it requires just qemu-user; see ../../../scripts/qemu-runner for why we
@@ -43,9 +47,13 @@ test:V: all
       }
       if not
          echo 'skipping Windows/wine tests: wine only runs x86 PE natively on an x86_64 host'
+      for (i in $WASMBINS) {
+         echo $i
+         ../../../scripts/wasm-runner ./$i | cmp /dev/stdin hello.expected.txt
+      }
 
 clean:V:
-	rm -f *.[5678ivj] *.exe
+	rm -f *.[5678ivj] *.e *.exe *.wasm
 
 #Linux
 # old: -X to avoid the golang specific stuff and -d to disable dynamic linking
@@ -142,3 +150,13 @@ hello_windows_386.exe: hello_windows_386.s
 hello_windows_amd64.exe: hello_windows_amd64.s
    6a -c $prereq
    6l -s -H 10 -o $target -E _start hello_windows_amd64.6
+
+# wasm
+# stdout goes through a WASI host import (wasi_snapshot_preview1.
+# fd_write), not a raw syscall -- el's -I flag wires an otherwise-
+# undefined CALL target to that import, the same role -I plays for
+# 6lg's Mach-O dynamic imports above (hello_macos_libc_amd64.exe).
+# See hello_wasm.s's own comment and linkers/el/l.h's Import comment.
+hello_wasm.wasm: hello_wasm.s
+   ea $prereq
+   el -o $target -I 'fd_write=wasi_snapshot_preview1.fd_write' hello_wasm.e

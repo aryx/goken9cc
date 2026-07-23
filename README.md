@@ -19,7 +19,8 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
   Link C and assembly programs that can *run* on Linux, macOS, Windows, and Plan 9 (TODO xv6)
 - **Multi-architecture support:**
   Build C and assembly programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm,
-  arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures (TODO Wasm)
+  arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, and mips architectures, plus an
+  experimental WebAssembly (wasm) assembler and linker (TODO: wasm compiler)
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
   (e.g., you can build from a Linux 386 machine a binary for arm64 macOS)
@@ -70,6 +71,7 @@ Plan 9 (and goken9cc) uses single-character codes for architectures. Each tool i
 | 6 | amd64 | 6c | 6a | 6l | .6 |
 | v | mips | vc | va | vl | .v |
 | i | riscv | ic | ia | il | .i |
+| e | wasm | *(TODO)* | ea | el | .e |
 
 Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X.out`
 

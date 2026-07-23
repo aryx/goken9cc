@@ -18,6 +18,7 @@ DIRS=\
   assemblers/6a linkers/6l compilers/6c \
   assemblers/va linkers/vl compilers/vc   machines/vi \
   assemblers/ia linkers/il compilers/ic \
+  assemblers/ea linkers/el \
   src/cmd/5l src/cmd/5a src/cmd/5c \
   src/cmd/8l src/cmd/8a src/cmd/8c \
   src/cmd/6l src/cmd/6a src/cmd/6c \

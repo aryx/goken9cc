@@ -7,7 +7,7 @@
 *.o
 
 # goken/kencc object files
-*.[5678vij]
+*.[5678evij]
 
 # gcc and goken libs
 *.a
@@ -28,6 +28,7 @@ y.output
 # pad's test files
 *.exe
 *.uexe
+*.wasm
 
 # tex object files
 *.aux
