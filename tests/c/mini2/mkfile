@@ -8,10 +8,10 @@ clean:V:
 test_one:V: all
 	./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
 
-#config: set -DDEBUG if needed
-CPP_FLAGS=-D$objtype # -DDEBUG
+#config: add -DDEBUG if needed
+CPP_FLAGS=-D$objtype
 
-# can use -v for verbose mode to help debug
+#config: can also add -v for verbose mode to help debug
 helloprintf.exe: helloprintf.c
    $CC_ $CPP_FLAGS -c test.c
    $CC_ $CPP_FLAGS -c print_nofloat_no64.c
@@ -20,8 +20,6 @@ helloprintf.exe: helloprintf.c
    $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ test.$O_
    $LD_ -L. -o $target -E _main helloprintf.$O_
 
-#TODO: arm_
-#TODO: arm_: works for the bool and hexa but not for 42; segfault
 ARCHS=386 amd64 arm arm64 mips riscv
 test:V:
         for (arch in $ARCHS) {
