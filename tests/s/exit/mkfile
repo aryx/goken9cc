@@ -10,7 +10,7 @@
 
 EXITLINUXBINS=exit_linux_arm.exe \
               exit_linux_arm64.exe \
-              exit_linux_mips.exe exit_linux_riscv.exe
+              exit_linux_mips.exe exit_linux_riscv.exe exit_linux_riscv64.exe
 
 all:V: $EXITLINUXBINS
 
@@ -39,7 +39,7 @@ test:V: all
       }
 
 clean:V:
-	rm -f *.[5678iv] *.exe
+	rm -f *.[5678ivj] *.exe
 
 exit_linux_arm64.exe: exit_linux_arm64.s
    7a -c $prereq
@@ -50,6 +50,9 @@ exit_linux_mips.exe: exit_linux_mips.s
 exit_linux_riscv.exe: exit_linux_riscv.s
    ia -c $prereq
    il -o $target -E _start exit_linux_riscv.i
+exit_linux_riscv64.exe: exit_linux_riscv64.s
+   ja -c $prereq
+   jl -o $target -E _start exit_linux_riscv64.j
 
 %.exe: %.s
    5ag -c $prereq

@@ -35,4 +35,9 @@ elf.$O:	../lk/elf.c
 #$TARGMODEL.$O:	../ld/$TARGMODEL.c
 #	$CC $CFLAGS ../ld/$TARGMODEL.c
 
-#install:V:	$BIN/jl
+# jl is the same binary as il, just installed under a second name: il's
+# main() (obj.c) already auto-selects thechar='j' (riscv64) when argv[0]'s
+# basename starts with 'j' or -j is passed, the same convention ja uses.
+install:V:	$BIN/$TARG $BIN/jl
+$BIN/jl:	$O.out
+	cp $prereq $target

@@ -18,5 +18,9 @@ YFLAGS=-D1 -d
 
 lex.$O:	$TOP/compilers/cck/macbody $TOP/compilers/cck/lexbody $TOP/compilers/cck/compat
 
-#TODO:
-#install:V:	$BIN/ja
+# ja is the same binary as ia, just installed under a second name: ia's
+# main() (lex.c) already auto-selects thechar='j' (riscv64) when argv[0]'s
+# basename starts with 'j', the same convention il/obj.c uses for jl.
+install:V:	$BIN/$TARG $BIN/ja
+$BIN/ja:	$O.out
+	cp $prereq $target

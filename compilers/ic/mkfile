@@ -43,4 +43,12 @@ p%.$O: $TOP/src/cmd/cc/p%.c
 #	mk $MKFLAGS y.tab.h
 #
 #
+# NOT enabled yet, unlike ja/jl (assemblers/ia/mkfile, linkers/il/mkfile):
+# ic's main() -- unlike ia's/il's -- has its argv[0]/-j thechar='j' selection
+# entirely commented out (see the top of txt.c, "TODO: trick for ic and
+# jc"); ginit() hardcodes thechar='i' unconditionally. Installing jc as-is
+# would just be ic under a different name, silently emitting 32-bit riscv
+# code while claiming to be the 64-bit compiler. Needs that main()/ginit()
+# work (plus the typeswitch/typecmplx wiring the TODO next to it mentions)
+# before this is safe to uncomment.
 #install:V:	$BIN/jc
