@@ -91,6 +91,18 @@ RUN if [ "$(dpkg --print-architecture)" = amd64 ]; then \
       apt-get install -y wine wine64 wine32:i386; \
     fi
 
+# wine's very first invocation creates the WINEPREFIX (~/.wine) and boots
+# it: registry setup, spawning explorer.exe/systray/rpcss, and printing a
+# "configuration ... has been updated" notice. That one-time setup needs
+# to happen here, not inline with the first hello_windows_*.exe test in
+# `mk test` below -- otherwise wineboot's own init and diagnostic output
+# share the same invocation (and stdout) as the very output `mk test` is
+# diffing against hello.expected.txt, which corrupts the comparison.
+# wineserver -w blocks until that background init actually finishes.
+RUN if [ "$(dpkg --print-architecture)" = amd64 ]; then \
+      WINEDEBUG=-all wineboot --init && wineserver -w; \
+    fi
+
 # Run tests
 RUN mk test
 
