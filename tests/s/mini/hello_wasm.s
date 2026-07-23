@@ -8,6 +8,28 @@
 // CALL (see e.out.h's AMOVx comment) rather than storing them at a
 // known stack address the way SUBQ $16,SP / MOVQ AX,0(SP) do on
 // amd64 -- there is no stack-relative argument area to build here.
+//
+// See hello_wasm.wat for the exact same program in traditional
+// WebAssembly Text (WAT) syntax, for side-by-side comparison. It
+// looks quite different, but not because it computes anything
+// differently -- ea/el and a normal wat2wasm-style toolchain end up
+// emitting structurally the same module. What differs is the surface
+// each one presents:
+//   - This file follows the Plan9/goken convention used by every
+//     other arch here (see e.out.h's own comment on this): one flat
+//     instruction per line, pseudo-registers SP/SB/FP, a virtual
+//     MOV mnemonic. It reads like 5a/8a/ia output, not like WAT,
+//     because staying consistent with the rest of this toolchain
+//     was the actual goal -- not staying close to WAT.
+//   - WAT nests call arguments as sub-expressions and requires the
+//     imported function's type spelled out at the import site,
+//     because it's meant to be handwritten/human-authored assembly
+//     for wasm specifically, with its own conventions -- not to
+//     share a family of syntax with a dozen other CPU architectures
+//     the way this project's .s files do.
+// Neither is "the real one"; they're just two different assemblers'
+// conventions for the same instruction set, the same way 5a's ARM
+// assembly and gas's ARM assembly both assemble to the same opcodes.
 
 // -------------------------------------------
 // main procedure
