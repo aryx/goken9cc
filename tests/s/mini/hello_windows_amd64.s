@@ -1,4 +1,4 @@
-// "Hello, World!" for 6l -H 10 (PE32+ for Windows x86-64).
+// "Hello, world" for 6l -H 10 (PE32+ for Windows x86-64).
 //
 // 6l emits a kernel32.dll import table and exposes each thunk as an
 // __imp_<name> symbol pointing at its IAT slot (see src/cmd/ld/pe.c). The
@@ -21,10 +21,10 @@ TEXT	_start(SB), $0
 	CALL	AX
 	MOVQ	AX, BX			// save handle
 
-	// WriteFile(h, msg, 14, &written, NULL)
+	// WriteFile(h, msg, 13, &written, NULL)
 	MOVQ	BX, CX			// hFile
 	LEAQ	msg(SB), DX		// lpBuffer
-	MOVL	$14, R8			// nNumberOfBytesToWrite
+	MOVL	$13, R8			// nNumberOfBytesToWrite
 	LEAQ	40(SP), R9		// lpNumberOfBytesWritten
 	MOVQ	$0, 32(SP)		// lpOverlapped = NULL (5th arg)
 	MOVQ	__imp_WriteFile(SB), AX
@@ -36,6 +36,6 @@ TEXT	_start(SB), $0
 	CALL	AX
 	RET
 
-DATA	msg+0(SB)/8, $"Hello, W"
-DATA	msg+8(SB)/6, $"orld!\n"
-GLOBL	msg(SB), $14
+DATA	msg+0(SB)/8, $"Hello, w"
+DATA	msg+8(SB)/5, $"orld\n"
+GLOBL	msg(SB), $13
