@@ -3,11 +3,10 @@
 ** TODO changes.txt
 
 ** Overview
-- libsyscall (thin wrappers around syscalls) for linux/macos/windows/plan9/xv6
-- libc (or libos), again working for linux/macos/windows/plan9/xv6 (different from lib9,
+- libsyscall (thin wrappers around syscalls) for linux/macos/windows/wasm/plan9/xv6
+- libc (or libos), again working for linux/macos/windows/wasm/plan9/xv6 (different from lib9,
   rely instead on libsyscall)
 - bootstrap itself!!! (need libsyscall/libos first)
-- wasm toolchain
 => simpler alt to gcc/clang for cross compiling C code! (ex: xv6-{x86,arm,riscv}!)
 
 ** Later
@@ -458,6 +457,7 @@ run (SRAIW was silently executing as SRLIW, discarding the sign of
 "x >>= n" on signed ints). See git log and plan9front.txt. Leaving this
 entry as a marker so it isn't re-proposed from a future diff re-run.
 
+** amd64 toolchain (6a/6c/6l)
 
 * Last
 
