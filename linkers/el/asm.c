@@ -461,7 +461,20 @@ asmb(void)
     for(t = firsttext; t != nil; t = t->link) {
         Bytebuf body;
         memset(&body, 0, sizeof(body));
-        bbuleb(&body, 0);	/* claude: no local-decl vector yet; see header comment */
+        /*
+         * claude: t->framesize is ec's own local (auto) count, not a
+         * byte size -- see compilers/ec/txt.c's align()/Aaut3 comment.
+         * Every auto is a plain i32 slot for now (int-only bootstrap,
+         * same scope as ASIGNATURE's 'W'-only signature), so one
+         * local-decl entry declaring that many i32s covers them all.
+         */
+        if(t->framesize > 0) {
+            bbuleb(&body, 1);
+            bbuleb(&body, t->framesize);
+            bbput(&body, 0x7F);	/* i32 */
+        } else {
+            bbuleb(&body, 0);
+        }
         for(ip = t->first; ip != nil; ip = ip->link)
             emitinstr(&body, ip);
         bbput(&body, 0x0B);	/* mandatory function-closing end */

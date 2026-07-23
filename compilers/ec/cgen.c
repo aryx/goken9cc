@@ -154,22 +154,39 @@ rval(Node *n)
 }
 
 /*
- * claude: boolgen() generates either a branch (nn==Z, used by
- * if/while's condition) or a 0/1 value (nn!=Z). Control flow isn't
- * implemented yet (see txt.c's gbranch()), so only the value form
- * works today; it's still needed as soon as any comparison appears
- * outside of an if/while condition (e.g. `int ok = a < b;`).
+ * claude: boolgen() generates either a branch (nn==Z, used by an
+ * if/while's own condition) or a materialized 0/1 value (nn!=Z, e.g.
+ * `int ok = a < b;`).
+ *
+ * The branch form is the one place ec's codegen touches control flow
+ * at all so far, and it works out simpler than a flat-branch arch's
+ * would: bcomplex() (compilers/cck/pgen.c) is OIF's only caller of
+ * this form, always as `boolgen(cond, 1, Z)` -- confirmed against
+ * ic/cgen.c's own boolgen, whose otrue=1 case emits "branch away when
+ * FALSE, fall through when TRUE". That is *exactly* wasm's own `if`
+ * opcode: pop a value, execute the then-branch when nonzero, jump to
+ * else/end when zero. So the branch form is just: compute the
+ * condition (negating first if otrue==0, to match AIF's fixed
+ * polarity), then emit AIF itself -- no separate "branch to a not-
+ * yet-known target" is needed the way gbranch(OGOTO) provides on a
+ * flat-branch arch, because wasm's if/else is already the structured
+ * thing pgen.c is asking for. AENDCTL/AELSE (closing this same AIF)
+ * are emitted later, by patch() -- see txt.c's gbranch()/patch()/
+ * pushif() and docs/notes_wasm.txt.
  */
 void
-boolgen(Node *n, int true, Node *nn)
+boolgen(Node *n, int otrue, Node *nn)
 {
+	rval(n);
+	if(!otrue)
+		gins(ATESTW, Z, Z);	/* i32.eqz: negate, to match AIF's fixed polarity */
+
 	if(nn == Z) {
-		diag(n, "boolgen: branch form not implemented yet (no control flow in ec yet)");
+		gins(AIF, Z, Z);
+		pushif();
 		return;
 	}
-	rval(n);
-	if(!true)
-		gins(ATESTW, Z, Z);	/* i32.eqz: negate a 0/1 value */
+
 	if(nn->op == OREGISTER)
 		return;
 	lstore(nn);

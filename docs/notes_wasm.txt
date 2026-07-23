@@ -2,15 +2,19 @@ Adding a WebAssembly (wasm) target: ea, el, and design notes for ec
 ====================================================================
 
 Notes gathered while adding an experimental wasm arch (letter 'e') to
-this toolchain: assemblers/ea, linkers/el, include/e.out.h. Written to
-be read before touching any of those, and especially before starting
-compilers/ec (the C compiler backend), which doesn't exist yet -- the
-"Open questions for ec" section at the end is the reason this file
-exists at all.
+this toolchain: assemblers/ea, linkers/el, include/e.out.h, and now
+compilers/ec (the C compiler backend, reusing compilers/cck's shared
+frontend). Written to be read before touching any of those. The "Open
+questions for ec" section at the end tracks what's still unimplemented
+(loops, floats, strings, variadic/printf) now that the bootstrap and
+if/else are done.
 
-See tests/s/mini/hello_wasm.s (a hand-written test, the only thing
-currently exercising this arch) and tests/s/mini/hello_wasm.wat (the
-same program in traditional WebAssembly Text, for comparison).
+See tests/s/mini/hello_wasm.s (hand-written ea assembly) and
+tests/s/mini/hello_wasm.wat (the same program in traditional
+WebAssembly Text, for comparison) for ea/el, and
+tests/c/mini2/regress_wasm.c for ec (straight-line arithmetic,
+recursion, and if/else -- see that file's own comments for what each
+function checks).
 
 
 Why 'e' for the arch letter
@@ -252,17 +256,53 @@ fd_write) since nothing else is needed yet; a real -I would need to
 also specify the signature once more imports show up.
 
 
-What's implemented but not verified by any test
+What's implemented and verified by a test
 ----------------------------------------------------
 
-hello_wasm.s only exercises ACONSTW (including the address-of-symbol
-form), ACALL, ARET, and ADROP, plus the TEXT/GLOBL/DATA pseudo-ops.
-Load/store, locals/globals, control flow (BLOCK/LOOP/IF/BR), and the
-register conversions are implemented against the wasm spec and the
-reasoning above, but nothing has actually run them through ea+el+a
-real wasm host yet. Treat them the way a freshly-added Optab row on a
-real arch would be treated before its first test: plausible, not
-proven.
+hello_wasm.s exercises ACONSTW (including the address-of-symbol
+form), ACALL, ARET, and ADROP, plus the TEXT/GLOBL/DATA pseudo-ops, via
+ea+el. tests/c/mini2/regress_wasm.c exercises ec's straight-line
+arithmetic, calls (including recursion), real per-function signatures
+(ASIGNATURE), and if/else control flow (if-with-no-else, if/else where
+both branches terminate, if/else where neither does, and else-if
+chains), via ec+el. Load/store of globals, locals beyond what
+regress_wasm.c needs, and the register conversions are implemented
+against the wasm spec but not yet exercised by any test -- treat those
+the way a freshly-added Optab row on a real arch would be treated
+before its first test: plausible, not proven.
+
+ec's if/else, in one paragraph: gbranch()/patch() (txt.c) track a
+small stack of open ifs (ifstack[]/ifthenterm[]/nifstack), since wasm
+has no free-standing branch-to-address the way gbranch()/patch()
+assume on every other arch -- OGOTO (the "jump over the else" cck's
+frontend emits) just notes "an else is coming" and defers to patch()
+to actually emit AELSE or AENDCTL. The one real subtlety: codgen()
+(cck/pgen.c) always emits a trailing gbranch(ORETURN) at the end of
+every function, whether or not all paths already returned, and by
+that point canreach is already 0 regardless of which case it is --
+so it can't be used to suppress the redundant one. The fix is to
+always emit ARET (never suppress it) and instead track lastterm (set
+by ARET/AUNREACHABLE, cleared by every other gins()) plus each open
+if's ifthenterm[] snapshot; if patch() finds both branches of a
+closing if/else were terminal, it emits a genuine AUNREACHABLE right
+after AENDCTL, which makes wasm treat everything after it (including
+the harmless redundant trailing RET) as type-polymorphic dead code
+instead of a stack-shape validation error.
+
+A second subtlety, found only once a function had more than one
+local: every local (param or auto) shares ec's single flat wasm-local
+index space (see txt.c's localindex()), but dcl.c -- shared frontend
+code also used by every register-based backend -- resets its own
+autoffset counter to 0 right after walking a function's parameters,
+because on a real arch params and autos live in disjoint address
+ranges (FP+ vs SP-) and don't need to share a numbering space. ec
+does need them to share one, so localindex() shifts every CAUTO index
+by nparams to land right after the last param. The matching other
+half: el reads each Text's framesize (which, in ec's design, Aaut3
+makes count *locals* rather than bytes -- see align()'s comment) and
+emits it as a single local-decl entry in the function body's code
+section, so wasm actually reserves those extra slots instead of
+leaving them undeclared.
 
 
 Open questions for ec (not yet started)
@@ -271,49 +311,35 @@ Open questions for ec (not yet started)
 This is the part of the design that reaches furthest past what
 exists today, kept here so it doesn't have to be re-derived:
 
-  - Structured control flow from goto-based IR. Every existing
-    backend's cgen.c/sgen.c assumes arbitrary goto/label control flow
-    (the same shape a real CPU's branches give you). wasm allows only
-    block/loop/if nesting with depth-based exits. Turning arbitrary C
-    control flow (which cck's frontend already lowers to gotos) into
-    properly nested block/loop/if is a real, nontrivial problem --
-    this is what Emscripten's "relooper" algorithm exists to solve.
-    ec needs either a relooper-equivalent, or to restrict itself to
-    control-flow shapes that translate directly (structured
-    if/while/for, which cck's frontend mostly already produces before
-    any goto-flattening) and fall back to a relooper only for the
-    genuinely irregular cases (arbitrary goto, computed jumps).
-
-  - Locals instead of registers. This is a *simplification* relative
-    to every other backend: reg.c's whole job (deciding which of a
-    small fixed set of hardware registers holds which value, with
-    spill code when they run out) doesn't apply, since wasm locals
-    are effectively unlimited. ec's equivalent of register allocation
-    can likely just be "one fresh local per live temporary", with no
-    spilling logic to write at all.
+  - Loops (for/while) and the general relooper problem. if/else has
+    no back-edges, so gbranch()/patch()'s small if-stack (described
+    above) was enough. A loop needs an actual back-edge (ABR to an
+    enclosing ALOOP), which is a genuinely different shape from
+    "signal an else is coming" -- this is where Emscripten's
+    "relooper" algorithm exists to solve the general case (arbitrary
+    goto). ec can likely still avoid a full relooper by handling
+    structured for/while directly (cck's frontend still hands them to
+    gbranch()/patch() as a recognizable shape before any goto
+    flattening) and only needs relooper-equivalent logic if genuinely
+    irregular control flow (arbitrary goto, computed jumps) needs to
+    be supported later.
 
   - The address-taken-local split. e.out.h's D_AUTO/D_PARAM already
     reserve the concept: a C local/param whose address is never taken
-    compiles straight to a D_LOCAL (fast, a true wasm local); one that
-    is address-taken (or too large to fit in a single wasm value type)
-    needs a slot in the shadow stack instead, addressed relative to
-    SPGLOBAL the way D_AUTO/D_PARAM work on every other arch. Deciding
-    which case a given C variable falls into is ec's job -- probably
-    a pass very similar to how existing backends already decide which
-    C locals become register variables versus stack-resident ones,
-    just with a binary fast/slow split instead of "how many registers
-    are free".
+    compiles straight to a D_LOCAL (fast, a true wasm local, as
+    implemented today); one that is address-taken (or too large to
+    fit in a single wasm value type) needs a slot in the shadow stack
+    instead, addressed relative to SPGLOBAL the way D_AUTO/D_PARAM
+    work on every other arch. Deciding which case a given C variable
+    falls into is ec's job -- probably a pass very similar to how
+    existing backends already decide which C locals become register
+    variables versus stack-resident ones, just with a binary
+    fast/slow split instead of "how many registers are free". This is
+    the hard blocker for variadic printf (which needs `&arg` to be a
+    real, contiguous address).
 
   - The shadow stack's actual push/pop sequence at function entry/
     exit isn't designed yet: SPGLOBAL needs to be decremented by the
-    frame's shadow-stack size on entry and restored on exit (mirroring
-    every other arch's TEXT-declared frame size), but nothing
-    generates that sequence today -- ATEXT's frame-size operand is
-    read by el but currently unused for anything.
-
-  - Function signatures. el currently hardcodes exactly two wasm
-    types (void->void for local functions, 4xi32->i32 for imports;
-    see asm.c's type-section comment) because nothing produces real
-    ones yet. ec will need el to grow a real type table keyed by each
-    TEXT's actual C signature, deduplicated the way a real wasm
-    module's type section is.
+    frame's shadow-stack size on entry and restored on exit. Nothing
+    needs this yet since no C variable is address-taken in any test
+    so far.

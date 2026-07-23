@@ -196,6 +196,7 @@ void	gins(int, Node*, Node*);
 void	gopcode(int, Node*);
 void	gbranch(int);
 void	patch(Prog*, int32);
+void	pushif(void);
 void	gpseudo(int, Sym*, Node*);
 
 /*

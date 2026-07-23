@@ -11,6 +11,11 @@
  */
 #include "gc.h"
 
+/* claude: forward declaration -- gins() (below) needs to reset this on
+ * every ordinary instruction; its real home and full explanation are
+ * with gbranch()/patch(), further down, where it's actually used. */
+static int lastterm;
+
 void
 ginit(void)
 {
@@ -266,9 +271,17 @@ maxround(int32 max, int32 v)
 }
 
 /*
- * claude: recover the wasm local index from a Node's xoffset -- CAUTO
- * locals carry it negated (dcl.c's own -autoffset convention above),
- * CPARAM locals carry it as-is.
+ * claude: recover the wasm local index from a Node's xoffset -- CPARAM
+ * locals carry it as-is (0-based, assigned by Aarg1 during argmark()).
+ * CAUTO locals carry -autoffset, where autoffset is dcl.c's own
+ * counter *reset to 0 after argmark()* (dcl.c line ~653) and then
+ * recounted from 1 by Aaut3 for each auto -- a real arch can do that
+ * because its params and autos live in disjoint address ranges (FP+
+ * vs SP-), but ec's design gives every local (param or auto) one flat
+ * wasm slot in the *same* index space. So a bare -o here would
+ * silently alias auto #1 onto param #1's slot (and so on) whenever a
+ * function has both. Shifting by nparams places every auto right
+ * after the last param instead.
  */
 static int32
 localindex(Node *n)
@@ -276,7 +289,7 @@ localindex(Node *n)
 	int32 o;
 
 	o = n->xoffset;
-	return o < 0 ? -o : o;
+	return o < 0 ? nparams + (-o) - 1 : o;
 }
 
 /*
@@ -522,25 +535,115 @@ gins(int a, Node *f, Node *t)
 		naddr(f, &p->from);
 	if(t != Z)
 		naddr(t, &p->to);
+	lastterm = 0;	/* see gbranch()/patch()'s comment on this flag */
+}
+
+/*
+ * claude: if/else, the first (and so far only) piece of control flow
+ * ec supports. See docs/notes_wasm.txt for the general problem this
+ * is a restricted case of: pgen.c's gen()/OIF (compilers/cck/pgen.c)
+ * is written entirely in terms of flat, PC-based branches --
+ * gbranch(OGOTO) emits an unresolved jump and hands back its Prog* in
+ * the global `p`; patch(that Prog*, pc) later fills in its target --
+ * a model with no notion of "this branch closes a structured
+ * construct" at all. Recovering that structure for wasm's block/loop/
+ * if nesting in general is a real algorithm (a "relooper"); for
+ * if/else specifically (no back-edges) it collapses to something far
+ * simpler, worked out here:
+ *
+ * OIF's own code (traced in full in the design notes) does exactly
+ * this, in this order, regardless of whether there's an else:
+ *   1. boolgen(cond,1,Z) -- already emits AIF directly (see cgen.c)
+ *      and calls pushif() to open a context; the Prog* pgen.c saves
+ *      as `sp` is never touched again by ec, it's an opaque token.
+ *   2. gen(then-body)
+ *   3. IF there's an else: gbranch(OGOTO) [no-op here, see below],
+ *      then patch(sp, pc) -- ELSE: just patch(sp, pc) directly.
+ *   4. IF there's an else: gen(else-body), then a second
+ *      patch(sp, pc).
+ *
+ * The key realization: wasm's own `if`/`else` construct already skips
+ * the untaken branch for free -- reaching the natural end of the
+ * then-branch jumps straight past the else-branch to after `end`,
+ * with no explicit "goto" needed. So gbranch(OGOTO) here (called only
+ * when there's an else, to fake the same "skip the else" a flat-
+ * branch arch needs) does not need to emit anything at all; it only
+ * needs to *record* that an else is coming, so that patch()'s first
+ * call for this if knows to emit AELSE (and expect one more patch()
+ * for AENDCTL) instead of closing with AENDCTL immediately.
+ *
+ * This intentionally assumes gbranch(OGOTO) can currently only mean
+ * "the if/else skip" -- true today, since nothing else in ec calls it
+ * yet (loops/switch/goto all still diag()). Adding those will need
+ * gbranch()/patch() to tell contexts apart properly instead.
+ *
+ * One more wrinkle, found empirically: codgen() (compilers/cck/
+ * pgen.c) unconditionally emits a trailing gbranch(ORETURN) at the
+ * very end of every function, whether or not every path already
+ * returned explicitly (fact()'s if/else, where both branches return,
+ * is exactly this). On a real arch that trailing RET is simply dead
+ * code, harmless. wasm's validator statically type-checks every
+ * instruction *as ec emits it*, and its unreachable-tracking does not
+ * carry across an if/else's own `end` back out to the enclosing
+ * block -- so a RET sitting right after a fully-terminal if/else,
+ * needing a value nothing left on the stack, is a real validation
+ * error, not just dead code (confirmed: V8 rejected it outright).
+ * The fix isn't to suppress that RET (canreach, the obvious signal,
+ * turns out to already be 0 by the time *any* gbranch(ORETURN) runs --
+ * gen()'s own ORETURN case zeroes it before emitting its own RET, so
+ * it can't tell "an explicit return, which must emit" from "the
+ * trailing one, which mustn't" apart). Instead: track, independently,
+ * whether the *last* thing emitted was itself a terminator
+ * (`lastterm`), and when closing an if/else whose *both* branches
+ * turned out to be terminal, emit a genuine `unreachable` right after
+ * `end` -- wasm's unreachable makes everything following it
+ * type-polymorphic, so that harmless trailing RET (or anything else)
+ * no longer needs the stack to be in any particular state at all.
+ */
+#define	MAXIFDEPTH	64
+enum { IFNOELSE, IFELSEPENDING, IFELSEEMITTED };
+static int ifstack[MAXIFDEPTH];
+static int ifthenterm[MAXIFDEPTH];	/* did the then-branch end in a terminator? */
+static int nifstack;
+
+void
+pushif(void)
+{
+	if(nifstack >= MAXIFDEPTH) {
+		diag(Z, "if/else nested too deeply");
+		return;
+	}
+	ifstack[nifstack++] = IFNOELSE;
 }
 
 void
 gbranch(int o)
 {
-	nextpc();
 	switch(o) {
 	case ORETURN:
+		nextpc();
 		p->as = ARET;
-		break;
+		lastterm = 1;
+		return;
 	case OGOTO:
-		/* claude: no control flow beyond straight-line code yet,
+		if(nifstack > 0 && ifstack[nifstack-1] == IFNOELSE) {
+			ifstack[nifstack-1] = IFELSEPENDING;
+			ifthenterm[nifstack-1] = lastterm;
+			lastterm = 0;	/* the else-branch starts fresh/reachable */
+			return;
+		}
+		/* claude: no control flow beyond if/else yet,
 		 * see docs/notes_wasm.txt's "Open questions for ec". */
 		diag(Z, "goto/loop/switch control flow not implemented yet in ec");
+		nextpc();
 		p->as = AUNREACHABLE;
-		break;
+		lastterm = 1;
+		return;
 	default:
 		diag(Z, "bad in gbranch %O", o);
+		nextpc();
 		p->as = AUNREACHABLE;
+		lastterm = 1;
 	}
 }
 
@@ -549,7 +652,31 @@ patch(Prog *op, int32 pc)
 {
 	USED(op);
 	USED(pc);
-	diag(Z, "patch: control flow not implemented yet in ec");
+	if(nifstack <= 0) {
+		diag(Z, "patch: unexpected control-flow resolution (no open if)");
+		return;
+	}
+	if(ifstack[nifstack-1] == IFELSEPENDING) {
+		nextpc();
+		p->as = AELSE;
+		ifstack[nifstack-1] = IFELSEEMITTED;
+		return;
+	}
+	nextpc();
+	p->as = AENDCTL;
+	if(ifstack[nifstack-1] == IFELSEEMITTED && ifthenterm[nifstack-1] && lastterm) {
+		/* both branches terminated: see the file comment above */
+		nextpc();
+		p->as = AUNREACHABLE;
+		lastterm = 1;
+	} else {
+		/* claude: no-else case (an if without an else always falls
+		 * through when the condition is false, matching pgen.c's own
+		 * `canreach = canreach || oldreach` -- always 1 here) or a
+		 * with-else case where at least one branch fell through. */
+		lastterm = 0;
+	}
+	nifstack--;
 }
 
 void

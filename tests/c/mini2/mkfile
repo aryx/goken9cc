@@ -86,6 +86,19 @@ test_macos_amd64:V: helloprintf_macos_amd64.exe regress7c_macos_amd64.exe
 	./regress7c_macos_amd64.exe
 
 
+# wasm regression test for compilers/ec (if/else + recursion so far --
+# see docs/notes_wasm.txt and regress_wasm.c's own comment). ec has no
+# printf/WASI runtime wired up yet, so unlike every recipe above this
+# is verified by calling runtests() directly and checking its return
+# value (scripts/wasm-call-runner.js), not by comparing captured
+# stdout against an expected.txt.
+regress_wasm.wasm: regress_wasm.c
+   ec -o regress_wasm.e regress_wasm.c
+   el -o $target regress_wasm.e
+
+test_wasm:V: regress_wasm.wasm
+	node $TOP/scripts/wasm-call-runner.js regress_wasm.wasm runtests
+
 # useful when troubleshooting issues to just get rid of the use of ar and
 # get rid of float/64 bits instructions and see if everything
 # else works at least
