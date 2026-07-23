@@ -290,8 +290,173 @@ those two together if at all. Coherent "tighter/more complete codegen"
 project, not a bug fix; lower priority than the correctness items above
 
 ** riscv toolchain (ia/ic/il)
-#try riscv hello-world?
-# https://9fans.topicbox.com/groups/9fans/T3f252d4d7c5389ee/issue-compiling-hello-world-for-risc-v-on-plan-9-pc-resets
+
+claude:
+found via /tmp/diffia, /tmp/diffic, /tmp/diffil (diff of ia/ic/il across
+9cc/9colombier/inferno/kencc-riscv/miller-riscv/goken checkouts in ~/xxx/
+-- 9front has no riscv port at all, base=inferno since 9cc doesn't have
+ia/ic/il either). Two candidate sources: kencc-riscv is a from-scratch,
+divergent RV32E-oriented rewrite (its own register numbering, its own
+ELF writer, dropped float/CSR support) -- not a good porting source,
+it's a different backend, not a superset; its only real contribution
+was surfacing the boolgen()/comrel restructuring idea (see below).
+miller-riscv (a Plan 9 riscv port, June 2025 checkout) is the valuable
+one: an actively-maintained continuation of the same dual 32-/64-bit
+('i'/'j') lineage goken already uses. Landed so far this session (see
+plan9front.txt and git log for the full writeup of each): riscv64
+('j') actually works end to end now, not just on paper -- ja/jc/jl are
+real installed binaries, not stubs. That surfaced and fixed three
+goken-original bugs along the way (an ELF header-size miscalc, a
+setSB/symbol-address bug, and a stale-pointer-width bug in ic's own
+dual-width ginit()), plus one diff-derived fix from miller-riscv
+(SRAIW silently executing as SRLIW) and one cross-arch-consistency fix
+shared with mips (fnuxi8[] float-constant stack overread in il/vl).
+tests/s/{exit,mini} and tests/c/{mini2} all have riscv64 coverage now.
+Remaining, not done:
+
+*** ic (compiler)
+
+**** boolgen()/comrel() NaN-comparison bug -- deeper than expected
+claude:
+compilers/ic/cgen.c:763, compilers/vc/cgen.c:636,730 -- boolgen()
+applies comrel[] (the integer logical-complement table, OLT<->OGE,
+OLE<->OGT, OEQ<->ONE, etc) to the source-level relational operator
+unconditionally, before checking whether the comparison is floating-
+point. That complement is sound for integers (total order) but not for
+IEEE-754 comparisons under NaN: e.g. "!(x < y)" is not equivalent to
+"x >= y" when x or y is NaN (both are false for NaN operands). This is
+shared kencc lineage code -- present in every backend's boolgen() (5c/
+6c/7c/8c/vc/ic and the 5ck/7ck/8ck variants), but 7c/5c already carry a
+compensating fix in gmove()/boolgen() ("ensure NaN comparison is
+always false", substituting ABMI/ABPL/ABHI/ABLS for the naive signed
+branches when typefd[et]). Confirmed real on both riscv and mips with
+a live qemu run: "x = 0.0/0.0; y = 1.0;" wrongly evaluates x>y and
+x>=y as true on riscv, x<y and x<=y as true on mips.
+
+Tried the obvious fix (mirroring kencc-riscv's restructuring: move the
+comrel[] application out from before the typefd check to only the
+integer-specific branches) -- it does NOT work. Confirmed empirically:
+it just changes *which* operators come out wrong (riscv: x<y, x<=y,
+x==y wrong instead of x>y, x>=y -- a lateral move, not a fix).
+Root cause is deeper: compilers/ic/txt.c's gopcode() (case OGE:1217,
+OGT:1225, `cmpfloat:` 1246) has its own synthesis for OGE/OGT, because
+RISC-V's FPU only has native FEQ/FLT/FLE, no FGT/FGE -- it computes
+FLE/FLT then branches on the *inverted* sense (`ab`), and that
+synthesis is independently NaN-unsound (assumes "!(x<y) implies x>=y",
+the same unsound total-order assumption, just relocated). boolgen()'s
+comrel[] turns out to be partly *compensating* for gopcode()'s
+synthesis rather than purely redundant with it, which is why removing
+it breaks cases it was accidentally getting right. A real fix needs to
+untangle both pieces together (likely: fix gopcode()'s OGE/OGT
+synthesis to be NaN-safe first, matching 7c/5c's ABMI/ABPL/ABHI/ABLS
+approach as closely as this ISA allows, *then* revisit whether
+boolgen()'s comrel[] still needs adjusting on top) -- not the
+"easily testable" one-line reorder it first looked like
+
+**** RELAX gmove() TUCHAR/TUSHORT store uses AMOVB not AMOVBU
+claude:
+compilers/ic/txt.c:743 (the store-direction switch) uses AMOVB for
+both TCHAR and TUCHAR (AMOVH for both TSHORT/TUSHORT). miller-riscv's
+diff adds an AMOVBU/AMOVHU variant here, gated behind a debug-flag
+combination (`if(!debug['N'] || debug['R'] || debug['P'])`) that looks
+like exploratory/half-finished code in miller-riscv itself, not a
+clean fix. Checked: RISC-V has no signed/unsigned distinction for
+*stores* (only `sb`/`sh`/`sw`, no unsigned variant -- that distinction
+only exists for *loads*, where lb/lbu differ in how they extend into a
+wider register). ic's own load-direction switch (txt.c:702-710)
+already correctly uses AMOVBU/AMOVHU for TUCHAR/TUSHORT. So this is a
+non-issue for goken's riscv backend specifically; not porting
+
+**** LATER investigate TUINT/TULONG AMOVWU vs AMOVW ("/* sic */")
+claude:
+compilers/ic/txt.c:717,894 currently use AMOVWU (zero-extending word
+load) for TUINT/TULONG. miller-riscv's diff changes one of these two
+spots to AMOVW with a "/* sic */" comment (Latin for "yes, really,
+despite appearances") -- suggesting the miller-riscv author found
+AMOVWU caused some other problem and deliberately reverted to AMOVW,
+but the diff alone doesn't explain why. A basic zero-extension check
+("unsigned long x = 0xFFFFFFFF; x >>= 32;" and read back) didn't
+discriminate -- turned out to be invalid C on this platform anyway
+(SZ_LONG=4 here, i.e. `long`/`unsigned long` are 32-bit even under
+thechar=='j', so shifting by 32 is UB, not a real test). Lowest-
+confidence item on this list; needs a real discriminating test found
+before touching it, not just re-reading the diff
+
+**** RELAX AREM/AREMW/AREMU/AREMUW missing from peep.c's case lists
+claude:
+compilers/ic/peep.c:233,478,614 (subprop()/copyu()/a2type()) group
+AMUL/AMULW with the other arithmetic opcodes but don't include
+AREM/AREMW/AREMU/AREMUW, unlike miller-riscv's diff which adds them.
+Checked: copyu()'s `default:` case (unrecognized opcode) already
+returns the safe/conservative "set and used" value, so this is a
+missed peephole optimization for remainder ops, not a correctness
+bug. Cheap and mechanical to add, but no demonstrated impact -- skip
+unless someone wants the marginal codegen-quality win
+
+**** LATER widen register allocator's usable range (REGALLOC)
+claude:
+linkers/il/i.out.h:25 REGALLOC=15 (only 7 usable general registers,
+R9-R15, out of riscv's 32). miller-riscv widens to REGALLOC=31 with a
+new REGLOWALLOC=9, plus matching bitmask-math changes in compilers/
+ic/reg.c RtoB()/BtoR() (mask width, base-register offset). Same shape
+and same risk profile as the arm64 REGMIN/REGMAX item above: a real
+codegen-quality win, but ABI-adjacent and needs testing against more
+than a unit snippet -- now at least testable on both riscv32 and
+riscv64 (arm64's equivalent item could only be tested on the one
+width it has)
+
+**** RELAX disabled byte/half->word promotion in reg.c's paint3()
+claude:
+compilers/ic/reg.c:1053 has a `#ifdef maybe`-disabled block: once a
+variable is fully register-resident, narrow AMOVB/AMOVBU/AMOVH/AMOVHU
+loads/stores against its original memory slot could be widened to a
+full AMOVW (no more need for byte/half-granularity access once it's in
+a register). miller-riscv enables this and extends it to the store
+side too (paint3()'s `to`-side pass, which goken doesn't even have the
+dead code for). Same shape as arm64's chipfloat()/case-54 item: real
+but unverified perf tweak, disabled code, not a bug. Skip unless
+someone wants to also verify/enable it
+
+**** LATER regalloc()'s "reuse lowest free register" (RVC-friendliness)
+claude:
+compilers/ic/txt.c:338 regalloc()'s free-register search currently
+round-robins via a static `lasti` counter (spreading allocations across
+the whole REGRET+1..REGALLOC range). miller-riscv's diff removes the
+round-robin and just takes the lowest-numbered free register every
+time, with the comment "reuse lower registers to aid instruction
+compression" -- RISC-V's C (compressed, 16-bit) instruction extension
+can only reference registers x8-x15, so biasing allocation toward low
+register numbers increases how often the linker's compress.c pass can
+shrink an instruction. Real optimization, but only pays off if RVC
+compression is actually enabled/exercised in this build -- worth
+checking linkers/il/compress.c's current state before porting this
+
+*** il (linker)
+
+**** confirmed bug, riscv64-only: absolute address fed to auipc (case 18)
+claude:
+linkers/il/asm.c:868 (case 18, "lui L1, T; jal [r,]L0(T)" -- the long-
+jump-beyond-direct-jal-range fallback) computes `v = p->cond->pc`,
+then for thechar=='j' does `vv = v + INITTEXT; v = (int32)vv;` and
+feeds that *absolute* address straight into `OP_UP(REGTMP, v)`, which
+emits `auipc` (a *PC-relative* instruction: result = pc + (imm<<12)).
+The neighboring case 20 (linkers/il/asm.c:892, the general large-
+constant-load case) already does this correctly for the same 'j'
+variant: `vv = regoff(&p->from) + instoffx - (pc + INITTEXT)` --
+subtracts the current PC to get a proper delta before feeding it to
+auipc. Confirmed real by this internal-consistency argument (not yet
+independently reproduced with a live test: it only fires for a call/
+jump target beyond direct `jal`'s ~1MB range, which needs a
+deliberately huge test function to trigger -- now buildable given
+working jc/ja/jl, just not attempted yet)
+
+**** RELAX slliw/srliw/sraiw case-2 dispatch -- DONE
+claude:
+was here as a candidate (miller-riscv changes optab.c's slliw/srliw/
+sraiw "type" field from 2 to 1); landed and confirmed via live qemu
+run (SRAIW was silently executing as SRLIW, discarding the sign of
+"x >>= n" on signed ints). See git log and plan9front.txt. Leaving this
+entry as a marker so it isn't re-proposed from a future diff re-run.
 
 
 * Last
