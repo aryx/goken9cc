@@ -459,6 +459,101 @@ entry as a marker so it isn't re-proposed from a future diff re-run.
 
 ** amd64 toolchain (6a/6c/6l)
 
+claude:
+found via /tmp/diff6a, /tmp/diff6c, /tmp/diff6l (diff of 6a/6c/6l across
+9cc/9colombier/inferno/inferno-old/plan9/mykencc/myplan9/kencc-riscv/
+miller-riscv/goken/goold/goken-go-variant/9front checkouts in ~/xxx/).
+Much bigger diffs than mips/arm64/riscv (6l's 9front section alone is
+2409 lines), so the initial read was delegated to a background agent
+rather than done by hand; findings cross-checked against current
+source before landing anything. 9front was again the richest source.
+goold and goken-go-variant are both pure noise for this arch
+specifically: 6a/6c/6l was recently re-imported fresh from
+plan9foundation/plan9.git (see changes.txt), demoting the old go-era
+lineage to 6ag/6cg/6lg as an intentionally-separate tool -- so diffing
+against goold/goken-go-variant just re-surfaces that already-resolved
+divergence, not new signal. inferno/plan9 mostly just confirm current
+6a/6c/6l already matches or improves on that shared ancestry (several
+"diffs" there are actually goken already carrying a fix upstream
+lacks, e.g. the zaddr()/Ieee int32-vs-long truncation fixes and the
+-z/PIE hardconst()/doindex() work already landed this session -- see
+changes.txt). Landed so far (see plan9front.txt and git log): the
+APSLLQ opcode bug (6l assembled "PSLLQ $imm,X" as a no-op MOVQ instead
+of a shift) and the "x *= 0;" mulgen1() compile failure (6c, and
+independently 8c/8ck). Remaining, not done:
+
+*** 6c (compiler)
+
+**** OAS hardleft paths drop a nested assignment's value into nn
+claude:
+compilers/6c/cgen.c:114-117 (the "l->op==OINDEX && immconst(r)" fast
+path inside the hardleft branch) does `gmove(r, l); break;` with no
+`nn` propagation, and the general hardleft fallback at line 133
+(`gmove(&nod, &nod1); regfree(...); break;`) has the same gap --
+compare the non-hardleft path at lines 119-124, which correctly does
+`if(nn != Z) gmove(r, nn);` right next to the equivalent store. So an
+assignment-used-as-a-value through one of these two specific paths,
+e.g. `x = (a[i] = 42);` where the OINDEX/immconst fast path or the
+general hardleft fallback fires, would silently drop the outer
+assignment (x keeps its old value) instead of receiving 42. 9front
+adds the missing `if(nn != Z) gmove(...);` call to both spots. Real,
+verbatim upstream-diverging logic bug -- but could not manufacture a
+test that visibly misbehaves within budget (regalloc's nn-hint
+mechanism seems to reliably honor nn whenever it's a plain free
+register in every construction tried: array assignment, pointer-deref
+assignment, under register pressure). Same epistemic status as several
+already-landed 7c fixes this session. Independently present in
+compilers/8c/cgen.c:~135,154 and compilers/8ck/cgen.c -- port to all
+three together if landing this
+
+**** fix OFUNC not stripping a leading comma from the callee
+claude:
+compilers/6c/cgen.c:882 is missing `l = uncomma(l);` at the top of the
+OFUNC case, unlike vc, 8c, 8ck and 7c (all of which already have this
+exact call, see e.g. compilers/vc/cgen.c:284) -- 6c is the odd one
+out. A callee reached through a comma expression, e.g.
+`(sideeffect(), fp)(args)`, would hit `diag(n, "bad function call")`
+or miscompile. Same status as the already-landed vc fix (see
+plan9front.txt's mips section): proven correct by 4 sibling backends
+now, but a quick `(g(), fp)()`-style probe didn't visibly discriminate
+within budget on 6c either
+
+**** LATER add missing SSE3/SSE4.1 mnemonics
+claude:
+9front's 6a/include/6.out.h/6l support JMPF, MOVQL, HADDPD/HADDPS,
+ADDSUBPD/ADDSUBPS, HSUBPD/HSUBPS, ROUNDSD/ROUNDSS/ROUNDPD/ROUNDPS,
+DPPD/DPPS -- goken has none of these (no enum entries, no 6a mnemonic-
+table rows, no linkers/6l/optab.c rows). Real missing feature, not a
+bug fix; needs coordinated additions across three files. Note 9cc
+itself is actually a superset of both (full AVX/VEX + Y-register
+support) that neither 9front nor goken carry -- goken's 6a currently
+matches plan9foundation's simpler baseline, a deliberate choice per
+changes.txt, not an oversight; low priority
+
+*** 6l (linker)
+
+**** RELAX autoffset negative-frame clamp is incomplete
+claude:
+linkers/6l/pass.c:510-511 clamps the local `autoffset` to 0 when
+negative, but not `p->to.offset` itself, which some downstream reads
+(current-frame tracking, AADJSP sizing) still see as negative. 9front
+also clamps `p->to.offset = 0`. Low-impact edge case, only reachable
+via a hand-written negative `TEXT ...,$-N` frame directive -- not
+something real C source produces
+
+*** cross-cutting (applies to 6a/6c/6l too, not new findings)
+claude:
+several TODOs already tracked elsewhere (mips section above, and
+Last1/Last2 below) were reconfirmed as applicable here too, extending
+their scope rather than being new items: the growable regopt() NRGN
+region array, the ".ret" register-tracking carve-out, sprint() ->
+snprint() unbounded-buffer cleanup, and especially the nodrat
+(struct-copy scratch temp) non-reentrancy bug -- compilers/6c/gc.h:147,
+150,157 confirms 6c shares the exact same nodrat/nrathole/symrathole
+global-temp pattern as every other backend (5c/5ck/7c/8c/8ck/ic/vc),
+so this bug is genuinely tree-wide, not mips-specific as originally
+scoped; worth raising its priority given how universal it is
+
 * Last
 
 ** Last2
