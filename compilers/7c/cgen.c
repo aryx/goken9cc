@@ -1110,6 +1110,22 @@ copy:
 		n->type = t;
 	}
 
+	if((m = w % SZ_LONG) > 0){
+		nod1.xoffset += w - m;
+		nod2.xoffset += w - m;
+		regalloc(&nod3, &regnode, Z);
+		do{
+			gins(AMOVB, &nod1, &nod3);
+			gins(AMOVB, &nod3, &nod2);
+			nod1.xoffset++;
+			nod2.xoffset++;
+			w--;
+		}while(--m > 0);
+		regfree(&nod3);
+		nod1.xoffset -= w - m;
+		nod2.xoffset -= w - m;
+	}
+
 	w /= SZ_LONG;
 	if(w <= 5) {
 		layout(&nod1, &nod2, w, 0, Z);

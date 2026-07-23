@@ -63,7 +63,27 @@ such as:
    within this pass's budget; fixed on the strength of the boolean
    logic being unambiguously wrong as written, confirmed to not
    regress the existing test suite.
- - 6a/6c/6l:
+ - 7c (arm64): sugen()'s struct/union-copy fallback ("copy:", reached
+   for any struct assignment where neither side is directly
+   addressable, e.g. through a pointer) truncated the byte width via
+   `w /= SZ_LONG;` before laying out the copy, with no handling for
+   the remainder -- any struct/union assignment whose size isn't a
+   multiple of SZ_LONG (4 bytes here) would have its trailing bytes
+   silently dropped. Ported 9front's fix verbatim (cinap_lenrek, same
+   commit as the vlong/offset fix above): a byte-by-byte tail-copy
+   loop for the `w % SZ_LONG` leftover bytes before the word-copy.
+     b117d7014 7c: fix long to vlong/pointer conversion, avoid negative immediate offsets
+   No dedicated test: despite extensive probing across struct sizes
+   (10, 30 bytes) and addressing shapes (direct global, through
+   pointers), the buggy and fixed builds produced byte-identical
+   assembly every time -- the surrounding layout()/loop-unrolling
+   logic apparently already rounds its copy width up to a safe
+   over-covering boundary independent of what `w` it's handed, masking
+   the truncation in this codebase's current implementation (same
+   pattern as the usableoffset() fix above: verbatim, well-reasoned
+   upstream fix for an objectively-wrong computation, but no observed
+   behavioral difference here). Confirmed to not regress the existing
+   test suite.
  - va (mips): assemble() copied its filename argument into a fixed
    `char ofile[100]` with a raw strcpy() and no bounds check --
    confirmed this crashes ("*** stack smashing detected ***", SIGABRT)
