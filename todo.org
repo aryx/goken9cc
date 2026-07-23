@@ -290,9 +290,8 @@ those two together if at all. Coherent "tighter/more complete codegen"
 project, not a bug fix; lower priority than the correctness items above
 
 ** riscv toolchain (ia/ic/il)
-
-*** try riscv hello-world?
-https://9fans.topicbox.com/groups/9fans/T3f252d4d7c5389ee/issue-compiling-hello-world-for-risc-v-on-plan-9-pc-resets
+#try riscv hello-world?
+# https://9fans.topicbox.com/groups/9fans/T3f252d4d7c5389ee/issue-compiling-hello-world-for-risc-v-on-plan-9-pc-resets
 
 
 * Last
