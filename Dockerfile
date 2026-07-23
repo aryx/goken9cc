@@ -65,6 +65,12 @@ FROM build AS test
 # qemu-user provides the qemu-xxx per-arch emulator binaries used by
 # scripts/qemu-runner.
 RUN apt-get install -y qemu-user
+
+# nodejs provides the WASI runtime used by scripts/wasm-runner.js to run
+# the .wasm test binaries produced by linkers/el. Ubuntu 24.04's apt
+# package is 18.19.1, whose node:wasi module already accepts the
+# `version: 'preview1'` option wasm-runner.js relies on.
+RUN apt-get install -y nodejs
 # We deliberately do NOT install qemu-user-binfmt:
 # it registers qemu as a kernel binfmt_misc interpreter so foreign ELF
 # binaries can be run directly as ./foo, but that registration is
