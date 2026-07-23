@@ -22,6 +22,10 @@
 # (assemblers/7a/lex.c) instead of va's. Found it organically while
 # building an unrelated feature test whose source lived at a long
 # scratch path -- 7a crashed the same way.
+#
+# amd64_psllq: see the comment in amd64_psllq.s. Exit 16 (1<<4) means
+# the shift actually happened; exit 0 means PSLLQ silently no-opped
+# (the pre-fix behavior, since it assembled to a MOVQ instead).
 
 LONG=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -48,6 +52,16 @@ test:V:
 		exit failed
 	}
 	rm -f $LONG.s $LONG.7 $LONG.exe
+	6a -c amd64_psllq.s
+	6l -o amd64_psllq.exe -E _start amd64_psllq.6
+	st=`{ ../../../scripts/qemu-runner amd64 ./amd64_psllq.exe; echo $status }
+	if (~ $st 16)
+		echo 'ok: amd64_psllq.exe exit 16 (PSLLQ actually shifted)'
+	if not {
+		echo 'FAILED: amd64_psllq.exe (got '$st')'
+		exit failed
+	}
+	rm -f amd64_psllq.6 amd64_psllq.exe
 
 clean:V:
-	rm -f xxx*.[v7] xxx*.exe xxx*.s
+	rm -f xxx*.[v7] xxx*.exe xxx*.s *.6
