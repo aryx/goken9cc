@@ -72,6 +72,18 @@ test:V: all
             echo 'skipping '$i': no plan9/386 emulator available (only 5i/vi exist)'
       }
 
+# macOS-native run tests (no qemu): unlike `test` above, which only
+# *builds* the Mach-O binaries (they can't run under qemu-user on CI),
+# these actually execute them and cmp the output, same strict check as
+# the Linux binaries. Split by host arch: a Mach-O binary only runs
+# natively on its own CPU. Driven from the top-level `mk test_macos`.
+test_macos_arm64:V: hello_macos_arm64.exe
+	./hello_macos_arm64.exe | cmp /dev/stdin hello.expected.txt
+
+test_macos_amd64:V: hello_macos_amd64.exe hello_macos_libc_amd64.exe
+	./hello_macos_amd64.exe | cmp /dev/stdin hello.expected.txt
+	./hello_macos_libc_amd64.exe | cmp /dev/stdin hello.expected.txt
+
 clean:V:
 	rm -f *.[5678ivj] *.e *.exe *.wasm
 

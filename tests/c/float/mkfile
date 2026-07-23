@@ -63,6 +63,6 @@ helloprintf_macos_arm64.exe: helloprintf.c
    if not true
 
 # runs natively on Apple Silicon (no qemu needed)
-test_macos:V: helloprintf_macos_arm64.exe
+test_macos_arm64:V: helloprintf_macos_arm64.exe
 	./helloprintf_macos_arm64.exe | cmp /dev/stdin helloprintf.expected.txt
 

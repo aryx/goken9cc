@@ -31,6 +31,21 @@ DIRS=\
 test:
 	cd tests; mk test
 
+# macOS-native regression tests (no qemu). 'test_macos' auto-detects the
+# host: Apple Silicon (arm64) runs the arm64 tests, Intel (x86_64) runs the
+# amd64 ones. Use test_macos_arm64 / test_macos_amd64 to force one.
+test_macos:V:
+	if(~ `{uname -m} arm64)
+		@{ cd tests; mk test_macos_arm64 }
+	if not
+		@{ cd tests; mk test_macos_amd64 }
+
+test_macos_arm64:V:
+	cd tests; mk test_macos_arm64
+
+test_macos_amd64:V:
+	cd tests; mk test_macos_amd64
+
 #TODO: LPDIRS like in principia
 sync:VQ:
 	echo TODO

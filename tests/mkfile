@@ -3,4 +3,25 @@ TOP=..
 
 DIRS=s c rc libmach 5i vi
 
+# Dirs holding macOS-native run tests, by host arch (coverage differs:
+# c/vlong and c/float only have arm64 stubs). Paths are relative to here;
+# each dir's mkfile exposes a test_macos_<arch> target. Driven from the
+# top-level `mk test_macos`, which auto-detects Apple Silicon vs Intel.
+MACOS_ARM64_DIRS=s/mini c/mini c/mini2 c/vlong c/float
+MACOS_AMD64_DIRS=s/mini c/mini c/mini2
+
 <$TOP/mkfiles/mkdirs
+
+test_macos_arm64:V:
+	for(i in $MACOS_ARM64_DIRS) @{
+		echo $i
+		cd $i
+		mk test_macos_arm64
+	}
+
+test_macos_amd64:V:
+	for(i in $MACOS_AMD64_DIRS) @{
+		echo $i
+		cd $i
+		mk test_macos_amd64
+	}

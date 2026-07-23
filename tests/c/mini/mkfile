@@ -31,7 +31,7 @@ test:V:
 
 
 # runs natively on Apple Silicon (no qemu needed)
-test_macos:V: helloc_macos_arm64.exe
+test_macos_arm64:V: helloc_macos_arm64.exe
         ./helloc_macos_arm64.exe | cmp /dev/stdin helloc.expected.txt
 
 # macOS arm64: same helloc.c but with the Darwin syscall stubs, the
