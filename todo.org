@@ -14,6 +14,7 @@
 *** LATER acid working on linux
 incorportate plan9port libmach so can get acid to work on Linux
 also DWARF binaries!
+plan9port use linux interception proc mechanism (ptrace?) similar to plan9
 
 *** LATER dwarf support working for all elf targets, ported from 6c?
 
