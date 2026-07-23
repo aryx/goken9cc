@@ -17,7 +17,13 @@
 # function argument reused a stale pointer-width Type object created
 # before ic's ginit() had set ewidth[TIND]=8 for 'j', throwing off
 # stack-argument layout for every argument after it in the same call.
-test:V: mips_aut3_align.check riscv64_ptr_width.check
+#
+# riscv64_sraiw: diff-derived (miller-riscv, see the comment in the .c
+# file) -- SRAIW silently executed as SRLIW (logical instead of
+# arithmetic shift), discarding the sign of "x >>= n" on plain (32-bit)
+# signed ints. Both riscv64 regressions share riscv64_ptr_width_start.s
+# as their minimal _main/exit runtime stub.
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -33,6 +39,18 @@ riscv64_ptr_width.check:V: riscv64_ptr_width.c riscv64_ptr_width_start.s
 		echo 'ok: riscv64_ptr_width.exe exit 0'
 	if not {
 		echo 'FAILED: riscv64_ptr_width.exe (got '$st')'
+		exit failed
+	}
+
+riscv64_sraiw.check:V: riscv64_sraiw.c riscv64_ptr_width_start.s
+	jc -Driscv64 -c riscv64_sraiw.c
+	ja -Driscv64 -c riscv64_ptr_width_start.s
+	jl -o riscv64_sraiw.exe -E _main riscv64_sraiw.j riscv64_ptr_width_start.j
+	st=`{ ../../../scripts/qemu-runner riscv64 ./riscv64_sraiw.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: riscv64_sraiw.exe exit 0'
+	if not {
+		echo 'FAILED: riscv64_sraiw.exe (got '$st')'
 		exit failed
 	}
 

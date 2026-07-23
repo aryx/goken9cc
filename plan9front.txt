@@ -231,3 +231,27 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
    found and fixed the identical bug in their vc, independently:
      e8c8f5d82 vc: word align automatics
    See tests/c/regressions/mips_aut3_align.c.
+
+** riscv (ia/ic/il)
+
+9front doesn't have a riscv port, so this section credits a different
+kencc-derived fork instead: miller-riscv (a Plan 9 riscv port,
+checkout dated June 2025), found the same way as the arm64/mips
+sections above -- diffing via scripts/diff.rc (~/xxx/miller-riscv/).
+The bulk of goken's own riscv64 ('j'/thechar='j') bring-up this
+session (ja/jc/jl, the ELF header-size fix, the setSB/symbol-address
+fix, the ic/jc stale-pointer-width fix) was goken-original work, not
+ported from anywhere, so it isn't listed here -- see git log instead.
+
+ - il: slliw/srliw/sraiw (the RV64-only word-shift-immediate
+   opcodes, used for shifts on plain 32-bit ints) were wired to
+   asmout()'s case 2 ("addi $I,[R,]D" -- a plain 12-bit signed
+   immediate), instead of case 1 like their 64-bit-register siblings
+   slli/srli/srai use, which additionally ORs in o->param to select
+   the arithmetic-vs-logical distinguishing bit. Since case 2 never
+   applies o->param, SRAIW's encoding came out byte-identical to
+   SRLIW's: it silently executed as a logical instead of arithmetic
+   right shift, discarding the sign of "x >>= n" on signed ints.
+   Confirmed real under qemu-riscv64 before landing the fix (an
+   optab.c "type" field change, 2 -> 1, matching miller-riscv exactly).
+   See tests/c/regressions/riscv64_sraiw.c.
