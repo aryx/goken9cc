@@ -931,7 +931,7 @@ gmove(Node *f, Node *t)
 	}
 	if(a == AGOK)
 		diag(Z, "bad opcode in gmove %T -> %T", f->type, t->type);
-	if(a == AMOV || (AMOVW || a == AMOVWU) && ewidth[ft] == ewidth[tt] || a == AFMOVS || a == AFMOVD)
+	if(a == AMOV || (a == AMOVW || a == AMOVWU) && ewidth[ft] == ewidth[tt] || a == AFMOVS || a == AFMOVD)
 	if(samaddr(f, t))
 		return;
 	gins(a, f, t);

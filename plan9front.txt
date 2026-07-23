@@ -45,6 +45,24 @@ such as:
    this goes through naddr()'s direct D_EXTERN+offset construction,
    not the usableoffset()-guarded paths this commit touches, so it's
    unaddressed here.
+ - 7c (arm64): gmove()'s "skip the move if source and dest are
+   already the same address" fast-path guard had a missing `a ==`:
+   `if(a == AMOV || (AMOVW || a == AMOVWU) && ewidth[ft] == ewidth[tt] || ...)`.
+   `AMOVW` alone is a nonzero enum constant, so `(AMOVW || a == AMOVWU)`
+   is always true regardless of `a` -- collapsing the guard for *any*
+   gmove opcode (including type-converting ones like the
+   int<->float/vlong conversions right above it) down to just
+   `ewidth[ft] == ewidth[tt]`, i.e. any same-width conversion could
+   spuriously take the "already in place, skip it" fast path via
+   samaddr() and drop the actual conversion instruction. 9front's
+   arm64 port has read `(a == AMOVW || a == AMOVWU)` since its very
+   first import (charles forsyth's original commit, no dedicated fix
+   commit to cite -- it was simply never broken there). No dedicated
+   test: constructing a case where samaddr() actually returns true for
+   two differently-typed-but-same-width operands didn't reproduce
+   within this pass's budget; fixed on the strength of the boolean
+   logic being unambiguously wrong as written, confirmed to not
+   regress the existing test suite.
  - 6a/6c/6l:
  - va (mips): assemble() copied its filename argument into a fixed
    `char ofile[100]` with a raw strcpy() and no bounds check --
