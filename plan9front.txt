@@ -93,6 +93,11 @@ such as:
    NVAR caps distinct tracked variables and region count depends more
    on control-flow complexity than raw size, so a cheap synthetic
    generator didn't reliably trigger the old cap either.
+ - 7c (arm64): mkvar() excluded every "."-prefixed pseudo-symbol from
+   register-allocator tracking, including ".ret" -- same fix, same
+   reasoning, as vc's (mips) equivalent: carve out ".ret" specifically
+   so it stays eligible for optimization like any other variable. Not
+   a correctness bug, purely a missed optimization; no dedicated test.
  - 7a/7l (arm64): LDAR/LDXR/LDAXR (load-acquire/load-exclusive/
    load-exclusive-acquire) and STLR/STXR/STLXR (store-release/
    store-exclusive/store-exclusive-release) -- the atomic primitives
