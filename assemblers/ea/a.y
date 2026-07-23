@@ -51,6 +51,42 @@ labeldepth(Sym *s)
     yyerror("undefined label: %s", s->name);
     return 0;
 }
+
+/*
+ * claude: ALOADx/ASTOREx only take the memarg offset -- the base
+ * address is a stack value, not part of their encoding (see e.out.h's
+ * comment). This is what lets LOADW/STOREW still be written with the
+ * familiar `name(SB)`/`off(SP)`/`off(FP)` syntax anyway: it pushes the
+ * base address itself (an ACONSTW-with-symbol for SB, since that
+ * address is a link-time constant; an AGLOBALGET(SPGLOBAL) for SP/FP,
+ * since the shadow stack's base is only known at run time) and
+ * returns the offset the actual ALOADx/ASTOREx should carry -- 0 when
+ * the whole address was already folded into the constant, or the
+ * user's own offset when the base came from SPGLOBAL.
+ */
+static long
+pushaddr(Gen *a)
+{
+    Gen g;
+
+    switch(a->name) {
+    case D_EXTERN:
+    case D_STATIC:
+        g = *a;
+        g.type = D_CONST;
+        outcode(ACONSTW, &nullgen, NOREG, &g);
+        return 0;
+    case D_AUTO:
+    case D_PARAM:
+        g = nullgen;
+        g.type = D_GLOBAL;
+        g.offset = SPGLOBAL;
+        outcode(AGLOBALGET, &nullgen, NOREG, &g);
+        return a->offset;
+    }
+    yyerror("bad address kind %d", a->name);
+    return 0;
+}
 %}
 %union
 {
@@ -66,15 +102,16 @@ labeldepth(Sym *s)
 %left	'<' '>'
 %left	'+' '-'
 %left	'*' '/' '%'
-%token	<lval>	LNULL LBLOCKOPEN LENDCTL LBR LCALL LTEE
-%token	<lval>	LMOV LDEF LDATA LWORD
+%token	<lval>	LNULL LBLOCKOPEN LENDCTL LBR LCALL
+%token	<lval>	LLOCALOP LGLOBALOP LCONSTI LCONSTFOP LLOAD LSTORE
+%token	<lval>	LDEF LDATA LWORD
 %token		LLOCAL LGLOBAL LSP LFP LSB
 %token	<lval>	LCONST
 %token	<sval>	LSCONST
 %token	<dval>	LFCONST
 %token	<sym>	LNAME LVAR
 %type	<lval>	con expr offset
-%type	<gen>	mo ximm fimm addr name oreg rel
+%type	<gen>	ximm fimm addr name oreg rel
 %%
 prog:
 |	prog line
@@ -130,7 +167,7 @@ inst:
 	{
 		outcode($1, &nullgen, NOREG, &$2);
 	}
-|	LTEE LLOCAL '(' expr ')'
+|	LLOCALOP LLOCAL '(' expr ')'
 	{
 		Gen g;
 		g = nullgen;
@@ -138,23 +175,37 @@ inst:
 		g.offset = $4;
 		outcode($1, &nullgen, NOREG, &g);
 	}
-|	/*
-	 * claude: virtual, Plan9-style (see e.out.h's AMOV* comment):
-	 * one mnemonic per width/sign, operand kind (immediate/memory/
-	 * local/global) picked apart by el, not by the opcode. The
-	 * one-operand form pushes and leaves the value on the stack --
-	 * used right before LCALL, since wasm arguments are passed by a
-	 * push sequence, not through a named/addressable location the
-	 * way REGARG or a stack slot would let a real arch read them
-	 * back afterwards.
-	 */
-	LMOV mo
+|	LGLOBALOP LGLOBAL '(' expr ')'
+	{
+		Gen g;
+		g = nullgen;
+		g.type = D_GLOBAL;
+		g.offset = $4;
+		outcode($1, &nullgen, NOREG, &g);
+	}
+|	LCONSTI ximm
 	{
 		outcode($1, &nullgen, NOREG, &$2);
 	}
-|	LMOV mo ',' mo
+|	LCONSTFOP fimm
 	{
-		outcode($1, &$2, NOREG, &$4);
+		outcode($1, &nullgen, NOREG, &$2);
+	}
+|	LLOAD addr
+	{
+		Gen g;
+		g = nullgen;
+		g.type = D_CONST;
+		g.offset = pushaddr(&$2);
+		outcode($1, &nullgen, NOREG, &g);
+	}
+|	LSTORE addr
+	{
+		Gen g;
+		g = nullgen;
+		g.type = D_CONST;
+		g.offset = pushaddr(&$2);
+		outcode($1, &nullgen, NOREG, &g);
 	}
 |	LDEF name ',' ximm
 	{
@@ -173,23 +224,6 @@ inst:
 |	LWORD ximm
 	{
 		outcode($1, &nullgen, NOREG, &$2);
-	}
-
-mo:
-	ximm
-|	fimm
-|	addr
-|	LLOCAL '(' expr ')'
-	{
-		$$ = nullgen;
-		$$.type = D_LOCAL;
-		$$.offset = $3;
-	}
-|	LGLOBAL '(' expr ')'
-	{
-		$$ = nullgen;
-		$$.type = D_GLOBAL;
-		$$.offset = $3;
 	}
 
 rel:
@@ -274,8 +308,8 @@ offset:
 /*
  * claude: the vlong-overflow check (also used, unmodified, by
  * assemblers/ia/a.y's own `imm` for the same reason on riscv64) is
- * what lets a bare LMOV push of a 64-bit constant that doesn't fit in
- * Gen.offset promote itself to D_VCONST; see e.out.h's D_VCONST.
+ * what lets a bare CONSTQ push of a 64-bit constant that doesn't fit
+ * in Gen.offset promote itself to D_VCONST; see e.out.h's D_VCONST.
  */
 ximm:
 	'$' con

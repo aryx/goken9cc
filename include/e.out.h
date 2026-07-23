@@ -45,6 +45,23 @@
  *     there is nothing to allocate from. No NOSPLIT either: wasm's
  *     call stack is host-managed and can't be segmented/grown the way
  *     NOSPLIT guards against on a real machine.
+ *
+ * claude: no virtual AMOVx here, unlike an earlier draft of this file.
+ * Every other arch's AMOVx works as one 2-operand mnemonic because
+ * there's always a *register* to be the other side of a load, a
+ * store, or a constant load -- the same instruction, just aimed at
+ * different places. wasm has no register to play that role, so
+ * forcing everything through one MOV-shaped mnemonic just made the
+ * arity silently change meaning (sometimes one operand meaning "push
+ * and leave it on the stack", sometimes two meaning "move"), which is
+ * exactly the kind of surprise a programmer coming from 5a/8a/ia
+ * would *not* expect from something called MOVW. Instead, each opcode
+ * below matches one real wasm instruction, with exactly the operand
+ * *that instruction's own encoding* carries -- see each section's
+ * comment. What still carries over deliberately: SB/SP/FP (still
+ * meaningful pseudo-registers), TEXT/GLOBL/DATA/WORD (identical
+ * concept), and CALL/RET/BR (still "control transfer with an
+ * operand").
  */
 
 /*
@@ -84,18 +101,29 @@
  * convention as v.out.h/i.out.h: Gen.type holds one of the "type"
  * values below and says how the instruction encodes the operand;
  * Gen.name holds one of the "name" values and, only when
- * type==D_OREG, says which linear-memory region the offset is
- * relative to. Unlike x86/amd64's D_INDIR, name is not additive onto
- * type -- there is exactly one memory-operand type (D_OREG), because
+ * type==D_OREG, says which linear-memory region a symbol is relative
+ * to. Unlike x86/amd64's D_INDIR, name is not additive onto type --
+ * there is exactly one symbol-reference type (D_OREG), because
  * D_LOCAL/D_GLOBAL (wasm locals/globals) never take a name: they are
  * never memory references, so the distinction doesn't apply to them.
+ *
+ * claude: D_OREG no longer means "the address a load/store reads or
+ * writes" the way it did in an earlier draft (see the AMOVx comment
+ * above) -- ALOADx/ASTOREx below take a plain offset, not an address,
+ * because that's what their real wasm encoding carries. D_OREG now
+ * means "a reference to a symbol's address", used only where that's
+ * still genuinely needed: ea's grammar folds a `name(SB)` operand
+ * into a D_OREG while parsing ACALL's target or ACONSTx's
+ * address-of-symbol form (see those opcodes' comments), and ACALL's
+ * target stays D_OREG all the way into the object file, for el to
+ * resolve into a function index.
  */
 enum
 {
 	D_GOK	= 0,
 	D_NONE,
 
-	/* name: which linear-memory region a D_OREG offset is relative to */
+	/* name: which linear-memory region a D_OREG symbol lives in */
 	D_EXTERN,	/* data/bss (from the module's data base) */
 	D_STATIC,	/* file-static data (private symbol) */
 	D_AUTO,		/* address-taken local: shadow-stack slot (from SPGLOBAL) */
@@ -103,7 +131,7 @@ enum
 
 	/* type: how the instruction encodes the operand */
 	D_BRANCH,	/* structured-control label depth, not a PC (see above) */
-	D_OREG,		/* linear-memory operand: offset, relative to Gen.name */
+	D_OREG,		/* a symbol reference (see the comment above) */
 	D_CONST,
 	D_VCONST,	/* i64.const that doesn't fit in Gen.offset; see Gen.vval */
 	D_FCONST,
@@ -142,60 +170,73 @@ enum	as
 	ASELECT,
 
 	/*
-	 * claude: local.tee has no natural "MOV" pairing (it reads
-	 * *and* writes the same local without popping, unlike a plain
-	 * move), so it keeps its own dedicated one-operand mnemonic --
-	 * the same way BL/SWI/CALL stand apart from arm's MOV family.
-	 * Plain local/global read and write, though, fold into the
-	 * unified AMOVx family below, the same way REGRET/REGARG never
-	 * needed their own opcodes on any other arch: a wasm local is
-	 * this arch's pseudo-register (unbounded, but a "slot" in
-	 * exactly the sense SP/SB/FP are already pseudo, not hardware),
-	 * so it takes the same MOV mnemonics real registers would.
+	 * Locals and globals: one operand each, the index -- genuinely
+	 * part of the real instruction's encoding (local.get/local.set/
+	 * local.tee/global.get/global.set all carry one), so this isn't
+	 * the same kind of mismatch AMOVx was. A wasm local is this
+	 * arch's closest equivalent of a register (unbounded, but a
+	 * "slot" in exactly the sense SP/SB/FP are already pseudo, not
+	 * hardware); ea's grammar spells it `LOCAL(n)`/`GLOBAL(n)`.
 	 */
+	ALOCALGET,
+	ALOCALSET,
 	ALOCALTEE,
+	AGLOBALGET,
+	AGLOBALSET,
 
 	/* linear memory management */
 	AMEMSIZE,
 	AMEMGROW,
 
 	/*
-	 * claude: virtual, Plan9-style, like arm/x86/riscv/mips's own
-	 * AMOVx (see 5.out.h's "AMOVW, // VIRTUAL, transformed in load
-	 * and store instructions"): one opcode per width/sign, and ea's
-	 * grammar accepts it with an immediate, a memory address
-	 * (D_OREG), a local (D_LOCAL), or a global (D_GLOBAL) on either
-	 * side -- el picks the concrete wasm instruction sequence
-	 * (const/load/local.get/global.get, then local.set/global.set/
-	 * store) from the operand kinds, exactly as arm/x86/riscv/mips
-	 * pick LDR vs STR vs a register move from theirs.
-	 *
-	 * One genuine wasm-specific extension of the convention: a
-	 * *one*-operand form ("MOVW src") is also allowed, meaning
-	 * "push src, leave it on the stack" -- needed because wasm's
-	 * calling convention passes arguments via a strictly-ordered
-	 * push sequence right before ACALL, not through named/
-	 * addressable storage the way a real stack frame would (there
-	 * is no REGARG-style register or stack slot for el to read
-	 * them back from afterwards).
+	 * Push an immediate: one operand, the value (or a symbol's
+	 * address, folded in as a D_CONST the same way riscv/mips's own
+	 * `imm: '$' addr` does for a constant that's really a symbol
+	 * reference) -- again genuinely part of iNN.const/fNN.const's
+	 * own encoding.
 	 */
-	AMOVB,		/* byte, sign-extend to i32 */
-	AMOVBU,		/* byte, zero-extend to i32 */
-	AMOVH,		/* halfword, sign-extend to i32 */
-	AMOVHU,		/* halfword, zero-extend to i32 */
-	AMOVW,		/* i32, no extension */
-	AMOVQ,		/* i64, no extension */
-	AMOVF,		/* f32 */
-	AMOVD,		/* f64 */
-	/* widening into i64 */
-	AMOVBQ,		/* byte, sign-extend to i64 */
-	AMOVBUQ,	/* byte, zero-extend to i64 */
-	AMOVHQ,		/* halfword, sign-extend to i64 */
-	AMOVHUQ,	/* halfword, zero-extend to i64 */
-	AMOVWQ,		/* i32, sign-extend to i64 (i64.extend_i32_s) */
-	AMOVWUQ,	/* i32, zero-extend to i64 (i64.extend_i32_u) */
-	/* narrowing i64 to i32 */
-	AMOVQW,		/* i64 to i32, wrap (i32.wrap_i64) */
+	ACONSTW,
+	ACONSTQ,
+	ACONSTF,
+	ACONSTD,
+
+	/*
+	 * Load and store: one operand, the memarg *offset* -- what the
+	 * real i32.load/i32.store encoding actually carries. The base
+	 * address is never an operand of these opcodes; it comes off
+	 * the stack, pushed by whatever precedes the load/store (an
+	 * ACONSTx for a symbol's address, or an AGLOBALGET of SPGLOBAL
+	 * for a stack-relative one) -- the same requirement WAT's own
+	 * nested `(i32.store (i32.const addr) (i32.const val))` encodes
+	 * by evaluating its first child before its second. ea's grammar
+	 * still accepts the familiar `name(SB)`/`off(SP)`/`off(FP)`
+	 * syntax and expands it into that push-then-load/store sequence
+	 * itself (see a.y), so the source still reads like every other
+	 * arch's addressing even though the object file underneath is
+	 * honest about there being two real instructions.
+	 */
+	ALOADB,		/* i32.load8_s */
+	ALOADBU,	/* i32.load8_u */
+	ALOADH,		/* i32.load16_s */
+	ALOADHU,	/* i32.load16_u */
+	ALOADW,		/* i32.load */
+	ALOADQ,		/* i64.load */
+	ALOADBQ,	/* i64.load8_s */
+	ALOADBUQ,	/* i64.load8_u */
+	ALOADHQ,	/* i64.load16_s */
+	ALOADHUQ,	/* i64.load16_u */
+	ALOADWQ,	/* i64.load32_s */
+	ALOADWUQ,	/* i64.load32_u */
+	ALOADF,		/* f32.load */
+	ALOADD,		/* f64.load */
+
+	ASTOREB,	/* i32.store8 (also used to store the low byte of an i64) */
+	ASTOREH,	/* i32.store16 (also i64) */
+	ASTOREW,	/* i32.store */
+	ASTOREWQ,	/* i64.store32: low 32 bits of an i64 value */
+	ASTOREQ,	/* i64.store */
+	ASTOREF,	/* f32.store */
+	ASTORED,	/* f64.store */
 
 	/* i32 arithmetic/logic/compare */
 	AADDW,
@@ -303,25 +344,40 @@ enum	as
 	ACMPLED,
 	ACMPGED,
 
-	/* int <-> float conversions */
-	AMOVWF,		/* i32 -> f32, signed */
-	AMOVWUF,	/* i32 -> f32, unsigned */
-	AMOVWD,		/* i32 -> f64, signed */
-	AMOVWUD,	/* i32 -> f64, unsigned */
-	AMOVQF,		/* i64 -> f32, signed */
-	AMOVQUF,	/* i64 -> f32, unsigned */
-	AMOVQD,		/* i64 -> f64, signed */
-	AMOVQUD,	/* i64 -> f64, unsigned */
-	AMOVFW,		/* f32 -> i32, signed trunc */
-	AMOVFWU,	/* f32 -> i32, unsigned trunc */
-	AMOVFQ,		/* f32 -> i64, signed trunc */
-	AMOVFQU,	/* f32 -> i64, unsigned trunc */
-	AMOVDW,		/* f64 -> i32, signed trunc */
-	AMOVDWU,	/* f64 -> i32, unsigned trunc */
-	AMOVDQ,		/* f64 -> i64, signed trunc */
-	AMOVDQU,	/* f64 -> i64, unsigned trunc */
-	AMOVFD,		/* f32 -> f64, promote */
-	AMOVDF,		/* f64 -> f32, demote */
+	/*
+	 * claude: register-only conversions, zero operands -- unlike
+	 * every opcode above with an operand, i32.wrap_i64,
+	 * i64.extend_i32_s, f32.convert_i32_s and the rest all carry
+	 * *no* immediate in their real wasm encoding; they only ever
+	 * transform whatever's already on the stack. Named after the
+	 * wasm spec's own words for these (wrap/extend/convert/trunc/
+	 * promote/demote), not "MOV", since there's no addressing or
+	 * moving happening at all.
+	 */
+	AWRAPQ,		/* i32.wrap_i64 */
+	AEXTW,		/* i64.extend_i32_s */
+	AEXTWU,		/* i64.extend_i32_u */
+
+	ACONVWF,	/* f32.convert_i32_s */
+	ACONVWUF,	/* f32.convert_i32_u */
+	ACONVWD,	/* f64.convert_i32_s */
+	ACONVWUD,	/* f64.convert_i32_u */
+	ACONVQF,	/* f32.convert_i64_s */
+	ACONVQUF,	/* f32.convert_i64_u */
+	ACONVQD,	/* f64.convert_i64_s */
+	ACONVQUD,	/* f64.convert_i64_u */
+
+	ATRUNCFW,	/* i32.trunc_f32_s */
+	ATRUNCFWU,	/* i32.trunc_f32_u */
+	ATRUNCFQ,	/* i64.trunc_f32_s */
+	ATRUNCFQU,	/* i64.trunc_f32_u */
+	ATRUNCDW,	/* i32.trunc_f64_s */
+	ATRUNCDWU,	/* i32.trunc_f64_u */
+	ATRUNCDQ,	/* i64.trunc_f64_s */
+	ATRUNCDQU,	/* i64.trunc_f64_u */
+
+	APROMOTE,	/* f64.promote_f32 */
+	ADEMOTE,	/* f32.demote_f64 */
 
 	/* bit-level reinterpretation (union type punning, fabs/copysign helpers) */
 	AREINTWF,	/* i32 bits -> f32 */

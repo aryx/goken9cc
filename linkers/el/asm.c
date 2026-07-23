@@ -12,12 +12,12 @@
  * encoding comes from optab.c's oplook(), not from logic in here.
  *
  * Verified against tests/s/mini/hello_wasm.s: TEXT/GLOBL/DATA layout,
- * the one-operand MOV (const push, including a symbol's address),
- * CALL to an imported function, RET. NOT exercised by any test yet:
- * loads/stores (D_OREG operands), locals/globals, conversions, and
- * control flow (BLOCK/LOOP/IF/BR) -- implemented from the spec, in
- * the same spirit as adding an opcode to a real arch's optab.c before
- * every encoding has a test, but treat them as unverified.
+ * ACONSTW (including pushing a symbol's address), CALL to an imported
+ * function, RET, ADROP. NOT exercised by any test yet: loads/stores,
+ * locals/globals, conversions, and control flow (BLOCK/LOOP/IF/BR) --
+ * implemented from the spec, in the same spirit as adding an opcode to
+ * a real arch's optab.c before every encoding has a test, but treat
+ * them as unverified.
  */
 #include "l.h"
 
@@ -193,6 +193,15 @@ layout(void)
 
 /* ---- per-instruction codegen, driven by optab.c ---- */
 
+/*
+ * claude: resolves the address ACONSTx's "push a symbol's address"
+ * form needs (see e.out.h's D_OREG comment). Only ever reached for
+ * D_EXTERN/D_STATIC in practice: ea's ALOADx/ASTOREx expansion (a.y's
+ * pushaddr()) handles D_AUTO/D_PARAM itself, by emitting an
+ * AGLOBALGET(SPGLOBAL) instead of ever asking el to fold a
+ * stack-relative address into a constant -- which it couldn't, since
+ * the shadow stack's base is only known at run time, not link time.
+ */
 static long
 symaddr(Adr *a)
 {
@@ -205,94 +214,9 @@ symaddr(Adr *a)
         }
         return a->sym->value + a->offset;
     default:
-        diag("SP/FP-relative addressing not implemented yet (no shadow stack in el v1)");
+        diag("SP/FP-relative constant address not supported (not a link-time constant)");
         errorexit();
         return 0;
-    }
-}
-
-/* push the value described by `a` onto the stack */
-static void
-fetch(Bytebuf *bb, Adr *a, Optab *o)
-{
-    switch(a->type) {
-    case D_CONST:
-        if(a->sym != S) {
-            bbput(bb, 0x41);	/* i32.const: an address is always i32 */
-            bbsleb(bb, symaddr(a));
-            break;
-        }
-        switch(o->constkind) {
-        case 'w': bbput(bb, 0x41); bbsleb(bb, a->offset); break;
-        case 'q': bbput(bb, 0x42); bbsleb(bb, a->offset); break;
-        default:  diag("float MOV given a plain constant"); errorexit();
-        }
-        break;
-    case D_VCONST:
-        bbput(bb, 0x42);
-        bbsleb(bb, a->vval);
-        break;
-    case D_FCONST:
-        if(o->constkind == 'f') {
-            float f = a->dval;
-            bbput(bb, 0x43);
-            bbwrite(bb, &f, 4);
-        } else {
-            double d = a->dval;
-            bbput(bb, 0x44);
-            bbwrite(bb, &d, 8);
-        }
-        break;
-    case D_OREG:
-        if(o->loadop < 0) {
-            diag("conversion from memory not implemented yet in el v1");
-            errorexit();
-        }
-        bbput(bb, 0x41);
-        bbsleb(bb, symaddr(a));
-        bbput(bb, o->loadop);
-        bbuleb(bb, 0);	/* align hint */
-        bbuleb(bb, 0);	/* offset: folded into the pushed address above */
-        break;
-    case D_LOCAL:
-        bbput(bb, 0x20);
-        bbuleb(bb, a->offset);
-        break;
-    case D_GLOBAL:
-        bbput(bb, 0x23);
-        bbuleb(bb, a->offset);
-        break;
-    default:
-        diag("unsupported MOV source kind %d", a->type);
-        errorexit();
-    }
-}
-
-/* consume the top-of-stack value into destination `a` */
-static void
-store(Bytebuf *bb, Adr *a, Optab *o)
-{
-    switch(a->type) {
-    case D_LOCAL:
-        bbput(bb, 0x21);
-        bbuleb(bb, a->offset);
-        break;
-    case D_GLOBAL:
-        bbput(bb, 0x24);
-        bbuleb(bb, a->offset);
-        break;
-    case D_OREG:
-        if(o->storeop < 0) {
-            diag("conversion into memory not implemented yet in el v1");
-            errorexit();
-        }
-        bbput(bb, o->storeop);
-        bbuleb(bb, 0);
-        bbuleb(bb, 0);
-        break;
-    default:
-        diag("unsupported MOV destination kind %d", a->type);
-        errorexit();
     }
 }
 
@@ -318,16 +242,33 @@ emitinstr(Bytebuf *bb, Instr *ip)
         bbuleb(bb, resolvecall(ip->to.sym));
         break;
     case OLOCAL:
+    case OGLOBAL:
         bbput(bb, o->op);
         bbuleb(bb, ip->to.offset);
         break;
-    case OMOVE:
-        if(ip->from.type == D_NONE)
-            fetch(bb, &ip->to, o);		/* one-operand: push, leave on stack */
-        else {
-            fetch(bb, &ip->from, o);
-            store(bb, &ip->to, o);
+    case OCONSTI:
+        bbput(bb, o->op);
+        if(ip->to.type == D_VCONST)
+            bbsleb(bb, ip->to.vval);
+        else if(ip->to.sym != S)
+            bbsleb(bb, symaddr(&ip->to));
+        else
+            bbsleb(bb, ip->to.offset);
+        break;
+    case OCONSTF:
+        bbput(bb, o->op);
+        if(o->fsize == 4) {
+            float f = ip->to.dval;
+            bbwrite(bb, &f, 4);
+        } else {
+            double d = ip->to.dval;
+            bbwrite(bb, &d, 8);
         }
+        break;
+    case OMEM:
+        bbput(bb, o->op);
+        bbuleb(bb, 0);		/* align hint, always minimal */
+        bbuleb(bb, ip->to.offset);	/* the memarg offset ea's pushaddr() computed */
         break;
     }
 }

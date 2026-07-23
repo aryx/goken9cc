@@ -1,0 +1,319 @@
+Adding a WebAssembly (wasm) target: ea, el, and design notes for ec
+====================================================================
+
+Notes gathered while adding an experimental wasm arch (letter 'e') to
+this toolchain: assemblers/ea, linkers/el, include/e.out.h. Written to
+be read before touching any of those, and especially before starting
+compilers/ec (the C compiler backend), which doesn't exist yet -- the
+"Open questions for ec" section at the end is the reason this file
+exists at all.
+
+See tests/s/mini/hello_wasm.s (a hand-written test, the only thing
+currently exercising this arch) and tests/s/mini/hello_wasm.wat (the
+same program in traditional WebAssembly Text, for comparison).
+
+
+Why 'e' for the arch letter
+----------------------------
+
+Every other arch letter here is either a digit (historical, assigned
+in the order Plan 9 grew ports) or a non-digit letter picked once
+digits ran out (k = sparc64, q = power64, u/v = sparc/mips in the
+Plan9 lineage; this project's own i = riscv). None of them are
+mnemonic, so there was no requirement to make wasm's letter mnemonic
+either -- just to avoid a letter that collides with an existing Unix
+command when combined with the c/a/l suffixes (w -> wc collides with
+the word-count command), and to avoid letters this project's own
+history already associated with something else (j and z were both
+tried for riscv at different points before it settled on i). 'e' has
+no such history and no collision (ec/ea/el are all unclaimed), and
+loosely suggests "engine" (Wasmtime/Wasmer are called wasm engines)
+or Emscripten, which is as much mnemonic value as any other arch
+letter here has.
+
+
+The D_* operand-kind enum: type vs name, not additive
+-------------------------------------------------------
+
+Three different conventions already coexist in this codebase for
+"how does Gen encode an operand":
+
+  - x86/amd64: one field, D_INDIR is *additive* onto a base value
+    (D_EXTERN + D_INDIR means "indirect through extern").
+  - arm: two separate enum *types*, Operand_kind (encoding) and
+    Sym_kind (storage class), as two different struct fields with
+    unrelated value spaces.
+  - riscv/mips: one enum *namespace*, split across two struct fields
+    (Gen.type = encoding, Gen.name = storage class) that happen to
+    share one set of integer constants.
+
+e.out.h follows riscv/mips's convention specifically: D_EXTERN/
+D_STATIC/D_AUTO/D_PARAM only ever mean something when paired with
+Gen.type == D_OREG (a symbol reference), because D_LOCAL/D_GLOBAL
+(wasm's locals/globals) never take a "which region" qualifier at all
+-- there's exactly one kind of symbol reference here, not several
+that could independently be "made indirect" the way x86's many
+register-class values could. An earlier draft of this file used the
+x86-style additive D_INDIR by mistake before this was caught; if
+you're porting logic from another arch's obj.c/Gen handling, check
+which of the three conventions that arch uses before assuming it
+matches this one.
+
+
+No register file: what that changes
+--------------------------------------
+
+Every other arch's Gen has a `reg` field (or several: reg/xreg/index)
+naming a hardware register. wasm has none, so e.out.h's Gen has no
+such field at all. Concretely:
+
+  - REGRET, REGSP, REGTMP as *hardware registers* don't exist.
+    Arguments and results live on wasm's implicit operand stack, in
+    the order the function's type gives them -- there's no register
+    to name for "the return value" the way REGRET names one
+    elsewhere.
+  - REGARG must still be defined (cck/pgen.c reads it unconditionally
+    to decide whether to pass the first argument in a register), and
+    it's -1: not just "disabled, matching every other arch in this
+    project's own REGARG=-1 convention", but the only value that's
+    even meaningful here, since there's no register to shortcut
+    through.
+  - What every other arch calls "a register" splits into two
+    unrelated wasm concepts: D_LOCAL (per-function, typed, unbounded
+    -- allocating one per live temporary is fine, there's no spill
+    logic to write) and D_GLOBAL (module-level, typed; currently only
+    used for the shadow stack pointer, SPGLOBAL = global index 0).
+  - A wasm local's *address* cannot be taken, unlike a stack slot on
+    a real machine. This is the one piece of the design that reaches
+    forward into ec (see below): D_AUTO/D_PARAM only make sense for
+    C variables whose address is never taken (compiled straight to a
+    D_LOCAL); anything address-taken needs a different, heavier
+    lowering. e.out.h reserves the concept (a linear-memory "shadow
+    stack", addressed relative to SPGLOBAL, exactly like D_AUTO/
+    D_PARAM work everywhere else) but doesn't implement it -- there's
+    no compiler yet to decide which C variables need it.
+
+
+No virtual AMOVx: why, and what replaced it
+-----------------------------------------------
+
+The first working draft of this arch had one AMOVx family (AMOVB..
+AMOVQ, one opcode per width/sign) used exactly like arm/x86/riscv's
+own AMOVx: one mnemonic, direction and operand kind (immediate,
+memory, local, global) inferred from the Gen shapes, `outcode()`'s
+job to sort out. That's real Plan9 precedent (5.out.h literally
+comments "AMOVW, // VIRTUAL, transformed in load and store
+instructions"), but it doesn't actually fit here, for a reason that's
+specific to wasm rather than a stylistic preference:
+
+On a real arch, AMOVW works as one 2-operand mnemonic because there
+is always a *register* to be the other side -- LDR/STR/a register
+move are three encodings of "get a value into/out of a named place",
+and that named place is always a register. wasm has no register to
+play that role. So the same mnemonic ended up meaning different
+*arities* depending on context: `MOVW $1` (one operand: push and
+leave on the stack, because wasm's calling convention passes
+arguments via a push sequence, not a named location an arch's own
+REGARG/stack-slot convention could read back from) vs `MOVW
+$1, LOCAL(2)` (two operands: an actual move). A programmer coming
+from 5a/8a/ia would reasonably expect "MOVW" to always be a 2-operand
+move, the same way it always is on every arch they already know --
+having it sometimes be a bare push instead is exactly the kind of
+surprise that defeats the point of reusing a familiar mnemonic in the
+first place.
+
+The fix: keep the Plan9-*style* naming and pseudo-registers where they
+map onto a real wasm concept, and give the rest of the operations
+their own single-purpose opcodes, one per real wasm instruction, with
+exactly the operand *that instruction's own binary encoding* carries:
+
+  - ACONSTW/Q/F/D: one operand, the immediate -- iNN.const/fNN.const
+    really do carry a value in their encoding.
+  - ALOCALGET/SET/TEE, AGLOBALGET/SET: one operand, the index --
+    local.get/local.set/... really do carry an index.
+  - ALOADx/ASTOREx: one operand, the memarg *offset* -- i32.load's
+    encoding carries an offset+align pair, but the base *address* is
+    not part of the instruction at all; it comes off the stack,
+    pushed by whatever precedes the load/store. This is also exactly
+    what WAT's own nested
+    `(i32.store (i32.const addr) (i32.const val))` encodes: the
+    address sub-expression is evaluated (pushed) before the value
+    sub-expression, address ends up below value on the stack, which
+    is the order i32.store requires when it pops them. A flat,
+    one-instruction-per-line assembler has no nesting to do that
+    implicitly, so ea's grammar (a.y) does it explicitly: writing the
+    familiar `LOADW msg+4(SB)` or `STOREW off(SP)` expands, in the
+    grammar action, into *two* real instructions -- push the base
+    address (an ACONSTW-with-symbol for SB, an AGLOBALGET(SPGLOBAL)
+    for SP/FP), then the actual ALOADx/ASTOREx carrying just the
+    offset. This is legitimate, existing Plan9 precedent for a
+    written mnemonic expanding to more than one real encoded
+    operation (see 5.out.h: "ASLL, // Shift Left Logic, VIRTUAL
+    transformed in bitshifted registers"), just applied here to
+    preserve the *addressing syntax* (SB/SP/FP) rather than a single
+    mnemonic's arity.
+  - AWRAPQ/AEXTW/AEXTWU/ACONVWF/ATRUNCFW/APROMOTE/ADEMOTE/etc: *zero*
+    operands. i32.wrap_i64, i64.extend_i32_s, f32.convert_i32_s, and
+    the rest of the register-only conversions carry no immediate at
+    all in their real encoding -- they only ever transform whatever's
+    already on the stack. Named after the wasm spec's own verbs
+    (wrap/extend/convert/trunc/promote/demote) rather than "MOV",
+    since there's no addressing or moving involved.
+
+What still *does* carry over unmodified, because it maps onto a real
+concept on both sides: SB/SP/FP as pseudo-registers (SB = the
+module's data base, SP = the shadow stack pointer global, FP =
+address-taken parameters -- same roles as on every other arch, just
+implemented differently underneath), TEXT/GLOBL/DATA/WORD (identical
+concept: declare a function, a data symbol, its bytes, a raw word),
+and CALL/RET/BR (still "transfer control, with an operand" -- BR's
+operand is a label depth instead of a PC displacement, the one place
+where even the *concept*, not just the encoding, differs; see next
+section).
+
+The rule of thumb that came out of this, for anyone adding more
+opcodes later: port the *name and surface syntax* when the concept is
+the same on both sides (a symbol, a control transfer, a pseudo-op);
+give it a new, wasm-native name when the concept doesn't actually
+exist the other way (no register to move between, no operand where
+the real encoding has none).
+
+
+Structured control flow: label depths, resolved by the assembler
+--------------------------------------------------------------------
+
+wasm has no unstructured jump. `br`/`br_if` target a label *depth*:
+how many enclosing block/loop/if constructs to exit, counted outward
+from the branch site -- not a PC-relative displacement the way every
+other arch's branches work, and not something a linker's second pass
+over the whole program needs to compute either. Depth is a purely
+lexical property of the function being assembled: it only depends on
+how deeply BLOCK/LOOP/IF/END are nested around the BR at the point
+it's written, which ea's grammar (a.y) already knows while parsing,
+by maintaining a small stack (`labelstack`/`nlabelstack`) pushed on
+BLOCK/LOOP/IF and popped on END. A named target (`BR myloop`) looks
+itself up in that stack; a raw target (`BR (2)`) is taken as a depth
+directly. By the time `outcode()` is called, the depth is already
+final -- there is nothing left for el to resolve, unlike every other
+arch's D_BRANCH, which the object file carries unresolved and the
+linker patches in a second pass.
+
+One consequence: there is deliberately no PC pseudo-register for
+branch targets the way arm/x86/riscv have one (`con(PC)`). Since
+depths aren't PC-relative, spelling a branch target as "PC" would
+suggest an addressing mode that doesn't actually exist here.
+
+ABRTABLE (br_table, a jump table) has no grammar support yet -- it
+needs a list of targets, and no test needs it. ACALLIND (call_indirect)
+is in the same state -- it needs a type-section index, which doesn't
+mean much before ec exists and functions have real signatures.
+
+
+el: a single-pass linker (why there's no span.c/layout.c/relocation table)
+---------------------------------------------------------------------------
+
+A real arch's linker needs a full relocation mechanism and often an
+iterative layout pass (span.c's branch-shortening feedback loop)
+because: branches are PC-relative and the final PC of a symbol isn't
+known until layout is mostly done; multiple object files can
+reference each other's symbols in either direction, including
+circularly. Neither problem exists here in the same way: wasm
+branches are already fully resolved by ea (see above), and el only
+ever reads one object file (no cross-file forward references to
+worry about). So el's whole job collapses to: read the one object
+file (obj.c), assign every symbol a function index or a linear-memory
+arena offset in one pass (asm.c's layout()), then emit the module.
+The one thing that still needs deferred resolution is a DATA record
+whose value is itself a symbol's address (`DATA iov+0(SB)/4,
+$msg(SB)`) -- msg's arena offset isn't known until layout has run --
+handled by a short deferred-patch list (l.h's DataReloc), applied
+right after layout and before any code is emitted. This is
+deliberately much smaller than a real relocation table: it only ever
+needs to run once, in one direction, because there's only one object
+file and layout is a single pass.
+
+optab.c/oplook() mirror every other arch's Optab/oplook() in spirit,
+simplified because there's no operand-*class* dispatch to do: a real
+arch's oplook() picks among several Optab rows for the same opcode
+depending on which addressing mode aclass() classified the operands
+into (register vs immediate vs various memory forms); a wasm opcode
+has exactly one encoding, full stop, so el's table is keyed by opcode
+alone and asm.c's fetch()/store() (not oplook()) are what branch on
+operand *kind* (const/local/global) to pick the right push/pop
+sequence.
+
+-I symbol=module.field (linkers/el/main.c) tells el that an otherwise-
+undefined CALL target should become a wasm import instead of a link
+error -- the same role -I plays for 6lg's Mach-O dynamic imports
+(tests/s/mini/hello_macos_libc_amd64.s), just adapted to wasm's
+two-level (module, field) import naming instead of a library path.
+v1 hardcodes one import signature (4 x i32 -> i32, i.e. WASI's
+fd_write) since nothing else is needed yet; a real -I would need to
+also specify the signature once more imports show up.
+
+
+What's implemented but not verified by any test
+----------------------------------------------------
+
+hello_wasm.s only exercises ACONSTW (including the address-of-symbol
+form), ACALL, ARET, and ADROP, plus the TEXT/GLOBL/DATA pseudo-ops.
+Load/store, locals/globals, control flow (BLOCK/LOOP/IF/BR), and the
+register conversions are implemented against the wasm spec and the
+reasoning above, but nothing has actually run them through ea+el+a
+real wasm host yet. Treat them the way a freshly-added Optab row on a
+real arch would be treated before its first test: plausible, not
+proven.
+
+
+Open questions for ec (not yet started)
+-------------------------------------------
+
+This is the part of the design that reaches furthest past what
+exists today, kept here so it doesn't have to be re-derived:
+
+  - Structured control flow from goto-based IR. Every existing
+    backend's cgen.c/sgen.c assumes arbitrary goto/label control flow
+    (the same shape a real CPU's branches give you). wasm allows only
+    block/loop/if nesting with depth-based exits. Turning arbitrary C
+    control flow (which cck's frontend already lowers to gotos) into
+    properly nested block/loop/if is a real, nontrivial problem --
+    this is what Emscripten's "relooper" algorithm exists to solve.
+    ec needs either a relooper-equivalent, or to restrict itself to
+    control-flow shapes that translate directly (structured
+    if/while/for, which cck's frontend mostly already produces before
+    any goto-flattening) and fall back to a relooper only for the
+    genuinely irregular cases (arbitrary goto, computed jumps).
+
+  - Locals instead of registers. This is a *simplification* relative
+    to every other backend: reg.c's whole job (deciding which of a
+    small fixed set of hardware registers holds which value, with
+    spill code when they run out) doesn't apply, since wasm locals
+    are effectively unlimited. ec's equivalent of register allocation
+    can likely just be "one fresh local per live temporary", with no
+    spilling logic to write at all.
+
+  - The address-taken-local split. e.out.h's D_AUTO/D_PARAM already
+    reserve the concept: a C local/param whose address is never taken
+    compiles straight to a D_LOCAL (fast, a true wasm local); one that
+    is address-taken (or too large to fit in a single wasm value type)
+    needs a slot in the shadow stack instead, addressed relative to
+    SPGLOBAL the way D_AUTO/D_PARAM work on every other arch. Deciding
+    which case a given C variable falls into is ec's job -- probably
+    a pass very similar to how existing backends already decide which
+    C locals become register variables versus stack-resident ones,
+    just with a binary fast/slow split instead of "how many registers
+    are free".
+
+  - The shadow stack's actual push/pop sequence at function entry/
+    exit isn't designed yet: SPGLOBAL needs to be decremented by the
+    frame's shadow-stack size on entry and restored on exit (mirroring
+    every other arch's TEXT-declared frame size), but nothing
+    generates that sequence today -- ATEXT's frame-size operand is
+    read by el but currently unused for anything.
+
+  - Function signatures. el currently hardcodes exactly two wasm
+    types (void->void for local functions, 4xi32->i32 for imports;
+    see asm.c's type-section comment) because nothing produces real
+    ones yet. ec will need el to grow a real type table keyed by each
+    TEXT's actual C signature, deduplicated the way a real wasm
+    module's type section is.

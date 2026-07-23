@@ -150,16 +150,23 @@ void	asmb(void);
  * wasm has no addressing-mode-dependent variants of the same
  * instruction to classify between (a real arch's oplook() picks among
  * several Optab rows per opcode via aclass(); here every opcode has
- * exactly one encoding, so the table is keyed by opcode alone).
+ * exactly one encoding, so the table is keyed by opcode alone). Also
+ * simpler than an earlier draft of this file that had a virtual
+ * AMOVx: every real instruction now has at most one operand (never
+ * ia->from, only ip->to), so there's no more "one vs two operand"
+ * branch in asm.c either.
  */
 enum
 {
     OSIMPLE,	/* one fixed byte, no operand */
     OSIMPLE2,	/* two fixed bytes (opcode + a required immediate byte) */
-    OMOVE,	/* virtual AMOVx: const/load/store, or a bare conversion */
     OBR,	/* br/br_if: opcode + uleb depth */
     OCALL,	/* call: opcode + resolved function index */
-    OLOCAL,	/* local.tee: opcode + uleb local index */
+    OLOCAL,	/* local.get/set/tee: opcode + uleb local index */
+    OGLOBAL,	/* global.get/set: opcode + uleb global index */
+    OCONSTI,	/* iNN.const: opcode + sleb value (or a resolved address) */
+    OCONSTF,	/* fNN.const: opcode + 4 or 8 raw bytes, see fsize */
+    OMEM,	/* iNN.loadNN/storeNN: opcode + fixed align=0 + uleb offset */
 };
 
 typedef struct	Optab	Optab;
@@ -169,9 +176,7 @@ struct	Optab
     int	kind;
     int	op;		/* primary wasm opcode byte */
     int	op2;		/* OSIMPLE2's required immediate byte */
-    int	loadop;		/* OMOVE: load variant, -1 if none (pure conversion) */
-    int	storeop;	/* OMOVE: store variant, -1 if none (pure conversion) */
-    int	constkind;	/* OMOVE: 'w'/'q'/'f'/'d', which const/push applies */
+    int	fsize;		/* OCONSTF: 4 (f32) or 8 (f64) */
 };
 
 Optab*	oplook(int);
