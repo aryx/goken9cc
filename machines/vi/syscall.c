@@ -492,9 +492,21 @@ syswrite(vlong offset)
 
 	Bflush(bioout);
 	buf = memio(0, a, size, MemRead);
-	n = pwrite(fd, buf, size, offset);
+	// claude: fd 0/1/2 are shared with the debugger's own stdin/stdout
+	// (bin/bioout) and are typically pipes or ttys on the host, not
+	// seekable regular files -- forwarding the emulated program's
+	// pwrite offset straight into the host's real pwrite(2) either
+	// fails outright (ESPIPE on a pipe, silently dropping the write
+	// since we only report the error via errstr) or corrupts output
+	// ordering (a positioned write on a regular file racing against
+	// bioout's own sequential writes to the same fd). Use a plain
+	// sequential write for the standard streams instead.
+	if(fd == 0 || fd == 1 || fd == 2)
+		n = write(fd, buf, size);
+	else
+		n = pwrite(fd, buf, size, offset);
 	if(n < 0)
-		errstr(errbuf, sizeof errbuf);	
+		errstr(errbuf, sizeof errbuf);
 	if(sysdbg)
 		itrace("write(%d, %lux, %d, 0xllx) = %d", fd, a, size, offset, n);
 	free(buf);

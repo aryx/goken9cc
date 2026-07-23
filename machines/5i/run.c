@@ -13,24 +13,24 @@
 /*e: macro [[XCAST]] */
 
 // forward decl
-void	undef(ulong);
+void	undef(instruction);
 
-void	Idp0(ulong);
-void	Idp1(ulong);
-void	Idp2(ulong);
-void	Idp3(ulong);
+void	Idp0(instruction);
+void	Idp1(instruction);
+void	Idp2(instruction);
+void	Idp3(instruction);
 
-void	Imul(ulong);
-void	Imula(ulong);
-void	Imull(ulong);
+void	Imul(instruction);
+void	Imula(instruction);
+void	Imull(instruction);
 
-void	Iswap(ulong);
-void	Imem1(ulong);
-void	Imem2(ulong);
-void	Ilsm(ulong inst);
+void	Iswap(instruction);
+void	Imem1(instruction);
+void	Imem2(instruction);
+void	Ilsm(instruction inst);
 
-void	Ib(ulong);
-void	Ibl(ulong);
+void	Ib(instruction);
+void	Ibl(instruction);
 
 int arm_class(instruction w);
 
@@ -861,7 +861,11 @@ Iswap(instruction inst)
 {
     int rn, rd, rm;
     ulong address, value;
-    bool bbit;
+    // claude: must be int, not bool -- bool is uint8 (see u.h) and
+    // "x & (1<<22)" truncated into a uint8 always yields 0, since C's
+    // narrowing assignment is a modulo truncation, not _Bool's
+    // "nonzero becomes 1" rule.
+    int bbit;
 
     bbit = inst & (1<<22); // BU?
 
@@ -904,7 +908,9 @@ Imem1(instruction inst)
 {
     int rn, rd, off, rm, sc, st;
     ulong address, value;
-    bool prebit, ubit, bbit, wbit, lbit, bit25;
+    // claude: int, not bool -- see comment in Iswap() above, same
+    // truncation trap applies to every high bit tested here (20..25)
+    int prebit, ubit, bbit, wbit, lbit, bit25;
 
     bit25 = inst & (1<<25); // rm or I?
     prebit = inst & (1<<24); // Pre indexing?
@@ -1012,7 +1018,8 @@ Imem2(instruction inst)
 {
     int rn, rd, off, rm;
     ulong address, value;
-    bool prebit, ubit, hbit, sbit, wbit, lbit, bit22;
+    // claude: int, not bool -- see comment in Iswap() above
+    int prebit, ubit, hbit, sbit, wbit, lbit, bit22;
 
     prebit = inst & (1<<24); // Pre indexing?
     ubit = inst & (1<<23); // Up offset?

@@ -86,7 +86,12 @@ struct Inst
 struct Registers
 {
 	ulong	pc;
-	ulong	ir;
+	// claude: u32int, not ulong -- a MIPS instruction word is always
+	// 32 bits; ulong is 64 bits on this host, and "itab[(ir)>>26]" in
+	// Iexec() has no re-masking, so a sign-extended ir sends the
+	// dispatch to a wild out-of-bounds itab index (see ifetch()/
+	// getmem_w() in mem.c for where the sign-extension itself happens)
+	u32int	ir;
 	Inst	*ip;
 	long	r[32];
 	ulong	mhi;
@@ -168,13 +173,13 @@ void		itrace(char *, ...);
 void		segsum(void);
 void		Ssyscall(ulong);
 char*		memio(char*, ulong, int, int);
-ulong		ifetch(ulong);
-ulong		getmem_w(ulong);
+u32int		ifetch(ulong);
+u32int		getmem_w(ulong);
 ushort		getmem_h(ulong);
 void		putmem_w(ulong, ulong);
 uchar		getmem_b(ulong);
 void		putmem_b(ulong, uchar);
-ulong		getmem_4(ulong);
+u32int		getmem_4(ulong);
 ulong		getmem_2(ulong);
 void		putmem_h(ulong, short);
 Mul		mul(long, long);

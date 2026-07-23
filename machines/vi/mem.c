@@ -7,7 +7,7 @@
 
 extern ulong	textbase;
 
-ulong
+u32int
 ifetch(ulong addr)
 {
 	uchar *va;
@@ -25,13 +25,18 @@ ifetch(ulong addr)
 	va = vaddr(addr);
 	va += addr&(BY2PG-1);
 
+	// claude: va[0]<<24|... is still computed as a plain (32-bit) int
+	// and can look "negative" when va[0]>=0x80, but ifetch's return
+	// type is now u32int (not ulong), so that bit pattern is
+	// reinterpreted, not sign-extended, on return -- see the comment
+	// on Registers.ir in mips.h
 	return va[0]<<24 | va[1]<<16 | va[2]<<8 | va[3];
 }
 
-ulong
+u32int
 getmem_4(ulong addr)
 {
-	ulong val;
+	u32int val;
 	int i;
 
 	val = 0;
@@ -51,7 +56,7 @@ getmem_2(ulong addr)
 	return val;
 }
 
-ulong
+u32int
 getmem_w(ulong addr)
 {
 	uchar *va;
@@ -66,7 +71,8 @@ getmem_w(ulong addr)
 	va = vaddr(addr);
 	va += addr&(BY2PG-1);
 
-	return va[0]<<24 | va[1]<<16 | va[2]<<8 | va[3];;
+	// claude: see the comment in ifetch() above -- same reasoning
+	return va[0]<<24 | va[1]<<16 | va[2]<<8 | va[3];
 }
 
 ushort

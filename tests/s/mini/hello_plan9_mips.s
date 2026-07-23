@@ -18,7 +18,7 @@ TEXT _main(SB), $20
 	MOVW	$0,4(R6)
 
         /* system call */
-	MOVW $9 /*PWRITE*/, R1
+	MOVW $11 /*PWRITE*/, R1
 	SYSCALL
         JAL exit(SB)
 

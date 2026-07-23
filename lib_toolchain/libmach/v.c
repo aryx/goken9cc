@@ -106,7 +106,12 @@ Mach mmips =
 	"R31",		/* name of link register */
 	"setR30",	/* static base register name */
 	0,		/* value */
-	0x1000,		/* page size */
+	// claude: must match linkers/vl's INITRND (16*1024 for -H2 plan9
+	// format, see obj.c), not the generic 4K page size -- otherwise
+	// crackhdr() computes the wrong txtaddr (settext() in
+	// executable.c uses pgsize+sizeof(Exec) as the text base) and
+	// every consumer (vi, nm, acid) mislocates the text/data segments
+	16*1024,	/* page size */
 	0xC0000000,	/* kernel base */
 	0x40000000,	/* kernel text mask */
 	0x7FFFFFFF,	/* user stack top */

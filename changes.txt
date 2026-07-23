@@ -186,6 +186,40 @@
     fd_write) hello world, run under Node's WASI implementation via
     the new scripts/wasm-runner (the wasm counterpart of
     scripts/qemu-runner); verified byte-identical to hello.expected.txt
+- 5i/vi: fix hello_plan9_arm.exe/hello_plan9_mips.exe not actually
+  running under the emulators (thx to Claude)
+  * 5i: bool is uint8 (see u.h), and "x & (1<<N)" for N>=8 truncates to
+    0 when narrowed into it (unlike a real _Bool's "nonzero->1"); this
+    silently zeroed prebit/ubit/bbit/wbit/lbit in Iswap/Imem1/Imem2,
+    turning the ARM "LDR $hello(SB), R1" PC-relative literal load into
+    a store that clobbered the following code. Retyped those locals to
+    plain int
+  * lib_toolchain/libmach/v.c: mmips.pgsize was 0x1000 but
+    linkers/vl rounds MIPS -H2 text to a 16K page (INITRND, obj.c),
+    so crackhdr() computed the wrong txtaddr and vi read the text
+    segment from the wrong file offset (fixed to 16*1024, matching
+    principia's own copy of this file)
+  * 5i/vi: ifetch()/getmem_w()/getmem_4() composed the 32-bit
+    instruction/memory word as "va[0]<<24 | ..."; the intermediate is
+    computed as a 32-bit int and can look negative, and returning that
+    through a ulong (64 bits on this host, unlike the original 32-bit
+    Plan9 hosts) sign-extended it, corrupting the top 32 bits. Harmless
+    in 5i (every consumer re-masks with a 32-bit constant), fatal in
+    vi's unmasked "itab[(ir)>>26]" dispatch (segfault on a wild index).
+    Retyped instruction/reg.ir and those three functions to u32int,
+    matching the int32 migration already underway in linkers/vl/l.h
+  * 5i/vi: syswrite() forwarded the emulated program's Plan9 pwrite
+    offset straight into the host's real pwrite(2) on fd 1; fine on a
+    tty (offset ignored) but ESPIPE on a pipe (write silently dropped)
+    and corrupts ordering on a regular file (racing bout/bioout's own
+    sequential writes). fd 0/1/2 now use plain write()
+  * tests/s/mini/hello_plan9_{arm,mips}.s: fix stale PWRITE=9 (that's
+    FD2PATH per the current lib_core/libc/9syscall/sys.h numbering);
+    PWRITE is 11
+  * tests/vi/smoke.sh: was pinning the txtaddr bug above as a documented
+    limitation (hardcoded the wrong 0x1020 address, skipped ':c'); now
+    asserts the real entry (0x4020) and runs to completion, like
+    tests/5i/smoke.sh
 
 ** os
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin

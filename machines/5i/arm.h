@@ -13,7 +13,11 @@ typedef	struct	Tlb			Tlb;
 typedef	struct	Breakpoint	Breakpoint;
 
 /*s: typedef instruction */
-typedef ulong instruction;
+// claude: u32int, not ulong -- an ARM instruction word is always 32
+// bits; on this 64-bit host ulong is 64 bits, and composing the word
+// byte-by-byte (ifetch/getmem_w) then returning it as a wider signed-
+// looking value sign-extends it, corrupting the top 32 bits
+typedef u32int instruction;
 /*e: typedef instruction */
 
 /*s: enum [[breakpoint_kind]] */
@@ -301,20 +305,20 @@ void		initstk(int, char**);
 // for syscalls.c
 char*		memio(char*, ulong, int, int);
 // for run.c
-void		Ssyscall(ulong);
+void		Ssyscall(instruction);
 // for run.c
-ulong		ifetch(ulong);
+u32int		ifetch(ulong);
 // used to be in libmach/, but I copy pasted it in run.c
 //int	arm_class(instruction);
 
 void		updateicache(ulong addr);
 
 ulong		getmem_2(ulong);
-ulong		getmem_4(ulong);
+u32int		getmem_4(ulong);
 uchar		getmem_b(ulong);
 ushort		getmem_h(ulong);
 uvlong		getmem_v(ulong);
-ulong		getmem_w(ulong);
+u32int		getmem_w(ulong);
 void		putmem_b(ulong, uchar);
 void		putmem_h(ulong, ushort);
 void		putmem_v(ulong, uvlong);
@@ -360,7 +364,7 @@ extern	Tlb			tlb;
 
 extern	Inst		itab[];
 
-extern	instruction	dot;
+extern	uintptr		dot;
 extern	int		count;
 
 extern	Biobuf*		bout;
