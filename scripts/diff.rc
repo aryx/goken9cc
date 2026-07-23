@@ -4,11 +4,16 @@
 
 # Script to compare the source code in the different kencc-derived
 # repositories, to ultimately try to unify them in one repo (goken).
-# ex of use: cd ~/; ./goken/diff.rc va &> /tmp/diffva
+# ex of use: cd ~/; ./goken/scripts/diff.rc va &> /tmp/diffva
 
 cmd=$1
 # let's focus just on the C and assembly code; let's skip diff on mkfile
 flags=(-u -p -b -B -r -x mkfile)
+
+# default base, for big comparisons
+base=9cc
+#base=inferno # for ia/ic/il as 9cc does not have them
+#base=myplan9old
 
 # missing: 
 # - 9base: no compiler toolchain
@@ -16,12 +21,8 @@ flags=(-u -p -b -B -r -x mkfile)
 # - 9cc: no riscv (ia/ic/il), no 5i/vi
 # - 9front: no riscv
 
-# big comparisons
-base=9cc
-#base=inferno # for ia/ic/il as 9cc does not have them
-#base=myplan9old
-
 dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv goken goold goken-go-variant 9front)
+# to add when comparing not-toolchain tools:
 #dirs=(9base plan9port)
 
 # goken comparisons
@@ -30,7 +31,7 @@ dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv goken
 
 # kencc comparisons
 #base=9cc
-#dirs=(9cc 9colombier inferno mykencc) # kencc-riscv
+#dirs=(9cc 9colombier inferno mykencc kencc-riscv)
 
 #base=mykencc
 #dirs=(9colombier)
