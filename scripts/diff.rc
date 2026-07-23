@@ -10,18 +10,17 @@ cmd=$1
 # let's focus just on the C and assembly code; let's skip diff on mkfile
 flags=(-u -p -b -B -r -x mkfile)
 
-# default base, for big comparisons
-base=9cc
-#base=inferno # for ia/ic/il as 9cc does not have them
-#base=myplan9old
-
 # missing: 
 # - 9base: no compiler toolchain
 # - plan9port: no compiler toolchain
 # - 9cc: no riscv (ia/ic/il), no 5i/vi
 # - 9front: no riscv
 
-dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv goken goold goken-go-variant 9front)
+# default base, for big comparisons
+#base=9cc
+base=inferno # for ia/ic/il as 9cc does not have them
+
+dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv miller-riscv goken goold goken-go-variant 9front)
 # to add when comparing not-toolchain tools:
 #dirs=(9base plan9port)
 
