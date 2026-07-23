@@ -61,6 +61,16 @@ struct	Prog
 	Adr	to;
 	Prog*	link;
 	int32	lineno;
+	int32	pcid;	/* claude: this Prog's identity at flat-emission time --
+			 * see txt.c's nextpc()/gbranch()/patch() and reg.c's
+			 * structuring pass, which is the only code that reads it */
+	int32	height;	/* claude: wasm operand-stack height *before* this Prog
+			 * runs -- see stackheight/gins() in txt.c and reg.c's
+			 * safeopen(), which needs exact heights (not just "was the
+			 * previous thing a branch") to find where it's actually
+			 * safe to open a block without splitting a still-pending
+			 * value from whatever consumes it (e.g. a comparison's
+			 * result from the branch that tests it) */
 	char	as;
 	char	reg;	/* wire format's third small-int slot: DATA width, TEXT flags */
 };
@@ -111,6 +121,7 @@ EXTERN	int32	nrathole;
 EXTERN	int32	nstring;
 EXTERN	Prog*	p;
 EXTERN	int32	pc;
+EXTERN	int32	stackheight;	/* claude: see Prog.height's comment above */
 EXTERN	char	string[NSNAME];
 EXTERN	Sym*	symrathole;
 EXTERN	Node	znode;
@@ -196,7 +207,6 @@ void	gins(int, Node*, Node*);
 void	gopcode(int, Node*);
 void	gbranch(int);
 void	patch(Prog*, int32);
-void	pushif(void);
 void	gpseudo(int, Sym*, Node*);
 
 /*

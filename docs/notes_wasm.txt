@@ -263,33 +263,53 @@ hello_wasm.s exercises ACONSTW (including the address-of-symbol
 form), ACALL, ARET, and ADROP, plus the TEXT/GLOBL/DATA pseudo-ops, via
 ea+el. tests/c/mini2/regress_wasm.c exercises ec's straight-line
 arithmetic, calls (including recursion), real per-function signatures
-(ASIGNATURE), and if/else control flow (if-with-no-else, if/else where
-both branches terminate, if/else where neither does, and else-if
-chains), via ec+el. Load/store of globals, locals beyond what
-regress_wasm.c needs, and the register conversions are implemented
-against the wasm spec but not yet exercised by any test -- treat those
-the way a freshly-added Optab row on a real arch would be treated
-before its first test: plausible, not proven.
+(ASIGNATURE), if/else (if-with-no-else, both-branches-terminate,
+neither-terminates, else-if chains), and `while` (plain, break,
+continue, nested, if-inside-while), via ec+el. Load/store of globals,
+locals beyond what regress_wasm.c needs, and the register conversions
+are implemented against the wasm spec but not yet exercised by any
+test -- treat those the way a freshly-added Optab row on a real arch
+would be treated before its first test: plausible, not proven.
 
-ec's if/else, in one paragraph: gbranch()/patch() (txt.c) track a
-small stack of open ifs (ifstack[]/ifthenterm[]/nifstack), since wasm
-has no free-standing branch-to-address the way gbranch()/patch()
-assume on every other arch -- OGOTO (the "jump over the else" cck's
-frontend emits) just notes "an else is coming" and defers to patch()
-to actually emit AELSE or AENDCTL. The one real subtlety: codgen()
-(cck/pgen.c) always emits a trailing gbranch(ORETURN) at the end of
-every function, whether or not all paths already returned, and by
-that point canreach is already 0 regardless of which case it is --
-so it can't be used to suppress the redundant one. The fix is to
-always emit ARET (never suppress it) and instead track lastterm (set
-by ARET/AUNREACHABLE, cleared by every other gins()) plus each open
-if's ifthenterm[] snapshot; if patch() finds both branches of a
-closing if/else were terminal, it emits a genuine AUNREACHABLE right
-after AENDCTL, which makes wasm treat everything after it (including
-the harmless redundant trailing RET) as type-polymorphic dead code
-instead of a stack-shape validation error.
+ec's control flow, in one paragraph: gbranch()/patch() (txt.c) are
+now, deliberately, almost identical to a *real* arch's -- gbranch(
+OGOTO) emits an unresolved ABR and hands back its Prog* in the global
+`p`; patch(that Prog*, pc) fills in `to.offset` with a raw target pc,
+exactly like ic/txt.c's D_BRANCH. boolgen()'s branch form (cgen.c)
+emits the matching conditional placeholder, ABRIF, the same way. This
+covers if/else, while, and break/continue uniformly, since it's the
+same gbranch(OGOTO)/patch() shape pgen.c already emits for all of
+them -- an earlier version of this file special-cased if/else's own
+call pattern directly in gbranch()/patch(), which worked but had no
+way to generalize to loops (see git history around the "flat-PC +
+restructure pass" commit for what that looked like and why it didn't
+scale). The wasm-specific part -- turning this flat, PC-addressed
+list into properly nested block/loop/br/br_if -- happens once per
+function in reg.c's regopt(), reusing the same hook every other arch's
+regopt() (register allocation) already runs there. Full algorithm in
+reg.c's own comments: jump-threading, dead-code elision (which is also
+how the redundant trailing return codgen() always appends gets
+silently dropped, replacing the older per-if AUNREACHABLE-insertion
+trick), scope construction, and emission. Two real subtleties
+reg.c had to account for, both explained in detail in safeopen()'s and
+extendscopes()'s own comments: a wasm block/loop resets what's visible
+on the operand stack, so a block wrapping a value-consuming branch
+(ABRIF) must open before that value's own computation, not at the
+branch itself; and some scope pairs (if/else's own "skip the else"
+jump, in particular) partially overlap in the flat list and need
+widening into proper nesting rather than nesting for free.
 
-A second subtlety, found only once a function had more than one
+A structural limitation found this way, not yet fixed: C `for` and
+`do while` both have an entry jump that skips straight into the middle
+of what the back-edge treats as the loop (for skips the first
+increment, do-while skips the first test) -- landing inside a scope
+from outside it, which plain block/loop nesting cannot express (only
+"jump to a scope's start" or "past its end"). reg.c's validatescopes()
+catches this with a clear diagnostic rather than emitting a module
+that fails wasm validation. See "Open questions" below for the real
+fix (loop rotation).
+
+A separate subtlety, found only once a function had more than one
 local: every local (param or auto) shares ec's single flat wasm-local
 index space (see txt.c's localindex()), but dcl.c -- shared frontend
 code also used by every register-based backend -- resets its own
@@ -311,18 +331,27 @@ Open questions for ec (not yet started)
 This is the part of the design that reaches furthest past what
 exists today, kept here so it doesn't have to be re-derived:
 
-  - Loops (for/while) and the general relooper problem. if/else has
-    no back-edges, so gbranch()/patch()'s small if-stack (described
-    above) was enough. A loop needs an actual back-edge (ABR to an
-    enclosing ALOOP), which is a genuinely different shape from
-    "signal an else is coming" -- this is where Emscripten's
-    "relooper" algorithm exists to solve the general case (arbitrary
-    goto). ec can likely still avoid a full relooper by handling
-    structured for/while directly (cck's frontend still hands them to
-    gbranch()/patch() as a recognizable shape before any goto
-    flattening) and only needs relooper-equivalent logic if genuinely
-    irregular control flow (arbitrary goto, computed jumps) needs to
-    be supported later.
+  - Loop rotation for C `for`/`do while`. Both constructs' entry jump
+    needs to land inside the loop body from outside it (see above) --
+    reg.c's block/loop insertion can't express that, and no amount of
+    more interval-insertion logic fixes it (a branch's *target*, unlike
+    its open point, is a real position that can't be moved). The
+    standard fix real compilers use is loop rotation: duplicate the
+    test so entry never has to jump into the middle, e.g. `for(init;
+    test; inc) body;` becomes roughly `init; if(test) { loop { body;
+    inc; if(test) continue; } }` -- a real generator change (actually
+    re-emitting the test's own instructions a second time), not just a
+    reg.c change. `while`/break/continue/nesting already work without
+    this (see above) since a plain while's entry and back-edge target
+    the *same* position (the test), never the loop's interior.
+
+  - Should ec ever need genuinely irregular control flow (arbitrary
+    goto into another block, computed jumps) -- unlikely, since cck's
+    frontend only hands gbranch()/patch() the shapes above, and
+    anything else already diag()s -- reg.c's scope-based approach
+    would need to become a real "relooper" (Emscripten's algorithm,
+    or LLVM's CFGStackify) instead of the direct construction it does
+    today.
 
   - The address-taken-local split. e.out.h's D_AUTO/D_PARAM already
     reserve the concept: a C local/param whose address is never taken

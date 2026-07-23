@@ -11,11 +11,6 @@
  */
 #include "gc.h"
 
-/* claude: forward declaration -- gins() (below) needs to reset this on
- * every ordinary instruction; its real home and full explanation are
- * with gbranch()/patch(), further down, where it's actually used. */
-static int lastterm;
-
 void
 ginit(void)
 {
@@ -30,6 +25,7 @@ ginit(void)
 	mnstring = 0;
 	nrathole = 0;
 	pc = 0;
+	stackheight = 0;
 	breakpc = -1;
 	continpc = -1;
 	cases = C;
@@ -118,6 +114,10 @@ nextpc(void)
 	p = alloc(sizeof(*p));
 	*p = zprog;
 	p->lineno = nearln;
+	p->pcid = pc;	/* see reg.c's structuring pass: breakpc/continpc-style
+			 * snapshots taken *before* the matching gbranch() call
+			 * are, by construction, exactly the pcid this Prog is
+			 * about to receive. */
 	pc++;
 	if(firstp == P) {
 		firstp = p;
@@ -526,96 +526,124 @@ gopcode(int o, Node *t)
 	gins(a, Z, Z);
 }
 
+/*
+ * claude: net wasm operand-stack effect of one instruction -- see
+ * Prog.height's comment (gc.h) for why reg.c needs this exactly,
+ * rather than a cheaper "was the previous thing a branch" heuristic
+ * (which an earlier version of this file tried and got wrong: it
+ * treated an ordinary ALOCALSET as *not* resetting height, so a
+ * value-computing branch's own condition computation looked like it
+ * needed to reach further back than it actually did, occasionally
+ * producing a block whose span crossed another one instead of
+ * nesting inside it). ACALL and ARET are variable-arity (a call's
+ * argument/result count depends on the callee; a return's on the
+ * current function's own type) and are tracked at their own call
+ * sites instead (cgen.c's rval()/OFUNC case, gbranch()'s ORETURN
+ * case) -- both unreachable here, listed only so an accidental
+ * gins(ACALL,...)/gins(ARET,...) call is caught rather than silently
+ * mistracked.
+ */
+static int
+stackdelta(int a)
+{
+	switch(a) {
+	case ACONSTW: case ACONSTQ: case ACONSTF: case ACONSTD:
+	case ALOCALGET: case AGLOBALGET:
+	case AMEMSIZE:
+		return 1;
+	case ALOCALSET: case AGLOBALSET:
+	case ADROP:
+		return -1;
+	case ALOCALTEE:
+	case AMEMGROW:
+		return 0;
+	case ALOADB: case ALOADBU: case ALOADH: case ALOADHU:
+	case ALOADW: case ALOADQ: case ALOADBQ: case ALOADBUQ:
+	case ALOADHQ: case ALOADHUQ: case ALOADWQ: case ALOADWUQ:
+	case ALOADF: case ALOADD:
+		return 0;	/* pop address, push value */
+	case ASTOREB: case ASTOREH: case ASTOREW: case ASTOREWQ:
+	case ASTOREQ: case ASTOREF: case ASTORED:
+		return -2;	/* pop address and value */
+	case AADDW: case ASUBW: case AMULW: case ADIVW: case ADIVWU:
+	case AREMW: case AREMWU: case AANDW: case AORW: case AXORW:
+	case ASHLW: case ASHRW: case ASHRWU: case AROLW: case ARORW:
+	case ACMPEQW: case ACMPNEW: case ACMPLTW: case ACMPLTWU:
+	case ACMPGTW: case ACMPGTWU: case ACMPLEW: case ACMPLEWU:
+	case ACMPGEW: case ACMPGEWU:
+	case AADDQ: case ASUBQ: case AMULQ: case ADIVQ: case ADIVQU:
+	case AREMQ: case AREMQU: case AANDQ: case AORQ: case AXORQ:
+	case ASHLQ: case ASHRQ: case ASHRQU: case AROLQ: case ARORQ:
+	case ACMPEQQ: case ACMPNEQ: case ACMPLTQ: case ACMPLTQU:
+	case ACMPGTQ: case ACMPGTQU: case ACMPLEQ: case ACMPLEQU:
+	case ACMPGEQ: case ACMPGEQU:
+	case AADDF: case ASUBF: case AMULF: case ADIVF: case AMINF: case AMAXF: case ACOPYSGNF:
+	case ACMPEQF: case ACMPNEF: case ACMPLTF: case ACMPGTF: case ACMPLEF: case ACMPGEF:
+	case AADDD: case ASUBD: case AMULD: case ADIVD: case AMIND: case AMAXD: case ACOPYSGND:
+	case ACMPEQD: case ACMPNED: case ACMPLTD: case ACMPGTD: case ACMPLED: case ACMPGED:
+		return -1;	/* binary: pop 2, push 1 */
+	case ACLZW: case ACTZW: case APOPCNTW: case ATESTW:
+	case ACLZQ: case ACTZQ: case APOPCNTQ: case ATESTQ:
+	case AABSF: case ANEGF: case ASQRTF: case ACEILF: case AFLOORF: case ATRUNCF: case ANEARF:
+	case AABSD: case ANEGD: case ASQRTD: case ACEILD: case AFLOORD: case ATRUNCD: case ANEARD:
+	case AWRAPQ: case AEXTW: case AEXTWU:
+	case ACONVWF: case ACONVWUF: case ACONVWD: case ACONVWUD:
+	case ACONVQF: case ACONVQUF: case ACONVQD: case ACONVQUD:
+	case ATRUNCFW: case ATRUNCFWU: case ATRUNCFQ: case ATRUNCFQU:
+	case ATRUNCDW: case ATRUNCDWU: case ATRUNCDQ: case ATRUNCDQU:
+	case APROMOTE: case ADEMOTE:
+	case AREINTWF: case AREINTFW: case AREINTQD: case AREINTDQ:
+		return 0;	/* unary: pop 1, push 1 */
+	case ACALL:
+		/* claude: variable arity -- gins(ACALL,...)'s caller (cgen.c's
+		 * rval()/OFUNC) overwrites stackheight itself right after this
+		 * runs, using the callee's actual signature. This 0 is never
+		 * the real answer, just a placeholder so gins() has something
+		 * to add without diag()ing on every single call site. */
+		return 0;
+	}
+	diag(Z, "stackdelta: unhandled opcode %A", a);
+	return 0;
+}
+
 void
 gins(int a, Node *f, Node *t)
 {
 	nextpc();
 	p->as = a;
+	p->height = stackheight;
 	if(f != Z)
 		naddr(f, &p->from);
 	if(t != Z)
 		naddr(t, &p->to);
-	lastterm = 0;	/* see gbranch()/patch()'s comment on this flag */
+	stackheight += stackdelta(a);
 }
 
 /*
- * claude: if/else, the first (and so far only) piece of control flow
- * ec supports. See docs/notes_wasm.txt for the general problem this
- * is a restricted case of: pgen.c's gen()/OIF (compilers/cck/pgen.c)
- * is written entirely in terms of flat, PC-based branches --
- * gbranch(OGOTO) emits an unresolved jump and hands back its Prog* in
- * the global `p`; patch(that Prog*, pc) later fills in its target --
- * a model with no notion of "this branch closes a structured
- * construct" at all. Recovering that structure for wasm's block/loop/
- * if nesting in general is a real algorithm (a "relooper"); for
- * if/else specifically (no back-edges) it collapses to something far
- * simpler, worked out here:
+ * claude: gbranch()/patch() are, on purpose, almost identical to
+ * ic/txt.c's real-arch versions: a flat, PC-addressed branch model.
+ * gbranch(OGOTO) emits an unresolved ABR and hands back its Prog* in
+ * the global `p`; patch(that Prog*, pc) later fills in `to.offset`
+ * with a raw target pc, exactly like a real arch's D_BRANCH. This
+ * covers if/else, while/for, and break/continue uniformly (the same
+ * gbranch(OGOTO)/patch() calls pgen.c already makes for all of them --
+ * see compilers/cck/pgen.c's OIF/OWHILE/OFOR/OBREAK/OCONTINUE), unlike
+ * an earlier version of this file that special-cased if/else's own
+ * call pattern directly here and had no way to generalize to loops.
  *
- * OIF's own code (traced in full in the design notes) does exactly
- * this, in this order, regardless of whether there's an else:
- *   1. boolgen(cond,1,Z) -- already emits AIF directly (see cgen.c)
- *      and calls pushif() to open a context; the Prog* pgen.c saves
- *      as `sp` is never touched again by ec, it's an opaque token.
- *   2. gen(then-body)
- *   3. IF there's an else: gbranch(OGOTO) [no-op here, see below],
- *      then patch(sp, pc) -- ELSE: just patch(sp, pc) directly.
- *   4. IF there's an else: gen(else-body), then a second
- *      patch(sp, pc).
+ * boolgen()'s branch form (cgen.c) emits the matching conditional
+ * placeholder, ABRIF, the same way.
  *
- * The key realization: wasm's own `if`/`else` construct already skips
- * the untaken branch for free -- reaching the natural end of the
- * then-branch jumps straight past the else-branch to after `end`,
- * with no explicit "goto" needed. So gbranch(OGOTO) here (called only
- * when there's an else, to fake the same "skip the else" a flat-
- * branch arch needs) does not need to emit anything at all; it only
- * needs to *record* that an else is coming, so that patch()'s first
- * call for this if knows to emit AELSE (and expect one more patch()
- * for AENDCTL) instead of closing with AENDCTL immediately.
- *
- * This intentionally assumes gbranch(OGOTO) can currently only mean
- * "the if/else skip" -- true today, since nothing else in ec calls it
- * yet (loops/switch/goto all still diag()). Adding those will need
- * gbranch()/patch() to tell contexts apart properly instead.
- *
- * One more wrinkle, found empirically: codgen() (compilers/cck/
- * pgen.c) unconditionally emits a trailing gbranch(ORETURN) at the
- * very end of every function, whether or not every path already
- * returned explicitly (fact()'s if/else, where both branches return,
- * is exactly this). On a real arch that trailing RET is simply dead
- * code, harmless. wasm's validator statically type-checks every
- * instruction *as ec emits it*, and its unreachable-tracking does not
- * carry across an if/else's own `end` back out to the enclosing
- * block -- so a RET sitting right after a fully-terminal if/else,
- * needing a value nothing left on the stack, is a real validation
- * error, not just dead code (confirmed: V8 rejected it outright).
- * The fix isn't to suppress that RET (canreach, the obvious signal,
- * turns out to already be 0 by the time *any* gbranch(ORETURN) runs --
- * gen()'s own ORETURN case zeroes it before emitting its own RET, so
- * it can't tell "an explicit return, which must emit" from "the
- * trailing one, which mustn't" apart). Instead: track, independently,
- * whether the *last* thing emitted was itself a terminator
- * (`lastterm`), and when closing an if/else whose *both* branches
- * turned out to be terminal, emit a genuine `unreachable` right after
- * `end` -- wasm's unreachable makes everything following it
- * type-polymorphic, so that harmless trailing RET (or anything else)
- * no longer needs the stack to be in any particular state at all.
+ * The wasm-specific part -- turning this flat, PC-addressed branch
+ * list into properly nested block/loop/br/br_if, *and* eliding the
+ * trailing gbranch(ORETURN) codgen() always appends whether or not
+ * the function already returned on every path -- happens once per
+ * function, after gen() has produced the whole flat list: see
+ * reg.c's regopt(), which plays that role the same way a real arch's
+ * regopt() post-processes its own flat Prog list (into real
+ * registers instead of wasm structure). Full algorithm and rationale
+ * in reg.c and docs/notes_wasm.txt.
  */
-#define	MAXIFDEPTH	64
-enum { IFNOELSE, IFELSEPENDING, IFELSEEMITTED };
-static int ifstack[MAXIFDEPTH];
-static int ifthenterm[MAXIFDEPTH];	/* did the then-branch end in a terminator? */
-static int nifstack;
-
-void
-pushif(void)
-{
-	if(nifstack >= MAXIFDEPTH) {
-		diag(Z, "if/else nested too deeply");
-		return;
-	}
-	ifstack[nifstack++] = IFNOELSE;
-}
-
 void
 gbranch(int o)
 {
@@ -623,60 +651,27 @@ gbranch(int o)
 	case ORETURN:
 		nextpc();
 		p->as = ARET;
-		lastterm = 1;
+		p->height = stackheight;
+		stackheight -= (thisfn->link->etype == TVOID) ? 0 : 1;
 		return;
 	case OGOTO:
-		if(nifstack > 0 && ifstack[nifstack-1] == IFNOELSE) {
-			ifstack[nifstack-1] = IFELSEPENDING;
-			ifthenterm[nifstack-1] = lastterm;
-			lastterm = 0;	/* the else-branch starts fresh/reachable */
-			return;
-		}
-		/* claude: no control flow beyond if/else yet,
-		 * see docs/notes_wasm.txt's "Open questions for ec". */
-		diag(Z, "goto/loop/switch control flow not implemented yet in ec");
 		nextpc();
-		p->as = AUNREACHABLE;
-		lastterm = 1;
+		p->as = ABR;
+		p->height = stackheight;	/* no operand: doesn't change height */
 		return;
 	default:
 		diag(Z, "bad in gbranch %O", o);
 		nextpc();
 		p->as = AUNREACHABLE;
-		lastterm = 1;
+		p->height = stackheight;
 	}
 }
 
 void
 patch(Prog *op, int32 pc)
 {
-	USED(op);
-	USED(pc);
-	if(nifstack <= 0) {
-		diag(Z, "patch: unexpected control-flow resolution (no open if)");
-		return;
-	}
-	if(ifstack[nifstack-1] == IFELSEPENDING) {
-		nextpc();
-		p->as = AELSE;
-		ifstack[nifstack-1] = IFELSEEMITTED;
-		return;
-	}
-	nextpc();
-	p->as = AENDCTL;
-	if(ifstack[nifstack-1] == IFELSEEMITTED && ifthenterm[nifstack-1] && lastterm) {
-		/* both branches terminated: see the file comment above */
-		nextpc();
-		p->as = AUNREACHABLE;
-		lastterm = 1;
-	} else {
-		/* claude: no-else case (an if without an else always falls
-		 * through when the condition is false, matching pgen.c's own
-		 * `canreach = canreach || oldreach` -- always 1 here) or a
-		 * with-else case where at least one branch fell through. */
-		lastterm = 0;
-	}
-	nifstack--;
+	op->to.offset = pc;
+	op->to.type = D_BRANCH;
 }
 
 void
@@ -710,6 +705,7 @@ gpseudo(int a, Sym *s, Node *n)
 		char sig[NSNAME];
 		int i;
 
+		stackheight = 0;
 		memset(sig, 0, sizeof(sig));
 		for(i = 0; i < nparams && i < NSNAME-2; i++)
 			sig[i] = 'W';
@@ -722,7 +718,11 @@ gpseudo(int a, Sym *s, Node *n)
 		p->from.name = D_EXTERN;
 		p->to.type = D_SCONST;
 		memmove(p->to.sval, sig, NSNAME);
-		pc--;	/* metadata about the TEXT above, not its own instruction */
+		/* claude: deliberately *not* `pc--` here (unlike the ADATA/
+		 * AGLOBL case above) -- reg.c's structuring pass needs every
+		 * Prog's pcid, including this one, to be a genuinely unique,
+		 * position-matching identity; decrementing pc after this made
+		 * the *next* Prog created collide with ASIGNATURE's own pcid. */
 	}
 }
 

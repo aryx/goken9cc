@@ -106,8 +106,19 @@ rval(Node *n)
 			diag(n, "cgen: indirect call not implemented yet");
 			return;
 		}
-		gargs(r, Z, Z);
-		gins(ACALL, Z, l);
+		{
+			/* claude: variable arity (depends on the callee's own
+			 * signature), so tracked here rather than through
+			 * txt.c's stackdelta() table -- gargs() already leaves
+			 * stackheight correct for however many args it just
+			 * pushed (each arg's own cgen() call tracks itself), so
+			 * this only needs to account for the call itself: pop
+			 * back to before the args, push one result unless void. */
+			int32 before = stackheight;
+			gargs(r, Z, Z);
+			gins(ACALL, Z, l);
+			stackheight = before + (l->type->link->etype == TVOID ? 0 : 1);
+		}
 		return;
 
 	case OADD:
@@ -155,38 +166,42 @@ rval(Node *n)
 
 /*
  * claude: boolgen() generates either a branch (nn==Z, used by an
- * if/while's own condition) or a materialized 0/1 value (nn!=Z, e.g.
- * `int ok = a < b;`).
+ * if/while/for's own condition) or a materialized 0/1 value (nn!=Z,
+ * e.g. `int ok = a < b;`).
  *
- * The branch form is the one place ec's codegen touches control flow
- * at all so far, and it works out simpler than a flat-branch arch's
- * would: bcomplex() (compilers/cck/pgen.c) is OIF's only caller of
- * this form, always as `boolgen(cond, 1, Z)` -- confirmed against
- * ic/cgen.c's own boolgen, whose otrue=1 case emits "branch away when
- * FALSE, fall through when TRUE". That is *exactly* wasm's own `if`
- * opcode: pop a value, execute the then-branch when nonzero, jump to
- * else/end when zero. So the branch form is just: compute the
- * condition (negating first if otrue==0, to match AIF's fixed
- * polarity), then emit AIF itself -- no separate "branch to a not-
- * yet-known target" is needed the way gbranch(OGOTO) provides on a
- * flat-branch arch, because wasm's if/else is already the structured
- * thing pgen.c is asking for. AENDCTL/AELSE (closing this same AIF)
- * are emitted later, by patch() -- see txt.c's gbranch()/patch()/
- * pushif() and docs/notes_wasm.txt.
+ * The branch form: bcomplex() (compilers/cck/pgen.c) is the only
+ * caller, always as `boolgen(cond, 1, Z)` -- confirmed against
+ * ic/cgen.c's own boolgen, whose otrue=1 case means "branch away when
+ * the condition is FALSE, fall through when TRUE" (used for if's
+ * then-branch, while/for's exit test, alike). A wasm br_if (ABRIF)
+ * has the *opposite* polarity from that: it branches when the popped
+ * value is nonzero/true. So this negates exactly when otrue (i.e. in
+ * the one case pgen.c actually uses), to make the ABRIF fire on
+ * false -- backwards from the value-form's own `if(!otrue) negate`
+ * just below, which keeps its ordinary "produce true" meaning.
+ *
+ * ABRIF is emitted as a flat, unresolved placeholder exactly like
+ * gbranch(OGOTO)'s ABR (see txt.c) -- pgen.c patches its target later
+ * the same way, and reg.c's structuring pass resolves it into a real
+ * wasm depth once the function's whole flat body is known.
  */
 void
 boolgen(Node *n, int otrue, Node *nn)
 {
 	rval(n);
-	if(!otrue)
-		gins(ATESTW, Z, Z);	/* i32.eqz: negate, to match AIF's fixed polarity */
 
 	if(nn == Z) {
-		gins(AIF, Z, Z);
-		pushif();
+		if(otrue)
+			gins(ATESTW, Z, Z);	/* i32.eqz */
+		nextpc();
+		p->as = ABRIF;
+		p->height = stackheight;
+		stackheight--;	/* pops its condition -- see txt.c's stackdelta() comment */
 		return;
 	}
 
+	if(!otrue)
+		gins(ATESTW, Z, Z);
 	if(nn->op == OREGISTER)
 		return;
 	lstore(nn);
