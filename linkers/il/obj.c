@@ -875,6 +875,25 @@ loop:
 		case AMULW:	o = AMUL; break;
 		}
 		p->as = o;
+	} else if(thechar == 'j') {
+		switch(o) {
+		case AMOVW:
+		case AMOVWU:
+			/* mirror of the AMOVW/AMOVWU case above for thechar=='i':
+			 * with no memory operand there is no 32-bit truncation/
+			 * extension to preserve (the value is just moved into a
+			 * register), so treat it as a full-width move. Otherwise
+			 * these hit optab.c's AMOVW/C_LECON case 9, which -- unlike
+			 * AMOV's C_LECON case 20 -- never adds instoffx (INITDAT)
+			 * and never emits the auipc-relative form thechar=='j'
+			 * needs, so any "MOVW $sym(SB), R" (e.g. the compiler's
+			 * setSB-style static-base setup) resolves to a near-zero
+			 * bogus address instead of the symbol's real one. */
+			if(p->from.type != D_OREG && p->to.type != D_OREG)
+				o = AMOV;
+			break;
+		}
+		p->as = o;
 	}
 
 	switch(o) {

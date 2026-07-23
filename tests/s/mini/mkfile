@@ -5,7 +5,7 @@
 
 LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
           hello_linux_arm.exe hello_linux_arm64.exe \
-          hello_linux_mips.exe hello_linux_riscv.exe \
+          hello_linux_mips.exe hello_linux_riscv.exe hello_linux_riscv64.exe \
                  hello_linux_386_.exe hello_linux_arm_.exe hello_linux_amd64_.exe
 MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe \
           hello_macos_libc_amd64.exe
@@ -45,7 +45,7 @@ test:V: all
          echo 'skipping Windows/wine tests: wine only runs x86 PE natively on an x86_64 host'
 
 clean:V:
-	rm -f *.[5678iv] *.exe
+	rm -f *.[5678ivj] *.exe
 
 #Linux
 # old: -X to avoid the golang specific stuff and -d to disable dynamic linking
@@ -73,6 +73,9 @@ hello_linux_arm64.exe: hello_linux_arm64.s
 hello_linux_riscv.exe: hello_linux_riscv.s
    ia -c $prereq
    il -o $target -E _start hello_linux_riscv.i
+hello_linux_riscv64.exe: hello_linux_riscv64.s
+   ja -c $prereq
+   jl -o $target -E _start hello_linux_riscv64.j
 hello_linux_mips.exe: hello_linux_mips.s
    va -c $prereq
    vl -o $target -E _start hello_linux_mips.v
