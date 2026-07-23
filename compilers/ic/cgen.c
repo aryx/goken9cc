@@ -619,24 +619,24 @@ lcgen(Node *n, Node *nn)
 }
 
 /*
- * Conditional branch if bool(n) != true
+ * Conditional branch if bool(n) != otrue
  */
 void
-bcgen(Node *n, int true)
+bcgen(Node *n, int otrue)
 {
 
 	if(n->type == T)
 		gbranch(OGOTO);
 	else
-		boolgen(n, true, Z);
+		boolgen(n, otrue, Z);
 }
 
 /*
- * If nn == Z, conditional branch if bool(n) != true
- * If nn != Z, assign n = (bool(n) == true)
+ * If nn == Z, conditional branch if bool(n) != otrue
+ * If nn != Z, assign n = (bool(n) == otrue)
  */
 void
-boolgen(Node *n, int true, Node *nn)
+boolgen(Node *n, int otrue, Node *nn)
 {
 	int o;
 	Prog *p1, *p2;
@@ -645,7 +645,7 @@ boolgen(Node *n, int true, Node *nn)
 
 	if(debug['g']) {
 		prtree(nn, "boolgen lhs");
-		prtree(n, true? "boolgen true" : "boolgen false");
+		prtree(n, otrue? "boolgen true" : "boolgen false");
 	}
 	curs = cursafe;
 	l = n->left;
@@ -656,7 +656,7 @@ boolgen(Node *n, int true, Node *nn)
 		regalloc(&nod, n, nn);
 		cgen(n, &nod);
 		if(nn == Z) {
-			o = true? OEQ : ONE;
+			o = otrue? OEQ : ONE;
 			if(typefd[n->type->etype]) {
 				nodreg(&nod1, n, NREG+FREGZERO);
 				gopcode(o, &nod, &nod1, Z);
@@ -667,7 +667,7 @@ boolgen(Node *n, int true, Node *nn)
 		}
 		if(typefd[n->type->etype]) {
 			regalloc(&nod2, nn, nn);
-			o = true? ONE : OEQ;
+			o = otrue? ONE : OEQ;
 			nodreg(&nod1, n, NREG+FREGZERO);
 			gopcode(o, &nod, &nod1, &nod2);
 			gopcode(OAS, &nod2, Z, nn);
@@ -675,7 +675,7 @@ boolgen(Node *n, int true, Node *nn)
 			regfree(&nod);
 			break;
 		}
-		if(true)
+		if(otrue)
 			gopcode(OCOND, &nod, nodconst(0), &nod);
 		else
 			gopcode(OCOND, nodconst(1), &nod, &nod);
@@ -685,7 +685,7 @@ boolgen(Node *n, int true, Node *nn)
 
 	case OCONST:
 		o = vconst(n);
-		if(!true)
+		if(!otrue)
 			o = !o;
 		gbranch(OGOTO);
 		if(o) {
@@ -697,22 +697,22 @@ boolgen(Node *n, int true, Node *nn)
 
 	case OCOMMA:
 		cgen(l, Z);
-		boolgen(r, true, nn);
+		boolgen(r, otrue, nn);
 		break;
 
 	case ONOT:
-		boolgen(l, !true, nn);
+		boolgen(l, !otrue, nn);
 		break;
 
 	case OCOND:
 		bcgen(l, 1);
 		p1 = p;
-		bcgen(r->left, true);
+		bcgen(r->left, otrue);
 		p2 = p;
 		gbranch(OGOTO);
 		patch(p1, pc);
 		p1 = p;
-		bcgen(r->right, !true);
+		bcgen(r->right, !otrue);
 		patch(p2, pc);
 		p2 = p;
 		gbranch(OGOTO);
@@ -721,13 +721,13 @@ boolgen(Node *n, int true, Node *nn)
 		goto com;
 
 	case OANDAND:
-		if(!true)
+		if(!otrue)
 			goto caseor;
 
 	caseand:
-		bcgen(l, true);
+		bcgen(l, otrue);
 		p1 = p;
-		bcgen(r, !true);
+		bcgen(r, !otrue);
 		p2 = p;
 		patch(p1, pc);
 		gbranch(OGOTO);
@@ -735,13 +735,13 @@ boolgen(Node *n, int true, Node *nn)
 		goto com;
 
 	case OOROR:
-		if(!true)
+		if(!otrue)
 			goto caseand;
 
 	caseor:
-		bcgen(l, !true);
+		bcgen(l, !otrue);
 		p1 = p;
-		bcgen(r, !true);
+		bcgen(r, !otrue);
 		p2 = p;
 		gbranch(OGOTO);
 		patch(p1, pc);
@@ -759,6 +759,8 @@ boolgen(Node *n, int true, Node *nn)
 	case OLO:
 	case OLS:
 		o = n->op;
+		if(otrue)
+			o = comrel[relindex(o)];
 		if(l->complex >= FNX && r->complex >= FNX) {
 			regret(&nod, r);
 			cgen(r, &nod);
@@ -767,11 +769,9 @@ boolgen(Node *n, int true, Node *nn)
 			regfree(&nod);
 			nod = *n;
 			nod.right = &nod1;
-			boolgen(&nod, true, nn);
+			boolgen(&nod, otrue, nn);
 			break;
 		}
-		if(true)
-			o = comrel[relindex(o)];
 		if(nn != Z || typefd[l->type->etype]) {
 			if(l->complex >= r->complex) {
 				regalloc(&nod1, l, nn);
