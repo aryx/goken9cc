@@ -131,8 +131,15 @@
   mach->pgsize == 0 and crashed vi with SIGFPE on amd64 CI (silently
   wrong on arm64 instead); also fixed the vi smoke test's now-stale
   txtaddr expectation after the pgsize fix
-- 7a/7c/7l: started big unification of different kenccs derived repo,
-  especially 9front
+- 7a/7c/7l: continued big unification with 9front: ported the
+  vlong/pointer-conversion fix, gmove() same-address guard fix,
+  struct-copy trailing-byte fix, growable regopt() regions, ".ret"
+  register tracking, LDAR/LDXR/STLR/STXR/STLXR atomics rework, and
+  va's long-filename buffer overflow fix; see plan9front.txt for details
+- 7a/7c/7l: also reverted go-era src/cmd adaptations, switching arm64
+  to AR_=iar (same treatment as va/vc/vl); applied 9front's D_XPOST
+  addressing-mode fix in a.y along the way, and ported arm64 (.7)
+  object support into lib_toolchain/libmach, fixing an obj[] OOB bug
 
 ** os
 - build on Windows Subsystem Linux (WSL)
