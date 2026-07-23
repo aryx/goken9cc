@@ -1,10 +1,8 @@
-#!/home/pad/goken/bin/rc
-# TODO: why this does not work?
-# #!/home/pad/goken/bin/rc -m /home/pad/goken/etc/rcmain.unix
+#!/home/pad/goken/bin/rc -m/home/pad/goken/etc/rcmain.unix
 
 # Script to compare the source code in the different kencc-derived
-# repositories, to ultimately try to unify them in one repo (goken).
-# ex of use: cd ~/; ./goken/scripts/diff.rc va &> /tmp/diffva
+# repositories to ultimately try to unify them in one repo (goken).
+# ex: cd ~/; ./goken/scripts/diff.rc va &> /tmp/diffva
 
 cmd=$1
 # let's focus just on the C and assembly code; let's skip diff on mkfile
@@ -17,11 +15,11 @@ flags=(-u -p -b -B -r -x mkfile)
 # - 9front: no riscv
 
 # default base, for big comparisons
-#base=9cc
-base=inferno # for ia/ic/il as 9cc does not have them
+base=9cc
+#base=inferno # for ia/ic/il as 9cc does not have them
 
 dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv miller-riscv goken goold goken-go-variant 9front)
-# to add when comparing not-toolchain tools:
+# to add when comparing regular tools instead of the toolchain:
 #dirs=(9base plan9port)
 
 # goken comparisons
@@ -32,6 +30,7 @@ dirs=(9cc 9colombier inferno inferno-old plan9 mykencc myplan9 kencc-riscv mille
 #base=9cc
 #dirs=(9cc 9colombier inferno mykencc kencc-riscv)
 
+# other
 #base=mykencc
 #dirs=(9colombier)
 
