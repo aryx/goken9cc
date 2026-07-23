@@ -1,20 +1,40 @@
-# Minimal repros for compiler/assembler/linker bugs found while diffing
-# the mips toolchain (vc/va/vl) against other kencc-derived repos (see
-# scripts/diff.rc); as opposed to tests/c/features, which is for ported
-# functionality rather than bug fixes. Each .c file documents its own
-# bug, root cause and origin in a comment at the top; see also
-# ../../../plan9front.txt for the running credits list.
+# Minimal repros for compiler/assembler/linker bugs, most (but not all --
+# see riscv64_ptr_width below) found while diffing the mips toolchain
+# (vc/va/vl) against other kencc-derived repos (see scripts/diff.rc); as
+# opposed to tests/c/features, which is for ported functionality rather
+# than bug fixes. Each .c file documents its own bug, root cause and
+# origin in a comment at the top; see also ../../../plan9front.txt for
+# the running credits list (for the ones that do have an upstream origin).
 
 # mips_aut3_align: no runtime crash to check (see the comment in the
 # .c file for why) -- instead greps vc -A's own alignment trace and
 # checks the "aut3" (total align of automatic) result is a multiple of
 # a MIPS word (4 bytes).
-test:V: mips_aut3_align.check
+#
+# riscv64_ptr_width: found (not diff-derived -- a goken-original bug in
+# ic/jc's own dual-width bring-up, see the comment in the .c file) while
+# getting tests/c/mini2 working for riscv64 ('j'): a string-literal
+# function argument reused a stale pointer-width Type object created
+# before ic's ginit() had set ewidth[TIND]=8 for 'j', throwing off
+# stack-argument layout for every argument after it in the same call.
+test:V: mips_aut3_align.check riscv64_ptr_width.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
 	awk '/align aut3/ { if ($NF % 4 != 0) { print "misaligned: " $0; bad=1 } } END { if (bad) exit 1 }' /tmp/mips_aut3_align.$pid.trace
 	rm -f /tmp/mips_aut3_align.$pid.trace
 
+riscv64_ptr_width.check:V: riscv64_ptr_width.c riscv64_ptr_width_start.s
+	jc -Driscv64 -c riscv64_ptr_width.c
+	ja -Driscv64 -c riscv64_ptr_width_start.s
+	jl -o riscv64_ptr_width.exe -E _main riscv64_ptr_width.j riscv64_ptr_width_start.j
+	st=`{ ../../../scripts/qemu-runner riscv64 ./riscv64_ptr_width.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: riscv64_ptr_width.exe exit 0'
+	if not {
+		echo 'FAILED: riscv64_ptr_width.exe (got '$st')'
+		exit failed
+	}
+
 clean:V:
-	rm -f *.v *.o o.out
+	rm -f *.v *.j *.o o.out *.exe

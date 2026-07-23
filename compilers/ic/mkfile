@@ -30,25 +30,13 @@ LIB=$TOP/src/cmd/cc/cc.a
 p%.$O: $TOP/src/cmd/cc/p%.c
 	$CC $CFLAGS $TOP/src/cmd/cc/p$stem.c
 
-#	lex.$O\
-#TODO: trick for ic and jc
-#lex.$O: ../cc/lex.c ../cc/y.tab.h
-#	$CC -Dmain'='ccmain $CFLAGS ../cc/lex.c
-#$ROOT/$OBJDIR/lib/libcc.a:
-#	cd ../cc
-#	mk $MKFLAGS install
-#	mk $MKFLAGS clean
-#../cc/y.tab.h: ../cc/cc.y
-#	cd ../cc
-#	mk $MKFLAGS y.tab.h
-#
-#
-# NOT enabled yet, unlike ja/jl (assemblers/ia/mkfile, linkers/il/mkfile):
-# ic's main() -- unlike ia's/il's -- has its argv[0]/-j thechar='j' selection
-# entirely commented out (see the top of txt.c, "TODO: trick for ic and
-# jc"); ginit() hardcodes thechar='i' unconditionally. Installing jc as-is
-# would just be ic under a different name, silently emitting 32-bit riscv
-# code while claiming to be the 64-bit compiler. Needs that main()/ginit()
-# work (plus the typeswitch/typecmplx wiring the TODO next to it mentions)
-# before this is safe to uncomment.
-#install:V:	$BIN/jc
+# jc is the same binary as ic, just installed under a second name: ic's
+# main() is the shared src/cmd/cc/lex.c one (used by 7c/vc/ic), which now
+# has an argv[0]-basename check for 'j' before it calls ginit() (mirroring
+# the ja/jl convention in assemblers/ia/mkfile, linkers/il/mkfile); ic's
+# own ginit() (txt.c) picks up thechar='j' from that to select ewidth[TIND]
+# and the typeword/typecmplx tables, same idea as compilers/7c/txt.c's
+# ginit(), which -- being always arm64/64-bit -- does it unconditionally.
+install:V:	$BIN/$TARG $BIN/jc
+$BIN/jc:	$O.out
+	cp $prereq $target

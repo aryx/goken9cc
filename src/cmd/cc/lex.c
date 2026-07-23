@@ -87,6 +87,23 @@ main(int argc, char *argv[])
 
 	ensuresymb(NSYMB);
 	memset(debug, 0, sizeof(debug));
+
+	/* riscv32/riscv64 (ic/jc) dual-width selection, same argv[0]-basename
+	 * convention ia/il already use for ja/jl (assemblers/ia/lex.c,
+	 * linkers/il/obj.c): jc is installed as a second name for the same
+	 * ic binary. This must run before ginit(), since ic's ginit()
+	 * (compilers/ic/txt.c) branches on thechar to pick ewidth[TIND] and
+	 * the typeword/typecmplx tables. A no-op for every other backend:
+	 * their own ginit() unconditionally overwrites thechar regardless
+	 * of what this sets. */
+	p = strrchr(argv[0], '/');
+	if(p == nil)
+		p = argv[0];
+	else
+		p++;
+	if(*p == 'j')
+		thechar = 'j';
+
 	tinit();
 	cinit();
 	ginit();

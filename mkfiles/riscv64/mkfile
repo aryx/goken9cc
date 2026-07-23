@@ -6,20 +6,15 @@ LD=gcc
 AS=gcc
 O=o
 
-# used in tests/: the RISC-V (rv64) lineage. ja/jl are the *same* binaries
-# as ia/il (assemblers/ia/mkfile, linkers/il/mkfile install them under both
-# names); their main()s auto-select thechar='j' (64-bit) from argv[0]'s
-# basename or a -j flag, the original inferno 'i'/'j' dual-width riscv
+# used in tests/: the RISC-V (rv64) lineage. ja/jc/jl are the *same*
+# binaries as ia/ic/il (assemblers/ia/mkfile, compilers/ic/mkfile,
+# linkers/il/mkfile install them under both names); their main()s
+# auto-select thechar='j' (64-bit) from argv[0]'s basename (or, for
+# ia/il, a -j flag too), the original inferno 'i'/'j' dual-width riscv
 # convention -- there is no separate top-level arch letter for riscv64
 # the way arm64 got its own '7' distinct from arm's '5'. Object ext .j.
-#
-# CC_ is NOT wired to a working jc yet: ic's thechar='j' selection is
-# entirely commented out (see compilers/ic/mkfile and compilers/ic/txt.c's
-# "TODO: trick for ic and jc"), so there is no C-level riscv64 compiler
-# yet -- only ja/jl (assembler/linker), enough for tests/s/* (hand-written
-# assembly) but not tests/c/* until ic's dual-mode is restored.
 O_=j
-CC_=ic	# TODO: not really riscv64, see above -- ic can't emit thechar='j' yet
+CC_=jc
 LD_=jl
 AS_=ja
 AR_=iar
