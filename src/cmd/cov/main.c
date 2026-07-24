@@ -408,14 +408,14 @@ go(void)
 
 	for(n = 0;; n++) {
 		ctlproc(pid, "startstop");
-		if(get8(mem, offsetof(Ureg, ip), &pc) < 0) {
+		if(get8(mem, offsetof(Ureg, pc), &pc) < 0) {
 			rerrstr(buf, sizeof buf);
 			if(strstr(buf, "exited") || strstr(buf, "No such process"))
 				return n;
 			sysfatal("cannot read pc: %r");
 		}
 		pc--;
-		if(put8(mem, offsetof(Ureg, ip), pc) < 0)
+		if(put8(mem, offsetof(Ureg, pc), pc) < 0)
 			sysfatal("cannot write pc: %r");
 		uncover(pc);
 	}

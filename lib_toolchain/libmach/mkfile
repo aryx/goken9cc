@@ -36,13 +36,13 @@ OFILES=\
 	linux.$O\
 
 HFILES=	$TOP/include/arch/mach.h\
-	$TOP/include/arch/mips/ureg.h\
-	$TOP/include/arch/arm64/ureg.h\
 	$TOP/include/arch/arm/ureg.h\
+	$TOP/include/arch/arm64/ureg.h\
 	$TOP/include/arch/386/ureg.h\
+	$TOP/include/arch/amd64/ureg.h\
+	$TOP/include/arch/mips/ureg.h\
 	bootexec.h\
 	elf.h\
-	ureg6.h\
 
 
 #	$TOP/include/a.out.h\

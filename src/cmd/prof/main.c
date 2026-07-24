@@ -115,9 +115,9 @@ amd64_regprint(void)
 	fprint(2, "es\t0x%llux\n", ureg_amd64.es);
 	fprint(2, "fs\t0x%llux\n", ureg_amd64.fs);
 	fprint(2, "gs\t0x%llux\n", ureg_amd64.gs);
-	fprint(2, "type\t0x%llux\n", ureg_amd64.type);
-	fprint(2, "error\t0x%llux\n", ureg_amd64.error);
-	fprint(2, "pc\t0x%llux\n", ureg_amd64.ip);
+	fprint(2, "type\t0x%llux\n", ureg_amd64.trap);
+	fprint(2, "error\t0x%llux\n", ureg_amd64.ecode);
+	fprint(2, "pc\t0x%llux\n", ureg_amd64.pc);
 	fprint(2, "cs\t0x%llux\n", ureg_amd64.cs);
 	fprint(2, "flags\t0x%llux\n", ureg_amd64.flags);
 	fprint(2, "sp\t0x%llux\n", ureg_amd64.sp);
@@ -147,8 +147,8 @@ amd64_getPC(Map *map)
 	uvlong x;
 	int r;
 
-	r = get8(map, offsetof(struct Ureg_amd64, ip), &x);
-	ureg_amd64.ip = x;
+	r = get8(map, offsetof(struct Ureg_amd64, pc), &x);
+	ureg_amd64.pc = x;
 	return r;
 }
 
@@ -166,7 +166,7 @@ amd64_getSP(Map *map)
 uvlong
 amd64_uregPC(void)
 {
-	return ureg_amd64.ip;
+	return ureg_amd64.pc;
 }
 
 uvlong
