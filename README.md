@@ -14,12 +14,13 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
 ## News
 
 - **Q3 2026** &mdash; v0.4 (in progress): a big unification release.
-  - imported the arm and x86 tools (5a/5c/5l, 8a/8c/8l) as rewritten ("Lpized") for the Principia Softwarica book back into goken9cc, fixing the many mismatches this uncovered against the older kencc-derived variants (kept side by side as 5ak/8ak, etc.)
+  - imported the arm and x86 tools (5a/5c/5l, 8a/8c/8l) as rewritten ("Lpized") for the Principia Softwarica books back into goken9cc, fixing the many mismatches this uncovered against the older kencc-derived variants (kept side by side as 5ak/8ak, etc.)
+  - native macOS (Mach-O) output for 6l/7l
+  - native Windows (PE) output for 6l/8l
+  - early WebAssembly backend (ea/ec/el)
   - separately ported a large batch of 9front fixes into the mips and arm64 toolchains (va/vc/vl, 7a/7c/7l)
   - brought up riscv64 for real (it was only commented-out stubs before)
   - fixed the arm and mips emulators (5i/vi) so they actually run their hello-world tests
-  - native macOS (Mach-O) output for 6l/7l, native Windows (PE) output for 6l/8l
-  - early WebAssembly backend (ea/el)
   - much richer test infra: tests now run under qemu (Linux), wine (Windows), and Node (wasm), and check output against expected.txt instead of just checking the build succeeds; new tests/s/variants and tests/c/variants compare the object files and executables produced by the principia vs. kencc lineages to catch mismatches
 - **Q2 2026** &mdash; v0.3: presented goken9cc at IWP9, the International Workshop on Plan 9.
 - **Q1 2026** &mdash; v0.2: added `pcc`, "a portable C compiler" to compile legacy Unix programs (called APE in Plan 9); started using AddressSanitizer to catch memory bugs in the toolchain itself; wrote up the project for an IWP9 paper submission.
