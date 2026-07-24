@@ -1,13 +1,40 @@
 # goken9cc
 
-**goken9cc** is a portable multi-platform C compiler, assembler, and
-linker toolchain as well as a minimalist C library rooted in the
-legendary work of Ken Thompson and the Plan 9 and Inferno operating
-systems. Originally extended by Go developers, this toolchain brings
+**goken9cc** is a portable, multi-architecture toolchain &mdash; C compiler,
+assembler, and linker &mdash; together with a minimalist C library, rooted in
+Ken Thompson's legendary work on the Plan 9 and Inferno operating
+systems. First extended by Go developers, this toolchain now brings
 cross-platform support for Linux, macOS, and Windows while preserving
 the simplicity, elegance, and efficiency of the original Plan 9 tools.
 
 See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the project.
+
+---
+
+## News
+
+- **Q3 2026** &mdash; v0.4 (in progress): a big unification release.
+  - imported the arm and x86 tools (5a/5c/5l, 8a/8c/8l) as rewritten ("Lpized") for the Principia Softwarica book back into goken9cc, fixing the many mismatches this uncovered against the older kencc-derived variants (kept side by side as 5ak/8ak, etc.)
+  - separately ported a large batch of 9front fixes into the mips and arm64 toolchains (va/vc/vl, 7a/7c/7l)
+  - brought up riscv64 for real (it was only commented-out stubs before)
+  - fixed the arm and mips emulators (5i/vi) so they actually run their hello-world tests
+  - native macOS (Mach-O) output for 6l/7l, native Windows (PE) output for 6l/8l
+  - early WebAssembly backend (ea/el)
+  - much richer test infra: tests now run under qemu (Linux), wine (Windows), and Node (wasm), and check output against expected.txt instead of just checking the build succeeds; new tests/s/variants and tests/c/variants compare the object files and executables produced by the principia vs. kencc lineages to catch mismatches
+- **Q2 2026** &mdash; v0.3: presented goken9cc at IWP9, the International Workshop on Plan 9.
+- **Q1 2026** &mdash; v0.2: added `pcc`, a portable C compiler; started using AddressSanitizer to catch memory bugs in the toolchain itself; wrote up the project for an IWP9 paper submission.
+- **Q4 2025** &mdash; v0.1: first working release &mdash; a Plan 9-style toolchain (compilers, assemblers, linkers for arm, x86, mips, and early riscv, plus an arm/mips emulator and the acid debugger) able to compile and run Principia Softwarica's own `pc`/`pi` operating system targets.
+- **Q3 2025** &mdash; Beta: arm64 and arm32 Linux binaries actually working; imported `mk`, `rc`, `ed`, and other core utilities from Principia Softwarica so the repo is self-contained; first typesetting tools (troff, eqn, tbl) brought in.
+- **Q2 2025** &mdash; Alpha: project started &mdash; forked the Go repository at its October 2010 C-toolchain commit, refocused on the C toolchain (dropping Go itself), first (untested) imports of the mips, arm64, and riscv toolchains, first Docker/Nix/CI setup.
+
+goken9cc's direct ancestor is [fork-kencc](https://github.com/aryx/fork-kencc), now deprecated in its favor:
+
+- **Q2 2025** &mdash; fork-kencc v0.4: added a Dockerfile and CI.
+- **Q2 2024** &mdash; fork-kencc v0.3: small resume of the project after a hiatus, with basic CI.
+- **Q2 2018** &mdash; fork-kencc v0.2: added Linux and Windows support.
+- **Q1 2014** &mdash; fork-kencc v0.1: project started &mdash; forked the kencc toolchain from Plan 9, got it building on macOS, and did a big code reorganization.
+
+See [changes.txt](changes.txt) for the detailed changelog.
 
 ---
 
