@@ -39,7 +39,7 @@ TOP=`pwd`
 ROOT=$TOP/ROOT
 
 #coupling: mkfiles/mkfile.proto and mkfiles/amd64/mkfile
-CFLAGS="-Wno-cpp --std=gnu89 -c -I$TOP/include -I$TOP/include/ALL -I. -O0 -fno-inline -ggdb"
+CFLAGS="-Wno-cpp --std=gnu89 -c -I$TOP/include -I$TOP/include/ALL -I. -O0 -fno-inline -ggdb -I$TOP/include/boot"
 LDFLAGS="-L$ROOT/$GOARCH/lib"
 
 ###############################################################################

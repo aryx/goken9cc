@@ -1,1 +1,0 @@
-../core/libc.h

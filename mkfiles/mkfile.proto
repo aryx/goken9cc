@@ -17,7 +17,7 @@ CPUS=arm arm64 386 amd64 riscv riscv64 mips wasm
 #TODO was -O2 but better -O0 for ease of debugging with gdb
 #note: SANITIZE is optionally set by ./configure --asan
 #coupling: scripts/build-mk.sh CFLAGS
-GCCFLAGS=-O0 -fno-inline -ggdb $SANITIZE
+GCCFLAGS=-O0 -fno-inline -ggdb $SANITIZE -I$TOP/include/boot
 CFLAGS=-I$TOP/include -I$TOP/include/ALL -I. $GCCFLAGS
 LDFLAGS=-L$ROOT/$objtype/lib $SANITIZE
 
