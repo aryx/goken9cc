@@ -1,7 +1,8 @@
 /*
  * 5obj.c - identify and parse a arm object file
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "../../linkers/5lk/5.out.h"
 #include "obj.h"

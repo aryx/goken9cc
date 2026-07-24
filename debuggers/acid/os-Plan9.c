@@ -2,7 +2,8 @@
  * Plan9
  */
 
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include <ctype.h>
 #include "mach.h"

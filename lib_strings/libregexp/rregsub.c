@@ -1,4 +1,5 @@
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include "regexp.h"
 
 /* substitute into one string using the matches from the last regexec() */

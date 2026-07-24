@@ -2,7 +2,8 @@
  * obj.c
  * routines universal to all object files
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "ar.h"
 #include "mach.h"

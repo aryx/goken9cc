@@ -1,7 +1,8 @@
 /*
  * vobj.c - identify and parse a mips object file
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include <v.out.h>
 #include "obj.h"

@@ -1,7 +1,8 @@
 /*
  * arm definition
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "ureg5.h"
 #include "mach.h"

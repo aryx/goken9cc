@@ -1,7 +1,8 @@
 /*
  * x86-amd64 definition
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "ureg6.h"
 #include "mach.h"

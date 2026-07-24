@@ -1,7 +1,8 @@
 /*
  * 6obj.c - identify and parse an amd64 object file
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include <6.out.h>
 #include "obj.h"

@@ -1,7 +1,8 @@
 /*
  * 8obj.c - identify and parse a 386 object file
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "../../linkers/8lk/8.out.h"
 #include "obj.h"

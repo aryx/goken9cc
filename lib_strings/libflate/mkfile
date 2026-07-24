@@ -17,6 +17,6 @@ OFILES=\
 	crc.$O\
 	adler.$O\
 
-HFILES=	$TOP/include/flate.h zlib.h
+HFILES=	$TOP/include/ALL/flate.h zlib.h
 
 <$TOP/mkfiles/mksyslib

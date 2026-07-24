@@ -2,7 +2,8 @@
 // also work for arm64 linux, not just x86 linux
 
 // This is stubbed out for the moment. Will revisit when the time comes.
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "mach.h"
 

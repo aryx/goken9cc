@@ -9,7 +9,7 @@ OFILES=	ar.$O\
 
 #	$TARGMODEL.$O\
 
-HFILES=	$TOP/include/bio.h $TOP/include/mach.h
+HFILES=	$TOP/include/ALL/bio.h $TOP/include/ALL/mach.h
 
 #$TOP/include/a.out.h\
 

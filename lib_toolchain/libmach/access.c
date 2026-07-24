@@ -2,7 +2,8 @@
  * functions to read and write an executable or file image
  */
 
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "mach.h"
 

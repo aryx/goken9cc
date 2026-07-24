@@ -33,6 +33,6 @@ OFILES=\
 #	windows.$O\
 #endif
 
-HFILES=$TOP/include/mach.h elf.h macho.h obj.h
+HFILES=$TOP/include/ALL/mach.h elf.h macho.h obj.h
 
 <$TOP/mkfiles/mksyslib

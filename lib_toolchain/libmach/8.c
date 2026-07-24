@@ -1,7 +1,8 @@
 /*
  * 386 definition
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "ureg8.h"
 #include "mach.h"

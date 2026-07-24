@@ -2,7 +2,8 @@
  * Debugger utilities shared by at least two architectures
  */
 
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
 #include "mach.h"
 
