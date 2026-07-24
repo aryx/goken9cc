@@ -206,7 +206,7 @@ typedef int32_t s32int;
 // but types without the _t suffix is more plan9ish
 typedef intptr ptrdiff;
 
-//TODO: define like Rust/Zig instead u8/u32/u64, s8/s32/s64
+//TODO: define like Rust/Zig instead the shorter u8/u32/u64, s8/s32/s64
 typedef s8int int8;
 typedef u8int uint8;
 typedef s16int int16;
@@ -225,12 +225,18 @@ typedef u64int uint64;
 // Pad's stuff (also in principia/include/ALL/libc.h)
 //******************************************************************************
 
-// Those types are needed to compile src/cmd/{mk,rc} which
+// Those types are needed to compile {mk,rc,5c,8c,...} which
 // comes from pad's principia which use a few extra C types
 // (I like types, and I especially don't like abusing ints for everything)
 
 #if __STDC_VERSION__ < 202311L  // before C23
 #ifndef __bool_true_false_are_defined
+
+// Note that using 'uint8' for bool and not 'int' has consequences! DO NOT
+// transform what you think is a bool like 'int flag;' to a bool when
+// this variable is actually used in arithmetic context. It led to
+// many regressions.
+// alt: typedef int bool; // would cause less regressions, but not as clean
 typedef	uint8			bool;
 enum _bool
 {

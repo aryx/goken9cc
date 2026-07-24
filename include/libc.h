@@ -138,7 +138,7 @@ extern	vlong	strtoll(char*, char**, int);
 extern	uvlong	strtoull(char*, char**, int);
  */
 
-// ?? a = ? ascii?
+// a = ascii
 extern	int     p9atoi(char*);
 extern	long	p9atol(char*);
 extern	vlong	p9atoll(char*);
@@ -153,7 +153,7 @@ extern	double	fmtcharstod(int(*)(void*), void*);
 // abs() defined in stdlib.h
 
 /*
- * provided by math.h
+ * provided by system <math.h>
  *
 extern	double	pow(double, double);
 extern	double	fabs(double);
