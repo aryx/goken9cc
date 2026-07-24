@@ -240,6 +240,8 @@
 
 ** internals
 - split include/ like in principia with include/{core,obj,exec,...}
+- new include/boot and moved lib9 to lib_boot/lib9 so more visible what
+  is used in "bootstrap" context to build goken using gcc and unix libs
 - remove 5a9/5c9/5l9, the original arm toolchain imported from
   https://bitbucket.org/plan9-from-bell-labs/9-cc.git; superseded by
   the kencc (5ak/5ck/5lk) and principia (5a/5c/5l) lineages reconciled
