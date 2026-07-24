@@ -34,8 +34,8 @@ goken9cc's direct ancestor is [fork-kencc](https://github.com/aryx/fork-kencc), 
 - **Q2 2024** &mdash; fork-kencc v0.3: small resume of the project after a hiatus, with basic CI.
 - **2019** &mdash; **2024**: Hiatus (working on https://semgrep.dev)
 
-- **Q2 2018** &mdash; fork-kencc v0.2: now build on Linux and Windows.
-- **Q1 2014** &mdash; fork-kencc v0.1: project started &mdash; forked the kencc toolchain from Plan 9, got it building on macOS, and did a big code reorganization.
+- **Q2 2018** &mdash; fork-kencc v0.2: got it building also on Linux and Windows.
+- **Q1 2014** &mdash; fork-kencc v0.1: project started &mdash; forked the kencc toolchain from Plan 9, keep just the x86 and arm toolchains, got it building on macOS, and did a big code reorganization.
 
 See [changes.txt](changes.txt) for the detailed changelog.
 
