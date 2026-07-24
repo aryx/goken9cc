@@ -9,8 +9,8 @@ ROOT=$TOP/ROOT
 # common mkfile parameters shared by all architectures
 #
 
-OS=5678
-CPUS=arm arm64 386 amd64
+OS=5678ijve
+CPUS=arm arm64 386 amd64 riscv riscv64 mips wasm
 
 #principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype ...
 #TODO: gcc and linux specific so move somewhere else
