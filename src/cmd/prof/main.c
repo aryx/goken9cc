@@ -207,7 +207,7 @@ x86_regprint(void)
 	fprint(2, "cs\t0x%llux\n", ureg_x86.cs);
 	fprint(2, "flags\t0x%llux\n", ureg_x86.flags);
 	fprint(2, "pc\t0x%llux\n", ureg_x86.pc);
-	fprint(2, "sp\t0x%llux\n", ureg_x86.sp);
+	fprint(2, "sp\t0x%llux\n", ureg_x86.u0.sp);
 	fprint(2, "ss\t0x%llux\n", ureg_x86.ss);
 }
 
@@ -232,7 +232,7 @@ x86_getPC(Map* map)
 int
 x86_getSP(Map* map)
 {
-	return get4(map, offsetof(struct Ureg_x86, sp), &ureg_x86.sp);
+	return get4(map, offsetof(struct Ureg_x86, u0.sp), &ureg_x86.u0.sp);
 }
 
 uvlong
@@ -244,7 +244,7 @@ x86_uregPC(void)
 uvlong
 x86_uregSP(void)
 {
-	return (uvlong)ureg_x86.sp;
+	return (uvlong)ureg_x86.u0.sp;
 }
 
 void
