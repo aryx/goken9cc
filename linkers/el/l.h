@@ -13,8 +13,8 @@
 #include	<libc.h>
 #include	<bio.h>
 
-#include	<common.out.h>
-#include	<e.out.h>
+#include	<obj/common.out.h>
+#include	<obj/e.out.h>
 
 typedef struct	Adr	Adr;
 typedef struct	Instr	Instr;

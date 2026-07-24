@@ -17,13 +17,13 @@ OFILES=\
 	enam.$O\
 	elf.$O\
 
-HFILES=	l.h $TOP/include/i.out.h ../lk/elf.h
+HFILES=	l.h $TOP/include/obj/i.out.h ../lk/elf.h
 
 CLEANFILES=enam.c
 
 <$TOP/mkfiles/mkone
 
-enam.c: $TOP/include/i.out.h
+enam.c: $TOP/include/obj/i.out.h
 	sh mkenam
 
 elf.$O:	../lk/elf.c

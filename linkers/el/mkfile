@@ -11,6 +11,6 @@ OFILES=\
 	optab.$O\
 	asm.$O\
 
-HFILES=	l.h $TOP/include/e.out.h
+HFILES=	l.h $TOP/include/obj/e.out.h
 
 <$TOP/mkfiles/mkone

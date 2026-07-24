@@ -9,10 +9,7 @@ OFILES=\
 	y.tab.$O\
 	lex.$O\
 
-HFILES=\
-	$TOP/include/v.out.h\
-	y.tab.h\
-	a.h\
+HFILES=	$TOP/include/obj/v.out.h y.tab.h a.h
 
 YFILES=a.y\
 

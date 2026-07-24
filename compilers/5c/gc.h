@@ -1,8 +1,8 @@
 /*s: 5c/gc.h */
 #include	"../cc/cc.h"
 
-#include	<common.out.h>
-#include	<5.out.h>
+#include	<obj/common.out.h>
+#include	<obj/5.out.h>
 
 /*
  * 5c/arm

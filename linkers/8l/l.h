@@ -3,8 +3,8 @@
 #include	<libc.h>
 #include	<bio.h>
 
-#include	<common.out.h>
-#include	<8.out.h>
+#include	<obj/common.out.h>
+#include	<obj/8.out.h>
 #include	"elf_.h"
 
 /*s: macro [[DBG]] */

@@ -1,4 +1,4 @@
-ed - ../../include/6.out.h <<'!'
+ed - ../../include/obj/6.out.h <<'!'
 v/^	A/d
 ,s/^	A/	"/
 g/ .*$/s///

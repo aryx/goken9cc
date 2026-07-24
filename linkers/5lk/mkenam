@@ -2,7 +2,7 @@
 # numbering) plus the kencc compat opcodes appended by this directory's
 # 5.out.h wrapper; the patterns accept the 4-space indent and the
 # inline // comments of the principia header.
-cat ../../include/5.out.h 5.out.h > enam.tmp
+cat ../../include/obj/5.out.h 5.out.h > enam.tmp
 ed - enam.tmp <<'!'
 v/^[ 	]*A[A-Z]/d
 ,s/^[ 	]*A/	"/

@@ -8,7 +8,7 @@ OFILES=\
 	y.tab.$O\
 	lex.$O\
 
-HFILES=	$TOP/include/6.out.h y.tab.h	a.h
+HFILES=	$TOP/include/obj/6.out.h y.tab.h	a.h
 
 YFILES=a.y
 YFLAGS=-D1 -d

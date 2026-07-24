@@ -17,7 +17,7 @@ OFILES=\
 	pgen.$O\
 	pswt.$O\
 
-HFILES=	gc.h $TOP/include/e.out.h $TOP/compilers/cck/cc.h
+HFILES=	gc.h $TOP/include/obj/e.out.h $TOP/compilers/cck/cc.h
 
 LIB=$TOP/compilers/cck/cc.a
 

@@ -1,5 +1,5 @@
 #include	"../../src/cmd/cc/cc.h"
-#include	<v.out.h>
+#include	<obj/v.out.h>
 
 /*
  * vc/mips

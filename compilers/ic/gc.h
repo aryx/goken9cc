@@ -1,5 +1,5 @@
 #include	"../../src/cmd/cc/cc.h"
-#include	<i.out.h>
+#include	<obj/i.out.h>
 
 /*
  * zc/riscv

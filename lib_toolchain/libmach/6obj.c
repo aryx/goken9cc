@@ -4,7 +4,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <6.out.h>
+#include <obj/6.out.h>
 #include "obj.h"
 
 typedef struct Addr	Addr;

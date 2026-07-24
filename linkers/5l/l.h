@@ -3,8 +3,8 @@
 #include    <libc.h>
 #include    <bio.h>
 
-#include    <common.out.h>
-#include    <5.out.h>
+#include    <obj/common.out.h>
+#include    <obj/5.out.h>
 
 #include    "../8l/elf_.h"
 

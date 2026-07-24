@@ -10,7 +10,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <i.out.h>
+#include <obj/i.out.h>
 #include "obj.h"
 
 typedef struct Addr	Addr;

@@ -7,7 +7,7 @@
  * duplicate Sym/Io/Hist/Htab locally and predate that refactor.
  */
 #include "../as/aa.h"
-#include <e.out.h>
+#include <obj/e.out.h>
 
 typedef	struct	Gen	Gen;
 

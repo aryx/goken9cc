@@ -10,7 +10,7 @@
 //#include "8.out.h" in 8a/a.h
 //#include "5.out.h" in 5a/a.h
 
-#include <common.out.h>
+#include <obj/common.out.h>
 
 #pragma lib "../as/aa.a$O"
 

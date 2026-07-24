@@ -1,5 +1,5 @@
 #include	"../../src/cmd/cc/cc.h"
-#include	<7.out.h>
+#include	<obj/7.out.h>
 
 /*
  * 7c/arm64

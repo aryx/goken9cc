@@ -23,9 +23,9 @@ VIEWS= \
   8a/lex.c\
   8a/a.y \
   \
-  ../include/5.out.h\
-  ../include/8.out.h \
-  ../include/common.out.h\
+  ../include/obj/5.out.h\
+  ../include/obj/8.out.h \
+  ../include/obj/common.out.h\
 
 
 sync:VI:

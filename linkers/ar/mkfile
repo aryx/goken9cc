@@ -7,10 +7,6 @@ LDLIBS=-lmach -lbio -l9 -lm
 
 OFILES=	ar.$O\
 
-#	$TARGMODEL.$O\
-
 HFILES=	$TOP/include/ALL/bio.h $TOP/include/ALL/mach.h
-
-#$TOP/include/a.out.h\
 
 <$TOP/mkfiles/mkone

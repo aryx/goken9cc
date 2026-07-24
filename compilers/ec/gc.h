@@ -16,8 +16,8 @@
  * flow beyond straight-line code, the address-taken-local split).
  */
 #include	"../cck/cc.h"
-#include	"../../include/common.out.h"
-#include	"../../include/e.out.h"
+#include	<obj/common.out.h>
+#include	<obj/e.out.h>
 
 #define	SZ_CHAR		1
 #define	SZ_SHORT	2

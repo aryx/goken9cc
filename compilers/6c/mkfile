@@ -20,7 +20,7 @@ OFILES=\
 	div.$O\
 	mul.$O\
 
-HFILES=	gc.h $TOP/include/6.out.h $TOP/compilers/cck/cc.h
+HFILES=	gc.h $TOP/include/obj/6.out.h $TOP/compilers/cck/cc.h
 
 LIB=$TOP/compilers/cck/cc.a
 

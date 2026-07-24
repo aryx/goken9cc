@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <i.out.h>
+#include <obj/i.out.h>
 
 #ifndef	EXTERN
 #define	EXTERN	extern

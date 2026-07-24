@@ -17,12 +17,7 @@ OFILES=\
 	macho.$O\
 	pe.$O\
 
-HFILES=\
-	l.h\
-	$TOP/include/6.out.h\
-	../lk/elf.h\
-	../lk/macho.h\
-	../lk/pe.h\
+HFILES= l.h $TOP/include/obj/6.out.h ../lk/elf.h ../lk/macho.h ../lk/pe.h
 
 <$TOP/mkfiles/mkone
 

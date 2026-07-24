@@ -31,13 +31,13 @@ OFILES=\
 #HOST=Posix
 
 
-HFILES=	l.h $TOP/include/7.out.h ../lk/ld.h ../lk/elf.h ../lk/macho.h
+HFILES=	l.h $TOP/include/obj/7.out.h ../lk/ld.h ../lk/elf.h ../lk/macho.h
 
 CLEANFILES=enam.c
 
 <$TOP/mkfiles/mkone
 
-enam.c: $TOP/include/7.out.h
+enam.c: $TOP/include/obj/7.out.h
 	sh mkenam
 
 %.$O:	../lk/%.c

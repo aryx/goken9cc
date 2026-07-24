@@ -18,8 +18,8 @@
  *  - D_OCONST, a linker-internal operand kind, appended after D_PSR
  *  - the thumb-support constants (REGTMPT, ALLTHUMBS)
  */
-#include "../../include/5.out.h"
-#include "../../include/common.out.h"	/* NSYM, Ieee */
+#include "../../include/obj/5.out.h"
+#include "../../include/obj/common.out.h"	/* NSYM, Ieee */
 
 enum Opcode_kencc
 {

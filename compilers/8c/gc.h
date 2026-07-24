@@ -1,8 +1,8 @@
 /*s: 8c/gc.h */
 #include	"../cc/cc.h"
 
-#include	<common.out.h>
-#include	<8.out.h>
+#include	<obj/common.out.h>
+#include	<obj/8.out.h>
 
 /*
  * 8c/386

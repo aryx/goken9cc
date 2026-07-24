@@ -11,10 +11,7 @@ OFILES=globals.$O\
 	obj.$O\
 	main.$O\
 
-HFILES=\
-	y.tab.h\
-	a.h\
-	$TOP/include/e.out.h
+HFILES=	y.tab.h	a.h $TOP/include/obj/e.out.h
 
 YFILES=a.y
 
