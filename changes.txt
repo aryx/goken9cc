@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, big kenccs unification, wasm ea/el)
+* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, start kenccs unification, wasm ea/ec/el)
 
 ** toolchain
 - import 5a/5c/5l and 8a/8c/8l from principia (and rename the 5a/5l/5c
@@ -19,8 +19,8 @@
   * fix the tests/c/vlong/ and tests/c/float/ tests for arm64; adjust to
     correct calling convention (start at FP+0 not FP+8 because return address
     not saved in stack but in the link register LR)
-- 7a/7c/7l: produce macOS arm64 Mach-O executables with -H6
-  (big thx to Claude)
+- 7a/7c/7l macOS
+  produce macOS arm64 Mach-O executables with -H6 (big thx to Claude)
   * 7l: add linkers/lk/macho.c, adapted from the old Go-era src/cmd/ld/macho.c
     of 6l. Modern arm64 macOS requires signed, dynamic (dyld + LC_MAIN), 
     PIE (Position Independent Executable, similar to PIC) executables, so 7l
@@ -48,7 +48,8 @@
       by the caller but never spilled by the callee (no-op for 5c/6c/8c
       which all have REGARG = -1)
     - runtime regression test with minimal repros: tests/c/mini2/regress7c.c
-- 6l: modernise the amd64 -H6 (macOS Mach-O) output, mirror of the 7l arm64 work:
+- 6l macOS
+  modernise the amd64 -H6 (macOS Mach-O) output, mirror of the 7l arm64 work:
   * LC_MAIN entry point (not LC_UNIXTHREAD), MH_DYLDLINK|MH_TWOLEVEL|
     MH_PIE, libSystem LC_LOAD_DYLIB, and LC_DYLD_INFO_ONLY/BUILD_VERSION/
     UUID -- dyld now loads the binary instead of the kernel doing a
@@ -118,6 +119,11 @@
   tests/s/variants/expected/ to match the corrected (and now-matching)
   output. principia's own x86 builds never hit this since they link as -H2
   native Plan9 binaries, not ELF (thx to Claude)
+- lib_toolchain/libmach: fixed a duplicate mmips definition (executable.c
+  shadowed v.c's real Mach struct with an all-zero stub), which left
+  mach->pgsize == 0 and crashed vi with SIGFPE on amd64 CI (silently
+  wrong on arm64 instead); also fixed the vi smoke test's now-stale
+  txtaddr expectation after the pgsize fix
 - va/vc/vl: start big unification with 9front: ported LL/SC/SYNC
   atomics, vl load-hoisting scheduler fix, va long-filename buffer
   overflow fix, vc growable regopt() regions, vc ".ret" register
@@ -128,11 +134,6 @@
   hack, switching mips to AR_=iar (matching 6a); needed porting mips
   (.v) object support (vobj.c) into lib_toolchain/libmach so iar/acid/vi
   could recognize .v objects again
-- lib_toolchain/libmach: fixed a duplicate mmips definition (executable.c
-  shadowed v.c's real Mach struct with an all-zero stub), which left
-  mach->pgsize == 0 and crashed vi with SIGFPE on amd64 CI (silently
-  wrong on arm64 instead); also fixed the vi smoke test's now-stale
-  txtaddr expectation after the pgsize fix
 - 7a/7c/7l: start big unification with 9front: ported the
   vlong/pointer-conversion fix, gmove() same-address guard fix,
   struct-copy trailing-byte fix, growable regopt() regions, ".ret"
@@ -164,7 +165,7 @@
   absolute-address-fed-to-auipc bug in the linker's long-jump case,
   and the register-range widening also pending for 7a/7c/7l)
 - add an experimental wasm (WebAssembly) toolchain skeleton: ea/el
-  (new arch letter 'e'), no compiler (ec) yet (thx to Claude)
+  (new arch letter 'e') (thx to Claude)
   * include/e.out.h: new opcode/operand-kind header, modeled on
     5.out.h/8.out.h and on v.out.h/i.out.h's combined D_* enum;
     locals/globals stand in for a register file (wasm has none), and
@@ -230,10 +231,12 @@
 
 ** os
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
+  (but not with Windows native compilers yet)
 - Windows PE experimental support for 386 (8l -H10) and amd64 (6l -H10)
-  working at least on Windows 10
+  working at least on Windows 10, ported from go-era and adapter (thx Claude)
 - macOS Mach-O experimental support for amd64 (6l -H6) and arm64 (7l -H6)
-  working on recent macOS (e.g., macOS 26 Tahoe)
+  working on recent macOS (e.g., macOS 26 Tahoe), ported from go-era
+  and adapted to latest (thx Claude)
 - better Linux ELF support for 386, amd64, arm, arm64, riscv, riscv64, mips
   with more tests (float and vlong and basic helloprintf working)
 
@@ -241,10 +244,11 @@
 - real support for 386, amd64, arm, arm64, riscv, riscv64, mips
   with basic helloprintf.exe working on all those archs, at least on Linux
 - experimental support for riscv64
-- experimental support for wasm: assembler+linker only (ea/el), no
-  compiler yet, hello world (WASI fd_write) working
+- experimental support for wasm: assembler+linker only (ea/el),
+  hello world (WASI fd_write) working
 
 ** internals
+- split include/ like in principia with include/{core,obj,exec,...}
 - remove 5a9/5c9/5l9, the original arm toolchain imported from
   https://bitbucket.org/plan9-from-bell-labs/9-cc.git; superseded by
   the kencc (5ak/5ck/5lk) and principia (5a/5c/5l) lineages reconciled
