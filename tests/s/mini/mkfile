@@ -84,6 +84,16 @@ test_macos_amd64:V: hello_macos_amd64.exe hello_macos_libc_amd64.exe
 	./hello_macos_amd64.exe | cmp /dev/stdin hello.expected.txt
 	./hello_macos_libc_amd64.exe | cmp /dev/stdin hello.expected.txt
 
+# Windows-native run tests (no wine): unlike `test` above, which runs
+# WINDOWSBINS under wine and only on an x86_64 host, this runs the PE
+# binaries directly since the host running this target IS Windows.
+# Driven from the top-level `mk test_windows`.
+test_windows:V: $WINDOWSBINS
+	for (i in $WINDOWSBINS) {
+		echo $i
+		./$i | cmp /dev/stdin hello.expected.txt
+	}
+
 clean:V:
 	rm -f *.[5678ivj] *.e *.exe *.wasm
 

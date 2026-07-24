@@ -46,6 +46,11 @@ test_macos_arm64:V:
 test_macos_amd64:V:
 	cd tests; mk test_macos_amd64
 
+# Windows-native regression tests (run directly, no wine/qemu, since the
+# host running this target IS Windows). Mirrors test_macos above.
+test_windows:V:
+	cd tests; mk test_windows
+
 #TODO: LPDIRS like in principia
 sync:VQ:
 	echo TODO

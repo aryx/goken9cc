@@ -99,6 +99,45 @@ regress_wasm.wasm: regress_wasm.c
 test_wasm:V: regress_wasm.wasm
 	node $TOP/scripts/wasm-call-runner.js regress_wasm.wasm runtests
 
+
+# Windows amd64: PE32+ (6l -H 10), kernel32.dll GetStdHandle/WriteFile/
+# ExitProcess via windows_amd64.s (mirrors macos_amd64.s/linux_amd64.s;
+# see windows_amd64.s for why write()/exit() must realign the stack).
+# 6l -H 10 never produces a PIE/ASLR image, so no -z here (unlike
+# macos_amd64.exe below, where -H6 forces PIE).
+#
+# claude: BLOCKED as of 2026-07-24 -- compiling print_nofloat_no64.c with
+# plain `6c -Damd64` fails deterministically ("cant rewrite typestr for
+# op NE" on `if(*p != '%') continue;`, compilers/cck/funct.c), and adding
+# -z to route around it turns that into a nondeterministic segfault
+# instead (memory fault, ~5/5 repro) rather than fixing anything. Neither
+# is a Windows-specific problem: both reproduce with plain `6c -Damd64 -c
+# print_nofloat_no64.c` with no OS/PE-specific flags at all, i.e. this
+# looks like a pre-existing cck Type.funct-table bug on this host,
+# unrelated to this test_windows addition. Left un-worked-around pending
+# investigation; see conversation with the user from that date.
+helloprintf_windows_amd64.exe: helloprintf.c
+   6c -Damd64 -c test.c
+   6c -Damd64 -c print_nofloat_no64.c
+   6c -Damd64 -c helloprintf.c
+   6a -Damd64 -c windows_amd64.s
+   iar rc libprint.a windows_amd64.6 print*.6 test.6
+   6l -s -H 10 -L. -o $target -E _main helloprintf.6
+
+# 6c code generation regression test (reuses the print/stub objects
+# built by the helloprintf rule above); same regress7c.c as macOS
+regress7c_windows_amd64.exe: regress7c.c helloprintf_windows_amd64.exe
+   6c -Damd64 -c regress7c.c
+   6l -s -H 10 -L. -o $target -E _main regress7c.6
+
+# runs natively on the Windows test host (no wine needed -- the host IS
+# Windows here, unlike the wine-under-Linux path in ../../s/mini/mkfile's
+# `test` target). Driven from the top-level `mk test_windows`.
+test_windows:V: helloprintf_windows_amd64.exe regress7c_windows_amd64.exe
+	./helloprintf_windows_amd64.exe | cmp /dev/stdin helloprintf.expected.txt
+	./regress7c_windows_amd64.exe
+
+
 # useful when troubleshooting issues to just get rid of the use of ar and
 # get rid of float/64 bits instructions and see if everything
 # else works at least

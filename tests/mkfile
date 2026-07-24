@@ -10,6 +10,16 @@ DIRS=s c rc libmach 5i vi
 MACOS_ARM64_DIRS=s/mini c/mini c/mini2 c/vlong c/float
 MACOS_AMD64_DIRS=s/mini c/mini c/mini2
 
+# Dirs holding Windows-native run tests (PE binaries executed directly,
+# no wine, since the host running `mk test_windows` IS Windows). Each
+# dir's mkfile exposes a test_windows target. Driven from the top-level
+# `mk test_windows`.
+# claude: c/mini2 left out for now -- its test_windows target exists but
+# `mk test_windows` there currently fails to even compile
+# print_nofloat_no64.c (pre-existing cck bug, not Windows-specific; see
+# the dated comment in c/mini2/mkfile). Add it back once that's fixed.
+WINDOWS_DIRS=s/mini
+
 <$TOP/mkfiles/mkdirs
 
 test_macos_arm64:V:
@@ -24,4 +34,11 @@ test_macos_amd64:V:
 		echo $i
 		cd $i
 		mk test_macos_amd64
+	}
+
+test_windows:V:
+	for(i in $WINDOWS_DIRS) @{
+		echo $i
+		cd $i
+		mk test_windows
 	}
