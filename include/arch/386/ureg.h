@@ -25,6 +25,6 @@ struct Ureg
 	union {
 		uint32	usp;
 		uint32	sp;
-	};
+	} u0;
 	uint32	ss;		/* old stack segment */
 };

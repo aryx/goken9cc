@@ -9,7 +9,7 @@
 #define	REGOFF(x)	(uintptr)(&((struct Ureg *) 0)->x)
 
 #define PC		REGOFF(pc)
-#define SP		REGOFF(sp)
+#define SP		REGOFF(u0.sp)
 #define	AX		REGOFF(ax)
 
 #define	REGSIZE		sizeof(struct Ureg)
