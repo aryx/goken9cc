@@ -9,7 +9,7 @@ OFILES=\
 	y.tab.$O\
 	lex.$O\
 
-HFILES=	$TOP/linkers/il/i.out.h	y.tab.h	a.h
+HFILES=	$TOP/include/i.out.h	y.tab.h	a.h
 
 YFILES=a.y
 YFLAGS=-D1 -d

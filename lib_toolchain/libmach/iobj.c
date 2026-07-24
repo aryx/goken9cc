@@ -7,9 +7,10 @@
  *  - the address (Adr) encoding follows linkers/il/obj.c:zaddr, which has
  *    a different set of D_* types than arm64.
  */
-#include <lib9.h>
+#include <u.h>
+#include <libc.h>
 #include <bio.h>
-#include "../../linkers/il/i.out.h"
+#include <i.out.h>
 #include "obj.h"
 
 typedef struct Addr	Addr;
@@ -42,9 +43,16 @@ _readi(Biobuf *bp, Prog *p)
 	if(as <= AXXX || as >= ALAST)
 		return 0;
 	p->kind = aNone;
+    //old: alt: p->sig = 0;
 	if(as == ANAME || as == ASIGNAME){
 		if(as == ASIGNAME)
 			skip(bp, 4);	/* signature */
+        //old: alt:
+		//if(as == ASIGNAME){
+		//	Bread(bp, &p->sig, 4);
+		//	p->sig = leswal(p->sig);
+		//}
+
 		p->kind = aName;
 		p->type = type2char(Bgetc(bp));		/* type */
 		p->sym = Bgetc(bp);			/* sym */
@@ -82,7 +90,7 @@ static Addr
 addr(Biobuf *bp)
 {
 	Addr a;
-	long off;
+	long off; //TODO: int32?
 
 	a.type = Bgetc(bp);	/* a.type */
 	skip(bp,1);		/* reg */

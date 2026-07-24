@@ -22,16 +22,14 @@ enum
 };
 
 /* in [$OS].c */
-int	_is5(char*),
-	_is6(char*),
-	_is7(char*),
-	_is8(char*),
-	_isi(char*),
-	_read5(Biobuf*, Prog*),
-	_read6(Biobuf*, Prog*),
-	_read7(Biobuf*, Prog*),
-	_read8(Biobuf*, Prog*),
-	_readi(Biobuf*, Prog*);
+int	_is5(char*);
+int	_is6(char*);
+int	_is7(char*);
+int	_is8(char*);
+int	_read5(Biobuf*, Prog*);
+int	_read6(Biobuf*, Prog*);
+int	_read7(Biobuf*, Prog*);
+int	_read8(Biobuf*, Prog*);
 
 typedef struct Obj	Obj;
 typedef struct Symtab	Symtab;
@@ -52,7 +50,7 @@ static Obj	obj[] =
 	[ObjArm64]	"arm64 .7",	_is7, _read7,
 	[Obj386]	"386 .8",	_is8, _read8,
 	//[ObjMips]	"mips .v",	_isv, _readv,
-	[ObjRiscv]	"riscv .i",	_isi, _readi,
+	//[ObjRiscv]	"riscv .i",	_isi, _readi,
 	[Maxobjtype]	0, 0
 };
 

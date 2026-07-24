@@ -26,7 +26,6 @@ OFILES=\
 	6obj.$O\
 	7obj.$O\
 	8obj.$O\
-        iobj.$O\
         $GOOS.$O\
 
 #ifneq ($(GOOS),windows)
