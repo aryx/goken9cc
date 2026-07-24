@@ -1,5 +1,5 @@
 #include "../lk/ld.h"
-#include "7.out.h"
+#include <7.out.h>
 #include "../lk/elf.h"
 #include "../lk/macho.h"
 

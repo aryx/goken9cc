@@ -41,9 +41,6 @@ OFILES=\
 #	windows.$O\
 #endif
 
-#7obj.$O: /sys/src/cmd/7c/7.out.h
-# ...
-
 HFILES=$TOP/include/mach.h elf.h macho.h obj.h
 
 <$TOP/mkfiles/mksyslib

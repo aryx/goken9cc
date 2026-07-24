@@ -1,4 +1,4 @@
-ed - 7.out.h <<'!'
+ed - ../../include/7.out.h <<'!'
 v/^	A/d
 ,s/^	A/	"/
 g/ .*$/s///

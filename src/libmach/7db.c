@@ -556,7 +556,7 @@ format(char *mnemonic, Instr *i, char *f)
 					(u)&7);		// op2
 				break;
 			}
-			/* see /sys/src/cmd/7c/7.out.h */
+			/* see 7.out.h */
 			switch(i->w & m){
 			case SYSARG5(3,3,4,2,1): bprint(i, "DAIF"); break;
 			case SYSARG5(3,3,4,2,0): bprint(i, "NZCV"); break;

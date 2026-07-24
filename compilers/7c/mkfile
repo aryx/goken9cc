@@ -21,7 +21,7 @@ OFILES=\
 	pswt.$O\
 	$TOP/linkers/7l/enam.$O\
 
-HFILES=	gc.h $TOP/linkers/7l/7.out.h $TOP/src/cmd/cc/cc.h
+HFILES=	gc.h $TOP/include/7.out.h $TOP/src/cmd/cc/cc.h
 
 LIB=$TOP/src/cmd/cc/cc.a
 

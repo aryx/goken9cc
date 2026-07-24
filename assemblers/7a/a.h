@@ -4,7 +4,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "../../linkers/7l/7.out.h"
+#include <7.out.h>
 
 #ifndef	EXTERN
 #define	EXTERN	extern
