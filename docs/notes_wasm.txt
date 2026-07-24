@@ -6,15 +6,16 @@ this toolchain: assemblers/ea, linkers/el, include/e.out.h, and now
 compilers/ec (the C compiler backend, reusing compilers/cck's shared
 frontend). Written to be read before touching any of those. The "Open
 questions for ec" section at the end tracks what's still unimplemented
-(loops, floats, strings, variadic/printf) now that the bootstrap and
-if/else are done.
+(floats, strings, variadic/printf) now that the bootstrap, if/else,
+and all of C's loop constructs (while, for, do while, including
+nesting/break/continue and loop rotation) are done.
 
 See tests/s/mini/hello_wasm.s (hand-written ea assembly) and
 tests/s/mini/hello_wasm.wat (the same program in traditional
 WebAssembly Text, for comparison) for ea/el, and
 tests/c/mini2/regress_wasm.c for ec (straight-line arithmetic,
-recursion, and if/else -- see that file's own comments for what each
-function checks).
+recursion, if/else, and all of while/for/do-while -- see that file's
+own comments for what each function checks).
 
 
 Why 'e' for the arch letter
@@ -299,15 +300,50 @@ branch itself; and some scope pairs (if/else's own "skip the else"
 jump, in particular) partially overlap in the flat list and need
 widening into proper nesting rather than nesting for free.
 
-A structural limitation found this way, not yet fixed: C `for` and
+A structural limitation found this way, since fixed: C `for` and
 `do while` both have an entry jump that skips straight into the middle
 of what the back-edge treats as the loop (for skips the first
 increment, do-while skips the first test) -- landing inside a scope
 from outside it, which plain block/loop nesting cannot express (only
-"jump to a scope's start" or "past its end"). reg.c's validatescopes()
-catches this with a clear diagnostic rather than emitting a module
-that fails wasm validation. See "Open questions" below for the real
-fix (loop rotation).
+"jump to a scope's start" or "past its end"). This is *not* a gap
+specific to this codebase's approach -- it is exactly why real
+compilers apply "loop rotation" (also called loop inversion) as a
+standard transformation: LLVM ships it as its own pass
+(llvm/lib/Transforms/Utils/LoopRotationUtils.cpp), and it is covered
+as a named loop transformation in the compiler-optimization literature
+(e.g. Muchnick, "Advanced Compiler Design and Implementation", Morgan
+Kaufmann 1997, in the loop-transformations chapter). The classic
+motivation there is different from ec's -- turning `while(cond) body;`
+into `if(cond) { do body; while(cond); }` so each iteration tests the
+condition once instead of twice (a perf win on real hardware) -- but
+the shape of the rewrite is the same one ec needs, for a structural
+reason instead of a performance one: after rotation, entry and the
+back-edge land on the *same* instruction (the moved-forward test+body,
+for `for`; the body, for `do while`), which is exactly what wasm's
+`loop` construct requires of anything branching back into it.
+
+ec's rotateloops() (reg.c) implements this as a pure rearrangement of
+the *already-generated* flat instructions -- swapping the increment
+(or test, for `do while`) block with the test+body block it used to
+jump over, then fixing up whichever one instruction was the loop's own
+automatic back-edge to target the new, unified entry point -- rather
+than by re-emitting anything. One further wrinkle specific to *nested*
+for/do-while (one directly inside another's body): the outer loop's
+own back-edge instruction can itself get jump-threaded away as dead
+code by markdead(), because the inner loop's own conditional test-exit
+branch already reaches the outer increment directly without needing
+that extra hop -- valid on a flat/arbitrary-target arch, but wasm
+still needs an explicit instruction to close the outer `loop`.
+rotateonce_insert() (reg.c) handles that case by synthesizing the one
+missing instruction (a bare, unconditional branch back to the loop's
+new entry point) and splicing it in, rather than trying to repurpose
+an instruction that in this case genuinely does not exist in the
+already-compacted flat list. findrotation() also rotates whichever
+loop has the smallest span first, so arbitrarily deep nesting resolves
+inside-out, one already-clean loop at a time. reg.c's validatescopes()
+remains in place as a safety net (should never fire in practice now)
+rather than being removed, on the theory that a safety net catching
+"impossible" cases is cheap insurance against a future regression.
 
 A separate subtlety, found only once a function had more than one
 local: every local (param or auto) shares ec's single flat wasm-local
@@ -330,20 +366,6 @@ Open questions for ec (not yet started)
 
 This is the part of the design that reaches furthest past what
 exists today, kept here so it doesn't have to be re-derived:
-
-  - Loop rotation for C `for`/`do while`. Both constructs' entry jump
-    needs to land inside the loop body from outside it (see above) --
-    reg.c's block/loop insertion can't express that, and no amount of
-    more interval-insertion logic fixes it (a branch's *target*, unlike
-    its open point, is a real position that can't be moved). The
-    standard fix real compilers use is loop rotation: duplicate the
-    test so entry never has to jump into the middle, e.g. `for(init;
-    test; inc) body;` becomes roughly `init; if(test) { loop { body;
-    inc; if(test) continue; } }` -- a real generator change (actually
-    re-emitting the test's own instructions a second time), not just a
-    reg.c change. `while`/break/continue/nesting already work without
-    this (see above) since a plain while's entry and back-edge target
-    the *same* position (the test), never the loop's interior.
 
   - Should ec ever need genuinely irregular control flow (arbitrary
     goto into another block, computed jumps) -- unlikely, since cck's

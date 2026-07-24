@@ -1,16 +1,15 @@
 // Regression test for the wasm backend (compilers/ec), covering the
-// control flow it supports so far: if/else and `while` (including
-// break/continue/nesting) -- C `for` and `do while` are not
-// implemented yet, see docs/notes_wasm.txt's "Open questions for ec"
-// (their own entry jump lands inside the loop body from outside it,
-// which needs loop rotation, not yet done -- compilers/ec/reg.c's
-// validatescopes() catches the attempt with a clear diagnostic rather
-// than emitting a module that fails wasm validation). No printf here
-// (ec has no varargs/WASI runtime wired up yet, see the same file's
-// gap list): runtests() below checks everything itself and returns 0
-// for all-pass or a bug-identifying nonzero code otherwise, verified
-// by scripts/wasm-call-runner.js the way every other arch's hello*.exe
-// is verified by `cmp` against an expected.txt.
+// control flow it supports so far: if/else, `while` (including break/
+// continue/nesting), and `for`/`do while` (including break/continue/
+// arbitrarily deep nesting) -- the latter two need loop rotation
+// (compilers/ec/reg.c's rotateloops(), see docs/notes_wasm.txt) since
+// their own entry jump lands inside the loop body from outside it,
+// which plain block/loop nesting can't express directly. No printf
+// here (ec has no varargs/WASI runtime wired up yet, see the same
+// file's gap list): runtests() below checks everything itself and
+// returns 0 for all-pass or a bug-identifying nonzero code otherwise,
+// verified by scripts/wasm-call-runner.js the way every other arch's
+// hello*.exe is verified by `cmp` against an expected.txt.
 
 // plain recursion + if/else, both branches returning -- exercises
 // compilers/ec/reg.c's dead-code elision: codgen() always appends a
@@ -167,6 +166,131 @@ sumspecial(int n)
 	return s;
 }
 
+// plain `for`: exercises loop rotation's simplest case (a single,
+// non-nested loop whose own automatic back-edge is a real, live
+// instruction sitting right where rotateonce() expects it).
+int
+forsum(int n)
+{
+	int i, s;
+
+	s = 0;
+	for (i = 0; i < n; i = i + 1) {
+		s = s + i;
+	}
+	return s;
+}
+
+// `do while`: rotation's PREFIX/REST split is the other way round
+// from `for` (PREFIX is the test, REST is the body) -- see
+// rotateonce()'s comment.
+int
+dowhilesum(int n)
+{
+	int i, s;
+
+	s = 0;
+	i = 0;
+	do {
+		s = s + i;
+		i = i + 1;
+	} while (i < n);
+	return s;
+}
+
+int
+forbreak(int n)
+{
+	int i, s;
+
+	s = 0;
+	for (i = 0; i < n; i = i + 1) {
+		if (i == 3) {
+			break;
+		}
+		s = s + 1;
+	}
+	return s;
+}
+
+int
+forcontinue(int n)
+{
+	int i, s;
+
+	s = 0;
+	for (i = 0; i < n; i = i + 1) {
+		if (i == 2) {
+			continue;
+		}
+		s = s + 1;
+	}
+	return s;
+}
+
+// a `for` nested directly in another `for`'s body: the outer loop's
+// own automatic back-edge gets jump-threaded away as dead code (the
+// inner loop's own conditional test-exit already reaches the outer
+// increment directly), so there is no live instruction left to
+// hardcode-retarget the way rotateonce() does for the simple case --
+// rotateonce_insert() synthesizes the missing instruction instead. See
+// findrotation()'s Dpos comment and rotateonce_insert()'s own comment
+// for the full story (this was the trickiest bug in the whole
+// rotation pass).
+int
+nestedfor(int n)
+{
+	int i, j, s;
+
+	s = 0;
+	for (i = 0; i < n; i = i + 1) {
+		for (j = 0; j < n; j = j + 1) {
+			s = s + 1;
+		}
+	}
+	return s;
+}
+
+// three levels deep: findrotation()'s "always rotate the smallest-
+// span (innermost) violation first" rule has to hold up recursively,
+// not just for one level of nesting.
+int
+triplenestedfor(int n)
+{
+	int i, j, k, s;
+
+	s = 0;
+	for (i = 0; i < n; i = i + 1) {
+		for (j = 0; j < n; j = j + 1) {
+			for (k = 0; k < n; k = k + 1) {
+				s = s + 1;
+			}
+		}
+	}
+	return s;
+}
+
+// a `do while` nested directly in another `do while`'s body -- same
+// underlying issue as nestedfor() above, just with PREFIX/REST
+// swapped per do-while's own shape.
+int
+nesteddowhile(int n)
+{
+	int i, j, s;
+
+	s = 0;
+	i = 0;
+	do {
+		j = 0;
+		do {
+			s = s + 1;
+			j = j + 1;
+		} while (j < n);
+		i = i + 1;
+	} while (i < n);
+	return s;
+}
+
 int
 runtests(void)
 {
@@ -202,5 +326,21 @@ runtests(void)
 		return 15;
 	if (sumspecial(5) != 14)
 		return 16;
+	if (forsum(5) != 10)
+		return 17;
+	if (dowhilesum(5) != 10)
+		return 18;
+	if (forbreak(5) != 3)
+		return 19;
+	if (forcontinue(5) != 4)
+		return 20;
+	if (nestedfor(3) != 9)
+		return 21;
+	if (nestedfor(4) != 16)
+		return 22;
+	if (triplenestedfor(3) != 27)
+		return 23;
+	if (nesteddowhile(3) != 9)
+		return 24;
 	return 0;
 }

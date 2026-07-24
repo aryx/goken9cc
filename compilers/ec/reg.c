@@ -30,18 +30,23 @@
  *     the else) but needs to reach past the whole if/else (see
  *     extendscopes()'s comment).
  * Both are fixed by widening a block's *open* point outward (always
- * safe -- see the comments where each happens); what this can't fix
- * is a branch whose *target* falls strictly inside another scope's
- * body while the branch itself sits outside it (as opposed to before
- * it) -- exactly what a C `for`/`do while`'s own entry jump needs
+ * safe -- see the comments where each happens); neither fixes a
+ * branch whose *target* falls strictly inside another scope's body
+ * while the branch itself sits outside it (as opposed to before it)
+ * -- exactly what a C `for`/`do while`'s own entry jump needs
  * (skipping the first iteration's increment/test, landing partway
- * into what the back-edge treats as the loop). That's a real
- * unsupported case today (see emit()'s validatescopes() check) --
- * fixing it needs an actual code-shape change (loop rotation:
- * duplicating the test so entry never has to jump into a loop's
- * middle), not just more interval-insertion logic.
+ * into what the back-edge treats as the loop). That case needs an
+ * actual code-shape change instead: rotateloops() (below) physically
+ * reorders the flat instructions into the standard "loop rotation"
+ * shape (see rotateonce()'s own comment) so the entry jump never has
+ * to land mid-loop again. It has to run on the already-compacted,
+ * dead-code-free list (see findrotation()'s comment for why running
+ * it any earlier reproduces the very violation it's trying to fix).
+ * validatescopes() stays as a safety net for anything that shape
+ * doesn't cover (arbitrary goto is still just diag()'d before it gets
+ * this far, so nothing should reach it today).
  *
- * Four passes over the function's flat Prog list:
+ * Five passes over the function's flat Prog list:
  *
  *   1. Jump-threading (resolve()/threadjumps()): any branch whose
  *      target is itself a bare unconditional ABR gets its target
@@ -64,20 +69,28 @@
  *      inserting AUNREACHABLE; simply never emitting the dead
  *      instruction at all is simpler still.
  *
- *   3. Scope construction (buildscopes()): every surviving branch
+ *   3. Loop rotation (findrotation()/rotateonce()/rotateloops()): find
+ *      and fix the C `for`/`do while` shape described above, by
+ *      physically reordering the now dead-code-free flat instructions
+ *      -- see rotateonce()'s own comment for the exact rearrangement
+ *      and why it's behaviorally identical to the original.
+ *
+ *   4. Scope construction (buildscopes()): every surviving branch
  *      target becomes a wasm structural boundary. A forward target
  *      (branch's own position precedes the target) needs an
  *      enclosing block whose end lands there; a backward target
  *      (target at or before the branch) needs an enclosing loop
  *      starting there.
  *
- *   4. Emission (emit()): sweep live positions in order, opening and
+ *   5. Emission (emit()): sweep live positions in order, opening and
  *      closing scopes (as real ABLOCK/ALOOP/AENDCTL Progs) as their
  *      spans dictate, and rewriting each branch's to.offset from a
  *      raw pc into the block/loop nesting depth wasm's br/br_if
  *      actually need.
  */
 #include "gc.h"
+
+static Prog*	newprog(int as);
 
 enum
 {
@@ -142,6 +155,360 @@ threadjumps(Prog **list, int32 n, int32 base)
 	for(i = 0; i < n; i++)
 		if(list[i]->as == ABR || list[i]->as == ABRIF)
 			list[i]->to.offset = resolve(list, n, base, list[i]->to.offset);
+}
+
+/*
+ * claude: find one C `for`/`do while` shape: a forward ABR at position
+ * `i` (< Lopen) whose target `T` lands strictly inside some backward-
+ * branch-defined loop [Lopen,Dclose) -- i.e. exactly the pattern
+ * validatescopes() (further down) diag()s on, but detected here, in
+ * time to actually fix it (see rotateonce()'s comment for why).
+ * Operates on already-live, already-0-based indices (run *after*
+ * markdead()/compact(), not before): an earlier version ran on the
+ * raw pre-compaction list and kept "fixing" the dead breakpc/continpc
+ * trampolines gen() leaves behind (see txt.c's/pgen.c's OWHILE/OFOR
+ * comments) right alongside the real entry jump -- each of those
+ * trampolines, once correctly retargeted to wherever its destination
+ * code now lives, becomes *itself* a forward-branch-into-a-loop's-
+ * interior, since it's structurally identical to the real entry jump
+ * (both are unconditional branches from outside the loop into it).
+ * That reproduced the violation forever instead of fixing it once.
+ * Dead code has no such trampolines left (they're exactly what
+ * markdead() elides), so running here is both correct and simpler --
+ * one call to run at, no base/pcid arithmetic needed.
+ *
+ * A `continue` inside the loop is *also* a backward ABR targeting the
+ * same Lopen as the loop's own automatic back-edge (both ultimately
+ * mean "go do the increment") -- so for a given Lopen, Dclose must be
+ * 1 + the *largest* matching backward source (matching buildscopes()'
+ * own loopclose[] logic just below), not whichever one happens to be
+ * found first; using an earlier `continue` as Dclose instead of the
+ * real, later back-edge produced a wrong (too-small) loop bound.
+ *
+ * The backward branch defining a loop's own Dclose isn't always an
+ * unconditional ABR either: for a `for` nested directly in another
+ * `for`'s body, the outer loop's own automatic back-edge (gen()'s
+ * "body finished normally" ABR) is itself unreachable-via-fallthrough
+ * dead code once the inner loop is the entire body (the inner loop's
+ * own trailing ABR already is the thing right before it) and gets
+ * elided by markdead() -- what's left targeting the outer Lopen is
+ * the *inner* loop's own conditional test-exit (ABRIF), which just
+ * happens to double as "outer loop, keep going" once it falls out of
+ * the inner loop. So both ABR and ABRIF count as backward-branch
+ * candidates here, matching buildscopes()' own check just below.
+ *
+ * For nested for/do-while (one directly in the other's body), more
+ * than one violation can exist at once, and *which* one gets rotated
+ * first matters: rotating the outer one first relocates the inner
+ * loop's whole span as one contiguous block (fine, its own internal
+ * targets all shift together and stay consistent) -- but rotating the
+ * outer one *before* the inner one has been fixed means the outer's
+ * "REST" region isn't really one contiguous logical chunk yet, since
+ * the still-unrotated inner loop's own increment/back-edge machinery
+ * is interleaved into it; rotateonce()'s block-swap then scrambles
+ * that interleaving instead of moving a clean unit. So this always
+ * returns the *smallest-span* (innermost) violation found, never just
+ * the first -- rotateloops() below relies on that to fix nested loops
+ * inside-out, each one already-clean by the time an outer one's own
+ * rotation moves it as a block.
+ *
+ * Returns 1 and fills *pLopen/*pTpos/*pDclose on the smallest-span
+ * match found, 0 if none.
+ */
+static int
+findrotation(Prog **live, int32 m, int32 *pLopen, int32 *pTpos, int32 *pDclose, int32 *pDpos)
+{
+	int32 i, j, target, lopen, dclose, dpos;
+	int32 bestlopen, besttpos, bestdclose, bestdpos, bestspan;
+	int found;
+
+	found = 0;
+	bestlopen = besttpos = bestdclose = bestdpos = bestspan = 0;
+	for(lopen = 0; lopen < m; lopen++) {
+		dclose = -1;
+		for(j = 0; j < m; j++) {
+			if((live[j]->as == ABR || live[j]->as == ABRIF)
+			&& live[j]->to.offset == lopen && j >= lopen)
+				if(dclose == -1 || j + 1 > dclose)
+					dclose = j + 1;
+		}
+		if(dclose == -1)
+			continue;
+		/* claude: capture the naive (pre-extension) backward-branch
+		 * position -- the fixpoint below may grow dclose to cover a
+		 * nested loop's own tail, but *this* position is the one
+		 * whose role actually changes under rotation (see rotateonce()
+		 * / rotateonce_insert()'s comments for why the two need
+		 * different treatment). */
+		dpos = dclose - 1;
+		/*
+		 * claude: nested loops -- dclose-1 (the branch that closes
+		 * *this* loop) can itself sit strictly inside some OTHER
+		 * loop's own span, when that other loop is an already-
+		 * rotated inner loop whose own conditional test-exit
+		 * (ABRIF) is what happens to be the backward branch
+		 * targeting our lopen (see the comment above this
+		 * function). That ABRIF is conditional -- when not taken,
+		 * control falls through into the rest of the inner loop's
+		 * body/increment/back-edge, which therefore belongs inside
+		 * *our* span too, or rotateonce()'s block-swap will leave
+		 * it behind as unswapped "outside" material. Fix by
+		 * extending dclose, to a fixpoint, to cover any such
+		 * other loop's own dclose whenever dclose-1 lands inside
+		 * it. Bounded by m since each extension strictly grows
+		 * dclose and dclose <= m.
+		 */
+		for(;;) {
+			int32 od, otarget, olopen, odclose, grown;
+
+			grown = 0;
+			for(od = 0; od < m; od++) {
+				if(live[od]->as != ABR && live[od]->as != ABRIF)
+					continue;
+				otarget = live[od]->to.offset;
+				if(otarget < 0 || otarget >= m || otarget == lopen)
+					continue;
+				if(!(otarget < dclose - 1 && dclose - 1 < od + 1))
+					continue;
+				/*
+				 * claude: only extend into a loop *nested inside*
+				 * the current candidate (its own header comes
+				 * after lopen), never into one that merely
+				 * *contains* lopen (an outer loop whose header
+				 * sits earlier) -- otherwise an inner loop's own
+				 * naive dclose wrongly balloons out to its
+				 * enclosing loop's dclose, corrupting a
+				 * perfectly self-contained inner rotation (seen
+				 * with nested do-while: the outer do-while's own
+				 * D, unrelated to the inner one, would otherwise
+				 * get mistaken for something the inner loop's
+				 * span needs to swallow).
+				 */
+				if(otarget <= lopen)
+					continue;
+				/* od is itself a backward branch whose target
+				 * (olopen) is some other loop's header, and
+				 * dclose-1 falls strictly inside [olopen, od]. */
+				olopen = otarget;
+				odclose = -1;
+				for(j = 0; j < m; j++) {
+					if((live[j]->as == ABR || live[j]->as == ABRIF)
+					&& live[j]->to.offset == olopen && j >= olopen)
+						if(odclose == -1 || j + 1 > odclose)
+							odclose = j + 1;
+				}
+				if(odclose > dclose) {
+					dclose = odclose;
+					grown = 1;
+				}
+			}
+			if(!grown)
+				break;
+		}
+		for(i = 0; i < lopen; i++) {
+			if(live[i]->as != ABR)
+				continue;
+			target = live[i]->to.offset;
+			if(lopen < target && target < dclose) {
+				if(!found || dclose - lopen < bestspan) {
+					found = 1;
+					bestlopen = lopen;
+					besttpos = target;
+					bestdclose = dclose;
+					bestdpos = dpos;
+					bestspan = dclose - lopen;
+				}
+			}
+		}
+	}
+	if(found) {
+		*pLopen = bestlopen;
+		*pTpos = besttpos;
+		*pDclose = bestdclose;
+		*pDpos = bestdpos;
+		return 1;
+	}
+	return 0;
+}
+
+/*
+ * claude: the actual "loop rotation" -- a standard, named compiler
+ * transformation (see docs/notes_wasm.txt for references; not
+ * something any *other* arch in this codebase needs, since a real
+ * arch's PC-addressed branches can jump into a loop's middle for free
+ * -- this is purely a consequence of wasm's structured control flow).
+ * C-level, it's `for(init;test;inc)body;` becoming roughly `init;
+ * if(test){ loop{ body; inc; if(test) continue; } }` -- but
+ * implemented here as a pure rearrangement of the *existing* flat
+ * instructions already generated for the unrotated form, not by
+ * re-emitting anything (verified equivalent by hand-tracing execution
+ * order both ways -- see docs/notes_wasm.txt for the derivation):
+ *
+ *   before: [Lopen..T)=PREFIX  [T..Dclose-1)=REST  [Dclose-1]=D(->Lopen)
+ *   after:  [Lopen..Lopen+len1)=REST (moved earlier)
+ *           [Lopen+len1..Dclose-1)=PREFIX (moved later)
+ *           [Dclose-1]=D, retargeted to Lopen (REST's new start)
+ *
+ * For a `for`, PREFIX is the increment and REST is test+body: the
+ * rotated form runs test+body first (entry already skipped inc, and
+ * now doesn't need to -- it just lands on REST directly), then inc,
+ * then loops back to REST (retest). For a `do while`, PREFIX is the
+ * test and REST is the body: entry (still skipping to T=body's old
+ * position, now REST's new start) runs body then the test then loops
+ * back to the body -- exactly do-while's own semantics.
+ *
+ * D is the one branch that does *not* follow the generic old-target-
+ * to-new-target mapping (remap[]): every other branch keeps meaning
+ * "go to wherever old target X's content now lives" (a `continue`
+ * targeting the old Lopen still means "go run the increment", which
+ * remap[Lopen] gives correctly, wherever the increment ends up). D
+ * specifically is gen()'s automatic "body finished normally" edge --
+ * after rotation the increment it used to jump to is reached by plain
+ * fallthrough instead (it now sits immediately before D), so D's own
+ * job changes to "increment just ran, go retest", i.e. always Lopen
+ * (REST's fixed new start), not remap[Lopen].
+ */
+static void
+rotateonce(Prog **live, int32 m, int32 Lopen, int32 Tpos, int32 Dclose)
+{
+	int32 len1, len2, i, target, idx;
+	int32 *remap;
+	Prog **tmp;
+
+	len1 = Dclose - 1 - Tpos;
+	len2 = Tpos - Lopen;
+
+	remap = alloc(m * sizeof(int32));
+	for(i = 0; i < m; i++)
+		remap[i] = i;
+	for(i = Tpos; i < Dclose - 1; i++)
+		remap[i] = Lopen + (i - Tpos);
+	for(i = Lopen; i < Tpos; i++)
+		remap[i] = Lopen + len1 + (i - Lopen);
+
+	tmp = alloc((len1 + len2) * sizeof(Prog*));
+	for(i = 0; i < len1; i++)
+		tmp[i] = live[Tpos + i];
+	for(i = 0; i < len2; i++)
+		tmp[len1 + i] = live[Lopen + i];
+	for(i = 0; i < len1 + len2; i++)
+		live[Lopen + i] = tmp[i];
+
+	for(i = 0; i < m; i++) {
+		if(i == Dclose - 1)
+			continue;
+		if(live[i]->as != ABR && live[i]->as != ABRIF)
+			continue;
+		target = live[i]->to.offset;
+		if(target < 0 || target >= m)
+			continue;
+		idx = remap[target];
+		live[i]->to.offset = idx;
+	}
+	live[Dclose - 1]->to.offset = Lopen;
+}
+
+/*
+ * claude: nested loops can leave a loop's own "automatic loop-back"
+ * edge absorbed into a *different*, inner loop's own conditional
+ * test-exit branch by threadjumps()/markdead() (see findrotation()'s
+ * Dpos comment: this is what makes the naive Dpos position land
+ * strictly *before* the fixpoint-extended Dclose, with more of the
+ * inner loop's own tail -- its body, increment, and its own D --
+ * sitting in between). When that happens, there is no longer any live
+ * instruction whose sole job is "the increment just ran via
+ * fallthrough, now retest": the one that used to do that was jump-
+ * threaded away as dead code, which is a valid optimization for a
+ * flat/arbitrary-target arch (the inner loop's exit branch already
+ * reaches the increment directly), but wasm's structured `loop`
+ * genuinely needs an explicit instruction closing it. This path
+ * synthesizes that one missing instruction (a bare ABR, hardcoded to
+ * Lopen) and splices it in right after the relocated PREFIX, growing
+ * the live array by one slot. Dpos itself is treated as an entirely
+ * ordinary member of REST here (remapped like any other branch, not
+ * hardcoded) since it is *not* adjacent to the relocated PREFIX -- the
+ * newly synthesized instruction is.
+ */
+static Prog**
+rotateonce_insert(Prog **live, int32 m, int32 Lopen, int32 Tpos, int32 Dclose, int32 *pm)
+{
+	int32 restlen, prefixlen, tailidx, i, target;
+	int32 *remap;
+	Prog **newlive;
+	Prog *newd;
+
+	restlen = Dclose - Tpos;
+	prefixlen = Tpos - Lopen;
+	tailidx = Lopen + restlen + prefixlen;
+
+	remap = alloc(m * sizeof(int32));
+	for(i = 0; i < m; i++)
+		remap[i] = i;
+	for(i = Tpos; i < Dclose; i++)
+		remap[i] = Lopen + (i - Tpos);
+	for(i = Lopen; i < Tpos; i++)
+		remap[i] = Lopen + restlen + (i - Lopen);
+	for(i = Dclose; i < m; i++)
+		remap[i] = tailidx + 1 + (i - Dclose);
+
+	newlive = alloc((m + 1) * sizeof(Prog*));
+	for(i = 0; i < Lopen; i++)
+		newlive[i] = live[i];
+	for(i = 0; i < restlen; i++)
+		newlive[Lopen + i] = live[Tpos + i];
+	for(i = 0; i < prefixlen; i++)
+		newlive[Lopen + restlen + i] = live[Lopen + i];
+
+	newd = newprog(ABR);
+	newd->to.offset = Lopen;
+	newlive[tailidx] = newd;
+
+	for(i = Dclose; i < m; i++)
+		newlive[tailidx + 1 + (i - Dclose)] = live[i];
+
+	for(i = 0; i < m; i++) {
+		if(newlive[remap[i]]->as != ABR && newlive[remap[i]]->as != ABRIF)
+			continue;
+		target = newlive[remap[i]]->to.offset;
+		if(target < 0 || target >= m)
+			continue;
+		newlive[remap[i]]->to.offset = remap[target];
+	}
+
+	*pm = m + 1;
+	return newlive;
+}
+
+/*
+ * claude: bounded by m tries -- each successful rotation strictly
+ * shrinks how many for/do-while shapes remain (it doesn't introduce
+ * new ones: see rotateonce()'s own comment; rotateonce_insert() grows
+ * the array by one Prog, not by one violation), so this should always
+ * terminate well under that; the bound is just a safety net against
+ * a bug turning this into an infinite loop instead of a diag(). May
+ * return a *different* live array than it was given (rotateonce_insert()
+ * reallocates), always updating *pm to match whatever it returns.
+ */
+static Prog**
+rotateloops(Prog **live, int32 *pm)
+{
+	int32 lopen, tpos, dclose, dpos, m;
+	int32 tries;
+
+	m = *pm;
+	for(tries = 0; tries < m + 1; tries++) {
+		if(!findrotation(live, m, &lopen, &tpos, &dclose, &dpos)) {
+			*pm = m;
+			return live;
+		}
+		if(dpos == dclose - 1)
+			rotateonce(live, m, lopen, tpos, dclose);
+		else
+			live = rotateonce_insert(live, m, lopen, tpos, dclose, &m);
+	}
+	diag(Z, "ec: loop rotation did not converge");
+	*pm = m;
+	return live;
 }
 
 /*
@@ -391,13 +758,13 @@ extendscopes(Scope *scope, int32 nscope)
  * *open* point outward -- there's no equivalent move for a scope
  * whose *close* (a real branch target, not adjustable) falls strictly
  * inside a loop while the branch reaching it sits entirely outside
- * that loop. That's exactly a C `for`/`do while`'s own entry jump:
- * it lands partway into what the back-edge treats as the loop body
- * (skipping the first iteration's increment or test), which wasm's
- * block/loop nesting simply can't express as a plain forward branch.
- * Caught here with a clear diagnostic instead of silently emitting a
- * module that fails wasm validation -- see the file comment's note on
- * loop rotation being the real fix, not yet implemented.
+ * that loop. rotateloops() (run much earlier, right after threading)
+ * already rewrites the one real case that produces this -- a C
+ * `for`/`do while`'s entry jump -- into something block/loop nesting
+ * *can* express, so nothing should reach this check in practice.
+ * Kept as a safety net (clear diagnostic instead of silently emitting
+ * a module that fails wasm validation) in case some shape neither
+ * rotateloops() nor cck's own frontend diag()s slips through.
  */
 static void
 validatescopes(Scope *scope, int32 nscope)
@@ -583,6 +950,8 @@ regopt(Prog *sp)
 	liveidx = alloc(n * sizeof(int32));
 	live = compact(list, n, dead, liveidx, &m);
 	retarget(live, m, base, liveidx);
+
+	live = rotateloops(live, &m);
 
 	blockid = alloc(m * sizeof(int32));
 	loopid = alloc(m * sizeof(int32));
