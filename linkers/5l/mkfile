@@ -31,7 +31,7 @@ OFILES=globals.$O\
 
 HFILES=\
 	l.h\
-	$TOP/include/elf.h\
+	$TOP/include/exec/elf.h\
         $TOP/include/5.out.h
 
 CFLAGS=$CFLAGS -I.

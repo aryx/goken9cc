@@ -40,8 +40,8 @@ VIEWS= \
   8l/span.c\
   8l/obj.c\
   \
-  ../include/a.out.h\
-  ../include/elf.h\
+  ../include/exec/a.out.h\
+  ../include/exec/elf.h\
 
 
 TODO=\

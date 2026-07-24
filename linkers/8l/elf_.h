@@ -1,5 +1,5 @@
 /*s: 8l/elf_.h */
-#include <elf.h>
+#include <exec/elf.h>
 
 // vs include/elf.h? and libmach/elf.h?
 
