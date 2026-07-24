@@ -22,8 +22,8 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
   - early WebAssembly backend (ea/el)
   - much richer test infra: tests now run under qemu (Linux), wine (Windows), and Node (wasm), and check output against expected.txt instead of just checking the build succeeds; new tests/s/variants and tests/c/variants compare the object files and executables produced by the principia vs. kencc lineages to catch mismatches
 - **Q2 2026** &mdash; v0.3: presented goken9cc at IWP9, the International Workshop on Plan 9.
-- **Q1 2026** &mdash; v0.2: added `pcc`, a portable C compiler; started using AddressSanitizer to catch memory bugs in the toolchain itself; wrote up the project for an IWP9 paper submission.
-- **Q4 2025** &mdash; v0.1: first working release &mdash; a Plan 9-style toolchain (compilers, assemblers, linkers for arm, x86, mips, and early riscv, plus an arm/mips emulator and the acid debugger) able to compile and run Principia Softwarica's own `pc`/`pi` operating system targets.
+- **Q1 2026** &mdash; v0.2: added `pcc`, "a portable C compiler" to compile legacy Unix programs (called APE in Plan 9); started using AddressSanitizer to catch memory bugs in the toolchain itself; wrote up the project for an IWP9 paper submission.
+- **Q4 2025** &mdash; v0.1: first working release &mdash; a Plan 9-style toolchain (compilers, assemblers, linkers for arm, x86, mips, and early riscv, plus an arm/mips emulator and the acid debugger) able to cross compile Principia Softwarica's own `pc`/`pi` operating system targets.
 - **Q3 2025** &mdash; Beta: arm64 and arm32 Linux binaries actually working; imported `mk`, `rc`, `ed`, and other core utilities from Principia Softwarica so the repo is self-contained; first typesetting tools (troff, eqn, tbl) brought in.
 - **Q2 2025** &mdash; Alpha: project started &mdash; forked the Go repository at its October 2010 C-toolchain commit, refocused on the C toolchain (dropping Go itself), first (untested) imports of the mips, arm64, and riscv toolchains, first Docker/Nix/CI setup.
 
