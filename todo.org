@@ -3,6 +3,7 @@
 ** TODO changes.txt
 
 ** Overview
+- benchmarks on compcert! with minimal libc/ape
 - libsyscall (thin wrappers around syscalls) for linux/macos/windows/wasm/plan9/xv6
 - libc (or libos), again working for linux/macos/windows/wasm/plan9/xv6 (different from lib9,
   rely instead on libsyscall)
@@ -580,6 +581,7 @@ at the same time nice to see explicitely the build-mk.sh in Dockerfile
 for iwp9 goken paper
 
 *** add back -X to vc, ic, 7c? and also 5c/8c?
+or update to -O0 better
 
 ** Last1
 
@@ -618,11 +620,11 @@ pass length each time, safer
 
 * Components
 
-** C compilers: 5c/6c/7c/8c/vc/ic
+** C compilers: 5c/6c/7c/8c/vc/ic/ec
 
-** assemblers: 5a/6a/7a/8a/va/ia
+** assemblers: 5a/6a/7a/8a/va/ia/ea
 
-** linkers: 6l/6l/7l/8l/vl/il
+** linkers: 5l/6l/7l/8l/vl/il/el
 
 ** mk/rc
 
@@ -635,9 +637,6 @@ pass length each time, safer
 ** Arch
 
 *** arm, 5a/5c/5l
-
-**** test infra! run hello_plan9_arm.exe on raspberry pi1 via qemu?
-and do also for pi2 and qemu pi2?
 
 **** try use different VFP instructions for floats?
 MOVF → VLDR/VMOV.F32/F64 + literal pool or immediate load).
@@ -671,8 +670,7 @@ it works for the arm32 binary with 5l but not 5l_
 
 *** mips
 
-**** try vi on hello_plan9_mips.exe
-error "can't read 4 bytes of symbol table"
+**** add commits from 9front after initial import
 
 **** can use acid to disassemble mips generated code and see it works?
 as I can't use objdump
@@ -699,10 +697,6 @@ try acid on it?
 
 **** hello_windows_x86.c
 try make hello.c that link with a few sys.s for windows and link for windows
-maybe remove *.go in runtime/ and see if can build a runtime.a that
-I can then use then to link a simple hello.c calling print.c
-
-try rt0.8 and then 8l but then linking errors so missing stuff
 
 **** window.yml: try install mingw from windows-latest GHA job as experiment
 so later can try to compile goken9cc in CI!
@@ -741,6 +735,8 @@ maybe still useful though ...
 # seems to work on 386, amd64, and arm hello_xxx binaries
 arm64? 7db.c does not work?
 
+need reimport the lpized version! and adapt to plan9port improvements
+
 **** RELAX acid can't load hello_plan9_mips.exe
 because I didn't add v.c and vdb.c yet! (and vobj.c and vcodas.c)
 
@@ -766,7 +762,8 @@ maybe this is the cause?
 **** weird, acid can't show symbols on helloc_arm.exe
 
 *** port also db to goken
-seems to be defined in plan9port
+seems to be defined in plan9port too
+less important though
 
 ** Rest (generators, utilities, typesetting)
 
@@ -781,6 +778,8 @@ than plan9 yacc and it's good to be compatible, just like
 getting kencc to compile with gcc so easier to bootstrap.
 
 *** goken/utilities/
+
+**** reimport and resync lpized awk that does not use APE
 
 **** RELAX LP split tr.c, join.c, sed.c, diff*.c
 and also make it work on goken
@@ -809,12 +808,6 @@ rc ../port/mkbootrules pi
 
 
 *** fix bugs in goken progs
-
-**** bug goken 5i, does not seem to work on hello_plan9_arm.exe
-compare to running 5i under plan9
-bug in libmach? because 5i code in goken is the same than in principia
-
-**** sync 5i with principia Machine.nw
 
 **** bug goken mk/rc, adding lnrand.c to lib9/mkfile didn't trigger recompilation
 use mk -dg
@@ -863,8 +856,6 @@ and lp and tr2post
 
 ** Test infra
 
-*** use 5i/vi in mk test and in CI to run some hello_plan9_xxx programs?
-
 *** LATER: try to compile goken with goken9cc!!!
 
 *** More workflows! build_amd64_linux.yaml, build_amd64_windows
@@ -883,12 +874,10 @@ need VM then ... and need to find a way to transfer data from one to the other
 
 ** Bench infra
 
-*** LATER add C tests and C bench for goken9cc
-take the one from Leroy for compcert?
-
 ** Dev infra
 
 *** devinfra: RELAX fix all gcc warnings in goken show when running 'mk'
+and especially clang warnings as clang seems stricter
 
 *** can detect the ugly 'stdin' Binit in sed.c that
 was fixed in inferno-os but caused some segfaults?
