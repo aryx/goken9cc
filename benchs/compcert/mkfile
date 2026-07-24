@@ -1,18 +1,22 @@
 # Micro-benchmarks originally from the CompCert project (see pad.txt),
-# used here to compare gcc -O0 vs gcc -O3 (and, later, goken's own Xc/Xa/Xl
-# pipeline once it can build this corpus too -- see TODO below).
+# used here to compare gcc/clang -O0 vs -O3 (and, later, goken's own
+# Xc/Xa/Xl pipeline once it can build this corpus too -- see TODO below).
+# gcc -O0 is the fixed baseline every variant is compared against, in
+# bench and (eventually) across compilers -- see bench.sh.
 #
 # Modeled after ./Makefile (the original CompCert GNU Makefile for this
-# corpus) but using mk/rc instead of make/bash, and gcc instead of ccomp.
+# corpus) but using mk/rc instead of make/bash, and gcc/clang instead of
+# ccomp.
 #
-#   mk          # just compile everything (gcc -O0 and gcc -O3)
+#   mk          # just compile everything (gcc/clang, -O0 and -O3)
 #   mk test     # compile + check stdout of every program against Results/
-#   mk bench    # compile + timing summary (gcc -O0 vs gcc -O3)
+#   mk bench    # compile + timing summary, all variants vs gcc -O0
 #   mk clean
 
 GCC=gcc
+CLANG=clang
 # -fgnu89-inline: spectral.c's `inline double eval_A(...)` has no other
-# definition in the translation unit. Under gcc's default (C99/gnu11)
+# definition in the translation unit. Under gcc/clang's default (C99/gnu11)
 # inline semantics that's only valid if the compiler actually inlines
 # every call; at -O0 it doesn't, so the plain -O0 build fails to link
 # ("undefined reference to eval_A"). gnu89 inline semantics always keep a
@@ -25,16 +29,28 @@ PROGS=fib integr qsort fft fftsp fftw sha1 sha3 aes almabench \
 	nsieve nsievebits spectral vmach \
 	bisect chomp perlin siphash24
 
-O0BINS=${PROGS:%=%.gcc-O0}
-O3BINS=${PROGS:%=%.gcc-O3}
+# gcc-O0 is the baseline (see VARIANTS in bench.sh); -O3 is each
+# compiler's "fastest" in a way still directly comparable to the others
+# (no -Ofast/-ffast-math, which could also break the Results/ diff on the
+# floating-point-heavy benchmarks like almabench/fftw).
+GCCO0BINS=${PROGS:%=%.gcc-O0}
+GCCO3BINS=${PROGS:%=%.gcc-O3}
+CLANGO0BINS=${PROGS:%=%.clang-O0}
+CLANGO3BINS=${PROGS:%=%.clang-O3}
 
-all:V: $O0BINS $O3BINS
+all:V: $GCCO0BINS $GCCO3BINS $CLANGO0BINS $CLANGO3BINS
 
 %.gcc-O0: %.c
 	$GCC $CFLAGS -O0 -o $target $stem.c $LIBS
 
 %.gcc-O3: %.c
 	$GCC $CFLAGS -O3 -o $target $stem.c $LIBS
+
+%.clang-O0: %.c
+	$CLANG $CFLAGS -O0 -o $target $stem.c $LIBS
+
+%.clang-O3: %.c
+	$CLANG $CFLAGS -O3 -o $target $stem.c $LIBS
 
 # Each program prints to stdout and must match Results/<prog> exactly.
 # Piped through /dev/stdin rather than the more common 'cmp - foo': this
@@ -44,7 +60,7 @@ all:V: $O0BINS $O3BINS
 # ROOT/$objtype/bin is ahead of the system cmp on $PATH. /dev/stdin is a
 # real path any cmp can open, so it works with either implementation.
 test:V: all
-	for(opt in gcc-O0 gcc-O3){
+	for(opt in gcc-O0 gcc-O3 clang-O0 clang-O3){
 		echo '--' $opt '--'
 		for(i in $PROGS){
 			if(./$i.$opt | cmp -s /dev/stdin Results/$i)
@@ -54,16 +70,18 @@ test:V: all
 		}
 	}
 
-# Timing summary, gcc -O0 vs gcc -O3. The arithmetic (best-of-N, speedup
-# ratio) is easier in bash than rc, so that part alone lives in bench.sh;
-# see its header for why it uses bash's `time` builtin instead of an
-# external command.
+# Timing summary, every variant vs the gcc -O0 baseline. The arithmetic
+# (best-of-N, speedup ratios) is easier in bash than rc, so that part
+# alone lives in bench.sh; see its header for why it uses bash's `time`
+# builtin instead of an external command, and VARIANTS for the compiler
+# list (extend it there, not here, once goken joins the comparison).
 bench:V: all
 	bash bench.sh $PROGS
 
 clean:V:
-	rm -f $O0BINS $O3BINS
+	rm -f $GCCO0BINS $GCCO3BINS $CLANGO0BINS $CLANGO3BINS
 
 # TODO: once goken can build this corpus, add %.goken-5/6/7/8 style
-# targets (per docs/notes on the arch letters) alongside the gcc ones
-# above, and fold them into test/bench too.
+# targets (per docs/notes on the arch letters) alongside the gcc/clang
+# ones above, add them to bench.sh's VARIANTS, and fold them into
+# test/bench too. gcc -O0 stays the baseline.
