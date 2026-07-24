@@ -18,7 +18,7 @@ OFILES=\
 
 #old: compat.$O or $TARGMODEL.$O
 
-HFILES= l.h 8.out.h  $TOP/include/ar.h
+HFILES= l.h 8.out.h  $TOP/include/obj/ar.h
 
 
 <$TOP/mkfiles/mkone

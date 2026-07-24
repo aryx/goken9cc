@@ -31,7 +31,7 @@
 
 #include	"l.h"
 #include	"lib.h"
-#include	<ar.h>
+#include	<obj/ar.h>
 
 int iconv(Fmt*);
 

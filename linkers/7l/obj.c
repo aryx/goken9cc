@@ -1,7 +1,7 @@
 #define	EXTERN
 #include	"l.h"
 
-#include	<ar.h>
+#include	<obj/ar.h>
 
 char	thechar		= '7';
 char	*thestring 	= "arm64";

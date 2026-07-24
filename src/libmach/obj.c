@@ -5,7 +5,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <ar.h>
+#include <obj/ar.h>
 #include <mach.h>
 
 #include "obj.h"

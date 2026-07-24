@@ -4,8 +4,8 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <mach.h>
-#include <ar.h>
+#include <arch/mach.h>
+#include <obj/ar.h>
 
 /*
  *	The algorithm uses up to 3 temp files.  The "pivot member" is the

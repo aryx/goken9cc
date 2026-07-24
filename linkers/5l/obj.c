@@ -1,6 +1,6 @@
 /*s: 5l/obj.c */
 #include	"l.h"
-#include	<ar.h>
+#include	<obj/ar.h>
 
 // Reading object files.
 

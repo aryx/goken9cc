@@ -1,7 +1,7 @@
 #define	EXTERN
 #include	"l.h"
 
-#include	<ar.h>
+#include	<obj/ar.h>
 
 char	*noname		= "<none>";
 char	symname[]	= SYMDEF;

@@ -35,7 +35,7 @@
 
 #include	"../ld/lib.h"
 #include	"../ld/elf.h"
-#include	<ar.h>
+#include	<obj/ar.h>
 
 char	*noname		= "<none>";
 char	thechar		= '5';

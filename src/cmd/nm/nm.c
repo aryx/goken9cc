@@ -33,7 +33,7 @@
  */
 #include <u.h>
 #include <libc.h>
-#include <ar.h>
+#include <obj/ar.h>
 #include <bio.h>
 #include <mach.h>
 

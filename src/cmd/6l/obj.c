@@ -39,7 +39,7 @@
 #include	"../ld/pe.h"
 #include	"../ld/dwarf.h"
 
-#include	<ar.h>
+#include	<obj/ar.h>
 
 char	*noname		= "<none>";
 char	thechar		= '6';

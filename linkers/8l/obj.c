@@ -1,6 +1,6 @@
 /*s: 8l/obj.c */
 #include	"l.h"
-#include	<ar.h>
+#include	<obj/ar.h>
 
 /*s: global [[curauto]] */
 // list<ref<Auto>> (next = Auto.link)

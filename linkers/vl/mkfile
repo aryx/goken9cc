@@ -20,7 +20,7 @@ OFILES=\
 
 #$TARGMODEL.$O\
 
-HFILES= l.h $TOP/include/obj/v.out.h $TOP/include/ar.h
+HFILES= l.h $TOP/include/obj/v.out.h $TOP/include/obj/ar.h
 
 <$TOP/mkfiles/mkone
 

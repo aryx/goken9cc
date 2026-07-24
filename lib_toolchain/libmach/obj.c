@@ -5,8 +5,8 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "ar.h"
-#include "mach.h"
+#include <obj/ar.h>
+#include <mach.h>
 #include "obj.h"
 
 #define islocal(t)	((t)=='a' || (t)=='p')

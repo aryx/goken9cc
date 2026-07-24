@@ -9,6 +9,7 @@
 #define	ARFMAG	"`\n"
 
 // size ar name entry
+//old: used to be 16, extended in go-era as go symbols can be long
 #define SARNAME	64
 
 struct	ar_hdr
