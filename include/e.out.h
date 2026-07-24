@@ -1,9 +1,8 @@
 /*
  * wasm (WebAssembly), arch letter 'e'.
  *
- * claude: modeled on include/5.out.h, include/6.out.h, include/8.out.h,
- * and on linkers/vl/v.out.h and linkers/il/i.out.h (the two most
- * recently-added arches). Follows v.out.h/i.out.h specifically for the
+ * claude: modeled on include/[568vi].out.h for the other architectures.
+ * Follows v.out.h/i.out.h specifically for the
  * D_* enum: one enum namespace, split across Gen's `type` and `name`
  * fields (type = operand encoding, name = memory region for a D_OREG),
  * rather than either arm's two separate enum types (Operand_kind/

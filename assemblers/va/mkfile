@@ -10,7 +10,7 @@ OFILES=\
 	lex.$O\
 
 HFILES=\
-	$TOP/linkers/vl/v.out.h\
+	$TOP/include/v.out.h\
 	y.tab.h\
 	a.h\
 

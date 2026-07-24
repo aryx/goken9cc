@@ -3,7 +3,7 @@
  */
 #include <lib9.h>
 #include <bio.h>
-#include "../../linkers/vl/v.out.h"
+#include <v.out.h>
 #include "obj.h"
 
 typedef struct Addr	Addr;
@@ -36,9 +36,15 @@ _readv(Biobuf *bp, Prog *p)
 	if(as < 0)
 		return 0;
 	p->kind = aNone;
+    //old: alt:	p->sig = 0;
 	if(as == ANAME || as == ASIGNAME){
 		if(as == ASIGNAME)
 			skip(bp, 4);	/* signature */
+        //old: alt:
+		//if(as == ASIGNAME){
+		//	Bread(bp, &p->sig, 4);
+		//	p->sig = leswal(p->sig);
+		//}
 		p->kind = aName;
 		p->type = type2char(Bgetc(bp));		/* type */
 		p->sym = Bgetc(bp);			/* sym */

@@ -19,7 +19,7 @@ OFILES=\
 	pswt.$O\
 	$TOP/linkers/vl/enam.$O\
 
-HFILES= gc.h $TOP/linkers/vl/v.out.h $TOP/src/cmd/cc/cc.h
+HFILES= gc.h $TOP/include/v.out.h $TOP/src/cmd/cc/cc.h
 
 LIB= $TOP/src/cmd/cc/cc.a
 

@@ -1,7 +1,7 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
-#include	"../vl/v.out.h"
+#include	<v.out.h>
 #include	"../lk/elf.h"
 
 #ifndef	EXTERN
