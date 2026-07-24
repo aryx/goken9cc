@@ -1,7 +1,7 @@
 # goken9cc
 
-**goken9cc** is a portable, multi-architecture toolchain &mdash; C compiler,
-assembler, and linker &mdash; together with a minimalist C library, rooted in
+**goken9cc** is a portable, multi-architecture toolchain &mdash; C compilers,
+assemblers, and linkers &mdash; together with a minimalist C library, rooted in
 Ken Thompson's legendary work on the Plan 9 and Inferno operating
 systems. First extended by Go developers, this toolchain now brings
 cross-platform support for Linux, macOS, and Windows while preserving
