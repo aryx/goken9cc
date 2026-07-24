@@ -5,7 +5,7 @@
 #define		EXTERN
 #include	"go.h"
 #include	"y.tab.h"
-#include <ar.h>
+#include <obj/ar.h>
 
 #undef	getc
 #undef	ungetc

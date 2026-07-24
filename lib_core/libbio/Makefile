@@ -46,6 +46,6 @@ OFILES=\
 	bwrite.$O\
 
 HFILES=\
-	../../include/bio.h
+	../../include/ALL/bio.h
 
 include ../../GO/Make.clib

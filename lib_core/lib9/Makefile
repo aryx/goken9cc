@@ -105,8 +105,8 @@ OFILES=\
 	$(UTFOFILES)\
 
 HFILES=\
-	$(QUOTED_GOROOT)/include/u.h\
-	$(QUOTED_GOROOT)/include/libc.h\
+	$(QUOTED_GOROOT)/include/ALL/u.h\
+	$(QUOTED_GOROOT)/include/ALL/libc.h\
 
 include ../../GO/Make.clib
 

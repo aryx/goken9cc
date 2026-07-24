@@ -58,6 +58,6 @@ OFILES+=\
 
 endif
 
-HFILES=../../include/mach.h elf.h macho.h obj.h
+HFILES=../../include/ALL/mach.h elf.h macho.h obj.h
 
 include ../Make.clib
