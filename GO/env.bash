@@ -5,7 +5,7 @@
 
 export GOROOT=${GOROOT:-$(cd ..; pwd)}
 
-if ! test -f "$GOROOT"/include/ALL/u.h
+if ! test -f "$GOROOT"/include/boot/u.h
 then
 	echo '$GOROOT is not set correctly or not exported: '$GOROOT 1>&2
 	exit 1
