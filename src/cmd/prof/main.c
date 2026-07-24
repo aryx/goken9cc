@@ -9,10 +9,10 @@
 #include <ctype.h>
 
 #define Ureg Ureg_amd64
-	#include <ureg_amd64.h>
+	#include <arch/amd64/ureg.h>
 #undef Ureg
 #define Ureg Ureg_x86
-	#include <ureg_x86.h>
+	#include <arch/386/ureg.h>
 #undef Ureg
 #include <mach.h>
 

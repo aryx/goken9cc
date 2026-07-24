@@ -2,8 +2,7 @@
  * mipsim.h
  */
 
-//#include "../../include/arch/mips/ureg.h"
-#include <ureg_mips.h>
+#include <arch/mips/ureg.h>
 
 #define	USERADDR	0xC0000000
 #define	UREGADDR	(USERADDR+BY2PG-4-0xA0)

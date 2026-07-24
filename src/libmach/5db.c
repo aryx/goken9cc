@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "ureg_arm.h"
+#include <arch/arm/ureg.h>
 #include <mach.h>
 
 static int debug = 0;

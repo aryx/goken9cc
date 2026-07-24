@@ -4,11 +4,11 @@
 #include <mach.h>
 
 #define Ureg UregAmd64
-#include <ureg_amd64.h>
+#include <arch/amd64/ureg.h>
 #undef Ureg
 
 #define Ureg Ureg386
-#include <ureg_x86.h>
+#include <arch/386/ureg.h>
 #undef Ureg
 
 typedef struct UregAmd64 UregAmd64;

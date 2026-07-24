@@ -13,7 +13,7 @@
 #include <ctype.h>
 #include "tree.h"
 
-#include <ureg_amd64.h>
+#include <arch/amd64/ureg.h>
 #include <mach.h>
 typedef struct Ureg Ureg;
 

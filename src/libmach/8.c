@@ -3,7 +3,7 @@
  */
 #include <u.h>
 #include <bio.h>
-#include <ureg_x86.h>
+#include <arch/386/ureg.h>
 #include <mach.h>
 
 #define	REGOFF(x)	(uintptr)(&((struct Ureg *) 0)->x)

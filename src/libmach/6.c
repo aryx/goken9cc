@@ -4,7 +4,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "ureg_amd64.h"
+#include <arch/amd64/ureg.h>
 #include <mach.h>
 
 #define	REGOFF(x)	offsetof(struct Ureg, x)
