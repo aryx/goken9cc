@@ -5,7 +5,7 @@
 #include <libc.h>
 #include <bio.h>
 #include <arch/mach.h>
-#include "ureg5.h"
+#include <arch/arm/ureg.h>
 
 
 #define	REGOFF(x)	(ulong) (&((struct Ureg *) 0)->x)

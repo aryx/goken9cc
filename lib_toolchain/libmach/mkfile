@@ -38,9 +38,9 @@ OFILES=\
 HFILES=	$TOP/include/arch/mach.h\
 	$TOP/include/arch/mips/ureg.h\
 	$TOP/include/arch/arm64/ureg.h\
+	$TOP/include/arch/arm/ureg.h\
 	bootexec.h\
 	elf.h\
-	ureg5.h\
 	ureg6.h\
 	ureg8.h
 
