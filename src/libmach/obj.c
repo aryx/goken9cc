@@ -24,11 +24,9 @@ enum
 /* in [$OS].c */
 int	_is5(char*);
 int	_is6(char*);
-int	_is7(char*);
 int	_is8(char*);
 int	_read5(Biobuf*, Prog*);
 int	_read6(Biobuf*, Prog*);
-int	_read7(Biobuf*, Prog*);
 int	_read8(Biobuf*, Prog*);
 
 typedef struct Obj	Obj;
@@ -47,7 +45,7 @@ static Obj	obj[] =
 {			/* functions to identify and parse each type of obj */
 	[ObjAmd64]	"amd64 .6",	_is6, _read6,
 	[ObjArm]	"arm .5",	_is5, _read5,
-	[ObjArm64]	"arm64 .7",	_is7, _read7,
+	//[ObjArm64]	"arm64 .7",	_is7, _read7,
 	[Obj386]	"386 .8",	_is8, _read8,
 	//[ObjMips]	"mips .v",	_isv, _readv,
 	//[ObjRiscv]	"riscv .i",	_isi, _readi,

@@ -56,26 +56,26 @@ typedef struct Exectable{
 	int	(*hparse)(int, Fhdr*, ExecHdr*);
 } ExecTable;
 
-extern	Mach	mmips;
+//extern	Mach	mmips;
 extern	Mach	mi386;
 extern	Mach	mamd64;
 extern	Mach	marm;
-extern	Mach	marm64;
+//extern	Mach	marm64;
 
 /* BUG: FIX THESE WHEN NEEDED */
-Mach	mmips;
+//Mach	mmips;
 
 ExecTable exectab[] =
 {
-	{ V_MAGIC,			/* Mips v.out */
-		"mips plan 9 executable BE",
-		"mips plan 9 dlm BE",
-		FMIPS,
-		1,
-		&mmips,
-		sizeof(Exec),
-		beswal,
-		adotout },
+//	{ V_MAGIC,			/* Mips v.out */
+//		"mips plan 9 executable BE",
+//		"mips plan 9 dlm BE",
+//		FMIPS,
+//		1,
+//		&mmips,
+//		sizeof(Exec),
+//		beswal,
+//		adotout },
 	{ I_MAGIC,			/* I386 8.out & boot image */
 		"386 plan 9 executable",
 		"386 plan 9 dlm",
@@ -139,15 +139,15 @@ ExecTable exectab[] =
 		sizeof(Exec),
 		leswal,
 		armdotout },
-    { R_MAGIC,			/* Arm64 7.out and boot image */
-		"arm64 plan 9 executable",
-		"arm64 plan 9 dlm",
-		FARM64,
-		1,
-		&marm64,
-		sizeof(Exec)+8,
-		nil,
-		commonllp64 },
+//    { R_MAGIC,			/* Arm64 7.out and boot image */
+//		"arm64 plan 9 executable",
+//		"arm64 plan 9 dlm",
+//		FARM64,
+//		1,
+//		&marm64,
+//		sizeof(Exec)+8,
+//		nil,
+//		commonllp64 },
 	{ 0 },
 };
 
@@ -617,10 +617,10 @@ elfdotout(int fd, Fhdr *fp, ExecHdr *hp)
 		mach = &mi386;
 		fp->type = FI386;
 		break;
-	case MIPS:
-		mach = &mmips;
-		fp->type = FMIPS;
-		break;
+	//case MIPS:
+	//	mach = &mmips;
+	//	fp->type = FMIPS;
+	//	break;
 	case ARM:
 		mach = &marm;
 		fp->type = FARM;

@@ -11,14 +11,19 @@ OFILES=\
 	6.$O\
 	7.$O\
 	8.$O\
+	v.$O\
 	5db.$O\
+	7db.$O\
 	8db.$O\
+	vdb.$O\
 	5obj.$O\
 	6obj.$O\
 	7obj.$O\
 	8obj.$O\
 	iobj.$O\
 	vobj.$O\
+	vcodas.$O\
+        \
 	obj.$O\
 	swap.$O\
 	setmach.$O\
@@ -27,9 +32,6 @@ OFILES=\
 	sym.$O\
 	access.$O\
 	machdata.$O\
-	v.$O\
-	vdb.$O\
-	vcodas.$O\
 	linux.$O\
 
 HFILES=	$TOP/include/mach.h\
