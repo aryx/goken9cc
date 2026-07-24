@@ -41,20 +41,12 @@ OFILES=\
 	setmach.$O\
 	5.$O\
 	6.$O\
-	7.$O\
 	8.$O\
-        v.$O\
 	5db.$O\
-	7db.$O\
 	8db.$O\
-        vdb.$O\
-        vcodas.$O\
 	5obj.$O\
 	6obj.$O\
-	7obj.$O\
 	8obj.$O\
-        vobj.$O\
-        iobj.$O\
 
 ifneq ($(GOOS),windows)
 OFILES+=\
