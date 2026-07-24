@@ -1,8 +1,9 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
+#include	<arch/mach.h>
+
 #include	"bootexec.h"
-#include	"mach.h"
 #include	"elf.h"
 #include	"macho.h"
 
@@ -21,6 +22,7 @@ typedef struct {
 		Ehdr64 elfhdr64;			/* elf.h */
 		struct mipsexec mips;	/* bootexec.h */
 		Machhdr machhdr;	/* macho.h */
+        //TODO: pe.h ?
 	} e;
 	int32 dummy;			/* padding to ensure extra int32 */
 } ExecHdr;
@@ -61,6 +63,7 @@ extern	Mach	mi386;
 extern	Mach	mamd64;
 extern	Mach	marm;
 extern	Mach	marm64;
+//TODO: riscv?
 
 ExecTable exectab[] =
 {
@@ -73,6 +76,7 @@ ExecTable exectab[] =
 		sizeof(Exec),
 		beswal,
 		adotout },
+
 	{ I_MAGIC,			/* I386 8.out & boot image */
 		"386 plan 9 executable",
 		"386 plan 9 dlm",
@@ -118,6 +122,7 @@ ExecTable exectab[] =
 		sizeof(Machhdr),
 		nil,
 		machdotout },
+
 	{ E_MAGIC,			/* Arm 5.out and boot image */
 		"arm plan 9 executable",
 		"arm plan 9 dlm",
@@ -136,6 +141,7 @@ ExecTable exectab[] =
 		sizeof(Exec),
 		leswal,
 		armdotout },
+
     { R_MAGIC,			/* Arm64 7.out and boot image */
 		"arm64 plan 9 executable",
 		"arm64 plan 9 dlm",
