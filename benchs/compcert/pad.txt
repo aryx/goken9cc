@@ -1,0 +1,6 @@
+Those files comes from an old version of the Compcert project
+https://github.com/AbsInt/CompCert and are now in the separate repo
+https://github.com/AbsInt/CompCert-small-tests
+
+Those files are useful to compare the speed of goken vs gcc (or clang) and
+also to evaluate the usefulness of certain goken optimizations (-X vs nothing).
