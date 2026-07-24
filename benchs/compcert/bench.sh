@@ -38,17 +38,28 @@ time_one() {
 	echo "$best"
 }
 
-fmt="%-14s"
+# One column per variant: baseline shows a plain time, everything else
+# shows "time (Nx)" so the speedup rides along with the number it's
+# relative to instead of living in its own hard-to-scan column.
+colw=18
+fmt="%-12s"
 header=(bench)
-sepline=(--------------)
+sepline=(------------)
 for v in "${VARIANTS[@]}"; do
-	fmt+=" %10s %9s"
-	header+=("$v(s)" "x")
-	sepline+=(---------- ---------)
+	fmt+=" %${colw}s"
+	header+=("$v")
+	sepline+=("$(printf '%*s' "$colw" '' | tr ' ' -)")
 done
 fmt+="\n"
 printf "$fmt" "${header[@]}"
 printf "$fmt" "${sepline[@]}"
+
+# logsum[v]/nprogs accumulates ln(speedup) per non-baseline variant, so the
+# final row can report a geometric mean -- the usual way to average ratios
+# in a benchmark suite, since it isn't skewed by the one or two long-running
+# programs the way an arithmetic mean of raw seconds would be.
+declare -A logsum=()
+nprogs=0
 
 for prog in "$@"; do
 	declare -A t=()
@@ -56,10 +67,23 @@ for prog in "$@"; do
 		t[$v]=$(time_one "$prog.$v")
 	done
 	base=${t[$BASELINE]}
+	nprogs=$((nprogs + 1))
 	row=("$prog")
 	for v in "${VARIANTS[@]}"; do
-		speedup=$(awk -v a="$base" -v b="${t[$v]}" 'BEGIN{ if (b+0>0) printf "%.2f", a/b; else print "n/a" }')
-		row+=("${t[$v]}" "${speedup}x")
+		if [[ $v == "$BASELINE" ]]; then
+			row+=("${t[$v]}s")
+			continue
+		fi
+		speedup=$(awk -v a="$base" -v b="${t[$v]}" 'BEGIN{ printf "%.4f", (b>0 ? a/b : 0) }')
+		logsum[$v]=$(awk -v s="${logsum[$v]:-0}" -v x="$speedup" 'BEGIN{ printf "%.6f", s + log(x) }')
+		row+=("$(awk -v t="${t[$v]}" -v x="$speedup" 'BEGIN{ printf "%ss (%.2fx)", t, x }')")
 	done
 	printf "$fmt" "${row[@]}"
 done
+
+printf "$fmt" "${sepline[@]}"
+avgrow=("geomean" "(baseline)")
+for v in "${VARIANTS[@]:1}"; do
+	avgrow+=("$(awk -v s="${logsum[$v]}" -v n="$nprogs" 'BEGIN{ printf "%.2fx", exp(s/n) }')")
+done
+printf "$fmt" "${avgrow[@]}"
