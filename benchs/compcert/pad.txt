@@ -2,5 +2,9 @@ Those files comes from an old version of the Compcert project
 https://github.com/AbsInt/CompCert and are now in the separate repo
 https://github.com/AbsInt/CompCert-small-tests
 
+Many of the C files actually come from The Computer Language Shootout Benchmarks
+at http://shootout.alioth.debian.org/
+
+
 Those files are useful to compare the speed of goken vs gcc (or clang) and
 also to evaluate the usefulness of certain goken optimizations (-X vs nothing).
