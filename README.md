@@ -91,13 +91,13 @@ Plan 9 (and goken9cc) uses single-character codes for architectures. Each tool i
 | Code | Arch | Compiler | Assembler | Linker | Object ext |
 |------|------|----------|-----------|--------|------------|
 | 5 | arm | 5c | 5a | 5l | .5 |
+| 6 | amd64 | 6c | 6a | 6l | .6 |
 | 7 | arm64 | 7c | 7a | 7l | .7 |
 | 8 | x86 (386) | 8c | 8a | 8l | .8 |
-| 6 | amd64 | 6c | 6a | 6l | .6 |
-| v | mips | vc | va | vl | .v |
+| e | wasm | ec | ea | el | .e |
 | i | riscv | ic | ia | il | .i |
 | j | riscv64 | jc | ja | jl | .j |
-| e | wasm | *(TODO)* | ea | el | .e |
+| v | mips | vc | va | vl | .v |
 
 Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X.out`
 
