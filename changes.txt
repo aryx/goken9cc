@@ -103,22 +103,13 @@
   * see docs/notes_macos.txt for the full story and darling recipe.
 - 6l/8l: support windows PE with -H10, thx to rafael2knokia (and Claude probably)
 - 8l/8lk: fix a real ELF-writer bug found via tests/c/vlong and
-  tests/c/float: an unstripped executable's debug/symbol-table data landed
-  inside the loaded .data segment, colliding with the program's own
-  string-literal data (confirmed by dumping a linked binary and finding
-  compiler-internal strings like "frame"/"lv"/"rv" sitting at the address a
-  "X\n" literal should have been). Root cause: asmb()'s H_ELF case seeks to
-  the symbol table's write position using the unrounded HEADR+textsize+
-  datsize, but the data section right before it was actually written at
-  the page-rounded rnd(HEADR+textsize,INITRND)+datsize (needed so the ELF
-  vaddr/file-offset page-alignment constraint holds) -- so the symbol
-  table's seek lands *before* the data section really ends and overwrites
-  its tail. Fixed in both linkers/8l/asm.c (principia lineage) and
-  linkers/8lk/asm.c (kencc lineage, kept in sync per the byte-identical
-  goal of tests/s/variants) and regenerated the 386 -S goldens in
-  tests/s/variants/expected/ to match the corrected (and now-matching)
-  output. principia's own x86 builds never hit this since they link as -H2
-  native Plan9 binaries, not ELF (thx to Claude)
+  tests/c/float: asmb()'s H_ELF case seeked to the symbol table using the
+  unrounded HEADR+textsize+datsize, but the .data section before it was
+  actually written at the page-rounded offset, so the seek landed short
+  and the symbol table clobbered the tail of .data. Fixed in both
+  linkers/8l/asm.c and linkers/8lk/asm.c (kept in sync per tests/s/variants)
+  and regenerated the 386 -S goldens; principia's own x86 builds never hit
+  this since they link as -H2, not ELF (thx to Claude)
 - lib_toolchain/libmach: fixed a duplicate mmips definition (executable.c
   shadowed v.c's real Mach struct with an all-zero stub), which left
   mach->pgsize == 0 and crashed vi with SIGFPE on amd64 CI (silently
