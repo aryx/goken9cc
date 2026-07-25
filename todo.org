@@ -57,6 +57,12 @@ hmm but actually 2a/2c/2l seems to be more for 68020 not 68000
 that was the amiga/atari
 
 
+*** LATER? add pdp11 archi :) or ask claude
+ack amsterdam toolkit has support for pdp11
+also gcc. and can use simh to run unix v1 etc for real apparently.
+
+that would be a 16 bits archi :)
+
 * Big Unify
 
 ** mips toolchain (va/vc/vl)
