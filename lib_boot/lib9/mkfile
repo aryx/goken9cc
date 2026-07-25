@@ -125,7 +125,7 @@ OFILES=\
 	$FMTOFILES\
 	$UTFOFILES\
 
-HFILES= $TOP/include/boot/u.h $TOP/include/boot/libc.h
+HFILES= $TOP/include/BOOT/u.h $TOP/include/BOOT/libc.h
 
 <$TOP/mkfiles/mksyslib
 

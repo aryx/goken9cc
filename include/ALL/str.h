@@ -1,1 +1,1 @@
-../strings/str.h
+../str/str.h
