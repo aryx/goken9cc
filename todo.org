@@ -44,6 +44,19 @@ more stuff to unix? doomplan9?
 maybe most of Graphics.nw can be tested on Linux?
 at least testdraw.c ?
 
+see plan9port/src/cmd/devdraw/ and also drawterm and more
+
+*** LATER? add the alpha architecture? was 7a/7c/8l but can rename to aa/ac/al
+import from 9front 2016 which removed support for it.
+could not find it in plan9 4th edition either
+
+*** LATER? add the 68000? historically interesting, amiga/atari used it!
+also apple so interesting to study?
+
+hmm but actually 2a/2c/2l seems to be more for 68020 not 68000
+that was the amiga/atari
+
+
 * Big Unify
 
 ** mips toolchain (va/vc/vl)
