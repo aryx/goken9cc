@@ -1,0 +1,5 @@
+
+// sizeof
+// offsetof
+// signof?
+// typeof?

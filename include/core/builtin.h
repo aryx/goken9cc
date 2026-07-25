@@ -10,14 +10,12 @@
 
 // ??
 
-// ----------------
-// Builtin operators
-// ----------------
+// ---------------------------------
+// Builtin (polymorphic) operators
+// ---------------------------------
 
 // +, -, *, /, % for many numeric types
 // ==, !=
 // <, >, <=, >= again for many types
 
 // ...
-
-
