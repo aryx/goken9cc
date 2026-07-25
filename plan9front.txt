@@ -8,6 +8,8 @@ the 99a10eff16b79cfb8ccf36e586532a40b17a203c commit point
 (see pad.org for more info).
 
 Some code and fixes come also from 9front at https://github.com/9front/9front
+as well as code maintained by Charles Forsyth for arm64 and Richard Miller
+for riscv.
 
 ** arm64 (7a/7c/7l)
 
@@ -25,8 +27,10 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
    o >= -256 || o < 4095*s;` (should be `&&`), which is true for
    essentially any offset, plus it never checked the offset is a
    multiple of the access width as arm64's scaled immediate encoding
-   requires. Ported verbatim from 9front (cinap_lenrek):
-     b117d7014 7c: fix long to vlong/pointer conversion, avoid negative immediate offsets
+   requires. 
+   => Ported verbatim from 9front (cinap_lenrek):
+     b117d7014 7c: fix long to vlong/pointer conversion, avoid
+   negative immediate offsets
    (touches cgen.c, txt.c, and the peep.c/reg.c companion changes
    teaching the peephole optimizer and register allocator about the
    new ASXTW opcode this introduces). See compilers/7c/{cgen,txt,peep,reg}.c.
@@ -58,8 +62,8 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
    int<->float/vlong conversions right above it) down to just
    `ewidth[ft] == ewidth[tt]`, i.e. any same-width conversion could
    spuriously take the "already in place, skip it" fast path via
-   samaddr() and drop the actual conversion instruction. 9front's
-   arm64 port has read `(a == AMOVW || a == AMOVWU)` since its very
+   samaddr() and drop the actual conversion instruction. 
+   => 9front's arm64 port has read `(a == AMOVW || a == AMOVWU)` since its very
    first import (charles forsyth's original commit, no dedicated fix
    commit to cite -- it was simply never broken there). No dedicated
    test: constructing a case where samaddr() actually returns true for
@@ -74,10 +78,11 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
    `w /= SZ_LONG;` before laying out the copy, with no handling for
    the remainder -- any struct/union assignment whose size isn't a
    multiple of SZ_LONG (4 bytes here) would have its trailing bytes
-   silently dropped. Ported 9front's fix verbatim (cinap_lenrek, same
+   silently dropped. 
+   => Ported 9front's fix verbatim (cinap_lenrek, same
    commit as the vlong/offset fix above): a byte-by-byte tail-copy
    loop for the `w % SZ_LONG` leftover bytes before the word-copy.
-     b117d7014 7c: fix long to vlong/pointer conversion, avoid negative immediate offsets
+      b117d7014 7c: fix long to vlong/pointer conversion, avoid negative immediate offsets
    No dedicated test: despite extensive probing across struct sizes
    (10, 30 bytes) and addressing shapes (direct global, through
    pointers), the buggy and fixed builds produced byte-identical
@@ -94,7 +99,7 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
    Rgn region[NRGN=1000] array (bumped from 600 "for paranoia.c" at
    some point in this repo's history) and gave up (warn + stop
    optimizing further, not a crash) past that many candidate regions
-   -- same fix as vc's: growable version (starts at 300, grows by 128
+   => same fix as vc's: growable version (starts at 300, grows by 128
    via allocn()). No dedicated test, same reasoning as vc's version:
    NVAR caps distinct tracked variables and region count depends more
    on control-flow complexity than raw size, so a cheap synthetic
@@ -134,7 +139,7 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
    placeholders): STLXP/STXP/STXPW/LDXP/LDXPW/LDAXP/LDAXPW, the
    register-*pair* atomic ops, since those need a genuinely different
    (4-operand) operand model this port doesn't have.
-   Ported from 9front, two commits combined (the second is what
+   => Ported from 9front, two commits combined (the second is what
    actually made STLR usable; the first fixed LDAXR/STLXR earlier):
      223e8ad00 7l, 7c: Remove STLP(W), finish LDAXR(W)/STLXR(W).
      61f6376b1 7[al]: implement atomic register loads properly
@@ -155,7 +160,8 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
    raw strcpy() stack buffer overflow as va's (see below) -- found
    organically when a feature-test source file happened to live at a
    long scratch path and 7a crashed the same way ("*** stack smashing
-   detected ***"). Same fix, same origin (9front): strdup()/smprint()
+   detected ***"). 
+   => Same fix, same origin (9front): strdup()/smprint()
    instead of fixed buffers. See
    tests/s/regressions/arm64_long_filename.s.tmpl.
 
@@ -164,13 +170,15 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
  - va: assemble() copied its filename argument into a fixed
    `char ofile[100]` with a raw strcpy() and no bounds check --
    confirmed this crashes ("*** stack smashing detected ***", SIGABRT)
-   on a source path >=100 bytes. Ported 9front's fix: dynamically
+   on a source path >=100 bytes. 
+   => Ported 9front's fix: dynamically
    sized via strdup()/smprint() instead. See
    tests/s/regressions/mips_long_filename.s.tmpl.
 
  - va/vc/vl: LL (load-linked) / SC (store-conditional) / SYNC
    (memory barrier) atomic instructions, needed for spinlocks/mutexes
-   on MIPS -- ported from 9front's sys/src/cmd/v[al]/*, by mia soweli:
+   on MIPS
+   => ported from 9front's sys/src/cmd/v[al]/*, by mia soweli:
      10f1eeb7d v[al], libmach: add LL (load-linked) and SC (store-conditional)
      ca2589a11 v[al]: add SYNC (memory barrier)
      e7d099ac4 vl: LL operand order and scheduling
@@ -179,15 +187,16 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
 
  - vl: linker instruction scheduler could hoist a stack-pointer
    -adjusting instruction above an earlier load in the same window,
-   changing the load's effective address if reordered -- ported from
-   9front's sys/src/cmd/vl/sched.c, by cinap_lenrek:
+   changing the load's effective address if reordered
+   => ported from 9front's sys/src/cmd/vl/sched.c, by cinap_lenrek:
      40ed531364 vl: prevent stack altering instructions to be hoisted above loads
    (found via a libmemdraw bug on real 9front; no dedicated minimal
    test in this repo yet -- see linkers/vl/sched.c sched().)
 
  - vc: register allocator's regopt() used a fixed
    Rgn region[600] array and gave up (warn + stop optimizing further,
-   not a crash) past 600 candidate regions -- ported 9front's growable
+   not a crash) past 600 candidate regions.
+   => ported 9front's growable
    version (region starts at 300, doubles via allocn() as needed). No
    dedicated test: NVAR=160 caps distinct tracked variables, and
    reaching 600 *regions* needs enough control-flow complexity that a
@@ -196,8 +205,8 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
 
  - vc: mkvar() excluded every "."-prefixed pseudo-symbol from
    register-allocator tracking, including ".ret" (the function
-   return-value pseudo-variable, see compilers/vc/txt.c ginit()) --
-   ported 9front's carve-out so ".ret" specifically stays eligible for
+   return-value pseudo-variable, see compilers/vc/txt.c ginit())
+   => ported 9front's carve-out so ".ret" specifically stays eligible for
    optimization like any other variable. Not a correctness bug, purely
    a missed optimization; no dedicated test (nothing to observably
    fail, just a quality difference in generated code that would need a
@@ -227,7 +236,8 @@ Some code and fixes come also from 9front at https://github.com/9front/9front
    were not rounded up to a MIPS word, skewing the whole function's
    frame size by a non-word amount. The 5c/7c (arm/arm64) backends
    already carried the fix (imported from principia-softwarica, itself
-   independent of 9front); ported the same one-line fix to vc. 9front
+   independent of 9front); 
+   => ported the same one-line fix to vc. 9front
    found and fixed the identical bug in their vc, independently:
      e8c8f5d82 vc: word align automatics
    See tests/c/regressions/mips_aut3_align.c.
