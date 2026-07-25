@@ -2,9 +2,13 @@
 
 # hide the go-specific stuff
 /GO
+/tests/go
+/tests/*.go
+# hide to C toolchain for go
+/src
 
 # temporary
-/GOX11/REST
+/typesetting
 
 # pad's specific
 /gitlog.txt

@@ -1,0 +1,3 @@
+
+//??
+//extern	char*	sysname(void);

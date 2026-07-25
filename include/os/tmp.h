@@ -1,0 +1,2 @@
+
+extern  char*   mktemp(char*);

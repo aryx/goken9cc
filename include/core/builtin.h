@@ -19,3 +19,8 @@
 // <, >, <=, >= again for many types
 
 // ...
+
+// ---------------------------------
+// Builtin (polymorphic) stuff
+// ---------------------------------
+// sizeof (see also reflect.h)

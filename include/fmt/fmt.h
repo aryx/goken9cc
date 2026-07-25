@@ -11,41 +11,47 @@ int		print(char *fmt, ...); // called printf() in classic C
 int		fprint(int fd, char *fmt, ...);
 int		sprint(char *buf, char *fmt, ...);
 
-char*		seprint(char *buf, char *e, char *fmt, ...);
-char*		smprint(char *fmt, ...);
+char*	seprint(char *buf, char *e, char *fmt, ...);
+char*	smprint(char *fmt, ...);
 int		snprint(char *buf, int len, char *fmt, ...);
 
 // flexible one, v for va_list (for variable argument list)
 int		vfprint(int fd, char *fmt, va_list args);
-char*		vseprint(char *buf, char *e, char *fmt, va_list args);
-char*		vsmprint(char *fmt, va_list args);
+char*	vseprint(char *buf, char *e, char *fmt, va_list args);
+char*	vsmprint(char *fmt, va_list args);
 int		vsnprint(char *buf, int len, char *fmt, va_list args);
 
 // rune
 int		runesprint(Rune *buf, char *fmt, ...);
-Rune*		runeseprint(Rune *buf, Rune *e, char *fmt, ...);
-Rune*		runesmprint(char *fmt, ...);
+Rune*	runeseprint(Rune *buf, Rune *e, char *fmt, ...);
+Rune*	runesmprint(char *fmt, ...);
 int		runesnprint(Rune *buf, int len, char *fmt, ...);
 
-Rune*		runevseprint(Rune *buf, Rune *e, char *fmt, va_list args);
-Rune*		runevsmprint(char *fmt, va_list args);
+Rune*	runevseprint(Rune *buf, Rune *e, char *fmt, va_list args);
+Rune*	runevsmprint(char *fmt, va_list args);
 int		runevsnprint(Rune *buf, int len, char *fmt, va_list args);
 
 
 typedef struct Fmt	Fmt;
 struct Fmt{
 	unsigned char	runes;		/* output buffer is runes or chars? */
+
 	void	*start;			/* of buffer */
 	void	*to;			/* current place in the buffer */
 	void	*stop;			/* end of the buffer; overwritten if flush fails */
+
 	int	(*flush)(Fmt *);	/* called when to == stop */
 	void	*farg;			/* to make flush a closure */
 	int	nfmt;			/* num chars formatted so far */
+
 	va_list	args;			/* args passed to dofmt */
+
 	Rune	r;			/* % format Rune */
 	int	width;
 	int	prec;
 	unsigned long	flags;
+
+    // Not in plan9 libc.h
 	char	*decimal;	/* decimal point; cannot be "" */
 
 	/* For %'d */
@@ -67,7 +73,7 @@ enum{
 	FmtSharp	= FmtPrec << 1,
 	FmtSpace	= FmtSharp << 1,
 	FmtSign		= FmtSpace << 1,
-	FmtApost		= FmtSign << 1,
+	FmtApost	= FmtSign << 1,
 	FmtZero		= FmtApost << 1,
 	FmtUnsigned	= FmtZero << 1,
 	FmtShort	= FmtUnsigned << 1,
@@ -112,5 +118,8 @@ int		quotestrfmt(Fmt *f);
 
 Rune*		runefmtstrflush(Fmt *f);
 int		runefmtstrinit(Fmt *f);
+
+// TODO? all the #pragma varargck    type ??
+// TODO? #pragma varargck    argpos ??
 
 #endif
