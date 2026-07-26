@@ -46,6 +46,10 @@ at least testdraw.c ?
 
 see plan9port/src/cmd/devdraw/ and also drawterm and more
 
+*** LATER add cii (now MIT license) containers and more generally all cii
+it's good simple C code, and especially address something Plan 9 developers
+avoid (reusable containers lib).
+
 *** LATER? add the alpha architecture? was 7a/7c/8l but can rename to aa/ac/al
 import from 9front 2016 which removed support for it.
 could not find it in plan9 4th edition either
