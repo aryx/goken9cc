@@ -161,14 +161,11 @@
     5.out.h/8.out.h and on v.out.h/i.out.h's combined D_* enum;
     locals/globals stand in for a register file (wasm has none), and
     branch targets are structured-control label depths instead of
-    PC-relative displacements
+    PC-relative displacements, but no MOVW, does not really work for wasm
   * assemblers/ea: built on the shared assemblers/as/aa.a library
     like 5a/8a (not the older self-contained ia/va style); a.y
     tracks block/loop/if nesting itself to resolve BR/BRIF targets
     to depths (the one part with no equivalent on any other arch);
-    keeps the Plan9 virtual-MOV convention (one AMOVx mnemonic for
-    const/load/store/local/global, direction inferred from operand
-    kind, same spirit as 5a/ia's own AMOVx)
   * linkers/el: table-driven (Optab/oplook(), like every other arch)
     linker emitting a real .wasm binary (type/import/function/
     memory/global/export/code/data sections); -I symbol=module.field
@@ -224,12 +221,12 @@
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
   (but not with Windows native compilers yet)
 - Windows PE experimental support for 386 (8l -H10) and amd64 (6l -H10)
-  working at least on Windows 10, ported from go-era and adapter (thx Claude)
+  working at least on Windows 10, ported from go-era and adapted (thx Claude)
 - macOS Mach-O experimental support for amd64 (6l -H6) and arm64 (7l -H6)
   working on recent macOS (e.g., macOS 26 Tahoe), ported from go-era
   and adapted to latest (thx Claude)
 - better Linux ELF support for 386, amd64, arm, arm64, riscv, riscv64, mips
-  with more tests (float and vlong and basic helloprintf working)
+  with more tests (float and vlong and basic helloprintf working, thx Claude)
 
 ** arch
 - real support for 386, amd64, arm, arm64, riscv, riscv64, mips
@@ -239,8 +236,8 @@
   hello world (WASI fd_write) working
 
 ** internals
-- split include/ like in principia with include/{core,obj,exec,...}
-- new include/BOOT and moved lib9 to lib_boot/lib9 so more visible what
+- split include/ like in principia (and GO/pkg) with include/{core,obj,exec,...}
+- new BOOT/include and moved lib9 to BOOT/lib9 so more visible what
   is used in "bootstrap" context to build goken using gcc and unix libs
 - remove 5a9/5c9/5l9, the original arm toolchain imported from
   https://bitbucket.org/plan9-from-bell-labs/9-cc.git; superseded by
@@ -253,7 +250,7 @@
 - tests/c/vlong, tests/c/float: cmp output against an expected.txt (like
   mini2), fix a big-endian mips %t bool bug in print.c (a promoted C
   vararg bool is 4 bytes, not 1), add arm64/riscv/386 (vlong now covers
-  amd64/arm/arm64/arm__/mips/riscv/386; float covers amd64/arm64/riscv/386).
+  amd64/arm/arm64/mips/riscv/386; float covers amd64/arm64/riscv/386).
   riscv and mips both needed their runtime to initialize the compiler's
   hardwired 0.0/0.5/1.0/2.0 float-constant registers (F28-31 on riscv,
   F24/26/28/30 on mips) at boot, matching the real plan9 mips kernel
@@ -288,8 +285,9 @@
 - ed: fix segfault on macOS when realloc in 6l/mkenam; use new ptrdiff not int
   on 64 bit machine when computing (64bits) pointer differences
 
-** misc
+** docs
 - presentation to IWP9 in Canada of goken9cc project (short talk, WIP)
+  and recorded video https://www.youtube.com/watch?v=E3iUpyqKvgk
 
 
 * 0.2 (Q1 2026) (pcc, ASAN, dosfstools, IWP9 paper)
@@ -304,10 +302,11 @@
   Dockerfile (useful for principia to switch from kencc to goken).
 
 ** test-infra
-- build-docker-principia target
+- build-docker-principia target for regression testing
 
 ** dev infra
-- added configure --asan to use gcc/lang address sanitizer to detect memory errors
+- added configure --asan to use gcc/lang fantastic address sanitizer
+  (=~ very fast purify/valgrind) to detect memory errors
   in the goken tools themselves (e.g., in rc, mk)
 
 ** docs
@@ -324,7 +323,7 @@
   https://github.com/aryx/fork-kencc put in assemblers/, linkers/, compilers/
   as they are known to work on principia code and I got tired of trying
   to make the golang-origin toolchains working (which are still in src/cmd).
-  (update: later renamed to 8ak/8ck/8lk/5ak/5ck/5lk)
+  (update: later renamed kencc origin tools to 8ak/8ck/8lk/5ak/5ck/5lk)
 - fix the imported 8a/8c/8l, ar, etc. by changing a few long->int32
   (cc/bits.c, x.out.h ieee float), and use -fsigned-char so it can compile
   principia softwarica from my arm64 machine!
@@ -347,7 +346,11 @@
 - add lex/yacc (generators)
 
 ** arch
-- support for arm (32 bits, not arm64)
+- tested support for arm (32 bits, not arm64), via cross-compiling principia
+- tested support for x86, via cross-compiling principia
+
+** os
+- fix the code so it can build with clang on macOS
 
 ** lib9
 - import open.c/_p9dir.c from plan9port which fixed ls/du/tar bugs
@@ -361,7 +364,7 @@
 ** test infra
 - multi-arch testing thanks to qemu (see tests/s/mini/, tests/c/mini/)
 - docker build and test working for both amd64 and arm64
-- more C tests in tests/c/{float,vlong}
+- more C tests in tests/c/{float,vlong} (and currently not passing)
 - use principia as a big regression test in docker, and use goken to compile
   all of principia including the kernels for the pi and pc targets!!
 - resume shell.nix and nix.yml GHA for Linux and macOS CI checks
@@ -377,7 +380,6 @@
 - use gcc -fpmath=sse -sse2 on i386 to get portable code and same float behavior
   on 32bits vs 64bits machine
 - remove the need for -Wl,--allow-multiple-definition
-- fix the code so it can build with clang on macOS
 
 ** internals
 - convert long -> int32 for 64bits machine and gcc/clang portability
@@ -389,6 +391,7 @@
 - move the different toolchains (ix, vx, ...) in assemblers/, linkers/,
   and compilers/ (and kept the golang-origin one in src/cmd/)
 - move src/lib9 to lib_core/lib9 and same for libbio
+  (update: later moved to BOOT/lib9)
 
 ** utilities
 - add utilities/calc/hoc from principia useful to compile the principia kernel
@@ -404,18 +407,20 @@
   (update: later undone because "adapt to goken" meant adapt to go-era)
 - adapt 5a/5c/5l to generate valid arm32 Linux binaries (EABI) with
   working hello_linux_arm.exe, helloc.exe, and helloprintf.exe also
-   on my thelio astra which can run both arm64 and arm32 binaries
+  on my thelio astra which can run both arm64 and arm32 binaries
+  (update: partially undone later by switching to imported fork-kencc 5a/5c/5l,
+   and further later by synced/fixed principia 5a/5c/5l)
 
 ** arch
 - experimental support for arm64
+  (update: but really tested in 0.3)
 - experimental support for riscv
+  (update: but really tested in 0.4)
 
 ** os
-- build on Linux
-- build on macOS
 - generate ELF binaries for Linux for arm and arm64
 
-** build
+** build infra
 - add mk and rc source code from principia softwarica so self-contained repo with
   build-mk.sh to "bootstrap" mk/rc
 - fix mk/rc for unix (RCMAIN, MKSHELL, import PATH, etc.)
@@ -445,13 +450,14 @@
 # see also pad.org history section
 
 Fork Go repo at Oct 10 2010 at commit 99a10eff16b79cfb8ccf36e586532a40b17a203c
-with a working 6a/6c/6l amd64 toolchain, the 8a/8c/8l x86 toolchain,
+with a working and tested 6a/6c/6l amd64 toolchain, the 8a/8c/8l x86 toolchain,
 and a possibly working 5a/5c/5l arm toolchain, as well as libmach, ar,
 nm, etc.
 
 ** toolchain
 - add mips toolchain va/vl/vc from https://bitbucket.org/plan9-from-bell-labs/9-cc.git
   and adapt it to goken; tested va/vl with vi from principia on hello_plan9_mips.s
+  (update: undone goken adaption later)
 - add arm64 toolchain 7a/7l/7c from 9-cc
   (not tested though)
 - add riscv toolchain ia/il/ic from https://github.com/inferno-os/inferno-os
@@ -459,15 +465,19 @@ nm, etc.
 
 ** arch
 - experimental mips support
+  (update: but really tested in 0.4)
 - support for x86 and amd64 (and in theory arm but not really tested)
 
 ** os
 - build on Linux
+- build on macOS
+- preliminary work to build on Windows
 - generate binaries for Plan9 for mips
 
 ** internals
 - reorg code with Go related toolchain in GOSRC/ and the C toolchain in src/,
   same for test/ renamed GOTEST/
+  (update: later in 0.4 moved in GO/ and GO/C)
 - start move around Go specific files in GOMISC/ (go editor modes, go shell hooks,
   cgo, go docs, cmd/ebnflint)
 - remove the Google (and obsolete) specifics: src/cmd/hgpatch and lib/corereview
@@ -477,10 +487,11 @@ nm, etc.
 - add Dockerfile.gosrc and docker.yml GHA (Github Action) CI checks,
   and Dockerfile.alpine (just build, no run; does not run unfortunately)
   and Dockerfile.mksrc (just C toolchain)
+  (update: the .mksrc became main Dockerfile later with gosrc -> Dockerfile.golang)
 - add shell.nix and nix.yml GHA for Linux CI checks (but not macOS yet)
 - add basic 'make test' and new tests/s/ and tests/c/
 
-** build
+** build infra
 - add mkfiles to better match kencc and plan9 build system
 - adapt quietgcc to modern Linux (2025) with recent gcc
 - adapt quietgcc to modern macOS (2025) with recent clang
@@ -491,14 +502,14 @@ nm, etc.
 * Goken9cc Pre-history
 
 ** SEMI Cinap 9front: 2019-2026
-- many fixes to 7[alc] and 6[alc]
+- many fixes to [67v][alc]
 
 ** Richard Miller: 2018
-- cmd/z[alc]/ for RISC-V (later renamed to i[alc] for riscv and j for riscv64)
+- z[alc] for RISC-V (later renamed to i[alc] for riscv and j for riscv64)
 in https://9p.io/sources/contrib/miller/
 
 ** Charles Forsyth: 2014
-- cmd/7[alc] for arm64 and apparently also cmd/6[alc]
+- 7[alc] for arm64 (and apparently also 6[alc])
 in https://bitbucket.org/plan9-from-bell-labs/9-cc/src/master/
 
 ** Go pre 1.0: 2008-2010
@@ -516,6 +527,7 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 + DWARF for gdb
 
 *** C compilers
++ ?? mostly adapted for Go use, trampoline, multi-stacks
 
 *** runtime
 + Linux (x86, amd64)
@@ -538,7 +550,7 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 
 ** Plan 9: 1985-2002
 Most of the code in goken9cc comes from Plan 9 4th edition:
-- cmd/[05678qtv][alc]/ cc/ and libmach/
+- cmd/[0568kqv][alc]/ cc/ and libmach/
   a multiarch assembler, linker, C compiler toolchain
 - libc/, libbio/
   a new minimalist C library (far smaller than glibc or musl)
@@ -559,14 +571,21 @@ the origin:
 
 ** toolchain
 
-** test infra
-
-** dev infra
-
-** build infra
-
-** internals
-
 ** os
 
 ** arch
+
+** test infra
+
+** build infra
+
+** dev infra
+
+** utilities
+
+** internals
+
+** libs
+
+
+** docs

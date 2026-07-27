@@ -39,7 +39,7 @@ TOP=`pwd`
 ROOT=$TOP/ROOT
 
 #coupling: mkfiles/mkfile.proto and mkfiles/amd64/mkfile
-CFLAGS="-Wno-cpp --std=gnu89 -c -I$TOP/include/BOOT -I$TOP/include -I$TOP/include/ALL -I. -O0 -fno-inline -ggdb"
+CFLAGS="-Wno-cpp --std=gnu89 -c -I$TOP/BOOT/include -I$TOP/include -I$TOP/include/ALL -I. -O0 -fno-inline -ggdb"
 LDFLAGS="-L$ROOT/$GOARCH/lib"
 
 ###############################################################################
@@ -49,7 +49,7 @@ LDFLAGS="-L$ROOT/$GOARCH/lib"
 #Note that because we just need to compile mk and rc, we don't need all of lib9
 # so we could reduce the list below. However, then we need to delete lib9.a
 # when compiling the rest of goken (see end of this file).
-cd $TOP/lib_boot/lib9
+cd $TOP/BOOT/lib9
 gcc $CFLAGS -DPLAN9PORT _p9dir.c -o _p9dir.o
 gcc $CFLAGS -DPLAN9PORT _exits.c -o _exits.o
 gcc $CFLAGS -DPLAN9PORT argv0.c -o argv0.o

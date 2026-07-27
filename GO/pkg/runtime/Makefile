@@ -117,7 +117,7 @@ goc2c: goc2c.c
 	quietgcc -o $@ $<
 
 mkversion: mkversion.c
-	quietgcc -o $@ -I "$(GOROOT)/include/BOOT" -I "$(GOROOT)/include" -I "$(GOROOT)/include/ALL"  $< "$(GOROOT)/lib/lib9.a"
+	quietgcc -o $@ -I "$(GOROOT)/BOOT/include" -I "$(GOROOT)/include" -I "$(GOROOT)/include/ALL"  $< "$(GOROOT)/lib/lib9.a"
 
 version.go: mkversion
 	./mkversion >version.go
