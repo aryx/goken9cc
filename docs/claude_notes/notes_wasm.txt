@@ -6,10 +6,13 @@ this toolchain: assemblers/ea, linkers/el, include/e.out.h, and now
 compilers/ec (the C compiler backend, reusing compilers/cck's shared
 frontend). Written to be read before touching any of those. The "Open
 questions for ec" section at the end tracks what's still unimplemented
-(floats, variadic/printf) now that the bootstrap, if/else, all of C's
-loop constructs (while, for, do while, including nesting/break/
-continue and loop rotation), string literals, and address-of for
-globals/statics are done.
+(floats, general address-of-a-local, a real relooper for switch-inside-
+a-continue-using-loop) now that the bootstrap, if/else, all of C's loop
+constructs (while, for, do while, including nesting/break/continue and
+loop rotation), switch/case (standalone), string literals, address-of
+for globals/statics and for a variadic function's own named parameter,
+pointer dereference, increment/decrement, compound assignment, and the
+variadic-call ABI are done.
 
 See tests/s/mini/hello_wasm.s (hand-written ea assembly) and
 tests/s/mini/hello_wasm.wat (the same program in traditional
@@ -22,9 +25,13 @@ tests/c/mini2/hellowrite_wasm.c is this arch's first *real*,
 running tests/c/mini2 example -- an actual C program's stdout compared
 against expected.txt via cmp, the same way every other arch's
 helloprintf.exe is checked, rather than regress_wasm.c's self-checking
-return-code trick. It isn't helloprintf.c itself (real variadic printf
-needs the address-taken-local/shadow-stack work below first -- see its
-own comment for exactly why write() doesn't); tests/s/mini/mkfile's
+return-code trick. It isn't helloprintf.c itself: the variadic-call
+ABI needed for real printf() is done now (see below), and so are
+test.c and helloprintf.c themselves (both compile against ec
+unmodified) -- but print_nofloat_no64.c's own vprintf() hits a real,
+still-open relooper limitation (switch inside a loop that also uses
+`continue`), so a true tests/c/mini2/helloprintf.wasm built from the
+unmodified shared sources isn't there yet. tests/s/mini/mkfile's
 storeorder_wasm.s is a from-a-different-angle sibling: hand-assembled
 rather than ec-compiled, and built specifically to catch a real
 STOREx-operand-order bug (below) rather than to demonstrate a full C
@@ -110,6 +117,72 @@ such field at all. Concretely:
     stack", addressed relative to SPGLOBAL, exactly like D_AUTO/
     D_PARAM work everywhere else) but doesn't implement it -- there's
     no compiler yet to decide which C variables need it.
+
+
+What a "shadow stack" actually is
+--------------------------------------
+
+Worth spelling out in full, since every other arch in this project
+gets this for free from real hardware and never has to name the
+concept explicitly.
+
+On 5c/6c/7c/8c/vc/ic, a C local or parameter that has its address
+taken (`&x`) just works, for free: the compiler puts `x` at some
+offset from the hardware SP/FP register, and `&x` is simply "SP/FP
+plus that offset" -- no different in kind from any other pointer
+value. Because every stack-resident local lives in the *same* byte-
+addressable memory, laid out in a predictable order (arguments
+adjacent to each other, in argument order), pointer arithmetic across
+them works too: `&x + 1` genuinely lands on whatever the compiler put
+right after `x`. This is exactly what a variadic function's `va_arg`-
+style machinery (see print_nofloat_no64.c's `vprintf`: `arg =
+(byte*)(&s+1)`) depends on -- it does not know or care about `s`'s
+type or the callee's frame layout in general, only that "the next
+argument's address is the previous argument's address plus its own
+(aligned) width", which is only true if arguments are actually
+adjacent in real memory.
+
+wasm has no hardware stack a compiler can address into. A wasm
+function's own locals (D_LOCAL here) are a separate, opaque index
+space -- more like a bank of named registers than memory -- and there
+is no instruction in the whole ISA that produces "the address of
+local #3", because locals were never given addresses to begin with
+(see "No register file" above). So `&x` has nothing to compute *from*
+when `x` is a true wasm local.
+
+The fix, used by every real-world wasm toolchain (LLVM's wasm32
+target, Emscripten, etc.), is to reserve a region of ordinary linear
+memory -- the same byte-addressable memory that already holds string
+literals and globals here -- and use it as a stand-in stack purely
+for the values that need a real address. It's called a "shadow" stack
+because it shadows only that *slice* of what a real machine's stack
+holds: locals that are never address-taken still live as true wasm
+locals and never touch it, so the common case (this project's
+existing control-flow tests, hellowrite_wasm.c's write() call) costs
+nothing extra. A dedicated wasm global (SPGLOBAL, global index 0)
+plays the role a hardware SP register plays elsewhere: it holds the
+current address of the shadow stack's "top", and a function that owns
+any shadow-stack slots decrements SPGLOBAL by its frame's shadow-
+stack size on entry (reserving its slots) and restores it on every
+exit path -- the wasm-native rendering of a normal prologue/epilogue,
+just written as explicit global-manipulating instructions instead of
+relying on hardware push/call/ret. e.out.h's D_AUTO/D_PARAM name a
+byte offset from SPGLOBAL for exactly this reason: deliberately given
+the same shape as a real arch's own stack-relative Adr encoding, so
+that whatever ec code ends up computing "the address of a local" can
+look structurally like 6c's or ic's equivalent code, rather than
+inventing a wasm-only representation for what is, conceptually, the
+same idea (a stack-relative address) implemented in software instead
+of hardware.
+
+Concretely, this is the actual, single blocker for a real variadic
+printf() on wasm: `vprintf`'s `&s+1` can only be a meaningful address
+if `s` and the variadic arguments after it all live in the shadow
+stack, laid out contiguously in argument order -- mirroring the real-
+arch C ABI closely enough that the *same*, unmodified vprintf() from
+print_nofloat_no64.c keeps working unchanged. A true wasm D_LOCAL can
+never support this, address-taken or not, because it was never memory
+in the first place; only a shadow-stack slot can.
 
 
 No virtual AMOVx: why, and what replaced it
@@ -394,8 +467,12 @@ that's exactly what gaddr() (ec/txt.c) already did (it predates this
 session, written for OAS's own "address first" sequencing) -- pushes
 the naddr()-computed D_OREG/D_STATIC-or-D_EXTERN address, retagged to
 D_CONST, the same trick ea/a.y's own pushaddr() uses for `$msg(SB)`.
-Address-of a *local* still diag()s (needs the shadow-stack redesign
-below, not yet started).
+Address-of a *local* still diag()s in the general case (needs the
+shadow-stack redesign below, not yet started) -- except for one
+specific, narrower case that's now done: a variadic function's own
+named parameter (e.g. printf's `s`, in `&s+1`). See the variadic-call
+ABI section further down for why that case turned out not to need the
+general redesign at all.
 
 A real bug found while building on top of this (tests/c/mini2/
 hellowrite_wasm.c, see its own comment): ea's `STOREx addr` convenience
@@ -446,6 +523,241 @@ macos_amd64.s/windows_amd64.s) is the first real user, and doubles as
 its test.
 
 
+Pointer dereference, inc/dec, compound assignment
+--------------------------------------------------------------------
+
+A follow-on session tried to build tests/c/mini2/helloprintf.wasm from
+the *unmodified* shared sources (helloprintf.c, print_nofloat_no64.c,
+test.c -- the same files every real arch already builds byte-for-byte
+against the same helloprintf.expected.txt), rather than a wasm-specific
+fork like hellowrite_wasm.c. Doing so turned up several ec/cgen.c gaps
+that nothing in the existing wasm test suite happened to exercise
+(every test so far was, unknowingly, written to avoid them):
+
+  - OIND (`*p`), both read (rval()'s case) and write (cgen()'s OAS
+    case, address-before-value ordering via rval(n->left->left) rather
+    than gaddr(), since there's no symbol/offset to fold into a
+    link-time constant for an arbitrary pointer expression).
+  - OPOSTINC/OPOSTDEC/OPREINC/OPREDEC and the whole OASADD/OASSUB/
+    OASMUL/OASLMUL/OASDIV/OASLDIV/OASMOD/OASLMOD/OASAND/OASOR/OASXOR/
+    OASASHL/OASASHR/OASLSHR family, e.g. vprintf's `p++`, printhex's
+    `--i`, printhex's `v /= 16`. Only an ONAME lvalue is implemented
+    for either family (matches the shared sources' own usage -- never
+    `*p` or `a[i]`); a more general lvalue diag()s. Both reuse the
+    same "no dup in wasm MVP" idiom already established elsewhere:
+    ALOCALTEE for the local case (a real wasm instruction: store and
+    leave a copy, no re-fetch needed), a second lload() for the
+    non-local case (re-fetch instead of duplicating).
+  - Chained/nested assignment used as a value (`lp = p = s;`, parsed
+    as OAS(lp, OAS(p, s))) -- rval() had no case for OAS at all (only
+    cgen()'s own top-level dispatch handled it), so an inner assignment
+    reached rval()'s generic `default: diag()`. Fixed with one line:
+    `case OAS: cgen(n, &stackresult); return;` in rval(), delegating
+    to cgen()'s already-correct OAS sequencing (whose own "no dup"
+    tail already means "leave the assigned value on the stack" when
+    called with nn == &stackresult -- exactly rval()'s contract).
+
+A genuine, previously-latent bug found in the process: gaddr()
+(pushes a C global/static's address as an ACONSTW) never updated
+p->height or stackheight, unlike every other instruction-emitting
+helper. Harmless as long as every caller immediately followed it with
+another gins() call whose own bookkeeping happened to leave the *net*
+effect looking right by the time anything downstream (reg.c's
+structuring pass) inspected it -- true of both existing callers
+(lload()'s global-read path, OAS's non-local write path). Using
+OADDR as a *bare call argument* (cgen.c's OFUNC/gargs() path) has no
+such follow-up instruction to absorb the omission, so stackheight
+stayed permanently one low from that point on, and reg.c's structuring
+pass corrupted the block/loop nesting it emitted downstream. Confirmed
+via a minimal repro (a 2-arg call whose first argument is `&global`)
+that failed wasm validation with "not enough arguments for call"
+before fixing it. Regression test: tests/c/mini2/regress_wasm.c's
+deref() (its call site passes `&gscratch` as a bare argument, exactly
+the repro shape).
+
+
+The variadic-call ABI
+--------------------------------------------------------------------
+
+The actual hard part of a real printf(): wasm's `call` instruction is
+arity- and type-checked against the callee's declared signature --
+there is no way to just push extra values onto the stack the way a
+real ISA's own calling convention would let a variadic call site do.
+`printf(fmt, true)` can't even validate: `printf`'s own wasm type
+would have exactly 1 param (nparams only counts *named* params --
+dcl.c's walkparam() treats the "..." token itself as a no-op), but the
+call site would try to push 2 values.
+
+The fix is the same one every real-world wasm C compiler already
+uses (LLVM's wasm32 target, Emscripten): every actual argument to a
+variadic call -- named params *and* "..." actuals alike -- gets
+written into a small buffer reserved on the shadow stack (see "What a
+shadow stack actually is" above), and the call passes exactly one
+wasm argument: the buffer's base address. This is deliberately not a
+general "any local can be address-taken" redesign (see the "Open
+questions" entry below, still not started) -- it only has to make ONE
+specific thing addressable: a variadic function's own named
+parameter(s), which is exactly the shape `&s+1` needs and nothing
+more. A variadic function's own *autos* (e.g. printf's `byte *arg;`)
+are unaffected, still ordinary fast wasm locals.
+
+Detection: `int isvariadic(Type *t)` (txt.c) walks `t->down` for a
+TDOT node -- confirmed this is how "..." is represented (dcl.c's
+fnproto1()'s ODOTDOT case returns `typ(TDOT, T)`, terminating the
+param chain; tmerge() already relies on the same TDOT check when
+merging a forward declaration against a definition). Called on
+`thisfn` (the function being compiled) and on a call site's callee
+type (`l->type` in cgen.c's OFUNC case) -- both sides see the same
+TDOT via minilibc.h's shared `extern void printf(char *s, ...);`
+declaration.
+
+Callee side (txt.c):
+  - gpseudo()'s ATEXT case forces the emitted ASIGNATURE to exactly 1
+    param ('W', the incoming pointer) + result, via a new
+    `wasmnparams()` helper (`isvariadic(thisfn) ? 1 : nparams`) instead
+    of looping nparams times.
+  - localindex()'s auto-shift uses wasmnparams() instead of nparams,
+    so autos in a variadic function are indexed right after the *real*
+    wasm param count (1), not after however many *named* C params
+    there are.
+  - islocal() excludes a CPARAM when isvariadic(thisfn) -- such a
+    param no longer lives in a real wasm local at all. The complement,
+    isvarargparam(), is true for exactly that case.
+  - A synthetic sentinel Node, argptrnode (exposed via nodargptr()),
+    represents wasm local 0 -- every variadic function's *sole* true
+    wasm param. Deliberately built as a plain CPARAM ONAME with
+    xoffset 0, so naddr()'s existing ONAME/CPARAM case (D_LOCAL via
+    localindex()) already does the right thing with zero new
+    naddr()/e.out.h plumbing.
+  - lload() and cgen.c's OADDR case both grew an isvarargparam()
+    branch: read pushes the pointer then loads at memarg offset
+    4*n->xoffset (one 4-byte slot per named param, matching this
+    bootstrap's "one slot per value" convention throughout); address-
+    of pushes the pointer and adds the same offset if nonzero (0 for
+    printf's own `s`, its only named param). Assignment *to* a vararg
+    param is left diag()'d in both cgen()'s OAS case and asop()/
+    incdec()'s own isvarargparam() guards: print_nofloat_no64.c never
+    assigns to `s`, and asop()/incdec()'s ordinary non-local branch
+    would otherwise silently mis-address it via gaddr() (which only
+    knows CSTATIC/CEXTERN/CGLOBL).
+
+Caller side (cgen.c's OFUNC case, callvariadic()): when
+isvariadic(l->type), instead of the ordinary gargs()+ACALL sequence:
+  1. Count actual arguments (countvariadicargs(), an OLIST walk mirroring
+     gargs()'s own recursion), size = 4*count.
+  2. Reserve shadow-stack space: GLOBALGET(SP); CONSTW size; SUBW;
+     GLOBALSET(SP) -- a new gspglobal(int) helper (txt.c), hand-built
+     exactly like gaddr() rather than through gins()+a Node/naddr(),
+     since there's no existing Node shape for "the SP global" (SPGLOBAL
+     is a D_GLOBAL, not a D_LOCAL like nodargptr() could piggyback on).
+  3. For each actual argument, in order (storevariadicargs()):
+     GLOBALGET(SP); <evaluate the argument>; STOREx $(4*i) -- literally
+     the same STOREx-with-a-bare-memarg-offset sequencing already
+     proven correct by the earlier storeorder_wasm.s regression test.
+  4. Push the base address once more (the call's sole wasm argument),
+     ACALL, restore stackheight the same "before + (result?1:0)" way
+     the ordinary path already does.
+  5. Restore SPGLOBAL (+= size) *after* the call returns, not before
+     -- the callee reads this memory during the call.
+
+No `el`/`ea` changes needed for any of this -- AGLOBALGET/AGLOBALSET/
+ASTOREx-with-offset/AADDW/ASUBW were all already implemented and
+tested (SP already used, and even the SP itself needed a fix -- see
+below).
+
+A real, previously-latent linker bug found while testing this:
+SPGLOBAL (linkers/el/asm.c) was initialized to `arenaend` -- the
+*bottom* of the free memory region (just past the last byte of static
+data) -- not its top. A stack that's about to be *decremented* to
+reserve space needs to start high and grow down into free memory;
+starting at arenaend instead means every reservation immediately
+underflows backward into the static data section itself, and for
+anything bigger than a couple of words, past address 0 entirely,
+wrapping to a huge unsigned offset. Confirmed via a minimal repro (a
+3-actual-argument variadic call) that failed with a wasm "memory
+access out of bounds" trap; 1- and 2-argument calls happened to still
+fit in the gap between ARENABASE and arenaend by accident, which is
+why this went unnoticed until a 3rd argument pushed the reservation
+past it. Nothing before this used SPGLOBAL as a real stack pointer
+(ea's own $SP addressing exists but had zero test coverage either).
+Fixed by initializing SPGLOBAL to the top of the single fixed-size
+linear memory page the module already declares (a new WASMPAGESIZE
+constant), matching every real wasm toolchain's own convention (data
+grows up from the bottom, the stack grows down from the top).
+Regression test: tests/c/mini2/regress_wasm.c's sumvariadic().
+
+A second, more subtle bug found in the same effort, in ec's own
+gpseudo() (txt.c): ASIGNATURE is emitted as a *second* Prog created
+right after ATEXT's own Prog, inside the same gpseudo(ATEXT, ...)
+call (see the SIGNATURE-directive section above for why it lives
+there). But codgen() (the shared cck/pgen.c) does `gpseudo(ATEXT,
+...); sp = p;` immediately afterward, expecting the global `p` to
+still be the ATEXT Prog it just asked for -- true for every other
+arch's own gpseudo()/gtext(), none of which emit a second Prog inside
+the same call, but silently broken here since nextpc() (called again
+for ASIGNATURE) reassigns `p` out from under the caller. codgen()'s
+own later `sp->to.offset += maxargsafe` -- its mechanism for folding
+regsalloc()'s scratch-local reservations (see swit1() below) into the
+ATEXT frame size -- was therefore silently mutating the *ASIGNATURE*
+Prog's unused to.offset field instead of the real frame size. Harmless
+as long as maxargsafe was always 0, true of every function until
+swit1() became the first thing in ec to ever call regsalloc() --
+which is exactly what surfaced it, as a wasm "invalid local index"
+validation failure (the scratch local's index was never actually
+declared). Fixed by saving the ATEXT Prog (`ptext`) before emitting
+ASIGNATURE and restoring `p = ptext` before gpseudo() returns.
+
+
+Switch/case
+--------------------------------------------------------------------
+
+doswit() (case/default value collection, sorting, dispatch-shape
+selection) is already fully generic, shared in cck/pswt.c -- only
+swit1() (the actual compare-and-branch emission) is ec's to provide,
+and it was a stub diag() until this session.
+
+The one real wrinkle: by the time swit1() runs, doswit() has already
+cgen()'d the switch expression, so its value is sitting on the wasm
+operand stack -- but swit1() needs to compare that *one* value against
+up to nc different case constants, and an operand-stack value can
+only be consumed once (no dup in wasm MVP, same limitation as
+everywhere else in this backend). Fixed by immediately spilling it
+into a freshly reserved scratch wasm local via regsalloc() (txt.c;
+see below) -- unlike the operand stack, a local can be read back as
+many times as needed. Each case then becomes "push scratch; push the
+case constant; i32.eq; br_if to that case's label" -- q[i].label is
+already a concrete, resolved pc by this point (the case body was
+emitted earlier, by doswit()'s own gen(n->right) call, *before* the
+switch expression is even evaluated), so patch() can target it
+immediately rather than being deferred the way an ordinary if/while/
+for's own gbranch() placeholders are.
+
+regsalloc() itself (txt.c) is ported from ic/6c's own regsalloc() --
+same cursafe/curarg/maxargsafe/stkoff globals every backend already
+has (cc.h/gc.h), same align()-based offset computation (against ec's
+own align(), whose Aaut3 case hands out a flat +1 per call rather than
+a byte width, so this reserves one wasm local per call). codgen()
+(cck/pgen.c) already folds maxargsafe into the ATEXT frame size *after*
+gen() finishes, which is what lets this be called from deep inside
+statement codegen despite ATEXT already having been emitted with the
+"final" auto count by then -- the exact mechanism ic/6c already rely
+on for their own regsalloc() calls (e.g. ic/cgen.c's indirect-call
+spill). (Finding and fixing this mechanism's own latent gpseudo() bug
+is what made regsalloc() actually work -- see above.)
+
+A switch used standalone (not inside a loop that also has its own
+backward branch, e.g. a `continue`) works and is tested
+(tests/c/mini2/regress_wasm.c's classify_switch()). Switch *inside*
+such a loop does not -- see the "Open questions" relooper entry below,
+now with a concrete, confirmed trigger: this is the actual, current
+blocker for building the real, unmodified print_nofloat_no64.c (its
+vprintf() has exactly this shape: `for(...) { ...continue...
+switch(...) {...} switch(...) {...} }`), i.e. for a true
+tests/c/mini2/helloprintf.wasm built from the shared sources verbatim.
+test.c and helloprintf.c themselves both already compile against ec
+unmodified; print_nofloat_no64.c is the one file that doesn't yet.
+
+
 Open questions for ec (not yet started)
 -------------------------------------------
 
@@ -453,32 +765,58 @@ This is the part of the design that reaches furthest past what
 exists today, kept here so it doesn't have to be re-derived:
 
   - Should ec ever need genuinely irregular control flow (arbitrary
-    goto into another block, computed jumps) -- unlikely, since cck's
-    frontend only hands gbranch()/patch() the shapes above, and
-    anything else already diag()s -- reg.c's scope-based approach
-    would need to become a real "relooper" (Emscripten's algorithm,
-    or LLVM's CFGStackify) instead of the direct construction it does
-    today.
+    goto into another block, computed jumps) -- reg.c's scope-based
+    approach would need to become a real "relooper" (Emscripten's
+    algorithm, or LLVM's CFGStackify) instead of the direct
+    construction it does today. This is no longer hypothetical: a
+    switch statement *inside* a loop that also has its own backward
+    branch (e.g. a `continue`) hits exactly this, confirmed via a
+    minimal repro and via print_nofloat_no64.c's real vprintf()
+    (`for(...) { ...continue... switch(...){...} switch(...){...} }`)
+    -- the actual, current blocker for a true tests/c/mini2/
+    helloprintf.wasm built from the unmodified shared sources (test.c
+    and helloprintf.c themselves already compile against ec as-is;
+    print_nofloat_no64.c is the one holdout). Root cause: reg.c's
+    buildscopes() classifies *every* backward branch as a loop's own
+    back-edge, but a switch's own case-dispatch branches are also
+    backward (case bodies are emitted before the dispatch code that
+    jumps to them, per cck/pswt.c's doswit()) and are not loop
+    back-edges at all -- when a loop's and a switch's backward
+    branches land in the same region, they get misclassified as
+    overlapping loops instead of one loop plus a plain multi-way jump,
+    and validatescopes() correctly refuses to emit a module for the
+    shape it can't make sense of, rather than silently emitting wrong
+    wasm. Fixing this for real needs the relooper generalization
+    above, not a narrower patch to swit1() or buildscopes() -- a
+    switch used standalone (not inside such a loop) already works and
+    is tested (regress_wasm.c's classify_switch()).
 
-  - The address-taken-local split. Address-of a global/static is done
-    (cgen.c's OADDR case, see above) -- what's still open is locals.
-    e.out.h's D_AUTO/D_PARAM already reserve the concept: a C local/
-    param whose address is never taken compiles straight to a D_LOCAL
-    (fast, a true wasm local, as implemented today); one that is
-    address-taken (or too large to fit in a single wasm value type)
-    needs a slot in the shadow stack instead, addressed relative to
-    SPGLOBAL the way D_AUTO/D_PARAM work on every other arch. Deciding
-    which case a given C variable falls into is ec's job -- probably a
-    pass very similar to how existing backends already decide which C
-    locals become register variables versus stack-resident ones, just
-    with a binary fast/slow split instead of "how many registers are
-    free". This is the hard blocker for variadic printf (which needs
-    `&arg` to be a real, contiguous address) -- write() (tests/c/mini2/
-    hellowrite_wasm.c) doesn't need it: wasi_wasm.s's wrapper builds
-    its iovec out of a private global, never the caller's own frame.
+  - The address-taken-local split, general case. Address-of a global/
+    static is done (cgen.c's OADDR case, see above); address-of a
+    variadic function's own named parameter is *also* done now (the
+    variadic-call-ABI section above) -- but that's a narrower, caller-
+    allocates-the-buffer mechanism specific to varargs, not the general
+    redesign this bullet is about. What's still open: e.out.h's
+    D_AUTO/D_PARAM already reserve the concept for an *ordinary*
+    function's own locals -- a C local/param whose address is never
+    taken compiles straight to a D_LOCAL (fast, a true wasm local, as
+    implemented today); one that is address-taken (or too large to fit
+    in a single wasm value type) needs a slot in the shadow stack
+    instead, addressed relative to SPGLOBAL the way D_AUTO/D_PARAM work
+    on every other arch. Deciding which case a given C variable falls
+    into is ec's job -- probably a pass very similar to how existing
+    backends already decide which C locals become register variables
+    versus stack-resident ones, just with a binary fast/slow split
+    instead of "how many registers are free". Nothing in the shared
+    test sources needs this yet: write() (hellowrite_wasm.c) doesn't
+    (wasi_wasm.s's wrapper builds its iovec out of a private global,
+    never the caller's own frame), and printf() only ever takes the
+    address of its own named parameter (the variadic-ABI case, done),
+    never of an ordinary local.
 
-  - The shadow stack's actual push/pop sequence at function entry/
-    exit isn't designed yet: SPGLOBAL needs to be decremented by the
-    frame's shadow-stack size on entry and restored on exit. Nothing
-    needs this yet since no C variable is address-taken in any test
-    so far.
+  - The shadow stack's actual push/pop sequence at a *function's own*
+    entry/exit (as opposed to a call site's, which callvariadic()
+    already does) isn't designed yet: SPGLOBAL would need to be
+    decremented by the frame's shadow-stack size on entry and restored
+    on exit. Nothing needs this yet since no *ordinary* local is
+    address-taken in any test so far (see the previous bullet).

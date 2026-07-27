@@ -191,12 +191,15 @@ Node*	nodconst(int32);
 Node*	nod32const(vlong);
 Node*	nodfconst(double);
 Node*	nodgconst(vlong, Type*);
+Node*	nodargptr(void);
 void	nodreg(Node*, Node*, int);
 void	regret(Node*, Node*);
 void	regalloc(Node*, Node*, Node*);
 void	regfree(Node*);
 void	naddr(Node*, Adr*);
 int	islocal(Node*);
+int	isvariadic(Type*);
+int	isvarargparam(Node*);
 void	gaddr(Node*);
 void	lload(Node*);
 void	lstore(Node*);
@@ -208,12 +211,14 @@ void	gopcode(int, Node*);
 void	gbranch(int);
 void	patch(Prog*, int32);
 void	gpseudo(int, Sym*, Node*);
+void	gspglobal(int);
 
 /*
  * swt.c
  */
 void	doswit(Node*);
 void	swit1(C1*, int, int32, Node*);
+void	regsalloc(Node*, Node*);
 void	casf(void);
 long	outstring(char*, long);
 void	nullwarn(Node*, Node*);

@@ -22,6 +22,7 @@
 #include "l.h"
 
 #define	ARENABASE	8	/* leave a small null-guard region unused */
+#define	WASMPAGESIZE	65536	/* one wasm linear-memory page */
 
 static long arenaend;
 static Sym *allsyms;	/* insertion order for SBSS layout, see collectsyms() */
@@ -410,7 +411,35 @@ asmb(void)
     memset(&bb, 0, sizeof(bb));
     bbuleb(&bb, 1);
     bbput(&bb, 0x7F); bbput(&bb, 0x01);
-    bbput(&bb, 0x41); bbsleb(&bb, arenaend);
+    /*
+     * claude: a real bug lived here -- SPGLOBAL (the shadow-stack
+     * pointer every AGLOBALGET/AGLOBALSET(SPGLOBAL) reads/writes,
+     * see docs/notes_wasm.txt) was initialized to `arenaend`, the
+     * *bottom* of the free region (just past the last byte of static
+     * data), not its top. A stack that's about to be *decremented* to
+     * reserve space (cgen.c's callvariadic(), the first real user of
+     * SPGLOBAL as an actual stack pointer) needs to start high and
+     * grow down into free memory -- starting at arenaend instead means
+     * every reservation immediately underflows *backward into the
+     * static data section itself*, and for anything bigger than a
+     * couple of words, past address 0 entirely, wrapping to a huge
+     * unsigned offset. Confirmed via a minimal repro (a 3-actual-
+     * argument variadic call) that failed with a wasm "memory access
+     * out of bounds" trap before this fix; 1- and 2-argument calls
+     * happened to still fit in the gap between ARENABASE and arenaend
+     * by accident, which is why this went unnoticed until a 3rd
+     * argument pushed the reservation past it. Nothing before this
+     * session ever used SPGLOBAL as a real stack pointer (ea's own $SP
+     * addressing exists but had no test either -- grep finds zero uses
+     * of it anywhere in tests/), so this was always latent, never
+     * exercised. Fixed by initializing to the top of the (single,
+     * fixed-size) linear memory page the section just above already
+     * declares, matching every real wasm toolchain's own convention
+     * (data grows up from the bottom, the stack grows down from the
+     * top). See tests/c/mini2/regress_wasm.c's sumvariadic() (and
+     * txt.c's callvariadic()) for the regression test.
+     */
+    bbput(&bb, 0x41); bbsleb(&bb, WASMPAGESIZE);
     bbput(&bb, 0x0B);
     emitsection(6, &bb);
 

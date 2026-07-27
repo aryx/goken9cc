@@ -1,15 +1,22 @@
 // Regression test for the wasm backend (compilers/ec), covering the
 // control flow it supports so far: if/else, `while` (including break/
-// continue/nesting), and `for`/`do while` (including break/continue/
-// arbitrarily deep nesting) -- the latter two need loop rotation
-// (compilers/ec/reg.c's rotateloops(), see docs/notes_wasm.txt) since
+// continue/nesting), `for`/`do while` (including break/continue/
+// arbitrarily deep nesting -- the latter two need loop rotation,
+// compilers/ec/reg.c's rotateloops(), see docs/notes_wasm.txt, since
 // their own entry jump lands inside the loop body from outside it,
-// which plain block/loop nesting can't express directly. No printf
-// here (ec has no varargs/WASI runtime wired up yet, see the same
-// file's gap list): runtests() below checks everything itself and
-// returns 0 for all-pass or a bug-identifying nonzero code otherwise,
-// verified by scripts/wasm-call-runner.js the way every other arch's
-// hello*.exe is verified by `cmp` against an expected.txt.
+// which plain block/loop nesting can't express directly), and switch/
+// case (standalone only -- switch inside a loop that also has its own
+// backward branch, e.g. a `continue`, hits a real, still-open relooper
+// limitation, see notes_wasm.txt). Also: pointer dereference (OIND),
+// increment/decrement and compound assignment (on a plain ONAME
+// lvalue), address-of a global, and the variadic-call ABI (a variadic
+// function's own named parameter, plus its "..." actuals). No printf
+// here (print_nofloat_no64.c's own vprintf() is exactly what hits the
+// switch/continue relooper limitation above): runtests() below checks
+// everything itself and returns 0 for all-pass or a bug-identifying
+// nonzero code otherwise, verified by scripts/wasm-call-runner.js the
+// way every other arch's hello*.exe is verified by `cmp` against an
+// expected.txt.
 
 // plain recursion + if/else, both branches returning -- exercises
 // compilers/ec/reg.c's dead-code elision: codgen() always appends a
@@ -291,6 +298,184 @@ nesteddowhile(int n)
 	return s;
 }
 
+// pointer dereference (OIND), read and write. Goes through a global
+// rather than a local's address -- address-of-a-local is still
+// unimplemented (see docs/notes_wasm.txt's "Open questions for ec")
+// -- purely to keep this test decoupled from that separate, still-open
+// question; OADDR-of-a-global is already implemented and tested.
+int gscratch;
+
+int
+deref(int *p, int v)
+{
+	*p = v;
+	return *p + 1;
+}
+
+// increment/decrement on a local int -- both the POST (result = old
+// value) and PRE (result = new value) forms, each checked against
+// both the returned expression value *and* the variable's final state
+// (`r*100+i` packs both into one checked int).
+int
+postinc_local(void)
+{
+	int i, r;
+
+	i = 5;
+	r = i++;
+	return r*100 + i;
+}
+
+int
+postdec_local(void)
+{
+	int i, r;
+
+	i = 5;
+	r = i--;
+	return r*100 + i;
+}
+
+int
+preinc_local(void)
+{
+	int i, r;
+
+	i = 5;
+	r = ++i;
+	return r*100 + i;
+}
+
+int
+predec_local(void)
+{
+	int i, r;
+
+	i = 5;
+	r = --i;
+	return r*100 + i;
+}
+
+// pointer increment scales by the pointee's width (unlike the plain
+// int case above) -- exactly the `p++` shape print_nofloat_no64.c's
+// own vprintf() uses. Checked via a pointer-to-int cast rather than
+// pointer subtraction (not itself exercised here) or array indexing
+// (still unimplemented, see docs/notes_wasm.txt).
+int
+ptrincword(void)
+{
+	int *p;
+	int before, after;
+
+	p = &gscratch;
+	before = (int)p;
+	p++;
+	after = (int)p;
+	return after - before;
+}
+
+int
+ptrincbyte(void)
+{
+	char *p;
+	int before, after;
+
+	p = (char*)&gscratch;
+	before = (int)p;
+	p++;
+	after = (int)p;
+	return after - before;
+}
+
+// compound assignment: result is the *new* value, on both a local
+// (ALOCALTEE path) and a global (gaddr()+re-fetch path) lvalue.
+// asdiv_local's `v` is unsigned specifically to exercise cck/com.c's
+// own OASDIV->OASLDIV rewrite (print_nofloat_no64.c's printhex() does
+// the same `v /= 16` on a uint32).
+int
+asadd_local(void)
+{
+	int x;
+
+	x = 10;
+	x += 5;
+	return x;
+}
+
+int
+asdiv_local(void)
+{
+	unsigned int v;
+
+	v = 100;
+	v /= 3;
+	return v;
+}
+
+int
+asadd_global(void)
+{
+	gscratch = 10;
+	gscratch += 5;
+	return gscratch;
+}
+
+// the variadic-call ABI itself -- a dedicated function (not printf,
+// to keep this self-checking via return code rather than stdout) that
+// reads `n` more int arguments the exact same way
+// print_nofloat_no64.c's own vprintf() reads its varargs: take the
+// address of the last *named* parameter and walk forward from there.
+// Exercises both sides of the ABI at once: cgen.c's OFUNC/
+// callvariadic() (caller: marshals every actual argument, named and
+// "...", into a shadow-stack buffer and passes its base address) and
+// txt.c's isvarargparam()/lload() (callee: reads `n` back out of that
+// same buffer instead of expecting a real wasm local for it).
+int
+sumvariadic(int n, ...)
+{
+	int *arg;
+	int i, s;
+
+	arg = (int*)(&n + 1);
+	s = 0;
+	for (i = 0; i < n; i = i + 1) {
+		s = s + *arg;
+		arg = arg + 1;
+	}
+	return s;
+}
+
+// switch/case (swit1() in txt.c) -- multiple case labels sharing one
+// body, a default, and a plain (non-loop) context. Deliberately NOT
+// inside a loop that also uses `continue`/`break`-as-loop-exit: that
+// combination hits a real, deeper limitation (see notes_wasm.txt) --
+// buildscopes() (reg.c) treats every backward branch as a loop's own
+// back-edge, but switch's own case-dispatch branches are also
+// backward (case bodies are emitted before the dispatch code that
+// jumps to them, per cck/pswt.c's doswit()), so when both a loop's
+// *and* a switch's backward branches land in the same region, they
+// get misclassified as overlapping loops instead of one loop plus a
+// plain multi-way jump -- a real "relooper" problem, not something
+// swit1() itself can fix. A switch used standalone still works today.
+int
+classify_switch(int n)
+{
+	int r;
+
+	switch (n) {
+	case 0:
+	case 1:
+		r = 10;
+		break;
+	case 2:
+		r = 20;
+		break;
+	default:
+		r = -1;
+	}
+	return r;
+}
+
 int
 runtests(void)
 {
@@ -342,5 +527,37 @@ runtests(void)
 		return 23;
 	if (nesteddowhile(3) != 9)
 		return 24;
+	if (deref(&gscratch, 41) != 42)
+		return 25;
+	if (postinc_local() != 506)
+		return 26;
+	if (postdec_local() != 504)
+		return 27;
+	if (preinc_local() != 606)
+		return 28;
+	if (predec_local() != 404)
+		return 29;
+	if (ptrincword() != 4)
+		return 30;
+	if (ptrincbyte() != 1)
+		return 31;
+	if (asadd_local() != 15)
+		return 32;
+	if (asdiv_local() != 33)
+		return 33;
+	if (asadd_global() != 15)
+		return 34;
+	if (sumvariadic(3, 10, 20, 30) != 60)
+		return 35;
+	if (sumvariadic(0) != 0)
+		return 36;
+	if (classify_switch(0) != 10)
+		return 37;
+	if (classify_switch(1) != 10)
+		return 38;
+	if (classify_switch(2) != 20)
+		return 39;
+	if (classify_switch(9) != -1)
+		return 40;
 	return 0;
 }

@@ -11,6 +11,12 @@
  */
 #include "gc.h"
 
+/* claude: see the comment above naddr()'s isvarargparam()/argptrnode
+ * section further down -- declared up here (initialized by ginit(),
+ * used by lload()/cgen.c's OADDR case) purely because ginit() runs
+ * before any of that code is defined in file order. */
+static Node argptrnode;
+
 void
 ginit(void)
 {
@@ -75,6 +81,15 @@ ginit(void)
 
 	nodrat = Z;
 	nodret = Z;
+
+	/* claude: see argptrnode's own comment (above naddr()) -- a
+	 * synthetic "local 0" reference, shared by every variadic
+	 * function this translation unit compiles. */
+	argptrnode = znode;
+	argptrnode.op = ONAME;
+	argptrnode.class = CPARAM;
+	argptrnode.xoffset = 0;
+	argptrnode.type = types[TIND];
 
 	com64init();
 
@@ -271,6 +286,43 @@ maxround(int32 max, int32 v)
 }
 
 /*
+ * claude: does this function's Type have a trailing "..."? dcl.c's
+ * fnproto1()'s ODOTDOT case terminates the param chain with a TDOT
+ * type node, so walking `down` and checking for it is exactly how
+ * tmerge() (cck/dcl.c) itself already recognizes a variadic prototype
+ * when merging a forward declaration against a definition. Called
+ * both on `thisfn` (the function being compiled, see gpseudo()'s
+ * ATEXT case and localindex() below) and on a call site's callee type
+ * (cgen.c's OFUNC case) -- both see the same TDOT via minilibc.h's
+ * shared `extern void printf(char *s, ...);` declaration.
+ */
+int
+isvariadic(Type *t)
+{
+	for(t = t->down; t != T; t = t->down)
+		if(t->etype == TDOT)
+			return 1;
+	return 0;
+}
+
+/*
+ * claude: how many *real* wasm param locals a function has -- nparams
+ * (dcl.c's own count of *named* params) for an ordinary function, but
+ * always exactly 1 for a variadic one (the incoming argument-block
+ * pointer; see isvarargparam()'s comment and docs/notes_wasm.txt's
+ * variadic-call-ABI section). Used both for ASIGNATURE's arity
+ * (gpseudo()'s ATEXT case) and for shifting autos past the real
+ * params (localindex() below) -- nparams itself must NOT be used for
+ * either once a function is variadic, since it counts named params,
+ * which is a different (and, in general, smaller) number.
+ */
+static int
+wasmnparams(void)
+{
+	return isvariadic(thisfn) ? 1 : nparams;
+}
+
+/*
  * claude: recover the wasm local index from a Node's xoffset -- CPARAM
  * locals carry it as-is (0-based, assigned by Aarg1 during argmark()).
  * CAUTO locals carry -autoffset, where autoffset is dcl.c's own
@@ -280,8 +332,12 @@ maxround(int32 max, int32 v)
  * vs SP-), but ec's design gives every local (param or auto) one flat
  * wasm slot in the *same* index space. So a bare -o here would
  * silently alias auto #1 onto param #1's slot (and so on) whenever a
- * function has both. Shifting by nparams places every auto right
- * after the last param instead.
+ * function has both. Shifting by wasmnparams() places every auto
+ * right after the last *real* wasm param instead -- for an ordinary
+ * function that's nparams, same as always; for a variadic function
+ * it's 1 (see wasmnparams()'s comment), since its own named params
+ * (o >= 0 below) are never actually reached for a variadic function's
+ * CPARAM in the first place -- see isvarargparam().
  */
 static int32
 localindex(Node *n)
@@ -289,7 +345,7 @@ localindex(Node *n)
 	int32 o;
 
 	o = n->xoffset;
-	return o < 0 ? nparams + (-o) - 1 : o;
+	return o < 0 ? wasmnparams() + (-o) - 1 : o;
 }
 
 /*
@@ -357,15 +413,62 @@ naddr(Node *n, Adr *a)
 /*
  * claude: is this ONAME a true wasm local (fast path), or a C global/
  * static that lives in linear memory? See e.out.h's D_AUTO/D_PARAM
- * comment -- this is always true for CAUTO/CPARAM today because
- * nothing takes a variable's address yet (docs/notes_wasm.txt);
- * ec will need a real address-taken check here once it does.
+ * comment -- this is true for every CAUTO (nothing takes an auto's
+ * address yet, docs/notes_wasm.txt) and for a CPARAM *unless* it's a
+ * named parameter of a variadic function, in which case it's
+ * isvarargparam() below instead: it doesn't live in a wasm local at
+ * all, real or otherwise, since the whole point of the variadic-call
+ * ABI is that such a function's *only* true wasm local is the
+ * incoming argument-block pointer (local 0).
  */
 int
 islocal(Node *n)
 {
-	return n->op == ONAME && (n->class == CAUTO || n->class == CPARAM);
+	return n->op == ONAME &&
+		(n->class == CAUTO || (n->class == CPARAM && !isvariadic(thisfn)));
 }
+
+/*
+ * claude: a named parameter of a variadic function (e.g. printf's own
+ * `s`) -- islocal()'s complement for CPARAM. Never true for a CAUTO:
+ * a variadic function's own locals (e.g. printf's `byte *arg;`) are
+ * ordinary wasm locals exactly like any other function's, just
+ * indexed starting after the single real param (see wasmnparams()).
+ * See docs/notes_wasm.txt's variadic-call-ABI section for the full
+ * picture: the caller writes `s` and all "..." actuals into a
+ * contiguous shadow-stack buffer and passes just its base address;
+ * this predicate is what makes the callee read `s` back out of that
+ * buffer (via the incoming pointer, argptrnode below) instead of
+ * expecting its own wasm local.
+ */
+int
+isvarargparam(Node *n)
+{
+	return n->op == ONAME && n->class == CPARAM && isvariadic(thisfn);
+}
+
+/*
+ * claude: a synthetic reference to wasm local 0 -- every variadic
+ * function's *sole* true wasm param, the incoming argument-block
+ * pointer (see isvarargparam()'s comment above). argptrnode itself is
+ * declared near the top of this file (ginit() initializes it before
+ * any of this is defined in file order); built as a plain CPARAM
+ * ONAME with xoffset 0 so naddr()'s existing ONAME/CPARAM case
+ * (D_LOCAL, offset via localindex()) already does the right thing
+ * with zero new naddr()/e.out.h plumbing -- localindex() returns o
+ * unchanged for any o >= 0, so this really does resolve to local
+ * index 0, exactly like an ordinary function's own first named
+ * parameter would. Exposed to cgen.c via nodargptr() rather than the
+ * Node itself, the same accessor-function style nodconst()/
+ * nodfconst() already use for their own static sentinels.
+ */
+Node*
+nodargptr(void)
+{
+	return &argptrnode;
+}
+
+static int stackdelta(int);
 
 /*
  * claude: pushes a C global/static's *address* as a plain i32
@@ -379,24 +482,79 @@ islocal(Node *n)
 void
 gaddr(Node *n)
 {
+	/* claude: a real bug lived here -- this never set p->height or
+	 * updated stackheight the way every other instruction-emitting
+	 * helper (gins(), gspglobal()) does, even though it genuinely
+	 * pushes one wasm value (a symbol's address). Masked until now
+	 * because every prior caller (lload()'s global-read path, OAS's
+	 * non-local write path) immediately follows gaddr() with another
+	 * gins() call whose own height/stackheight bookkeeping happened
+	 * to leave the *net* effect looking consistent by the time
+	 * anything downstream (reg.c's structuring pass) inspected it.
+	 * Using OADDR as a bare call argument (cgen.c's OFUNC/gargs()
+	 * path, nothing else calls gaddr() without a following gins())
+	 * has no such follow-up instruction to absorb the omission,
+	 * leaving stackheight permanently one low from here on -- reg.c's
+	 * structuring pass then misreads the (now-wrong) height sequence,
+	 * corrupting the block/loop nesting it emits. Confirmed via a
+	 * minimal repro (a 2-arg call whose first argument is `&global`)
+	 * that failed wasm validation with "not enough arguments for
+	 * call" before this fix. See tests/c/mini2/regress_wasm.c's
+	 * deref() regression test (its call site passes `&gscratch`
+	 * as a bare argument, exactly the repro shape). */
 	nextpc();
 	p->as = ACONSTW;
 	p->from.type = D_NONE;
+	p->height = stackheight;
 	naddr(n, &p->to);
 	p->to.type = D_CONST;
+	stackheight += stackdelta(ACONSTW);
+}
+
+/*
+ * claude: emit a bare AGLOBALGET/AGLOBALSET of SPGLOBAL -- the
+ * variadic-call ABI's own building block (cgen.c's OFUNC case), used
+ * to reserve/restore a caller-allocated argument-block buffer on the
+ * shadow stack (see docs/notes_wasm.txt's "What a shadow stack
+ * actually is" and variadic-call-ABI sections). Hand-built exactly
+ * like gaddr() above rather than going through gins()+a Node/naddr(),
+ * because there's no existing Node shape that means "the SP global"
+ * to reuse (unlike nodargptr(), which could piggyback on the ordinary
+ * ONAME/CPARAM path) -- SPGLOBAL is a D_GLOBAL, not a D_LOCAL, and
+ * naddr() has no case that produces one from any Node op today.
+ */
+void
+gspglobal(int as)
+{
+	nextpc();
+	p->as = as;
+	p->from.type = D_NONE;
+	p->height = stackheight;
+	p->to.type = D_GLOBAL;
+	p->to.offset = SPGLOBAL;
+	stackheight += stackdelta(as);
 }
 
 /*
  * claude: push n's current value onto the operand stack -- local.get
- * for a true wasm local, or push-address-then-load (offset always 0:
- * the whole address was already folded into gaddr()'s constant) for a
- * C global/static.
+ * for a true wasm local, push-address-then-load through the incoming
+ * argument-block pointer for a variadic function's own named param
+ * (see isvarargparam()'s comment; offset is 4*n->xoffset, one 4-byte
+ * slot per named param, matching the caller-side layout cgen.c's
+ * OFUNC case builds), or push-address-then-load (offset always 0: the
+ * whole address was already folded into gaddr()'s constant) for a C
+ * global/static.
  */
 void
 lload(Node *n)
 {
 	if(islocal(n)) {
 		gins(ALOCALGET, Z, n);
+		return;
+	}
+	if(isvarargparam(n)) {
+		gins(ALOCALGET, Z, nodargptr());
+		gins(loadop(n->type), Z, nodconst(4*n->xoffset));
 		return;
 	}
 	gaddr(n);
@@ -677,6 +835,8 @@ patch(Prog *op, int32 pc)
 void
 gpseudo(int a, Sym *s, Node *n)
 {
+	Prog *ptext;
+
 	nextpc();
 	p->as = a;
 	p->from.type = D_OREG;
@@ -700,14 +860,44 @@ gpseudo(int a, Sym *s, Node *n)
 	 * (via align()'s Aarg0/Aarg1 cases) walk all of a function's
 	 * parameters before codgen() ever runs. Int-only for this
 	 * bootstrap (every param/result becomes 'W' = i32).
+	 *
+	 * wasmnparams(), not nparams, decides the arity: for a variadic
+	 * function this must be exactly 1 (the incoming argument-block
+	 * pointer), never however many *named* C params it has -- see
+	 * wasmnparams()'s own comment and docs/notes_wasm.txt's
+	 * variadic-call-ABI section. For an ordinary function the two are
+	 * the same, so this is a no-op change on the non-variadic path.
 	 */
 	if(a == ATEXT) {
 		char sig[NSNAME];
-		int i;
+		int i, np;
+
+		/* claude: a real bug lived here -- ptext saves the ATEXT
+		 * Prog itself, because the nextpc() call below (for
+		 * ASIGNATURE) overwrites the global `p` to point at that new
+		 * Prog instead. codgen() (cck/pgen.c) does `gpseudo(ATEXT,
+		 * ...); sp = p;` immediately after this function returns,
+		 * expecting `p` to still be the ATEXT Prog it just asked for
+		 * -- true for every other arch's own gpseudo()/gtext(), which
+		 * never emit a second Prog inside the same call. Without
+		 * restoring `p` before returning, codgen()'s later `sp->
+		 * to.offset += maxargsafe` (its own mechanism for folding
+		 * regsalloc()'s scratch-local reservations into the ATEXT
+		 * frame size, see swt.c's regsalloc()) was silently mutating
+		 * the *ASIGNATURE* Prog's unused to.offset field instead of
+		 * the real frame size -- harmless as long as maxargsafe was
+		 * always 0, which it was for every function until swit1()
+		 * (below) became the first thing in ec to ever call
+		 * regsalloc(). Confirmed via a minimal switch-statement repro
+		 * that failed wasm validation with "invalid local index"
+		 * (the scratch local's index was never actually declared)
+		 * before this fix. */
+		ptext = p;
 
 		stackheight = 0;
 		memset(sig, 0, sizeof(sig));
-		for(i = 0; i < nparams && i < NSNAME-2; i++)
+		np = wasmnparams();
+		for(i = 0; i < np && i < NSNAME-2; i++)
 			sig[i] = 'W';
 		sig[i] = thisfn->link->etype == TVOID ? 'V' : 'W';
 
@@ -723,6 +913,8 @@ gpseudo(int a, Sym *s, Node *n)
 		 * Prog's pcid, including this one, to be a genuinely unique,
 		 * position-matching identity; decrementing pc after this made
 		 * the *next* Prog created collide with ASIGNATURE's own pcid. */
+
+		p = ptext;
 	}
 }
 

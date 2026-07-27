@@ -148,18 +148,88 @@ gextern(Sym *s, Node *n, long off, long w)
 }
 
 /*
- * claude: doswit()/casf()/nullwarn()/ieeedtod() are already defined
- * in the shared compilers/cck/pswt.c -- only swit1() (the actual
- * compare-and-branch emission, genuinely arch-specific) is ec's to
- * provide. Switch isn't implemented (see txt.c's gbranch()/patch()),
- * so this is a stub; it's never reached because gen()'s OSWITCH case
- * would already have called gbranch(OGOTO), which diag()s first.
+ * claude: a scratch CAUTO-shaped Node with a freshly reserved,
+ * non-colliding local slot -- ported from ic/txt.c's own regsalloc(),
+ * same cursafe/curarg/maxargsafe/stkoff globals (already declared for
+ * every backend via cc.h/gc.h) and the same align()-based offset
+ * computation, just against ec's own align() (whose Aaut3 case hands
+ * out a flat +1 per call rather than a byte width, see align()'s own
+ * comment -- so this reserves one wasm local per call, exactly the
+ * granularity swit1() below needs). codgen() (cck/pgen.c) already
+ * folds maxargsafe into the ATEXT frame size *after* gen() finishes
+ * (`sp->to.offset += maxargsafe`), which is what lets this be called
+ * from deep inside statement codegen despite ATEXT already having
+ * been emitted with the "final" auto count by then -- the real
+ * mechanism ic/6c already rely on for exactly this kind of need
+ * (their own regsalloc() calls, e.g. ic/cgen.c's indirect-call spill).
+ * Unlike a real local, xoffset here is computed directly rather than
+ * assigned by dcl.c's declaration-time walk, but naddr()/localindex()
+ * don't know or care about that difference -- to them this is just
+ * another CAUTO.
  */
 void
-swit1(C1 *c1, int nc, int32 def, Node *n)
+regsalloc(Node *n, Node *nn)
 {
-	USED(c1); USED(nc); USED(def); USED(n);
-	diag(Z, "switch not implemented yet in ec");
+	cursafe = align(cursafe + stkoff, nn->type, Aaut3) - stkoff;
+	maxargsafe = maxround(maxargsafe, cursafe + curarg);
+	*n = *nodsafe;
+	n->xoffset = -(stkoff + cursafe);
+	n->type = nn->type;
+	n->etype = nn->type->etype;
+}
+
+/*
+ * claude: doswit()/casf()/nullwarn()/ieeedtod() are already defined in
+ * the shared compilers/cck/pswt.c -- only swit1() (the actual
+ * compare-and-branch emission, genuinely arch-specific) is ec's to
+ * provide.
+ *
+ * By the time this runs, doswit() has already cgen()'d the switch
+ * expression into `n` -- meaning its value is sitting on the wasm
+ * operand stack *right now*. But swit1() needs to compare that one
+ * value against up to nc different case constants, and a wasm
+ * operand-stack value can only be consumed once (no dup in wasm MVP,
+ * same limitation as everywhere else in this backend) -- so the very
+ * first thing here is to pop it into a fresh scratch local
+ * (regsalloc() above), which -- unlike the operand stack -- can be
+ * read back as many times as needed via ALOCALGET.
+ *
+ * Each case becomes "push scratch; push the case constant; i32.eq;
+ * br_if to that case's label" -- q[i].label is already a concrete,
+ * resolved pc by this point (the case body was emitted earlier, by
+ * doswit()'s own gen(n->right) call, before the switch expression was
+ * even evaluated), so patch() can target it immediately instead of
+ * being deferred the way an ordinary if/while/for's own gbranch()
+ * placeholders are. Falls through to an unconditional branch to `def`
+ * (the default case's label, or breakpc if there was no default --
+ * doswit() already resolved that distinction before calling this).
+ *
+ * Int-only for this bootstrap (matches every other switch-adjacent
+ * piece of this backend): doswit() only ever reaches the `!isv`
+ * (32-bit) call shape for ec, since typev[] is never true for the
+ * char/int switch expressions the shared sources use.
+ */
+void
+swit1(C1 *q, int nc, int32 def, Node *n)
+{
+	Node nsafe;
+	int i;
+
+	regsalloc(&nsafe, n);
+	gins(ALOCALSET, Z, &nsafe);
+
+	for(i = 0; i < nc; i++) {
+		gins(ALOCALGET, Z, &nsafe);
+		gins(ACONSTW, Z, nodconst((int32)q[i].val));
+		gins(ACMPEQW, Z, Z);
+		nextpc();
+		p->as = ABRIF;
+		p->height = stackheight;
+		stackheight--;	/* pops its condition -- see txt.c's stackdelta() comment */
+		patch(p, q[i].label);
+	}
+	gbranch(OGOTO);
+	patch(p, def);
 }
 
 /*
