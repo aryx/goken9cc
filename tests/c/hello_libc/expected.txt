@@ -1,0 +1,1 @@
+hello from libc.a: 2 + 2 = 4

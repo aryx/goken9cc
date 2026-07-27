@@ -1,0 +1,101 @@
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
+
+# arm64/linux only for now; other cputype/GOOS combinations are the next
+# incremental step once this one is proven (see lib_core/libc/{os,arch,
+# syscall}/ -- built to make that additive, not a rewrite).
+
+LIBNAME=libc.a
+
+# note: deliberately NOT setting CFLAGS_EXTRA= here (even to empty) --
+# mk leaves a never-assigned var as literal "$CFLAGS_EXTRA" text for rc
+# to expand at runtime, and rc correctly turns a truly-unset variable
+# into zero words. An explicit CFLAGS_EXTRA= assignment instead makes mk
+# substitute it eagerly as a one-element empty-string list, which shows
+# up as a stray empty argv entry -- and 7c's strict flag-then-positional
+# argument parsing (unlike gcc's) stops scanning for flags at the first
+# such non-flag argument, silently misreading -o/$target/$stem.c after
+# it as more input files instead.
+
+# fmt/*.c: the same Plan9 fmt implementation BOOT/lib9/ already builds
+# with gcc (byte-identical files), now compiled with goken's own 7c.
+# fmt.c's knownfmt[] dispatch table takes the address of every verb
+# handler unconditionally (even fltfmt.c's __efgfmt for %f/%e/%g), so
+# this has to be built as one unit -- see BOOT/lib9/mkfile's FMTOFILES
+# for the same list (minus fmtlock2.c, which is BOOT's pthread-based
+# lock; fmt/fmtlock.c here is the plain single-threaded no-op version).
+FMTOFILES=\
+	fmt/dofmt.$O\
+	fmt/errfmt.$O\
+	fmt/fltfmt.$O\
+	fmt/fmt.$O\
+	fmt/fmtfd.$O\
+	fmt/fmtfdflush.$O\
+	fmt/fmtlocale.$O\
+	fmt/fmtlock.$O\
+	fmt/fmtnull.$O\
+	fmt/fmtprint.$O\
+	fmt/fmtquote.$O\
+	fmt/fmtrune.$O\
+	fmt/fmtstr.$O\
+	fmt/fmtvprint.$O\
+	fmt/fprint.$O\
+	fmt/nan64.$O\
+	fmt/print.$O\
+	fmt/seprint.$O\
+	fmt/smprint.$O\
+	fmt/snprint.$O\
+	fmt/sprint.$O\
+	fmt/strtod.$O\
+	fmt/vfprint.$O\
+	fmt/vseprint.$O\
+	fmt/vsmprint.$O\
+	fmt/vsnprint.$O\
+
+# only what fmt/*.c actually calls (chartorune/fullrune/runetochar via
+# rune.c, utflen, utfnlen) -- not all of utf/, which also has the
+# 1400+ line Unicode runetype tables nothing here needs.
+UTFOFILES=\
+	utf/rune.$O\
+	utf/utflen.$O\
+	utf/utfnlen.$O\
+
+MATHOFILES=\
+	math/nan.$O\
+
+PORTOFILES=\
+	port/memmove.$O\
+	port/memset.$O\
+	port/memcmp.$O\
+	port/strcmp.$O\
+	port/strchr.$O\
+	port/memccpy.$O\
+	port/strlen.$O\
+	port/strcpy.$O\
+	port/ctype.$O\
+	port/fabs.$O\
+	port/frexp.$O\
+	port/strtod.$O\
+	port/abort.$O\
+	port/errno.$O\
+	port/assert.$O\
+	port/strerror.$O\
+
+SYSCALLOFILES=\
+	syscall/arch/$cputype/svc.$O\
+	syscall/os/linux/zsyscall_linux_$cputype.$O\
+
+ARCHOFILES=\
+	arch/$cputype/rt0.$O\
+
+OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $SYSCALLOFILES $ARCHOFILES
+
+HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
+
+<$TOP/mkfiles/mksyslib
+
+# after the include so mksyslib's own 'all' rule stays the default
+# target (mk picks the *first* rule in the file when none is given on
+# the command line)
+syscall/os/linux/zsyscall_linux_$cputype.c:	syscall/os/linux/syscall_linux_$cputype.decl
+	$TOP/scripts/mksyscall.sh $prereq > $target

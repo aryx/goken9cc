@@ -5,17 +5,24 @@ LIB=$ROOT/$cputype/lib/$LIBNAME
 all:V:  $LIB
 
 #TODO: principia: 'ar vu' under plan9, rsc is GNU binutils specific
+# note: $AR, not a hardcoded 'ar' -- a goken-native build (AR=iar) needs
+# its own archive format, which the host's binutils ar can't produce
+# and goken's own Xl can't read the reverse of either
 $LIB:   $OFILES
-        ar rsc $LIBNAME $prereq
+        $AR rc $LIBNAME $prereq
 	cp $LIBNAME $LIB
 
 %.$O:   $HFILES                 # don't combine with following %.$O rules
 
 # this will work also for OFILES in subdir as fmt/chartod.o thx to '-o $target'
+# note: -o must come *before* the source file: goken's own Xc/Xa (unlike
+# gcc) stop scanning for flags at the first non-flag argument (standard
+# Plan9 ARGBEGIN/getopt-style parsing), so a trailing '-o $target' after
+# $stem.c/$stem.s would silently be read as extra input filenames instead
 %.$O:   %.c
-	$CC $CFLAGS $CFLAGS_EXTRA $stem.c -o $target
+	$CC $CFLAGS $CFLAGS_EXTRA -o $target $stem.c
 %.$O:   %.s
-	$AS $AFLAGS $stem.s -o $target
+	$AS $AFLAGS -o $target $stem.s
 
 install:V: $LIB
 uninstall:V:

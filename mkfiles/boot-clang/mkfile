@@ -13,3 +13,4 @@ CC=clang -c --std=gnu89 -Wno-cpp $CFLAGS_ARCH
 LD=clang
 AS=clang
 O=o
+AR=ar

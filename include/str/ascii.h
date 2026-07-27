@@ -43,3 +43,8 @@ extern unsigned char	_ctype[];
 #define	_tolower(c)	((c)-'A'+'a')
 
 #define	toascii(c)	((c)&0177)
+
+// plain ctype.h names, for code (e.g. fmt/strtod.c) that calls these
+// without the Plan9 underscore prefix
+#define	toupper(c)	(islower(c) ? _toupper(c) : (c))
+#define	tolower(c)	(isupper(c) ? _tolower(c) : (c))

@@ -24,3 +24,8 @@ LD=gcc
 #alt: could use gas?
 AS=gcc
 O=o
+# the system's own binutils ar: mkfiles/mksyslib/mklib use $AR (not
+# goken's own iar, used by mkfiles/$cputype/mkfile) since a
+# gcc/clang-produced library is only ever linked by the host's own
+# linker, never by goken's own Xl
+AR=ar

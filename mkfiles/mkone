@@ -9,10 +9,11 @@ $O.out:	$OFILES $LIB
 	$LD $LDFLAGS -o $target $prereq $LDLIBS
 
 %.$O:	$HFILES		# don't combine with following %.$O rules
+# note: -o must come *before* the source file -- see mkfiles/mksyslib
 %.$O:	%.c
-	$CC $CFLAGS $CFLAGS_EXTRA $stem.c -o $target
+	$CC $CFLAGS $CFLAGS_EXTRA -o $target $stem.c
 %.$O:	%.s
-	$AS $AFLAGS $stem.s -o $target
+	$AS $AFLAGS -o $target $stem.s
 
 # to generate also y.tab.h with the token definitions
 # alt: move that in YACC definition in mkfile.proto

@@ -1,8 +1,10 @@
 #ifndef _UTFH_
 #define _UTFH_ 1
 
-//TODO? what for?
-#include <stdint.h>
+// claude: this used to #include <stdint.h> ("//TODO? what for?") but
+// nothing in this file actually needs it -- Rune is just a plain
+// unsigned int -- and lib_core/ code may not depend on Unix headers,
+// only on stuff under include/ (see u.h), so it's dropped rather than shimmed.
 
 typedef unsigned int Rune;	/* Code-point values in Unicode 4.0 are 21 bits wide.*/
 

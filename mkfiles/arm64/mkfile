@@ -3,6 +3,10 @@
 # the goken cross-toolchain itself: used by tests/ (mk objtype=arm64) and,
 # once self-hosting is viable, as CC/AS/LD for the top-level build too
 O=7
+# 7c never auto-searches /usr/include (unlike gcc), so this needs an
+# explicit -I for the arch's own u.h; $CFLAGS_COMMON (mkfile.proto) adds
+# the shared include/include/ALL/. search path
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/arm64
 CC=7c
 LD=7l
 AS=7a

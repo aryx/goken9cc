@@ -13,8 +13,7 @@ extern  void*   memcpy(void*, void*, ulong);
 extern  void*   memmove(void*, void*, ulong);
 extern  int     memcmp(void*, void*, ulong);
 extern  void*   memchr(void*, int, ulong);
-// less useful
-//extern  void*   memccpy(void*, void*, int, ulong);
+extern  void*   memccpy(void*, void*, int, ulong);
 
 // internals (useful for debugging)
 // alt: in debug.h

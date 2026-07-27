@@ -50,6 +50,15 @@ int          __runeneedsquotes(Rune *r, int *quotelenp);
 int          __runesfmt(Fmt *f);
 int          __strfmt(Fmt *f);
 
+// fmt/strtod.c wants the plain ANSI name; __Inf(0) is already this
+// implementation's +Infinity (no <math.h> here -- see include/os/posix/errno.h
+// for why lib_core/ can't depend on Unix headers). Guarded: this file is
+// shared (BOOT/lib9/fmt is a symlink to lib_core/libc/fmt/), and the
+// gcc/BOOT build already gets a real HUGE_VAL from the host's <math.h>.
+#ifndef HUGE_VAL
+#define HUGE_VAL __Inf(0)
+#endif
+
 #define FMTCHAR(f, t, s, c)\
 	do{\
 	if(t + 1 > (char*)s){\
