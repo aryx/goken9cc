@@ -20,7 +20,7 @@ to crash ("*** stack smashing detected ***", SIGABRT) on a source path
 100 bytes or longer. Ported 9front's fix: size the buffer dynamically
 via strdup()/smprint() instead. The exact same bug, independently, was
 later found in 7a (arm64) when a feature-test file happened to live at
-a long scratch path -- see docs/notes_arch_arm64.txt. See
+a long scratch path -- see docs/claude_notes/notes_arch_arm64.txt. See
 tests/s/regressions/mips_long_filename.s.tmpl.
 
 LL/SC/SYNC: the atomic primitives spinlocks need
@@ -54,7 +54,7 @@ vc: three register-allocator/codegen carve-outs, one real correctness bug
   optimizing, not a crash) past 600 candidate regions. Ported 9front's
   growable version (starts at 300, doubles via allocn() as needed).
   The identical fix, independently confirmed necessary, landed in 7c
-  (arm64) too -- see docs/notes_arch_arm64.txt.
+  (arm64) too -- see docs/claude_notes/notes_arch_arm64.txt.
 
 - mkvar() excluded every "."-prefixed pseudo-symbol from register-
   allocator tracking, including ".ret" (the function return-value
@@ -71,7 +71,7 @@ vc: three register-allocator/codegen carve-outs, one real correctness bug
   exists in shared cc/ code, and 7c/8c/8ck already had this exact
   call, making vc the odd one out among this project's own backends
   (6c later turned out to be missing it too -- see
-  docs/notes_arch_amd64.txt).
+  docs/claude_notes/notes_arch_amd64.txt).
 
 - align()'s Aaut3 case ("total align of automatic") never set `w`, so
   stack "safe" spill-temp regions (regsalloc(), used e.g. when
@@ -100,7 +100,7 @@ identical defect but happened not to manifest it in the test used
 coincidentally benign stack garbage that time) -- fixed here anyway on
 the strength of the riscv repro and the fix being verbatim what every
 other backend already does. Full story, including why riscv is what
-actually surfaced it, in docs/notes_arch_riscv.txt. See
+actually surfaced it, in docs/claude_notes/notes_arch_riscv.txt. See
 tests/c/regressions/float_const_oob.c.
 
 What's landed vs. what todo.org still lists as open
@@ -115,7 +115,7 @@ elsewhere in this tree) to va/cck's shared macro-expansion code; a
 wrong regalloc template in vc's constant compound-assign fast path
 (low-risk one-liner, not yet landed); making the shared struct-copy
 scratch temp (nodrat) reentrant, a real correctness bug this project's
-every C backend shares (see docs/notes_arch_amd64.txt's closing
+every C backend shares (see docs/claude_notes/notes_arch_amd64.txt's closing
 paragraph); a dropped-warning cosmetic fix; ELF64/MIPSR4K (64-bit
 MIPS) support, entirely unimplemented (elf64()/MIPSR4K already exist
 in the shared linkers/lk/elf.h and are used by other linkers, but vl

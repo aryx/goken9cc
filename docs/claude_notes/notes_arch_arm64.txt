@@ -2,7 +2,7 @@ The arm64 toolchain (7a/7c/7l): what the 9front unification landed
 =====================================================================
 
 Notes on 7a/7c/7l's codegen/ABI internals -- as opposed to the
-Mach-O-specific work covered in docs/notes_exec_macho.txt (PIE,
+Mach-O-specific work covered in docs/claude_notes/notes_exec_macho.txt (PIE,
 dyld, code signing, the arm64-specific 7c frame-size and vlong-spill
 bugs found while bringing up -H6, which live there because they were
 found via macOS execution, not because they're macOS-specific bugs).

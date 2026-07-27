@@ -6,10 +6,10 @@ softwarica-synced lineage, generated from the docs/*.nw literate books
 via syncweb) byte-identical to 8ak/8ck/8lk (the original kencc
 reference lineage this whole project forked from). This is the arch
 where that reconciliation was worked out first, in July 2026 -- the
-arm equivalent (docs/notes_arch_arm.txt) followed the same playbook a
+arm equivalent (docs/claude_notes/notes_arch_arm.txt) followed the same playbook a
 few days later, once this one had proven it. For the ELF/Mach-O/PE
 executable-format bugs 8l/8lk also had (symbol-table/.data collision,
-segment rounding), see docs/notes_exec_elf.txt instead -- those are
+segment rounding), see docs/claude_notes/notes_exec_elf.txt instead -- those are
 format bugs shared with other archs' linkers, not part of this
 principia-vs-kencc story. See pad.org's "regression/mismatch fixes"
 table for the original bug list, and compilers/8c/, assemblers/8a/,
@@ -89,7 +89,7 @@ blake2sblock.c, libhtml's build.c). Fixed the same way the kencc
 lineage already had been (see changes.txt's own "cc/bits.c" entry) --
 Bits/NVAR use uint32, not ulong. This is the same underlying class of
 bug as amd64's "long on a 64-bit host" story
-(docs/notes_arch_amd64.txt) -- code written assuming a 32-bit host's
+(docs/claude_notes/notes_arch_amd64.txt) -- code written assuming a 32-bit host's
 integer widths, silently misbehaving once the host itself is 64-bit --
 just manifesting as a buffer overflow here instead of a truncated
 comparison. See tests/c/variants/manyvars.c.
@@ -119,4 +119,4 @@ QEMU with rio and mothra working -- not just a clean compile. Nothing
 was lost for this toolchain's own host-binary role either: Linux ELF
 (-H7) output stayed pinned byte-identical via the tests/s/variants
 goldens throughout, and neither 386 linker lineage has ever produced
-macOS binaries (only the go-era 6l does, see docs/notes_exec_macho.txt).
+macOS binaries (only the go-era 6l does, see docs/claude_notes/notes_exec_macho.txt).

@@ -9,10 +9,10 @@ hello_windows_{386,amd64}.s.
 
 Scope: this file is about the PE/COFF executable format specifically
 (headers, sections, the import table) and the 386/amd64 ABI details
-that surfaced while producing it. Companions: docs/notes_exec_macho.txt
-(macOS) and docs/notes_exec_elf.txt (Linux) cover the other two
+that surfaced while producing it. Companions: docs/claude_notes/notes_exec_macho.txt
+(macOS) and docs/claude_notes/notes_exec_elf.txt (Linux) cover the other two
 executable formats; general Windows build/toolchain notes not specific
-to PE output would belong in a future docs/notes_os_windows.txt, not
+to PE output would belong in a future docs/claude_notes/notes_os_windows.txt, not
 here.
 
 Where the PE writer lives
@@ -81,7 +81,7 @@ same switch:
 No ASLR / no relocation table: absolute addressing is correct here
 ------------------------------------------------------------------
 
-The macOS -H6 story (docs/notes_exec_macho.txt) spends most of its length
+The macOS -H6 story (docs/claude_notes/notes_exec_macho.txt) spends most of its length
 on PIE / RIP-relative addressing because modern arm64 macOS mandates
 ASLR. PE has no equivalent requirement in this toolchain: HEADTYPE==10
 was deliberately left out of the RIP-relative branch that span.c
@@ -246,6 +246,6 @@ What's not implemented yet
 - 386 and amd64 both only import from kernel32.dll
   (GetStdHandle/WriteFile/ExitProcess) -- enough for a hello-world,
   not a general -I mechanism the way lk/macho.c's dynamic-import
-  support is (see docs/notes_exec_macho.txt's "got:remote:lib" section);
+  support is (see docs/claude_notes/notes_exec_macho.txt's "got:remote:lib" section);
   peimports() hardcodes the one DLL and the three imports needed by
   the existing tests.

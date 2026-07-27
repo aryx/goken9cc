@@ -8,7 +8,7 @@ miller-riscv, an actively maintained Plan 9 riscv port. This file is
 about the architecture/codegen internals (registers, calling
 convention, instruction encoding, the 'i'/'j' dual-width design); for
 the ELF-format bug riscv64 also surfaced (a hardcoded 32-bit HEADR
-computation), see docs/notes_exec_elf.txt's own riscv64 section --
+computation), see docs/claude_notes/notes_exec_elf.txt's own riscv64 section --
 that one is about ELF header layout, not codegen, even though the
 same bring-up session found both. See compilers/ic/, assemblers/ia/,
 linkers/il/, include/i.out.h, tests/s/{exit,mini}, and
@@ -59,7 +59,7 @@ candidates, and they are not interchangeable:
 setSB/symbol-address bug: an existing 'i' fixup with no 'j' counterpart
 ---------------------------------------------------------------------------
 
-Once the ELF HEADR fix (docs/notes_exec_elf.txt) got a .data-less
+Once the ELF HEADR fix (docs/claude_notes/notes_exec_elf.txt) got a .data-less
 exit(42) binary running under qemu-riscv64, a hello-world touching
 .data still printed nothing (`write(1, 0, 13)` per strace -- a
 near-zero buffer pointer). Root cause: `MOVW $sym(SB), R` -- emitted

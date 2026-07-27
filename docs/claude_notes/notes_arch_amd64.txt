@@ -2,9 +2,9 @@ The amd64 toolchain (6a/6c/6l): a fresh import, and `long` on a 64-bit host
 =============================================================================
 
 Notes on 6a/6c/6l's codegen/ABI internals -- as opposed to the
-executable-format-specific work covered in docs/notes_exec_macho.txt
+executable-format-specific work covered in docs/claude_notes/notes_exec_macho.txt
 (-H6, PIE, RIP-relative addressing, the 6c -z flag) and
-docs/notes_exec_pe.txt (-H10) and docs/notes_exec_elf.txt (-H7),
+docs/claude_notes/notes_exec_pe.txt (-H10) and docs/claude_notes/notes_exec_elf.txt (-H7),
 which is where the Mach-O/PE/ELF-driven parts of the recent 6l work
 belong. This file covers the codegen bugs that surfaced independently
 of any particular output format. See plan9front.txt's amd64 section
@@ -14,8 +14,8 @@ compilers/6c/, assemblers/6a/, linkers/6l/.
 Starting point: freshly re-imported, not incrementally patched
 ---------------------------------------------------------------------
 
-Unlike 5a/5c/5l and 8a/8c/8l (docs/notes_arch_arm.txt,
-docs/notes_arch_x86.txt), which trace back through years of this
+Unlike 5a/5c/5l and 8a/8c/8l (docs/claude_notes/notes_arch_arm.txt,
+docs/claude_notes/notes_arch_x86.txt), which trace back through years of this
 project's own kencc/principia history, 6a/6c/6l were re-imported fresh
 from plan9foundation/plan9.git in 2026 as a new amd64 starting point,
 demoting the old go-era lineage to 6ag/6cg/6lg as an intentionally

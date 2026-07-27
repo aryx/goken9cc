@@ -3,14 +3,14 @@ The arm (32-bit) toolchain (5a/5c/5l): reconciling principia with kencc
 
 Notes on making 5a/5c/5l (the principia-softwarica-synced lineage)
 byte-identical to 5ak/5ck/5lk (the kencc reference lineage) -- the
-arm counterpart of docs/notes_arch_x86.txt's 386 story, worked out a
+arm counterpart of docs/claude_notes/notes_arch_x86.txt's 386 story, worked out a
 few days later using the same playbook (branch `mismatch_5`, merged in
 8debd46e7) but hitting a genuinely different set of bugs: 386 and arm
 share very little machine-specific linker logic, so almost nothing
 here overlaps with the x86 file, only the underlying *shape* of
 "literate-programming refactor silently changed behavior" repeats. For
 the shared 5.out.h header work and ELF-specific fixes, see
-docs/notes_exec_elf.txt. See compilers/5c/, assemblers/5a/,
+docs/claude_notes/notes_exec_elf.txt. See compilers/5c/, assemblers/5a/,
 linkers/5l/ vs. their 5ck/5ak/5lk counterparts.
 
 5.out.h: unifying the object-header numbering first
@@ -135,7 +135,7 @@ procedures over 128K instead of erroring out (matching kencc), and
 default INITTEXTP to INITTEXT plus setting the arm EABI e_flags
 (0x5000200) in the shared 8l/elf.c code path when the target machine
 is ARM -- needed before Linux would exec() an arm binary at all (see
-docs/notes_exec_elf.txt's own EABI section for why this class of
+docs/claude_notes/notes_exec_elf.txt's own EABI section for why this class of
 mistake fails so much earlier than a bad PT_LOAD entry would).
 
 A cross-cutting fix along the way: mallocz() where a bump allocator's zeroing was assumed

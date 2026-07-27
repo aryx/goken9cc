@@ -8,10 +8,10 @@ See linkers/lk/macho.c, linkers/7l/, and tests/s/mini/hello_macos_arm64.s.
 Scope: this file is about the Mach-O executable format specifically
 (load commands, code signing, PIE/ASLR, dyld) and the arm64/amd64
 codegen choices that format forces on the linker. Companions:
-docs/notes_exec_elf.txt (Linux) and docs/notes_exec_pe.txt (Windows)
+docs/claude_notes/notes_exec_elf.txt (Linux) and docs/claude_notes/notes_exec_pe.txt (Windows)
 cover the other two executable formats this toolchain emits; general
 macOS build/toolchain notes not specific to Mach-O output would belong
-in a future docs/notes_os_macos.txt, not here.
+in a future docs/claude_notes/notes_os_macos.txt, not here.
 
 What the arm64 kernel demands of an executable
 ----------------------------------------------
@@ -204,7 +204,7 @@ The kernel kills at exec() silently, so work hypothesis-by-hypothesis:
   compilers/7c and linkers/7l here; 'git log' + diff over there is a
   goldmine when suspecting a codegen bug: both 7c fixes found on this
   branch (gtext frame size, vlong first-arg spill) have counterparts
-  visible by diffing goken against 9front. See docs/notes_arch_arm64.txt
+  visible by diffing goken against 9front. See docs/claude_notes/notes_arch_arm64.txt
   for the other 7a/7c/7l fixes that same 9front diff turned up, found
   independently of this Mach-O bring-up.
 

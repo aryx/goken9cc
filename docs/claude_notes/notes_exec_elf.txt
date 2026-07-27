@@ -4,7 +4,7 @@ Producing Linux ELF executables, across seven architectures
 Notes gathered while bringing up (or fixing) native Linux ELF output
 in 5l (arm), 6l (amd64), 7l (arm64), 8l/8lk (386), il (riscv32/
 riscv64), and vl (mips) between December 2025 and July 2026. Unlike
-the macOS/Windows stories (docs/notes_exec_macho.txt, docs/notes_exec_pe.txt),
+the macOS/Windows stories (docs/claude_notes/notes_exec_macho.txt, docs/claude_notes/notes_exec_pe.txt),
 which are each about one target bolted onto one or two linkers, ELF is
 this toolchain's most widely shared non-Plan-9 format -- every linker
 has an ELF case -- so most of what follows is about the same class of
@@ -108,7 +108,7 @@ linkers; each one assigns its own numbers, and they don't agree:
 Before 141e05f54, 6l used HEADTYPE 6 for its (then only) ELF64 Linux
 case -- a collision waiting to happen with 7l's convention where 6
 means Mach-O, once 6l later grew its own -H6 Mach-O case (the
-docs/notes_exec_macho.txt amd64 work). 141e05f54 renumbered 6l's ELF64 case
+docs/claude_notes/notes_exec_macho.txt amd64 work). 141e05f54 renumbered 6l's ELF64 case
 from 6 to 7 pre-emptively, before that collision could actually
 happen, specifically to match 7l's numbering. The general takeaway:
 when adding a new HEADTYPE case to any one of these linkers, don't
@@ -123,7 +123,7 @@ getgoos() auto-detection: same idea, but not on every linker
 with no explicit -H flag and getting a runnable Linux ELF binary out,
 via a getgoos()-based check: HEADTYPE defaults to 2 (plan9), but
 switches to the ELF case when the host's own GOOS is "linux" (and, for
-6l, to Mach-O when it's "darwin" -- see docs/notes_exec_macho.txt). This
+6l, to Mach-O when it's "darwin" -- see docs/claude_notes/notes_exec_macho.txt). This
 guard only fires when HEADTYPE is still -1 (i.e. the user passed no
 -H), so an explicit `-H2` still forces Plan9 output on a Linux host.
 
@@ -135,7 +135,7 @@ passed -- this silently overrode the new getgoos() auto-detection
 every time, so the mechanism had to be deleted outright (neither 7l
 nor 8l carry it at all) rather than reconciled with the new check.
 
-Windows (-H10, see docs/notes_exec_pe.txt) is deliberately NOT part of
+Windows (-H10, see docs/claude_notes/notes_exec_pe.txt) is deliberately NOT part of
 this auto-detection anywhere: there's no "goos == windows" branch in
 any linker's HEADTYPE default logic, since PE binaries are normally
 cross-linked from a Linux or macOS host in this project, not built on
@@ -152,13 +152,13 @@ real Linux ABI shows up and has to be gotten right independently:
 
   - 386: `int $0x80`, arguments on the stack (a pointer argument is
     4 bytes, so a following count sits at 4(FP), not further out); see
-    docs/notes_arch_x86.txt for 8a/8c/8l's own codegen/ABI history.
+    docs/claude_notes/notes_arch_x86.txt for 8a/8c/8l's own codegen/ABI history.
   - amd64: `syscall` instruction, arguments in DI/SI/DX/CX/R8/R9
     (System V AMD64 ABI -- notably different from Win64's CX/DX/R8/R9
     + shadow space convention used under -H10, and from the BSD-class
-    macOS convention under -H6, see docs/notes_exec_macho.txt's "Raw
+    macOS convention under -H6, see docs/claude_notes/notes_exec_macho.txt's "Raw
     syscalls on arm64 macOS differ from Linux" section for the
-    contrast on the arm64 side; see docs/notes_arch_amd64.txt for
+    contrast on the arm64 side; see docs/claude_notes/notes_arch_amd64.txt for
     6a/6c/6l's own codegen bugs, independent of any output format).
   - arm: EABI. 5l/5l_ needed an explicit "set EABI ELF flags" fix
     (c1fe6d3ba, bbee52c40) before Linux would even exec()
@@ -166,15 +166,15 @@ real Linux ABI shows up and has to be gotten right independently:
     to run" -- the commit's own words); e_flags identifying the EABI
     version is checked by the kernel's ELF loader before it even looks
     at the program headers, so getting it wrong fails harder and
-    earlier than a bad PT_LOAD entry would. See docs/notes_arch_arm.txt
+    earlier than a bad PT_LOAD entry would. See docs/claude_notes/notes_arch_arm.txt
     for 5a/5c/5l's own codegen/ABI bugs, unrelated to this ELF flag.
   - arm64: LR-based return addressing changes the calling-convention
     layout at FP+0 (no saved return address slot on the stack the way
-    32-bit arm reserves one) -- see docs/notes_exec_macho.txt's 7c section
+    32-bit arm reserves one) -- see docs/claude_notes/notes_exec_macho.txt's 7c section
     for the vlong/argument-spill bugs this shape caused, which affect
     the Linux arm64 target identically to macOS since the bugs were in
     7c code generation, not in either OS's linker case; see
-    docs/notes_arch_arm64.txt for the rest of the 9front-derived 7a/7c/7l
+    docs/claude_notes/notes_arch_arm64.txt for the rest of the 9front-derived 7a/7c/7l
     fixes.
   - riscv32: ECALL, rv32 Linux syscall convention.
   - riscv64 ('j'): reused the same ia/ic/il tree as riscv32 via
@@ -182,12 +182,12 @@ real Linux ABI shows up and has to be gotten right independently:
     been exercised end to end (no ja/jl binaries installed, no
     mkfiles/riscv64/, no qemu-runner mapping) until be2a45114
     (2026-07-23) wired it up -- which immediately surfaced a real bug,
-    see below (and docs/notes_arch_riscv.txt for the rest of what that
+    see below (and docs/claude_notes/notes_arch_riscv.txt for the rest of what that
     bring-up found).
   - mips: standard Linux mips syscall convention; see
     lib_toolchain/libmach's mmips glue (shared with the vi emulator)
     for the pgsize/txtaddr details that matter for *reading* mips ELF
-    binaries, as opposed to producing them; see docs/notes_arch_mips.txt
+    binaries, as opposed to producing them; see docs/claude_notes/notes_arch_mips.txt
     for va/vc/vl's own codegen/ABI fixes.
 
 riscv64's HEADR bug: hardcoded 32-bit sizes under a 64-bit thechar
@@ -234,7 +234,7 @@ Two lineages, one ELF bug: why a fix has to land in both
 
 386 has two independent linker implementations in this tree: 8l
 (principia lineage) and 8lk (kencc lineage) -- see
-docs/notes_arch_x86.txt for the wider reconciliation story of why both
+docs/claude_notes/notes_arch_x86.txt for the wider reconciliation story of why both
 exist and what else had to be fixed to make them agree.
 d5cfb36f0's symbol-table/.data collision bug (above) existed
 identically in both, and fixing only one would have made things
