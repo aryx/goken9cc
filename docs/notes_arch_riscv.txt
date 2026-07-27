@@ -1,0 +1,245 @@
+The riscv toolchain (ia/ic/il): dual width, and what real bring-up found
+==========================================================================
+
+Notes gathered while bringing up riscv64 ('j') for real in July 2026 --
+turning ja/jc/jl from installed-but-untested stubs into a backend with
+actual qemu-verified coverage -- and while porting fixes in from
+miller-riscv, an actively maintained Plan 9 riscv port. This file is
+about the architecture/codegen internals (registers, calling
+convention, instruction encoding, the 'i'/'j' dual-width design); for
+the ELF-format bug riscv64 also surfaced (a hardcoded 32-bit HEADR
+computation), see docs/notes_exec_elf.txt's own riscv64 section --
+that one is about ELF header layout, not codegen, even though the
+same bring-up session found both. See compilers/ic/, assemblers/ia/,
+linkers/il/, include/i.out.h, tests/s/{exit,mini}, and
+tests/c/{mini2,regressions}/riscv64_*.c.
+
+The dual-width design: one source tree, two thechar values
+-----------------------------------------------------------------
+
+ia/ic/il implement both riscv32 (thechar=='i') and riscv64
+(thechar=='j') from one shared source tree, inherited from inferno's
+original dual-width convention (the same shape 9front applies
+elsewhere, but 9front itself has no riscv port at all -- there was no
+upstream to diff against for this arch, unlike every other backend
+here). thechar is picked at runtime, either from argv[0]'s basename
+(ia/lex.c, il/obj.c already had this) or an explicit -j flag, and
+downstream code branches on it wherever the two widths genuinely
+differ: ELF header sizes, symbol-address encoding (setSB, below),
+pointer width (ic's ginit(), below). Before this session riscv64 had
+never actually been exercised end to end -- ja/jl existed as installed
+binaries but jc's own thechar='j' selection was entirely commented out
+(see "the stale-pointer-width bug in jc bring-up" below) -- so
+"riscv64 support" meant "the 32-bit code happens to also assemble"
+rather than any of the 64-bit-specific paths actually having run.
+
+Two candidate porting sources, and why only one was used
+---------------------------------------------------------------
+
+Diffing against other riscv lineages found in ~/xxx/ turned up two
+candidates, and they are not interchangeable:
+
+- kencc-riscv is a from-scratch, divergent RV32E-oriented rewrite:
+  its own register numbering, its own ELF writer, dropped float/CSR
+  support entirely. Not a porting source -- it's a different backend
+  targeting a different ISA subset, not a superset of this one. Its
+  only real contribution was surfacing the idea of restructuring
+  boolgen()/comrel() (see the NaN-comparison item below), which turned
+  out on closer inspection not to actually fix anything by itself.
+- miller-riscv (June 2025 checkout) is the valuable one: an actively
+  maintained continuation of the exact same dual 32-/64-bit ('i'/'j')
+  lineage this project already uses, making it a real porting source
+  rather than a different design to reconcile with. Most of what
+  follows below (SRAIW, the register-allocator-widening TODO, the
+  RVC-friendliness TODO) traces back to a diff against it via
+  scripts/diff.rc; see plan9front.txt and todo.org's "riscv toolchain"
+  section for the full diff-derived candidate list, landed and
+  pending.
+
+setSB/symbol-address bug: an existing 'i' fixup with no 'j' counterpart
+---------------------------------------------------------------------------
+
+Once the ELF HEADR fix (docs/notes_exec_elf.txt) got a .data-less
+exit(42) binary running under qemu-riscv64, a hello-world touching
+.data still printed nothing (`write(1, 0, 13)` per strace -- a
+near-zero buffer pointer). Root cause: `MOVW $sym(SB), R` -- emitted
+by the compiler's setSB static-base setup, and by any code loading a
+data symbol's address -- assembles to AMOVW. linkers/il/obj.c's
+ldobj() already had a thechar=='i' fixup collapsing AMOVW/AMOVWU to
+plain AMOV whenever neither operand is a memory reference (there's no
+meaningful 32-bit-vs-full-width distinction for a pure register/
+immediate move, only for actual loads/stores), but had no equivalent
+branch for thechar=='j'. So on riscv64 these instructions stayed
+AMOVW, hit optab.c's AMOVW/C_LECON case (asmout()'s case 9), which --
+unlike AMOV's own case 20 -- never adds INITDAT to the symbol's data-
+relative offset and never emits the auipc-relative encoding 'j'
+requires; it always emits a plain absolute lui, correct for 32-bit but
+not 64-bit addressing. For setSB specifically this made gp resolve to
+a bare offset-into-data (2048) instead of the real address
+(INITDAT+2048), so every SB-relative load built on top of it (e.g.
+`$msg(SB)`) collapsed to near zero. Root-caused by comparing thechar
+'i' and 'j' runs of identical source side by side with a temporary
+debug print in case 9, and confirmed against readelf's real data-
+segment address. Fix: add the missing thechar=='j' branch, mirroring
+the existing 'i' one, routing these loads through the already-correct
+case 20 path instead of the incomplete case 9 one.
+
+The stale-pointer-width bug in jc bring-up: two Type objects for TIND
+---------------------------------------------------------------------------
+
+Bringing up jc (the C compiler side) surfaced a bug with no equivalent
+on the assembler/linker side. ic's main() had its own argv[0]/-j
+thechar='j' selection entirely commented out, referencing a ccmain()
+split that no longer exists -- src/cmd/cc/lex.c's shared main() (used
+by 7c, vc and ic alike) now does what per-backend main()s used to.
+Restoring it (mirroring the argv[0]-basename check ja/jl already use)
+let ic's own ginit() run and set ewidth[TIND]=8 for riscv64, the same
+way 7c's ginit() unconditionally does for arm64.
+
+That alone wasn't enough: a plain two-argument call like
+`check("x", 77)` reliably corrupted the second argument. Root-caused
+with a temporary debug print in swt.c's align() (Aarg2 case): the
+*same* etype (TIND) reported width=8 in one call and width=4 in
+another, at the same point in the same compilation -- meaning two
+different Type objects existed for what should be one canonical
+pointer-width representation. Cause: lex.c's cinit() (called right
+before ginit()) builds the canonical `types[TIND]` via `typ()`, which
+bakes in `width = ewidth[TIND]` *at that moment* -- gc.h's compile-time
+SZ_IND (4, the rv32 default), since ic's own ginit() hadn't yet run to
+override ewidth[TIND] to 8. Every pointer type parsed from source
+afterwards calls typ() fresh, post-ginit(), and gets the right width
+automatically -- but this one pre-existing object (reused for string-
+literal arguments) stayed stale at width 4. That 4-vs-8 mismatch threw
+off align()'s Aarg2 stack layout ("o += t->width") for any argument
+following a string literal, shifting it 4 bytes relative to where the
+callee's own (correctly 8-byte) prologue expected to read it. Fixed by
+patching `types[TIND]->width` directly in ginit(), once ewidth[TIND]
+is actually set -- not by changing typ()/cinit() themselves, which
+other backends' 32-bit-only types still rely on behaving exactly as
+before. The general shape worth remembering for any arch with a
+runtime-selected width: a "canonical" type object built once at
+startup, before the width-selection logic runs, silently freezes
+whatever the compile-time default was.
+
+SRAIW silently executing as SRLIW: a one-bit encoding gap
+------------------------------------------------------------
+
+A diff-derived fix from miller-riscv, only actually testable once
+riscv64 worked end to end. linkers/il/optab.c's slliw/srliw/sraiw (the
+RV64-only word-shift-immediate opcodes used for shifts on plain 32-bit
+ints) had "type" field 2, routing them through asmout()'s case 2 (a
+plain 12-bit signed immediate, no shift-type bit). Their 64-bit-
+register siblings (slli/srli/srai) use case 1 instead, which
+additionally ORs in the bit distinguishing an arithmetic right shift
+from a logical one (`o->param<<5`, 0x20 for srai/sraiw). Since case 2
+never touches o->param, SRAIW's encoding came out byte-identical to
+SRLIW's: it silently executed as a *logical* shift, discarding the
+sign. SLLIW happened to keep working (its o->param is 0, and func3
+alone already distinguishes SLL from ADD), which is presumably why
+this went unnoticed even after every other riscv64 test started
+passing -- "x = -8; x >>= 2;" computed a large positive number instead
+of -2, confirmed live under qemu before the fix. Fix: give
+slliw/srliw/sraiw the same case-1 dispatch their 64-bit siblings
+already correctly use.
+
+fnuxi8[] float-constant stack overread: found by cross-arch consistency
+------------------------------------------------------------------------------
+
+Not diff-derived at all -- found by noticing il and vl (mips) were the
+only two backends still writing a 4-byte float constant via
+`cast[fnuxi8[i+4]]`, where every other backend (5l/5lk/6l/7l/8l/8lk)
+uses `cast[fnuxi8[i]]`. fnuxi8[] is an 8-entry byte-order table where
+indices 0-3 apply to a 4-byte value and 4-7 to the *upper half* of an
+8-byte one; indexing with `[i+4]` for a genuinely 4-byte `float`
+constant reads 4 bytes past the end of the local `int32 fl` holding
+it -- a stack buffer overread that corrupts every float (not double)
+global/static initializer's stored bits with whatever garbage happens
+to sit next on the stack. Confirmed live on both riscv widths (a
+`float pi = 3.14f;` global came back with the wrong bit pattern);
+mips's own vl build has the identical defect but happened not to
+manifest it in the test used (confirmed by reverting the fix and
+rebuilding -- same code path, coincidentally benign garbage) -- fixed
+there too on the strength of the riscv repro and the fix being
+verbatim what every other backend already does. The lesson: a bug that
+never manifests on the arch you're testing isn't necessarily absent
+from that arch's code -- cross-arch consistency ("does every backend
+that should share this logic actually look the same?") caught this
+one before any mips-specific test would have.
+
+Open / pending (see todo.org's "riscv toolchain" section for the source)
+-------------------------------------------------------------------------------
+
+- **boolgen()/comrel() NaN-comparison bug -- deeper than a one-line
+  fix.** Shared kencc-lineage code: boolgen() applies comrel[] (the
+  integer logical-complement table, OLT<->OGE, OEQ<->ONE, etc.)
+  unconditionally, before checking whether the comparison is floating-
+  point. Sound for integers (total order), unsound for IEEE-754 under
+  NaN, where e.g. "!(x < y)" is not equivalent to "x >= y". 7c/5c
+  already carry a compensating fix in gmove()/boolgen(); ic/vc don't.
+  Confirmed live on both riscv and mips: "x = 0.0/0.0; y = 1.0;"
+  wrongly evaluates x>y and x>=y as true on riscv, x<y and x<=y as
+  true on mips. The obvious fix (moving comrel[]'s application to only
+  the integer branches, mirroring kencc-riscv's restructuring) does
+  NOT work -- confirmed empirically, it just relocates which operators
+  come out wrong. Root cause is deeper: ic's own gopcode() synthesizes
+  OGE/OGT from FLE/FLT plus an inverted branch sense, because RISC-V's
+  FPU has no native FGT/FGE -- and that synthesis is independently
+  NaN-unsound, so boolgen()'s comrel[] is partly *compensating* for
+  gopcode() rather than purely redundant with it. A real fix needs
+  both pieces untangled together, not a single reorder.
+
+- **REGALLOC widening (register-allocator range).** il/i.out.h's
+  REGALLOC=15 leaves only 7 usable general registers (R9-R15) out of
+  riscv's 32. miller-riscv widens to REGALLOC=31 with a new
+  REGLOWALLOC=9, plus matching RtoB()/BtoR() bitmask changes in
+  reg.c. Real codegen-quality win, ABI-adjacent, needs more than a
+  unit-snippet test -- same risk shape as the analogous arm64
+  REGMIN/REGMAX item, but riscv is actually better-positioned to test
+  it, since it now has two widths (32/64) to cross-check against
+  instead of arm64's one.
+
+- **auipc fed an absolute address instead of a PC-relative delta,
+  riscv64-only, confirmed by internal consistency, not yet
+  reproduced live.** il/asm.c's case 18 (the long-jump fallback for a
+  call/jump target beyond direct `jal`'s ~1MB range) computes an
+  absolute address for thechar=='j' and feeds it straight to an
+  `auipc`-emitting helper, which is a *PC-relative* instruction
+  (result = pc + (imm<<12)). The neighboring case 20 (the general
+  large-constant-load path) already subtracts the current pc for the
+  same 'j' variant before doing the same thing. Needs a deliberately
+  huge test function to actually trigger (only fires beyond direct
+  jal's range) -- buildable now that jc/ja/jl all work, just not
+  attempted yet.
+
+- **RVC-friendly register allocation (low-register bias).**
+  regalloc()'s free-register search round-robins via a static
+  counter; miller-riscv just takes the lowest-numbered free register,
+  since RVC (RISC-V's compressed 16-bit instruction extension) can
+  only reference registers x8-x15, so biasing toward low numbers lets
+  the linker's compress.c pass shrink more instructions. Real
+  optimization, but only pays off if RVC compression is actually
+  exercised in this build -- check compress.c's current state before
+  porting.
+
+- Checked and explicitly NOT ported: an AMOVBU/AMOVHU store-direction
+  variant from miller-riscv (RISC-V stores have no signed/unsigned
+  distinction at all -- only loads do -- so this is a non-issue here,
+  the load-direction switch already does the right thing); an
+  AMUL-sibling peephole gap for AREM/AREMW/AREMU/AREMUW in peep.c
+  (missed optimization, not a bug -- copyu()'s default case is already
+  conservative); a disabled byte/half->word store-widening pass in
+  reg.c's paint3() (real but unverified perf tweak, dead code, same
+  shape as an analogous unported arm64 item).
+
+What has real test coverage today
+--------------------------------------
+
+tests/s/exit (a .data-less exit(42), the simplest possible bring-up
+smoke test) and tests/s/mini (hello-world, exercising .data + SB-
+relative loads) both run under qemu-riscv64 for riscv32 and riscv64.
+tests/c/mini2 and a handful of tests/c/regressions/riscv64_*.c pin the
+jc pointer-width bug and the SRAIW bug specifically, each confirmed to
+actually fail without its fix (not just written after the fact) by
+temporarily reverting and rebuilding. jc is riscv64-only among the
+compiler side of this bring-up -- ic's own thechar='j' path is what
+was fixed, there is no separate "jc-specific" source file.

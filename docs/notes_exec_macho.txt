@@ -5,6 +5,14 @@ Notes gathered while adding Mach-O output to 7l (-H6), tested on
 macOS 26 (Darwin 25) on Apple Silicon in July 2026.
 See linkers/lk/macho.c, linkers/7l/, and tests/s/mini/hello_macos_arm64.s.
 
+Scope: this file is about the Mach-O executable format specifically
+(load commands, code signing, PIE/ASLR, dyld) and the arm64/amd64
+codegen choices that format forces on the linker. Companions:
+docs/notes_exec_elf.txt (Linux) and docs/notes_exec_pe.txt (Windows)
+cover the other two executable formats this toolchain emits; general
+macOS build/toolchain notes not specific to Mach-O output would belong
+in a future docs/notes_os_macos.txt, not here.
+
 What the arm64 kernel demands of an executable
 ----------------------------------------------
 

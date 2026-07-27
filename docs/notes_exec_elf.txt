@@ -1,0 +1,275 @@
+Producing Linux ELF executables, across seven architectures
+=============================================================
+
+Notes gathered while bringing up (or fixing) native Linux ELF output
+in 5l (arm), 6l (amd64), 7l (arm64), 8l/8lk (386), il (riscv32/
+riscv64), and vl (mips) between December 2025 and July 2026. Unlike
+the macOS/Windows stories (docs/notes_exec_macho.txt, docs/notes_exec_pe.txt),
+which are each about one target bolted onto one or two linkers, ELF is
+this toolchain's most widely shared non-Plan-9 format -- every linker
+has an ELF case -- so most of what follows is about the same class of
+bug recurring independently in each one, and the shared code
+(linkers/lk/elf.c/elf.h) versus what each linker still does on its own.
+See tests/s/mini/hello_linux_*.s for the per-arch hello-world tests and
+scripts/qemu-runner for how they're actually executed.
+
+The recurring bug: file offset must track vaddr's page rounding
+--------------------------------------------------------------------
+
+ELF's PT_LOAD program header requires file-offset and virtual-address
+to agree modulo the segment's alignment (p_vaddr % p_align ==
+p_offset % p_align) -- the kernel maps pages, and a page has one
+offset into the file and one address in memory; if the two don't
+share the same remainder, mapping the segment necessarily maps the
+wrong bytes to the wrong addresses. Concretely here, that means: once
+.text is written, .data must start at file offset
+rnd(HEADR+textsize, INITRND), not at the immediately-following byte
+HEADR+textsize -- there's a real gap to pad in the output file itself.
+
+This exact bug, or its symbol-table-writing sibling, was independently
+found and fixed at least four times across the different linkers,
+because each one's asm.c/obj.c has its own copy of the "where does
+.data/the symbol table go" arithmetic rather than sharing it:
+
+- 3bbe26b66 (2026-07-03): 5l/8l -- ELF executables were rejected
+  outright by the Linux loader ("Error mapping file: Invalid
+  argument") because the data segment's file offset wasn't page-
+  aligned to its vaddr. Ported from the already-correct 5lk/8lk
+  variants.
+- 141e05f54 (2026-07-22): 6l -- the same mismatch, but subtler:
+  writing at the wrong offset didn't make the loader reject the file,
+  it made write() fault with EFAULT at runtime reading the msg string,
+  because the .data *bytes* physically weren't where the PT_LOAD
+  header said they'd be. This is the difference between an ELF
+  structural error (caught at load time) and a plain "wrong bytes in
+  the wrong place" error (only surfaces when something touches that
+  address) -- the former fails loud and immediately, the latter fails
+  quiet and only when exercised, which is why it took until 6l was
+  actually run under qemu (rather than just compiled) to notice.
+- d5cfb36f0 (2026-07-21): 8l/8lk -- the *symbol table's* write
+  position (only emitted under -S) had the same class of bug one
+  level further out: asmb()'s H_ELF case seeked to
+  HEADR+textsize+datsize (unrounded) to write it, but the data section
+  written just before it actually ended at
+  rnd(HEADR+textsize,INITRND)+datsize (rounded). The seek landed
+  short, and the symbol table silently overwrote the tail of .data.
+  This one was latent in *both* the principia and kencc lineages
+  simultaneously (see "Two lineages" below) since principia's own x86
+  builds link as -H2 Plan9, never ELF, so this path was never
+  exercised until tests/c/vlong and tests/c/float's symbol tables got
+  big enough to actually collide with real .data content.
+
+The lesson each of these shares: this project has no single "lay out
+an ELF file" function shared across linkers the way, say, span.c's
+branch-shortening logic is shared via a common shape (not common code)
+across arches -- each linker's asm.c independently re-derives "where
+does section N start" from HEADR/textsize/datsize/INITRND, so a
+rounding fix in one linker says nothing about whether its siblings
+have the same bug. When touching this arithmetic in any one linker,
+check whether the sibling linkers' asm.c have the identical pattern
+before assuming it's already fixed everywhere -- and note that even
+code that *is* shared, in linkers/lk/, still needs every consumer
+relinked and re-tested after a change there, not just the one linker
+you happened to be editing when you noticed the bug.
+
+INITRND: one constant, independently wrong in different linkers
+---------------------------------------------------------------------
+
+Related but distinct from the offset bug above: INITRND (the segment
+alignment ELF's PT_LOAD needs) doesn't need to be small, just
+consistent -- but a needlessly large value still costs real bytes,
+since the gap between text and data is physically written into the
+output file (asm.c literally pads with zeros up to the rounded
+offset). 1d3d045ef (2026-07-23) found 6l's ELF64 case using
+INITRND=0x200000 (2MB), copied verbatim from 9front's *plan9* -H2 case
+when Linux ELF support was first bolted onto 6l -- 9front's own 6l has
+no ELF/Linux case at all, so there was no upstream value to inherit
+for it, and whoever added it just reused the number sitting right
+above in the same switch statement. Every sibling linker's own ELF
+case had already picked a much smaller, sane value independently (8l,
+il, vl: 4096; 7l's own -H7: 4096) -- only 6l's copy-paste from a
+*different format's* constant went unnoticed, inflating every amd64
+Linux binary 6l produces by ~2MB regardless of actual content (e.g.
+tests/c/variants/*_amd64.exe: ~2MB -> ~4.6KB after the fix).
+
+HEADTYPE numbers are not consistent across linkers -- check per-linker
+---------------------------------------------------------------------------
+
+There is no single canonical HEADTYPE-to-format mapping shared across
+linkers; each one assigns its own numbers, and they don't agree:
+
+    7l:  6 = Mach-O,  7 = ELF64
+    6l:  6 = Mach-O,  7 = ELF64   (renumbered from 6 by 141e05f54,
+                                   see below, to match 7l)
+    8l:  ... renumbered 5 -> 7 for ELF, by 3bbe26b66, to line up with
+         the -H7 used uniformly across tests and by 5l/8lk
+    5l:  Linux ELF support (no Mach-O case; arm has none)
+
+Before 141e05f54, 6l used HEADTYPE 6 for its (then only) ELF64 Linux
+case -- a collision waiting to happen with 7l's convention where 6
+means Mach-O, once 6l later grew its own -H6 Mach-O case (the
+docs/notes_exec_macho.txt amd64 work). 141e05f54 renumbered 6l's ELF64 case
+from 6 to 7 pre-emptively, before that collision could actually
+happen, specifically to match 7l's numbering. The general takeaway:
+when adding a new HEADTYPE case to any one of these linkers, don't
+assume a given number means the same format in a sibling linker's own
+obj.c/asm.c/span.c switch -- check that linker's own HEADTYPE comments,
+they really do disagree by linker, not just by history.
+
+getgoos() auto-detection: same idea, but not on every linker
+------------------------------------------------------------------
+
+7l, 8l, il, and (after 141e05f54) 6l all support running `Xl foo.X`
+with no explicit -H flag and getting a runnable Linux ELF binary out,
+via a getgoos()-based check: HEADTYPE defaults to 2 (plan9), but
+switches to the ELF case when the host's own GOOS is "linux" (and, for
+6l, to Mach-O when it's "darwin" -- see docs/notes_exec_macho.txt). This
+guard only fires when HEADTYPE is still -1 (i.e. the user passed no
+-H), so an explicit `-H2` still forces Plan9 output on a Linux host.
+
+6l's version of this (141e05f54) had one extra wrinkle its siblings
+didn't: 6l inherited a vanilla-plan9 debug['9']/debug['B']/DEFAULT
+mechanism that unconditionally forced HEADTYPE back to plan9 in the
+common case, since debug['9'] defaults to 1 unless -U is explicitly
+passed -- this silently overrode the new getgoos() auto-detection
+every time, so the mechanism had to be deleted outright (neither 7l
+nor 8l carry it at all) rather than reconciled with the new check.
+
+Windows (-H10, see docs/notes_exec_pe.txt) is deliberately NOT part of
+this auto-detection anywhere: there's no "goos == windows" branch in
+any linker's HEADTYPE default logic, since PE binaries are normally
+cross-linked from a Linux or macOS host in this project, not built on
+a Windows host defaulting to its own format the way Linux/Darwin do
+for themselves.
+
+Per-arch calling-convention glue: what actually varies
+------------------------------------------------------------
+
+Producing a *linkable* ELF file is the easy 90%; the syscall stubs
+(xwrite/xexit and friends, per tests/c/mini's start_$objtype.s /
+xwrite_$objtype.s / xexit_$objtype.s convention) are where each arch's
+real Linux ABI shows up and has to be gotten right independently:
+
+  - 386: `int $0x80`, arguments on the stack (a pointer argument is
+    4 bytes, so a following count sits at 4(FP), not further out).
+  - amd64: `syscall` instruction, arguments in DI/SI/DX/CX/R8/R9
+    (System V AMD64 ABI -- notably different from Win64's CX/DX/R8/R9
+    + shadow space convention used under -H10, and from the BSD-class
+    macOS convention under -H6, see docs/notes_exec_macho.txt's "Raw
+    syscalls on arm64 macOS differ from Linux" section for the
+    contrast on the arm64 side).
+  - arm: EABI. 5l/5l_ needed an explicit "set EABI ELF flags" fix
+    (c1fe6d3ba, bbee52c40) before Linux would even exec()
+    hello_linux_arm.exe at all ("Otherwise bash/linux don't even want
+    to run" -- the commit's own words); e_flags identifying the EABI
+    version is checked by the kernel's ELF loader before it even looks
+    at the program headers, so getting it wrong fails harder and
+    earlier than a bad PT_LOAD entry would.
+  - arm64: LR-based return addressing changes the calling-convention
+    layout at FP+0 (no saved return address slot on the stack the way
+    32-bit arm reserves one) -- see docs/notes_exec_macho.txt's 7c section
+    for the vlong/argument-spill bugs this shape caused, which affect
+    the Linux arm64 target identically to macOS since the bugs were in
+    7c code generation, not in either OS's linker case.
+  - riscv32: ECALL, rv32 Linux syscall convention.
+  - riscv64 ('j'): reused the same ia/ic/il tree as riscv32 via
+    inferno's dual-width 'i'/'j' convention, but had never actually
+    been exercised end to end (no ja/jl binaries installed, no
+    mkfiles/riscv64/, no qemu-runner mapping) until be2a45114
+    (2026-07-23) wired it up -- which immediately surfaced a real bug,
+    see below.
+  - mips: standard Linux mips syscall convention; see
+    lib_toolchain/libmach's mmips glue (shared with the vi emulator)
+    for the pgsize/txtaddr details that matter for *reading* mips ELF
+    binaries, as opposed to producing them.
+
+riscv64's HEADR bug: hardcoded 32-bit sizes under a 64-bit thechar
+------------------------------------------------------------------------
+
+be2a45114's il bug is worth its own paragraph as a template for what
+to check on any arch with a 32/64-bit dual-width convention (this
+project's riscv 'i'/'j', mirroring inferno). linkers/il/obj.c's ELF
+header-size computation (case 7) was hardcoded to the 32-bit
+constants regardless of thechar:
+
+    HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+
+For thechar=='j' (riscv64), the actual ELF header + 3 program headers
+need 64+3*56 = 232 bytes, but this reserved only 52+3*32 = 160
+(rounded to 160 anyway). The linker then started writing .text at file
+offset 0xa0 -- *inside* the program-header table it had just written
+-- so the very first bytes qemu executed were raw program-header data,
+not code: an illegal-instruction crash on every single -j-linked
+binary, immediately at entry. Ehdr64sz/Phdr64sz already existed in
+linkers/lk/elf.h and were already used by elf64() itself; they had
+simply never been wired into HEADR's own separate calculation in
+il/obj.c. Fixed with an explicit thechar=='j' branch. The general
+pattern to watch for: a dual-width arch's "sizeof this ELF structure"
+logic can easily exist correctly in one place (elf64() itself) while a
+different, independent computation of the same quantity (HEADR here)
+still hardcodes the narrower width, because nothing type-checks that
+the two agree.
+
+riscv64 is still incomplete past this fix -- a hello-world-style test
+that touches .data (unlike the bare exit(42) used to verify the HEADR
+fix) still fails: the gp/setSB static-base computation resolves to a
+small absolute literal (2048) instead of a real data-segment address,
+so SB-relative loads collapse to near-zero pointers. Separate bug,
+not yet root-caused. Also, only ia/il (assembler/linker) are wired up
+for riscv64 -- ic (the C compiler)'s thechar='j' selection is entirely
+commented out (see the top of compilers/ic/txt.c) and ginit()
+hardcodes thechar='i' unconditionally, so there is no working jc yet;
+riscv64 currently only supports tests/s/* (hand assembly), not
+tests/c/*.
+
+Two lineages, one ELF bug: why a fix has to land in both
+--------------------------------------------------------------
+
+386 has two independent linker implementations in this tree: 8l
+(principia lineage) and 8lk (kencc lineage) -- see pad.org's
+regression/mismatch section for the wider context on why both exist.
+d5cfb36f0's symbol-table/.data collision bug (above) existed
+identically in both, and fixing only one would have made things
+*worse* in one specific way: tests/s/variants requires 8l and 8lk to
+produce byte-identical output, so a one-sided fix would turn a
+previously-passing (both equally broken) -S comparison into a failing
+one. The fix landed in both linkers/8l/asm.c and linkers/8lk/asm.c in
+the same commit, and the tests/s/variants/expected/ goldens for the
+affected *.sym.exe files were regenerated -- confirmed precisely
+scoped by checking that the plain (unstripped, no -S) goldens and
+every arm golden were untouched.
+
+A related, narrower fix: bb6e2a2f6 also made 8l pick ELF-by-default
+from getgoos() (see above) as a smaller follow-on to this same area,
+and 740793f04 added an explicit -S comparison to tests/s/variants in
+the first place -- before that, the ELF section-table-writing bug
+(a distinct, earlier bug: elf32sectab()'s data offset) was invisible
+because stripped links skip the section table outright, and even
+plain (non--S) links skip it too since 8l only emits a section table
+under -S, unlike 5l which sets debug['S'] unconditionally for ELF.
+Without that -S comparison in the test matrix, neither the sectab bug
+nor the later symtab/.data collision bug had any regression coverage
+at all.
+
+Testing infrastructure: qemu-runner, not binfmt_misc
+------------------------------------------------------
+
+Every arch's Linux ELF hello-world (tests/s/mini/hello_linux_*.s) is
+executed under the matching qemu-user binary directly
+(scripts/qemu-runner: qemu-i386, qemu-x86_64, qemu-arm, qemu-aarch64,
+qemu-mips, qemu-riscv32, qemu-riscv64), not via binfmt_misc
+registration (letting the kernel transparently exec foreign-arch
+ELF files as if they were native, by registering qemu as their
+interpreter). This is a deliberate choice, not an oversight:
+binfmt_misc is host/CI-global kernel state, invisible from inside a
+container and dependent on whatever setup-qemu-action or
+multiarch/qemu-user-static did to the *host* outside this repo's
+control -- and it has repeatedly picked the wrong emulator in practice
+(e.g. qemu-mipsn32 instead of plain qemu-mips). Invoking the qemu-xxx
+binary directly needs only qemu-user installed, nothing kernel-
+registered, and sidesteps all of that variability. Note that this
+setup verifies the toolchain's own output, not qemu's fidelity: some
+FPU corner cases seen through qemu-mips/qemu-arm turned out to be
+qemu's own emulation bugs, not toolchain bugs -- worth remembering
+before chasing a float-test failure through the compiler when it
+might be the emulator underneath it.

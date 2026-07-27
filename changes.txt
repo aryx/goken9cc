@@ -26,11 +26,11 @@
     PIE (Position Independent Executable, similar to PIC) executables, so 7l
     also generates
     pc-relative ADRP/ADD pairs for MOV $sym(SB) and the mkfile runs codesign;
-    see docs/notes_macos.txt and tests/s/mini/hello_macos_arm64.s
+    see docs/notes_exec_macho.txt and tests/s/mini/hello_macos_arm64.s
   * 7l -H6: dyld rebase info (LC_DYLD_INFO_ONLY) for pointers stored in
     initialized data, so C globals like 'static char *dig = "0123...";'
     survive the ASLR slide of PIE executables (see the enlarged ASLR
-    explanations in docs/notes_macos.txt)
+    explanations in docs/notes_exec_macho.txt)
   * 7c-compiled programs run natively on macOS arm64 too (7c itself needed
     no change): see helloc_macos_arm64.exe in tests/c/mini, with Darwin
     syscall stubs and a MOVW fix in xwrite_arm64.s (a 64-bit load of a
@@ -100,7 +100,7 @@
     image regardless.
   * tests/s/mini/hello_macos_libc_amd64.s calls libSystem's _write via
     the GOT slot and runs under darling.
-  * see docs/notes_macos.txt for the full story and darling recipe.
+  * see docs/notes_exec_macho.txt for the full story and darling recipe.
 - 6l/8l: support windows PE with -H10, thx to rafael2knokia (and Claude probably)
 - 8l/8lk: fix a real ELF-writer bug found via tests/c/vlong and
   tests/c/float: asmb()'s H_ELF case seeked to the symbol table using the

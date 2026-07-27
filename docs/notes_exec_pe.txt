@@ -1,0 +1,251 @@
+Producing Windows PE executables
+=================================
+
+Notes gathered while adding PE (Portable Executable) output to 6l
+(-H10, amd64) and 8l (-H10, 386) in July 2026, and while getting the
+result to actually run under wine and, later, natively on Windows.
+See linkers/lk/pe.c, linkers/lk/pe.h, and tests/s/mini/
+hello_windows_{386,amd64}.s.
+
+Scope: this file is about the PE/COFF executable format specifically
+(headers, sections, the import table) and the 386/amd64 ABI details
+that surfaced while producing it. Companions: docs/notes_exec_macho.txt
+(macOS) and docs/notes_exec_elf.txt (Linux) cover the other two
+executable formats; general Windows build/toolchain notes not specific
+to PE output would belong in a future docs/notes_os_windows.txt, not
+here.
+
+Where the PE writer lives
+--------------------------
+
+Unlike ELF (linkers/lk/elf.c) and Mach-O (linkers/lk/macho.c), PE had
+no shared linkers/lk/ writer until this work: it only existed in the
+old Go-era src/cmd/{6l,8l,ld}/pe.c, confirmed byte-identical across
+all three of those, i.e. already architecture-generic in practice,
+just never factored out. deb44650a ports that forward into
+linkers/lk/pe.{c,h}, following the same simplifications already
+applied when lk/macho.c was split out of src/cmd/ld/macho.c:
+
+- always stripped (no PE symbol-table / .symdat section -- that
+  support doesn't exist here at all yet, on either lineage);
+- no build timestamp in the header, for reproducible output (matching
+  this project's existing preference, see linkers/ar's -D flag; the
+  Go-era version wrote the real build time);
+- built on ?l's own primitives (lputl/wputl/cput/seek) instead of the
+  richer src/cmd/ld/ ones.
+
+8l already had its own pe.c/pe.h from the earlier 386-only work
+(41342c42d); 6l's amd64 support (d0d0e7ccb) came from upstream Go's
+own PE32+ path. deb44650a is the point where both converged onto one
+shared lk/pe.c, the same way the two macOS Mach-O linkers share
+lk/macho.c.
+
+PE32 vs PE32+: the two headers differ by more than a flag
+------------------------------------------------------------
+
+386 (-H10 under 8l) writes IMAGE_OPTIONAL_HEADER (PE32): ImageBase and
+the four stack/heap sizes are 4 bytes, and there's a BaseOfData field.
+amd64 (-H10 under 6l) writes IMAGE_OPTIONAL_HEADER64 (PE32+): those
+same fields widen to 8 bytes and BaseOfData is dropped entirely (not
+zeroed -- the field doesn't exist in the struct). pe.c keeps both
+struct definitions and a `pe64` flag (set from thechar=='6' in
+peinit()) that picks Magic 0x20b vs 0x10b, MajorSubsystem/OS version
+6.0 vs 4.0 (64-bit Windows predates 4.0), and which struct asmbpe()
+serializes. Getting this wrong doesn't crash outright -- it produces a
+file the loader silently refuses, since Magic is the first thing a PE
+loader checks to decide which optional-header shape to expect.
+
+PEBASE / PERESERVE and where -H10 differs from -H2/-H6/-H7
+---------------------------------------------------------------
+
+linkers/6l/obj.c's HEADTYPE switch (case 10) sets:
+
+    HEADR    = PERESERVE          // 0x1000, header space
+    INITTEXT = PEBASE + 0x1000    // PEBASE = 0x00400000
+
+Two things distinguish this case from every other -H value in the
+same switch:
+
+- it is never chosen by the getgoos()-based auto-detection that picks
+  ELF on Linux / Mach-O on Darwin for a bare `6l foo.6` -- there's no
+  "goos == windows" branch. -H10 must always be passed explicitly.
+  Windows is not auto-detected from the *build* host the way Linux/
+  Darwin are, since these binaries are typically cross-linked from a
+  Linux or macOS box in the first place.
+- case 10 calls peinit() eagerly, inline in the HEADTYPE switch,
+  unlike -H6/-H7 which only set HEADR/INITTEXT/INITRND and leave the
+  real per-format setup for asmbpe()/asmbelf() later. peinit() has to
+  run early because it's what sets the `pe64` flag that INITTEXT's own
+  siblings (oh vs oh64) depend on downstream.
+
+No ASLR / no relocation table: absolute addressing is correct here
+------------------------------------------------------------------
+
+The macOS -H6 story (docs/notes_exec_macho.txt) spends most of its length
+on PIE / RIP-relative addressing because modern arm64 macOS mandates
+ASLR. PE has no equivalent requirement in this toolchain: HEADTYPE==10
+was deliberately left out of the RIP-relative branch that span.c
+gained for -H6, because a plain PE image has a fixed ImageBase and
+this linker emits no .reloc section (the directory entry that would
+let the Windows loader rebase the image at a different address).
+Absolute `MOVQ $sym(SB), R` / disp32 addressing is therefore the
+*correct* encoding for -H10, not a missing feature -- verified by
+hand-decoding a linked test binary's __text and confirming every
+reference resolves against the fixed ImageBase. If PIE-style
+relocatable Windows binaries (ASLR, /DYNAMICBASE) are ever wanted,
+that's a .reloc section and a real second addressing mode to add, the
+same shape of work -H6 already went through for Mach-O.
+
+Imports: __imp_<name>, IAT thunks, and the two-pass span() trick
+---------------------------------------------------------------------
+
+Windows has no raw "syscall" instruction usable from user mode the way
+Linux/macOS do (see below) -- every program calls through the Import
+Address Table (IAT) into a DLL, kernel32.dll here. peimports() (called
+from dopepe(), itself called from obj.c's dope()) lays out the .idata
+section and defines a linker symbol `__imp_<Name>` at each import's IAT
+slot (e.g. `__imp_WriteFile`). Generated code loads through the thunk
+indirectly:
+
+    MOVQ __imp_WriteFile(SB), AX
+    CALL AX
+
+not a direct `CALL WriteFile(SB)` -- patch() rejects a direct CALL to a
+non-text target, and the whole point of an IAT slot is that its
+contents are filled in by the *Windows loader* at process start, not
+by this linker; only the slot's address is known at link time.
+
+These `__imp_<name>` symbols need a new symbol type, SFIXED ("value is
+already an absolute address"), added to l.h alongside the existing
+STEXT/SCONST/etc.: vaddr() otherwise treats every non-STEXT/SCONST
+symbol's value as an INITDAT-relative offset to add the data segment
+base to, which is wrong for an IAT slot -- its value is already the
+absolute PEBASE-relative address peimports() computed.
+
+The layout has a chicken-and-egg problem obj.c resolves with a second
+span() pass, which doesn't exist for ELF/Mach-O: unlike those two,
+PE's dopepe()/peimports() must run *after* textsize/datsize/bsssize
+are known (to lay out .idata following .text/.data/.bss) but *before*
+the `__imp_<name>` references get encoded into instructions. This ?l
+lineage has no separate relocation pass -- vaddr() resolves symbol
+addresses directly during instruction encoding -- so obj.c calls
+span() once to get sizes, then dopepe(), then span() again: sizes
+don't change (a disp32 operand is always 4 bytes regardless of what
+address it holds) so the second pass just re-encodes with the now-
+correct import addresses and converges immediately, no iteration
+needed.
+
+386's calling convention: __stdcall, and why PUSHL doesn't work
+--------------------------------------------------------------------
+
+kernel32's Win32 API uses __stdcall on 386: arguments pushed right-to-
+left, callee pops them before returning. This collides with a
+mechanical check in 8l -- it statically balances PUSH/POP within a
+function to catch stack-imbalance bugs, and can't see that the callee
+(not the caller) is the one popping __stdcall's arguments, so a
+sequence of PUSHL instructions trips "unbalanced PUSH/POP". The
+hello_windows_386.s test works around this the same way any caller
+into a __stdcall function has to under this linker: reserve the
+argument area with a single SUBL (stack pointer adjustment, which 8l's
+balance check doesn't track) and fill each slot with MOVL instead of
+PUSHL.
+
+amd64 uses the real Win64 ABI instead: first four arguments in
+CX/DX/R8/R9, a mandatory 32-byte "shadow space" reserved by the
+caller even when the callee doesn't spill into it, and a 16-byte
+aligned stack at the call instruction -- all different from both the
+System V amd64 ABI (Linux/macOS, args in DI/SI/DX/CX/R8/R9, no shadow
+space, red zone below RSP) and 386 stdcall above. hello_windows_amd64.s
+is the reference example.
+
+Zero-size sections and file-offset-vs-EOF: two loader-rejection traps
+--------------------------------------------------------------------------
+
+Two PE-specific pitfalls found while bringing up the amd64 path,
+neither with a real ELF/Mach-O analogue in this codebase:
+
+- dope() must skip zero-size .data/.bss sections entirely rather than
+  emitting an empty section header for them: an empty section doesn't
+  advance the virtual-address cursor the way a real one would, so the
+  *next* section's VirtualAddress would collide with the empty one's,
+  and the Windows loader rejects the image outright on that overlap
+  (no partial/best-effort loading the way some ELF loaders tolerate).
+
+- add_import_table() writes the .idata bytes at the section's own
+  PointerToRawData (computed during layout), not at "wherever the
+  file happens to be positioned" (i.e. not just appending at EOF): once
+  .data is non-empty, EOF is not page-aligned, and writing .idata there
+  instead of at its declared file offset produces an image that reads
+  as truncated / has garbage between sections.
+
+How this gets tested without a Windows machine
+--------------------------------------------------
+
+Three levels, in the order they were actually used as -H10 matured:
+
+1. Structural verification only (deb44650a, when linkers/lk/pe.c was
+   first split out): hand-parse the COFF + optional headers and
+   section table of a linked binary, confirm file(1) recognizes it
+   ("PE32+ executable ... for MS Windows"), and hand-decode __text to
+   confirm each `MOVQ __imp_<name>(SB)` / `LEAQ msg(SB)` resolves to
+   the exact IAT slot / .data address the section headers and import
+   table promise. tests/s/variants/pe_amd64.s is a golden-diff
+   regression pinning this layout, the same reasoning as
+   riprel_amd64.s for Mach-O: no second amd64 lineage exists to cross-
+   check against, and no Windows/PE execution was available yet
+   either, so it only protects against a regression in import-table
+   layout or address resolution, not full runtime correctness.
+
+2. wine, on an x86_64 host (a886ed83d): wine translates the Win32 API/
+   ABI, not the CPU ISA, so it can only run these x86/amd64 binaries
+   natively on an x86_64 host -- both the Dockerfile (wine install)
+   and the mkfile test target are guarded to skip cleanly on arm64
+   hosts. This is what caught the actual output-content bug
+   (29acbdbc5): the hello binaries printed "Hello, World!\n" (capital
+   W, trailing "!", 14 bytes) instead of the "Hello, world\n" (13
+   bytes) every other OS variant uses, invisible before because the
+   binaries were only build-tested (`all:`), never executed and
+   diffed, until wine execution was wired into `mk test`.
+
+3. Native Windows (c12abadc8, `mk test_windows`): mirrors `mk
+   test_macos` -- runs the already-built PE binaries directly with no
+   wine layer, for when the host running the test target is Windows
+   itself. Verified end-to-end building and running
+   hello_windows_386.exe / hello_windows_amd64.exe. A Windows amd64
+   tests/c/mini2 build (windows_amd64.s, kernel32 stubs mirroring
+   macos_amd64.s/linux_amd64.s) exists but is not yet wired into
+   WINDOWS_DIRS: compiling print_nofloat_no64.c with 6c hits a pre-
+   existing, Windows-independent cck bug ("cant rewrite typestr for op
+   NE") -- documented as a disabled target rather than worked around.
+
+Build-system gotcha: two build systems, two places to list pe.$O
+------------------------------------------------------------------
+
+6l's PE support was merged (#8) with pe.$O wired into src/cmd/6l/
+mkfile but not into src/cmd/6l/Makefile -- a second, parallel build
+description (Make.ccmd) exercised only by the GO/make.bash path (used
+by Dockerfile.alpine and Dockerfile.golang in CI), not by the mk-based
+build most work here goes through. That left 6l linking without
+pe.o and failing with undefined references to asmbpe/peinit/dope,
+caught only when CI ran the make.bash path (b2867dc8b). The general
+lesson, not specific to PE: any file added to one of this project's
+per-arch mkfile build descriptions should be checked against the
+sibling Makefile too if both exist for that directory, since only one
+of them runs in a given CI job and a missing entry in the other one
+won't show up locally.
+
+What's not implemented yet
+------------------------------
+
+- No PE symbol table (always stripped, matching Mach-O's -H6
+  treatment here, not upstream Go's fuller src/cmd/ld/pe.c).
+- No .reloc / ASLR support (see "No ASLR" above) -- ImageBase is
+  fixed, ranges from ImageBase..+SizeOfImage are absolute.
+- No arm/arm64 Windows target (only 386 and amd64 have PE cases in
+  8l/6l respectively; 5l/7l have no -H10 case).
+- 386 and amd64 both only import from kernel32.dll
+  (GetStdHandle/WriteFile/ExitProcess) -- enough for a hello-world,
+  not a general -I mechanism the way lk/macho.c's dynamic-import
+  support is (see docs/notes_exec_macho.txt's "got:remote:lib" section);
+  peimports() hardcodes the one DLL and the three imports needed by
+  the existing tests.
