@@ -1,0 +1,38 @@
+Building goken itself on Plan 9 (the host, not the target)
+=============================================================
+
+Scope: this file would be about compiling and running goken's own
+toolchain sources *on* real Plan 9 (or a Plan 9 descendant like
+9front) as the development host -- bootstrapping this project's own
+mk/rc/compilers using Plan 9's native environment instead of the
+Linux/macOS/Windows-hosted cross-build this project actually uses
+today. For Plan 9 as a *target* -- the native -H2 executable format
+this toolchain's linkers already produce by default (see e.g.
+docs/claude_notes/notes_arch_arm.txt's BIG/follow() story, which is
+about -H2 output correctness, not about running the build on Plan 9
+itself) -- there is no dedicated docs/claude_notes/notes_exec_plan9.txt
+yet either; -H2 has stayed simple enough not to need one so far.
+
+Current state: not attempted, tracked as a real TODO
+-----------------------------------------------------------
+
+README.md lists building on Plan 9 itself as a "TODO" alongside xv6,
+distinct from the four host OSes (Linux, macOS, Windows via WSL/
+Cygwin) that already work. Nothing has been landed here: no one has
+yet tried running ./configure, build-mk.sh, or a syncweb-generated
+tool chain natively under Plan 9 or 9front.
+
+What would actually belong here
+-------------------------------------
+
+If this is ever attempted, the interesting content would likely be
+almost the mirror image of everything this project already does to
+run *Plan 9-lineage code* on a modern POSIX host (lib9's whole reason
+for existing) -- e.g. whether this project's newer, non-Plan-9-
+originated code (the wasm ea/ec/el work, the macOS/Windows/Linux
+target-format writers, anything written assuming a POSIX host
+environment rather than Plan 9's own APIs) can run unmodified under
+real Plan 9, or needs its own compatibility shim in the other
+direction. Record findings here rather than retrofitting them into
+lib9's own documentation, which is about the existing (POSIX-hosting-
+Plan9-code) direction, not this one.

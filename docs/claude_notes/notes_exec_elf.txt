@@ -11,7 +11,12 @@ has an ELF case -- so most of what follows is about the same class of
 bug recurring independently in each one, and the shared code
 (linkers/lk/elf.c/elf.h) versus what each linker still does on its own.
 See tests/s/mini/hello_linux_*.s for the per-arch hello-world tests and
-scripts/qemu-runner for how they're actually executed.
+scripts/qemu-runner for how they're actually executed. This file is
+about the ELF format itself and the per-arch syscall conventions it
+carries; building goken *on* Linux as a host has no dedicated notes
+file (see docs/claude_notes/notes_os_linux.txt for why -- Linux is
+this project's reference host, so it's the baseline everything else is
+compared against, not a source of host-specific quirks of its own).
 
 The recurring bug: file offset must track vaddr's page rounding
 --------------------------------------------------------------------

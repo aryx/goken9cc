@@ -12,8 +12,9 @@ Scope: this file is about the PE/COFF executable format specifically
 that surfaced while producing it. Companions: docs/claude_notes/notes_exec_macho.txt
 (macOS) and docs/claude_notes/notes_exec_elf.txt (Linux) cover the other two
 executable formats; general Windows build/toolchain notes not specific
-to PE output would belong in a future docs/claude_notes/notes_os_windows.txt, not
-here.
+to PE output (building goken itself on Windows) belong in
+docs/claude_notes/notes_os_windows.txt instead -- thin today (WSL/
+Cygwin only, no native build attempted yet), but that's where it goes.
 
 Where the PE writer lives
 --------------------------

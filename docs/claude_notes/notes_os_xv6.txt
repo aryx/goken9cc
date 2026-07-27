@@ -1,0 +1,36 @@
+Building goken itself on xv6 (the host, not the target)
+==========================================================
+
+Scope: this file would be about running goken's own toolchain on xv6
+(the MIT teaching OS) as a development host. There is currently no
+corresponding "xv6 as a target" concern either -- unlike Plan 9, Linux,
+macOS, and Windows, xv6 isn't one of this toolchain's executable-format
+targets today (no notes_exec_xv6.txt, no HEADTYPE case for it in any
+linker), so this file has no sibling to point at yet in either
+direction.
+
+Current state: pure aspiration, nothing landed
+------------------------------------------------------
+
+README.md lists xv6 as a "TODO" host OS alongside Plan 9. todo.org goes
+further and sketches *why* it might be interesting: a hypothetical
+libsyscall (thin per-OS syscall wrappers) and libc/libos layer covering
+linux/macos/windows/wasm/plan9/xv6 uniformly, pitched as "a simpler alt
+to gcc/clang for cross compiling C code", with xv6-{x86,arm,riscv} named
+as the kind of small, auditable target that would make a good proof of
+concept for that idea. None of libsyscall, libos, or any xv6-specific
+code exists yet -- this is a design idea recorded in todo.org's "Later"
+section, not work in progress.
+
+What would actually belong here
+-------------------------------------
+
+If xv6 support is ever started -- either as a build host or, more
+plausibly given todo.org's framing, as a minimal target OS for
+libsyscall/libos to prove itself against -- record what's found here:
+xv6's syscall ABI per architecture, how it differs from Linux's for the
+same arch (xv6 traditionally targets x86 and has an educational riscv
+port; both would need their own syscall-stub conventions the way
+tests/c/mini's start_$objtype.s/xwrite_$objtype.s files already do per
+OS), and anything about xv6's minimal libc that this toolchain's own
+lib9/libc would need to accommodate.

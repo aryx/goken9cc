@@ -1,0 +1,38 @@
+Building goken itself on Windows (the host, not the target)
+==============================================================
+
+Scope: this file would be about compiling and running goken's own C
+sources *on* Windows as the development host, the same way
+docs/claude_notes/notes_os_macos.txt covers the macOS-as-host story.
+For Windows as a *target* (PE output via 6l/8l -H10, the import-table
+mechanism, wine/native testing), see
+docs/claude_notes/notes_exec_pe.txt instead -- that file already
+covers wine and native `mk test_windows` execution of the *produced*
+binaries, which is a different concern from building the toolchain
+itself on a Windows machine.
+
+Current state: WSL/Cygwin only, nothing native yet
+---------------------------------------------------------
+
+Per README.md and changes.txt, goken currently builds on Windows only
+via Windows Subsystem for Linux (WSL) or Cygwin -- i.e., by way of a
+POSIX-compatible layer, not against native Windows toolchains (MSVC,
+or clang/mingw invoked directly from a native shell). Both of those
+compatibility layers make the host look enough like Linux that no
+Windows-specific host-build content has accumulated yet: whatever
+POSIX-layer quirks might exist haven't surfaced as distinct bugs
+worth recording separately from the ordinary Linux-host path.
+
+What would actually belong here
+-------------------------------------
+
+If a genuinely native Windows build is attempted (no WSL/Cygwin,
+compiling this tree's C sources with MSVC or a native-Windows
+clang/mingw), record what breaks and why here: things like path
+separator handling, case-insensitive filesystem surprises, missing
+POSIX headers/functions this codebase assumes (fork/exec, signals,
+mmap -- all things Plan 9 C code leans on heavily), or MSVC-specific C
+dialect gaps (this codebase is largely C89/C99 with some GNU
+extensions). None of that exists yet -- this file is a placeholder for
+when it does, per this project's own "not with Windows native
+compilers yet" TODO.

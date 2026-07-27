@@ -1,0 +1,170 @@
+Building and running goken itself on macOS (the host, not the target)
+========================================================================
+
+Scope: this file is about compiling and running goken's own C sources
+(5c/6c/7c/8c/vc/ic, 5l/6l/7l/8l/vl/il, ed, rc, mk, ...) *on* macOS as
+the development host -- portability bugs and host-compiler quirks that
+have nothing to do with what those tools produce. For macOS as a
+*target* (Mach-O output, -H6, PIE, codesigning, dyld), see
+docs/claude_notes/notes_exec_macho.txt instead -- that file is about
+binaries this toolchain emits; this one is about binaries this
+toolchain's own build produces on your machine when your machine
+happens to be a Mac.
+
+The recurring theme: clang (on macOS) is stricter than gcc (on Linux)
+------------------------------------------------------------------------
+
+Almost every fix in this file is an instance of the same thing: this
+codebase's C sources are old K&R-adjacent Plan 9 C, written against
+whatever a given era's gcc tolerated, and clang -- the default and
+most commonly available compiler on macOS -- enforces more of the C
+standard than gcc's defaults do, most visibly around implicit
+declarations and pointer/qualifier mismatches. None of the individual
+fixes are large, but there have been enough of them, spread over
+almost a year of otherwise-unrelated work, that it's worth naming the
+pattern once: if a fresh macOS clang build fails somewhere gcc-on-
+Linux was silent, suspect a missing prototype or a signature mismatch
+before suspecting real logic.
+
+- Missing `extern` declarations in include/libc.h: cistrcmp() was
+  commented out entirely, dirread(), mallocz(), and lnrand() had no
+  declaration at all. gcc-on-Linux tolerates calling a function with
+  no visible prototype (an implicit `int`-returning declaration,
+  historically a warning); clang -- especially clang on macOS arm64 --
+  does not, by default. Fixed by adding the missing `extern` lines.
+- rc/fmt.c called needsrcquote() before its definition, with no
+  forward declaration -- same implicit-declaration gap, fixed by
+  adding one.
+- linkers/5l__/l.h: mysbrk()'s declared parameter type (usize) didn't
+  match callers' actual argument type (ulong), and ocmp() was declared
+  taking `void*, void*` while the qsort-comparator convention (and
+  qsort() itself, on a strict host) expects `const void*, const
+  void*`. Both are the same class of "clang enforces the prototype it
+  sees" issue, not a logic bug.
+- utilities/text/misc/ed.c (and utilities/misc/ed.c, an older copy):
+  blkio() takes a function pointer typed for a specific read/write
+  signature; passing the real read(2)/write(2) directly needed an
+  explicit cast under clang's stricter function-pointer-type checking.
+  Separately, `while(*p2++ = *p1++)` (an assignment used as a
+  condition, extremely common and idiomatic in this vintage of C) got
+  a clang `-Wparentheses` warning treated seriously enough to fix by
+  adding the extra parens `while((*p2++ = *p1++))` -- a style-only
+  change, not a behavior change, but one that had accumulated across
+  several call sites in the same file.
+
+linkers/*/asm.c: `long` in wput/lput's signature, not just amd64's story
+------------------------------------------------------------------------------
+
+A handful of low-level byte-emission helpers (wput/wputl/lput/lputl,
+in e.g. linkers/5l/asm.c) took a plain `long` parameter. This surfaced
+as a clang-macos compilation problem specifically (not a silent
+runtime bug the way amd64's own long-vs-int32 story in
+docs/claude_notes/notes_arch_amd64.txt was) -- fixed by retyping the
+parameter (and its declaration in l.h) to int32 throughout, matching
+what these functions actually operate on (fixed-width object-file
+bytes, never a genuinely pointer-width value). Worth distinguishing
+from the amd64 bug class even though the surface symptom rhymes: that
+one was several *silent* 32-bit truncations of "does this fit"
+checks; this one is a *build-time* signature mismatch that just
+happened to also be a `long`-on-a-64-bit-host situation.
+
+`-fsigned-char`: a host-*architecture* quirk, not really a macOS one
+------------------------------------------------------------------------
+
+compilers/8c/mul.c initializes a `char` array with `{-1, 1, 100}` (a
+multiplier-search table) relying on `-1` meaning the byte value -1, as
+it does under the signed-by-default `char` most x86/Linux toolchains
+use. arm64's ABI (per the AAPCS64 spec, followed by both Apple's clang
+and Linux's gcc/clang on arm64) defaults `char` to *unsigned* --
+`-1` becomes 255, quietly breaking 8c's search table and making it
+fail to compile some inputs correctly (see tests/c/misc/bad_mul.c).
+Fixed in mkfiles/arm64/mkfile by adding `-fsigned-char` to that arch's
+host CC line. This is filed under macOS notes because it was found
+building on Apple Silicon, but the actual trigger is the *host being
+arm64*, not the host being macOS -- the identical bug would hit a
+Linux arm64 host building this same toolchain, since the ABI default
+is a property of the architecture's calling convention, not the OS.
+If you're chasing a similarly "off by 256" kind of bug on any arm64
+host (Linux or macOS), check `char` signedness assumptions first.
+
+The gethunk()/sbrk() OOM bug, and why the obvious fix recursed
+--------------------------------------------------------------------
+
+8c and 8l (and, by the same shared pattern, every other compiler/
+linker in this tree) allocate their working memory from a bump "hunk"
+arena, refilled on demand by gethunk(). The original refill used
+sbrk(). macOS's sbrk() is deprecated and hard-capped at roughly 4MB of
+total growth, after which it returns -1 forever -- so any translation
+unit or link needing more arena than that (first hit building
+principia's lib_graphics/libimg/torgbv.c with 8c, and linking its
+8.jpg with 8l) died with an internal "out of memory", not a graceful
+error.
+
+The non-obvious part: the fix isn't just "call malloc() instead of
+sbrk() in gethunk()". Both compat.c files in this codebase redefine
+`malloc()` itself to *be* the arena allocator (the compiler's version
+routes it through alloc(); the linker's version carves memory directly
+out of hunk/nhunk). So the naive fix creates gethunk() -> malloc() ->
+gethunk() -> malloc() -> ... , an infinite recursion that crashes on
+the very first source file compiled. The real fix: disable the fake-
+malloc wrapper in compat.c (kept as `#if 0`, not deleted, so the
+syncweb chunk markers around it stay intact for the literate docs),
+so real libc malloc()/free() are used everywhere in these two tools,
+and have gethunk() itself refill the arena with real malloc() +
+memset(). The memset() matters: the arena's callers rely on freshly-
+allocated hunk memory being zeroed (sbrk() handed out fresh zero
+pages; malloc() makes no such promise), so skipping it would trade an
+OOM crash for silent uninitialized-memory bugs instead. malloc() has
+no ~4MB cap on macOS, Linux, or Plan 9, so the previously-OOMing
+compiles and links now succeed, verified byte-identical to the old
+sbrk-based output on every input the old toolchain could actually
+handle. tests/scripts/bigmem-oom.sh is the regression guard: it
+generates inputs well past the old ceiling and asserts 8c/8a/8l handle
+them, and it also guards specifically against the recursion trap --
+reintroducing the fake-malloc wrapper crashes on any input at all, not
+just large ones. Only 8c/8l were fixed this way so far; every other
+per-arch compiler/linker has its own separate copy of this same
+gethunk()/compat.c pattern and would need the identical treatment
+if/when it hits the same macOS sbrk ceiling.
+
+ed.c: an LP64 pointer-delta truncation that only macOS's malloc exposed
+-------------------------------------------------------------------------------
+
+In ed's append(), growing the zero[] line-pointer array via realloc()
+relocates every existing pointer into the new block by a delta:
+`tl = a1 - zero` (a pointer subtraction, naturally a 64-bit ptrdiff on
+these hosts, counted in array-element units). The code stored that
+delta in a plain `int tl` -- silently truncated on any LP64 host where
+the delta exceeds INT_MAX. It "worked" on Linux because glibc's
+realloc() tends to grow a block in place or nearby, keeping the
+pointer delta small; macOS's malloc() implementation is more willing
+to relocate a growing block to a distant memory zone, which is exactly
+what makes the same truncating code actually overflow there. The
+corrupted `tl` then propagates into zero/addr1/addr2/dol/dot, and the
+next `*rdot = tl` store dereferences a garbage pointer -- a segfault
+with no obvious connection to "ed grew an array" from the crash site
+alone. Root-caused via a real repro: `src/cmd/6l/mkenam` driving `ed`
+over the generated 6.out.h (unusually large at ~867 lines, crossing
+two of the array's growth steps -- 128->640, then 640->1152). The
+first realloc tends to grow in place (delta 0, no symptom); the second
+one moves the block and exposes the truncation; bisecting the input
+file length confirmed the crash appears right at that second growth
+step. Fixed with a dedicated `intptr delta` instead of reusing `int`.
+The general lesson for anyone hitting an unexplained macOS-only
+segfault in old C code doing manual pointer-array bookkeeping: a bug
+that depends on which allocator happens to move a block versus grow it
+in place will reproduce inconsistently across platforms for reasons
+that have nothing to do with the code itself being different there.
+
+What's not written up here yet
+------------------------------------
+
+Everything above was found incidentally while working on other things
+(mostly the -H6 Mach-O target work, which is what motivated actually
+building and running this toolchain on real macOS hardware in the
+first place). There is no dedicated "bring up the build on macOS"
+effort this file summarizes the way notes_arch_riscv.txt summarizes a
+riscv64 bring-up -- if one happens later (a clean-room build on a
+fresh macOS install, from ./configure onward), record what it finds
+here rather than starting a new file, and check README.md's own list
+of supported host OSes for what's currently claimed to work.

@@ -1,0 +1,33 @@
+Building and running goken itself on Linux (the host, not the target)
+========================================================================
+
+Scope: this file would be about compiling and running goken's own C
+sources *on* Linux as the development host -- portability bugs and
+host-compiler quirks specific to that host, the same way
+docs/claude_notes/notes_os_macos.txt covers the macOS-as-host story.
+For Linux as a *target* (ELF output across every arch this toolchain
+supports), see docs/claude_notes/notes_exec_elf.txt instead.
+
+Nothing here yet, and that's expected, not an oversight
+-------------------------------------------------------------
+
+Linux (specifically, the gcc toolchain on a mainstream distro) is this
+project's primary and reference development host -- the environment
+everything else gets diffed against, including the very
+docs/claude_notes/notes_os_macos.txt clang-portability fixes, which
+are framed as "clang is stricter than gcc-on-Linux" rather than the
+reverse. Because of that, there is no equivalent "bugs found building
+on Linux" list the way there is for macOS: a build problem that shows
+up on Linux first is just a bug, not a host-specific quirk, and gets
+fixed without needing a dedicated note like this one.
+
+What would actually belong here
+-------------------------------------
+
+If Linux-specific host build/runtime quirks are ever found -- a
+particular distro's libc behaving differently (musl vs glibc, for
+instance, which this project has not yet tried building against), a
+kernel version dependency, or a gcc-version-specific miscompilation of
+this codebase's own sources -- record them here rather than folding
+them into a per-arch or per-format note, the same separation of
+concerns notes_os_macos.txt uses.
