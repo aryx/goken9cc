@@ -1,0 +1,178 @@
+The arm64 toolchain (7a/7c/7l): what the 9front unification landed
+=====================================================================
+
+Notes on 7a/7c/7l's codegen/ABI internals -- as opposed to the
+Mach-O-specific work covered in docs/notes_exec_macho.txt (PIE,
+dyld, code signing, the arm64-specific 7c frame-size and vlong-spill
+bugs found while bringing up -H6, which live there because they were
+found via macOS execution, not because they're macOS-specific bugs).
+This file is about the fixes ported from 9front (Charles Forsyth's
+arm64 port) via scripts/diff.rc during the July 2026 "big unification"
+pass -- see plan9front.txt's arm64 section for the primary source and
+todo.org's "arm64 toolchain" section for what's still open. See
+compilers/7c/{cgen,txt,peep,reg}.c, assemblers/7a/, linkers/7l/.
+
+Why 9front, and not some other lineage
+------------------------------------------
+
+Every other backend in this project has at least one same-era sibling
+lineage to diff against (9cc, inferno, kencc, miller-riscv, ...).
+arm64 doesn't: it postdates all of those, so 9front's arm64 port
+(which is considerably more evolved than goken's own already-extensive
+arm64 work) was the only real upstream to compare against. The diff
+was large enough that several fixes below are "verbatim, well-reasoned
+upstream fix for an objectively-wrong computation" but with **no
+demonstrated behavioral difference** in this codebase after landing
+them -- worth calling out explicitly, since it means "ported and
+verified against the test suite" here sometimes means "confirmed to
+not regress anything" rather than "confirmed to fix an observed bug",
+unlike the atomics fix below, which is qemu-verified end to end.
+
+gmove()'s long-to-pointer conversion, and usableoffset()'s inverted `||`
+------------------------------------------------------------------------------
+
+Two related bugs, both ported from 9front's b117d7014 in one commit:
+
+- gmove() moved a 32-bit int-family value into a vlong/pointer-typed
+  register with a plain 64-bit AMOV, which just copies the raw
+  register bits instead of sign/zero-extending them. Not every arm64
+  instruction leaves a properly extended 64-bit result (e.g. NEGW
+  zero-extends), so a negative int used as a pointer offset could
+  carry garbage in the high 32 bits. Fixed by introducing a real
+  ASXTW (sign-extend word) opcode, which also meant teaching the
+  peephole optimizer and register allocator (peep.c/reg.c) about it.
+
+- cgen()/reglcgen() folded a constant array/pointer offset directly
+  into a load/store's immediate field via ad hoc inline range checks
+  (`v >= -4096 && v < 4096`) instead of calling the already-declared-
+  but-never-called usableoffset(), which itself had an outright logic
+  bug: `return o >= -256 || o < 4095*s;` (should be `&&`) -- true for
+  essentially any offset -- and never checked the offset was a
+  multiple of the access width, which arm64's scaled immediate
+  encoding requires.
+
+Extensive probing (misaligned/negative/large constant offsets, through
+globals, struct fields, function parameters) never found a
+reproducible pre/post difference here -- 7l's own aclass()/asmout()
+addressing-mode selection appears to self-correct regardless of what
+usableoffset() decides, so the practical effect may be codegen quality
+rather than correctness (matching 9front's own commit message: "not
+so optimal pointer arithmetic instructions"). Applied anyway on the
+strength of the original `||` being unambiguously wrong. A *separate*,
+still-unfixed bug was found along the way and left alone: a global
+array accessed at a compile-time-constant misaligned offset (e.g.
+`*(long long*)(buf + 4099) = v;`) fails to link outright with
+"internal: miscalculated offset" -- that path goes through naddr()'s
+direct D_EXTERN+offset construction, not the usableoffset()-guarded
+paths this commit touches.
+
+gmove()'s same-address fast path: a boolean typo that always evaluated true
+---------------------------------------------------------------------------------
+
+`if(a == AMOV || (AMOVW || a == AMOVWU) && ewidth[ft] == ewidth[tt] || ...)`
+-- `AMOVW` alone is a nonzero enum constant, so `(AMOVW || a ==
+AMOVWU)` is always true regardless of `a`, collapsing the guard for
+*any* gmove opcode (including type-converting ones like int<->float/
+vlong conversions right above it) down to just `ewidth[ft] ==
+ewidth[tt]`. Any same-width conversion could spuriously take the
+"already in place, skip it" fast path via samaddr() and silently drop
+the actual conversion instruction. 9front's arm64 port has read
+`(a == AMOVW || a == AMOVWU)` since its very first import -- this was
+never broken there, so there's no dedicated fix commit to cite, just
+the corrected boolean. No case constructing this failure was found
+within budget, but the logic as written is unambiguously wrong.
+
+Struct-copy trailing bytes, and two missed-optimization carve-outs
+------------------------------------------------------------------------
+
+- sugen()'s struct/union-copy fallback ("copy:", reached when neither
+  side of a struct assignment is directly addressable) truncated the
+  byte width via `w /= SZ_LONG;` with no handling for the remainder --
+  any assignment whose size isn't a multiple of 4 bytes would silently
+  drop its trailing bytes. Fixed with a byte-by-byte tail-copy loop for
+  `w % SZ_LONG`, ported verbatim (same 9front commit as above).
+  Despite probing across struct sizes (10, 30 bytes) and addressing
+  shapes, buggy and fixed builds produced byte-identical assembly --
+  the surrounding layout code apparently already over-covers its copy
+  width independent of `w`, masking the bug in this codebase's current
+  form.
+
+- regopt()'s fixed `Rgn region[NRGN=1000]` array gave up (warn + stop
+  optimizing, not a crash) past that many candidate regions -- same
+  fix shape as mips's vc (below): grow it dynamically starting at 300,
+  doubling via allocn().
+
+- mkvar() excluded every "."-prefixed pseudo-symbol from register-
+  allocator tracking, including ".ret" -- carved out specifically so
+  it stays eligible for optimization, mirroring vc's identical fix.
+  Missed optimization, not a correctness bug.
+
+Atomics: LDAR/STLR/LDXR/STXR/LDAXR/STLXR, broken in four independent ways
+---------------------------------------------------------------------------------
+
+The one fix in this file with a real, qemu-verified regression test
+(the others above either have none or found no observable difference).
+The load-acquire/exclusive and store-release/exclusive primitives spinlocks
+and CAS loops need were broken in four unrelated ways simultaneously:
+
+1. STLR/STLRB/STLRH/STLRW were grammared as the 3-operand exclusive-
+   store form (same grammar as STXR/STLXR, which return a status
+   register), instead of the correct 2-operand plain store-release
+   form -- `STLR R2, (R1)` failed to *parse*.
+2. ALDAR/ALDAXR/ASTLR/ASTLXR had no linkers/7l/optab.c entries at all
+   -- even the mnemonics that did parse (ALDAR/ALDAXR) failed to link
+   with no matching optab entry.
+3. ALDAXRW was encoded with the wrong instruction-size bit in
+   opload() (identical to ALDARW's bit pattern) -- had it linked, it
+   would have silently executed as a plain load-acquire, dropping the
+   "exclusive" semantics a CAS loop depends on for correctness.
+   ASTLXP/ASTLXPW had their 32/64-bit size bits swapped in opstore().
+4. asmout.c's stxr case encoded the status register from p->from3,
+   which doesn't apply to STLR (2-operand, no status register) vs
+   STXR/STLXR (3-operand, includes one) -- needed an arity-aware
+   rewrite.
+
+Also deliberately dropped, matching 9front rather than left as
+silently-broken placeholders: STLXP/STXP/STXPW/LDXP/LDXPW/LDAXP/
+LDAXPW, the register-*pair* atomics, since those need a genuinely
+different 4-operand operand model this port doesn't have.
+
+Ported from two combined 9front commits (223e8ad00, the one that
+actually made STLR usable; 61f6376b1, which fixed LDAXR/STLXR
+earlier). tests/s/features/arm64_atomic_ldxr_stxr.s: a real LDXR/STXR
+compare-and-retry increment loop (the lock-code idiom), wrapped in an
+LDAR/STLR pair, linked and run under qemu-arm64, checked against the
+expected post-increment exit code -- confirmed the pre-fix build fails
+outright at *parse* time on `STLR R2, (R1)`, a hard, unambiguous
+regression check. Also documented in the test itself: the operand
+carrying the store-conditional status result is the *third* operand of
+STXR, not the first, despite naming conventions elsewhere in this
+assembly suggesting otherwise.
+
+7a's own long-filename stack overflow
+------------------------------------------
+
+assemble() had the exact same fixed `char ofile[100]`/raw strcpy()
+stack buffer overflow already fixed in va (mips) -- found organically
+when a feature-test source file happened to live at a long scratch
+path and 7a crashed the same way ("*** stack smashing detected ***").
+Same fix, same 9front origin: strdup()/smprint() instead of fixed
+buffers. See tests/s/regressions/arm64_long_filename.s.tmpl.
+
+What's landed vs. what todo.org still lists as open
+---------------------------------------------------------
+
+Everything above is done and tested against the existing suite. Still
+open per todo.org's "arm64 toolchain" section, kept there rather than
+re-derived here since these are genuinely unlanded: a regalloc type-
+mismatch in compound multiply/divide/mod assign (no demonstrated
+impact, same "verbatim fix, no observed difference" epistemic status
+as several items above); an unexamined boolgen() FP-vs-immediate-zero
+compare difference; widening the register allocator's usable range
+(REGMIN=9/REGMAX=15, 7 usable registers, to 9front's REGMIN=9/
+REGMAX=23) -- a real codegen-quality win but ABI-adjacent, needs more
+than unit-snippet testing; and chipfloat()/asmout.c case 54's
+immediate-float encoding, which is dead code twice over (`&& 0` and
+`|| 1` guards) but unreachable in practice since 7c never generates
+code that would exercise it, so "fixing" it without also changing 7c's
+constant-loading strategy would be an unverifiable no-op.

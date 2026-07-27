@@ -204,7 +204,9 @@ The kernel kills at exec() silently, so work hypothesis-by-hypothesis:
   compilers/7c and linkers/7l here; 'git log' + diff over there is a
   goldmine when suspecting a codegen bug: both 7c fixes found on this
   branch (gtext frame size, vlong first-arg spill) have counterparts
-  visible by diffing goken against 9front.
+  visible by diffing goken against 9front. See docs/notes_arch_arm64.txt
+  for the other 7a/7c/7l fixes that same 9front diff turned up, found
+  independently of this Mach-O bring-up.
 
 Producing macOS amd64 executables (6l -H6)
 ------------------------------------------

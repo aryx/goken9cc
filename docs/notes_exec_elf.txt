@@ -151,37 +151,44 @@ xwrite_$objtype.s / xexit_$objtype.s convention) are where each arch's
 real Linux ABI shows up and has to be gotten right independently:
 
   - 386: `int $0x80`, arguments on the stack (a pointer argument is
-    4 bytes, so a following count sits at 4(FP), not further out).
+    4 bytes, so a following count sits at 4(FP), not further out); see
+    docs/notes_arch_x86.txt for 8a/8c/8l's own codegen/ABI history.
   - amd64: `syscall` instruction, arguments in DI/SI/DX/CX/R8/R9
     (System V AMD64 ABI -- notably different from Win64's CX/DX/R8/R9
     + shadow space convention used under -H10, and from the BSD-class
     macOS convention under -H6, see docs/notes_exec_macho.txt's "Raw
     syscalls on arm64 macOS differ from Linux" section for the
-    contrast on the arm64 side).
+    contrast on the arm64 side; see docs/notes_arch_amd64.txt for
+    6a/6c/6l's own codegen bugs, independent of any output format).
   - arm: EABI. 5l/5l_ needed an explicit "set EABI ELF flags" fix
     (c1fe6d3ba, bbee52c40) before Linux would even exec()
     hello_linux_arm.exe at all ("Otherwise bash/linux don't even want
     to run" -- the commit's own words); e_flags identifying the EABI
     version is checked by the kernel's ELF loader before it even looks
     at the program headers, so getting it wrong fails harder and
-    earlier than a bad PT_LOAD entry would.
+    earlier than a bad PT_LOAD entry would. See docs/notes_arch_arm.txt
+    for 5a/5c/5l's own codegen/ABI bugs, unrelated to this ELF flag.
   - arm64: LR-based return addressing changes the calling-convention
     layout at FP+0 (no saved return address slot on the stack the way
     32-bit arm reserves one) -- see docs/notes_exec_macho.txt's 7c section
     for the vlong/argument-spill bugs this shape caused, which affect
     the Linux arm64 target identically to macOS since the bugs were in
-    7c code generation, not in either OS's linker case.
+    7c code generation, not in either OS's linker case; see
+    docs/notes_arch_arm64.txt for the rest of the 9front-derived 7a/7c/7l
+    fixes.
   - riscv32: ECALL, rv32 Linux syscall convention.
   - riscv64 ('j'): reused the same ia/ic/il tree as riscv32 via
     inferno's dual-width 'i'/'j' convention, but had never actually
     been exercised end to end (no ja/jl binaries installed, no
     mkfiles/riscv64/, no qemu-runner mapping) until be2a45114
     (2026-07-23) wired it up -- which immediately surfaced a real bug,
-    see below.
+    see below (and docs/notes_arch_riscv.txt for the rest of what that
+    bring-up found).
   - mips: standard Linux mips syscall convention; see
     lib_toolchain/libmach's mmips glue (shared with the vi emulator)
     for the pgsize/txtaddr details that matter for *reading* mips ELF
-    binaries, as opposed to producing them.
+    binaries, as opposed to producing them; see docs/notes_arch_mips.txt
+    for va/vc/vl's own codegen/ABI fixes.
 
 riscv64's HEADR bug: hardcoded 32-bit sizes under a 64-bit thechar
 ------------------------------------------------------------------------
@@ -226,8 +233,9 @@ Two lineages, one ELF bug: why a fix has to land in both
 --------------------------------------------------------------
 
 386 has two independent linker implementations in this tree: 8l
-(principia lineage) and 8lk (kencc lineage) -- see pad.org's
-regression/mismatch section for the wider context on why both exist.
+(principia lineage) and 8lk (kencc lineage) -- see
+docs/notes_arch_x86.txt for the wider reconciliation story of why both
+exist and what else had to be fixed to make them agree.
 d5cfb36f0's symbol-table/.data collision bug (above) existed
 identically in both, and fixing only one would have made things
 *worse* in one specific way: tests/s/variants requires 8l and 8lk to

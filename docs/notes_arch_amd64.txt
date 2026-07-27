@@ -1,0 +1,140 @@
+The amd64 toolchain (6a/6c/6l): a fresh import, and `long` on a 64-bit host
+=============================================================================
+
+Notes on 6a/6c/6l's codegen/ABI internals -- as opposed to the
+executable-format-specific work covered in docs/notes_exec_macho.txt
+(-H6, PIE, RIP-relative addressing, the 6c -z flag) and
+docs/notes_exec_pe.txt (-H10) and docs/notes_exec_elf.txt (-H7),
+which is where the Mach-O/PE/ELF-driven parts of the recent 6l work
+belong. This file covers the codegen bugs that surfaced independently
+of any particular output format. See plan9front.txt's amd64 section
+and todo.org's "amd64 toolchain" section for the source material, and
+compilers/6c/, assemblers/6a/, linkers/6l/.
+
+Starting point: freshly re-imported, not incrementally patched
+---------------------------------------------------------------------
+
+Unlike 5a/5c/5l and 8a/8c/8l (docs/notes_arch_arm.txt,
+docs/notes_arch_x86.txt), which trace back through years of this
+project's own kencc/principia history, 6a/6c/6l were re-imported fresh
+from plan9foundation/plan9.git in 2026 as a new amd64 starting point,
+demoting the old go-era lineage to 6ag/6cg/6lg as an intentionally
+separate tool. That makes diffing against goken's own history (goold,
+goken-go-variant) mostly noise for this arch specifically -- those
+just re-surface the already-resolved go-vs-plan9 divergence, not new
+signal. Diffing against 9front (the richest source here, same as
+mips/arm64/riscv) instead found real, still-live bugs; diffing against
+inferno/plan9 mostly just confirmed current 6a/6c/6l already matches or
+improves on that shared ancestry.
+
+The long-vs-int32-on-a-64-bit-host bug class: five independent hits
+------------------------------------------------------------------------
+
+This is the amd64-specific story worth understanding as a pattern, not
+just five isolated fixes: `long` is 32 bits on the original Plan 9
+hosts this code was written for, but 64 bits on the Linux/macOS hosts
+this toolchain actually runs on today. Any "does this value fit in a
+32-bit field" check written as `long l = v; if((vlong)l != v)` is
+silently *always false* on a 64-bit host, because the narrowing
+never happens -- the bug doesn't crash, it just quietly disables
+whatever 64-bit-vs-32-bit distinction the check existed to make.
+Found one at a time via a systematic grep for the `(vlong)l ==` / `!=`
+idiom across assemblers/6a, compilers/6c and linkers/6l, prompted by
+recalling this exact pattern from earlier diffing -- five instances
+surfaced this way, all fixed by switching the check variable from
+`long` to `int32` (matching what Go-era's own 6g/6a/6l already do,
+since Go's runtime always treated `long` this way):
+
+1. compilers/6c/cgen.c immconst() ("does this vlong constant fit as a
+   32-bit signed immediate") always returned true, so hardconst()
+   (`!immconst(n)`, used by e.g. boolgen()'s comparison codegen) never
+   fired for genuinely-oversized constants. Not just wrong codegen but
+   an outright assembly failure: comparing a vlong against an out-of-
+   range constant emitted "CMPQ reg,$1099511627818", and x86-64 has no
+   64-bit-immediate CMP form (only 32-bit sign-extended), so 6l's
+   doasm() rejected it with "notfound". Found while moving
+   tests/c/mini2's regress7c_macos_amd64.exe off 6cg -- its
+   `id64(1099511627818LL) == 1099511627818LL` (2^40+42) hits exactly
+   this path; the bug itself is OS-independent, just previously only
+   ever exercised by that one macOS-only file.
+
+2. compilers/6c/swt.c zaddr() ("does this offset fit in 32 bits", used
+   to decide whether to set the object-file T_64 flag) had the same
+   shape: the flag was never set, so linkers/6l/obj.c's own zaddr()
+   (the reader) never read the high 32 bits back for a symbol's data
+   offset.
+
+3. include/6.out.h's Ieee.l/.h fields were `long`. The linker copies
+   this struct's raw bytes straight into the data segment (6l's
+   AMOVSD/AFMOVD case), so every IEEE double literal wider than 32
+   bits (e.g. NaN's 0x7FF0000000000001, or plain doubles like 2.2) got
+   corrupted down to its low 32 bits on a 64-bit host. Already correct
+   in the shared include/common.out.h (used by 5l/8l) and in the older
+   linkers/8lk/6.out.h copy -- only this freshly-imported vanilla
+   header still had the original 32-bit-host `long`.
+
+4. linkers/6l/span.c oclass() had the identical "does this fit in 32
+   bits" pattern (matching what Go-era's own src/cmd/6l/span.c already
+   fixed it to). Found alongside #3, in the same pass, though not what
+   caused the symptom actually chased down that time.
+
+5. assemblers/6a/lex.c zaddr() -- the assembler-side counterpart to
+   #2's compiler-side zaddr() -- had the exact same bug: a hand-
+   assembled `MOVQ $0x7FF0000000000001,CX` assembled to the wrong
+   32-bit-immediate opcode form (0xc7), silently encoding just `$1`.
+
+Each of the five has a minimal regression test (tests/c/variants/
+fconst64_amd64.c for #2/#3, tests/c/variants/vlongimm_amd64.c for #1,
+tests/s/variants/const_amd64.s for #5), each verified to actually fail
+against the pre-fix code and pass after. The general lesson for anyone
+touching 6a/6c/6l further: grep for `long` in any "does this fit in N
+bits" comparison before trusting it -- on this codebase's actual hosts,
+`long` and `vlong` are the same width, so any check assuming otherwise
+is dead code that happens to compile.
+
+APSLLQ: a copy-paste opcode byte from the wrong instruction
+------------------------------------------------------------------
+
+linkers/6l/optab.c's APSLLQ (packed 64-bit shift-left-by-immediate)
+entry used opcode byte 0x7e for its reg,imm8 encoding -- 0x7e is
+MOVD/MOVQ, not a shift, and has no trailing immediate operand at all,
+so "PSLLQ $imm, X" assembled to a MOVQ with the shift-count byte
+spilling into whatever instruction came next. The sibling entries
+(APSLLL, APSLLW, APSRLQ, and even APSLLQ's own memory-operand form
+right next to the broken one) all correctly use 0x72/0x71/0x73.
+Confirmed real under qemu-amd64 before landing the one-byte fix
+(0x7e -> 0x73): "MOVQ $1,AX; MOVQ AX,X0; PSLLQ $4,X0; MOVQ X0,DI" came
+back 0 (a no-op) instead of 16. See tests/s/regressions/amd64_psllq.s.
+
+"x *= 0;" failing to compile ("mulgen botch")
+--------------------------------------------------
+
+mulgen1() (the constant-multiply strength-reduction search) never
+special-cased a multiplier of 0, so `x *= 0;` failed to compile
+outright with an internal "mulgen botch" diagnostic -- after already
+emitting code that left x unchanged, i.e. it would have been *silently
+wrong* even if the diagnostic hadn't caught it first. Confirmed real
+on 6c and, independently, on 8c/8ck too (same shared mulgen1() shape).
+Fixed with a 3-line early-out mirroring 9front's: `if(v == 0){
+zeroregm(n); return 1; }` (zeroregm() already existed in each compiler
+for exactly this "materialize a zero" purpose). See
+tests/c/regressions/mulzero.c.
+
+What's landed vs. what todo.org still lists as open
+---------------------------------------------------------
+
+Still open, not re-derived here: 6c's OAS hardleft paths (two spots)
+drop a nested assignment's value into `nn` (present identically in
+8c/8ck, so any fix should land in all three together); 6c is missing
+`l = uncomma(l);` at the top of its OFUNC case, unlike every sibling
+backend (vc/8c/8ck/7c all already have it -- 6c is the odd one out);
+missing SSE3/SSE4.1 mnemonics 9front carries (JMPF, HADDPD/PS, ROUNDSD/
+SS/PD/PS, DPPD/DPPS, etc. -- a real missing feature, not a bug, and
+goken deliberately doesn't chase 9cc's fuller AVX/VEX superset either);
+and an incomplete negative-frame clamp in linkers/6l/pass.c (low-impact,
+only reachable via a hand-written negative TEXT frame directive, not
+real C source). Several cross-cutting items (growable regopt() NRGN,
+".ret" register tracking, sprint()->snprint() cleanup, and especially
+the nodrat struct-copy-temp non-reentrancy bug shared by every backend
+in this tree) apply here too but are tracked once, under mips's
+section, rather than duplicated per arch.

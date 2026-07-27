@@ -1,0 +1,122 @@
+The 386 toolchain (8a/8c/8l): reconciling principia with kencc
+=================================================================
+
+Notes on the July 2026 effort to make 8a/8c/8l (the principia-
+softwarica-synced lineage, generated from the docs/*.nw literate books
+via syncweb) byte-identical to 8ak/8ck/8lk (the original kencc
+reference lineage this whole project forked from). This is the arch
+where that reconciliation was worked out first, in July 2026 -- the
+arm equivalent (docs/notes_arch_arm.txt) followed the same playbook a
+few days later, once this one had proven it. For the ELF/Mach-O/PE
+executable-format bugs 8l/8lk also had (symbol-table/.data collision,
+segment rounding), see docs/notes_exec_elf.txt instead -- those are
+format bugs shared with other archs' linkers, not part of this
+principia-vs-kencc story. See pad.org's "regression/mismatch fixes"
+table for the original bug list, and compilers/8c/, assemblers/8a/,
+linkers/8l/ vs. their 8ck/8ak/8lk counterparts.
+
+Why two lineages exist, and why they needed to match
+------------------------------------------------------
+
+principia-softwarica's own copies of 8a/8c/8l are generated from
+literate-programming (.nw) books, refactored and reorganized many
+times over the years independently of upstream kencc. Importing them
+into this project meant two 386 toolchains coexisting: the
+principia-synced one (this project's
+primary lineage, since it's what the literate books document) and the
+kencc one (kept as the known-good reference to validate against).
+Getting them byte-identical over the whole principia corpus was the
+actual acceptance criterion for trusting the principia-synced lineage
+enough to make it the default install name (ed4fa3ff2, "8a/8c/8l: make
+the principia-synced lineage the default install names") -- and
+finding *why* they weren't identical yet is where all of the following
+bugs came from. Every one of them, notably, is not a from-scratch bug:
+it's a **regression accidentally introduced by a literate-programming
+refactor** in principia's own history, years before this project
+existed -- reorganizing which .nw chunk a piece of code lives in is
+supposed to be behavior-preserving, and each fix below is a place
+where it quietly wasn't.
+
+simplec(): a fallthrough case dropped by a 2016 chunk move
+------------------------------------------------------------
+
+`case 0:` (falling through to `case BAUTO: return CAUTO;`) governs
+every multi-token type declaration (`unsigned long`, `long int`, ...)
+reaching simplec() with no class bits set. A 2016 principia reorg
+(46fc889d) moved `case BREGISTER:` into its own side chunk but left
+`case 0:` behind in the process, so every multi-token type failed with
+"illegal combination of class 4: AUTO" -- 406 principia files were
+affected. Single-token types skip simplec() entirely, which is why
+small hand-written test snippets never caught this for years. Fixed by
+restoring `case 0: return CXXX;`, matching both original Plan 9 and
+kencc. See tests/c/variants/unsigned_long.c.
+
+as: a lost early-exit guard caused spurious history records
+------------------------------------------------------------------
+
+The assembler's filbuf() lost plan9's `if(i->f < 0) goto pop;` guard
+during the same era of aspectization/reorganization -- popping a
+macro-expansion buffer (pushed with f == FD_NONE) instead fell through
+to attempt `read(-1)`, took the resulting end-of-file path, and
+emitted a spurious AHISTORY record on every single macro use. 26
+principia .s files differed from kencc's output purely because of this
+(e.g. libc/386/atom.s). Restored the guard from original plan9 and
+cck/lexbody. See tests/s/variants/macro_386.s.
+
+ccom(): a `goto commute` turned into a comment during LPization
+-------------------------------------------------------------------
+
+`OAND`'s case in ccom() is supposed to `goto commute` (apply the
+commutative-constant rewrite), but the literate reorg replaced the
+goto with a comment saying "Fallthrough, goto commute" -- leaving the
+actual control flow to physically fall into the OASHR/OASHL/OLSHR
+shift cases instead. Symptom: bogus "stupid shift" warnings for AND
+masks wider than the operand's type, plus the commutative rewrite
+itself silently never applying to OAND. A comment describing what the
+code used to do, sitting where the code that did it used to be, is
+exactly the trap a chunk-reordering refactor can produce -- the
+comment reads as documentation, not as evidence something was deleted.
+
+Bits/NVAR: a 64-bit-host stack smash, same bug class as elsewhere
+------------------------------------------------------------------------
+
+The bits code (blsh, and the /32 and %32 arithmetic built on top of
+it) assumes 32-bit words. With `ulong` 64 bits wide on this project's
+actual hosts, NVAR doubles to 320 and blsh(160+) writes past the end
+of `b[BITS]` -- a real stack smash, crashing 8c on any function with
+more than 160 register candidates (hit by real code: libsec's
+blake2sblock.c, libhtml's build.c). Fixed the same way the kencc
+lineage already had been (see changes.txt's own "cc/bits.c" entry) --
+Bits/NVAR use uint32, not ulong. This is the same underlying class of
+bug as amd64's "long on a 64-bit host" story
+(docs/notes_arch_amd64.txt) -- code written assuming a 32-bit host's
+integer widths, silently misbehaving once the host itself is 64-bit --
+just manifesting as a buffer overflow here instead of a truncated
+comparison. See tests/c/variants/manyvars.c.
+
+Two items deliberately left open, not bugs
+------------------------------------------------
+
+pad.org's own tracking table lists two more mismatches investigated
+but not resolved as part of this pass: float literal parsing differing
+by 1 ULP on long mantissas (a deliberate divergence -- kencc kept
+plan9's mpatof, principia uses strtod, and strtod is judged the
+correct one, not a bug to "fix" by reverting), and `~` on a sub-word
+unsigned value, where principia emits NOTB+MOVBLZX (arguably correct
+per C's integer-promotion rules) against kencc's plain NOTL (not yet
+traced to a root cause). Both stayed open rather than being forced
+into either lineage matching the other for their own sake.
+
+Reaching byte parity: what "done" actually meant
+------------------------------------------------------
+
+ed4fa3ff2 records the actual acceptance bar this reconciliation was
+held to, worth restating since it's more concrete than "the bugs above
+are fixed": byte-identical objects, iar archive libraries, and linked
+executables over the entire principia corpus (asm 170 match/0 differ,
+C 1969 match/0 differ), plus the resulting OS actually booting under
+QEMU with rio and mothra working -- not just a clean compile. Nothing
+was lost for this toolchain's own host-binary role either: Linux ELF
+(-H7) output stayed pinned byte-identical via the tests/s/variants
+goldens throughout, and neither 386 linker lineage has ever produced
+macOS binaries (only the go-era 6l does, see docs/notes_exec_macho.txt).
