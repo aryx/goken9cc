@@ -6,6 +6,8 @@
 # the default and the only path exercised in CI); $CFLAGS_ARCH's flags
 # (-fsigned-char, -m32, ...) are accepted by clang too but the exact
 # set may need adjusting once this path is actually exercised.
+#coupling: scripts/build-mk.sh CFLAGS
+CFLAGS=-O0 -fno-inline -ggdb $SANITIZE -I$TOP/BOOT/include -I$TOP/include -I$TOP/include/ALL -I.
 CC=clang -c --std=gnu89 -Wno-cpp $CFLAGS_ARCH
 #alt: could use lld?
 LD=clang

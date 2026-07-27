@@ -13,6 +13,11 @@
 # once the cross-tools can compile lib_core/libc themselves, a later
 # 'mk objtype=$cputype' build (see mkfiles/$cputype/mkfile) can use them
 # as CC/AS/LD instead of gcc, to self-host goken with goken.
+#
+#TODO was -O2 but better -O0 for ease of debugging with gdb
+#note: SANITIZE is optionally set by ./configure --asan
+#coupling: scripts/build-mk.sh CFLAGS
+CFLAGS=-O0 -fno-inline -ggdb $SANITIZE -I$TOP/BOOT/include -I$TOP/include -I$TOP/include/ALL -I.
 CC=gcc -c --std=gnu89 -Wno-cpp $CFLAGS_ARCH
 #alt: could use ld?
 LD=gcc

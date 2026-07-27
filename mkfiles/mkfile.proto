@@ -12,13 +12,12 @@ ROOT=$TOP/ROOT
 OS=5678ijve
 CPUS=arm arm64 386 amd64 riscv riscv64 mips wasm
 
-#principia: CFLAGS=-FTVw -I$TOP/include/arch/$objtype ...
-#TODO: gcc and linux specific so move somewhere else
-#TODO was -O2 but better -O0 for ease of debugging with gdb
+# note: CFLAGS itself (the host-compiler flags: -O0/-ggdb/--std=gnu89/...)
+# is NOT defined here since it's gcc/clang specific -- see
+# mkfiles/boot-gcc/mkfile and mkfiles/boot-clang/mkfile. Kept here only:
+# LDFLAGS's -L is understood by both gcc/clang (host bootstrap) and by
+# goken's own linkers (5l/6l/7l/8l/...), so it stays generic.
 #note: SANITIZE is optionally set by ./configure --asan
-#coupling: scripts/build-mk.sh CFLAGS
-GCCFLAGS=-O0 -fno-inline -ggdb $SANITIZE -I$TOP/BOOT/include
-CFLAGS=$GCCFLAGS -I$TOP/include -I$TOP/include/ALL -I. 
 LDFLAGS=-L$ROOT/$cputype/lib $SANITIZE
 
 LEX=lex
