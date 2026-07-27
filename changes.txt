@@ -276,6 +276,20 @@
   test files; for now just testing gcc as goken can't compile such code yet
   (need APE-like lib or minimal libc/libos support in goken)
 
+** docs
+- add docs/claude_notes/, Claude-authored engineering notes gathered
+  while bringing up or fixing a specific area (done/verified work, not
+  a TODO list -- see CLAUDE.md's own section on these for the
+  conventions): notes_exec_{macho,pe,elf}.txt (executable-format
+  internals per target OS), notes_arch_{arm,arm64,x86,amd64,mips,riscv}.txt
+  (per-arch codegen/ABI fixes), notes_os_{macos,linux,windows,plan9,xv6}.txt
+  (building goken itself on each host OS), notes_abi_plan9.txt (Plan 9's
+  native syscall ABI and the 5i/vi emulators), notes_shared_frontend_bugs.txt
+  (a per-backend status table for bugs recurring across 5c/6c/7c/8c/vc/ic),
+  notes_test_infra.txt (the testing methodology itself), notes_libmach.txt
+  (lib_toolchain/libmach's object-format parsing story), and notes_wasm.txt
+  (the ea/ec/el design) (thx to Claude)
+
 * 0.3 (Q2 2026) (IWP9 presentation)
 
 ** build infra

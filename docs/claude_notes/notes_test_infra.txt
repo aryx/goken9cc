@@ -1,0 +1,158 @@
+How this project actually tests itself
+==========================================
+
+Scope: the testing *methodology* this project relies on, extracted
+from where it's currently explained piecemeal -- inline in whichever
+notes_exec_*.txt/notes_arch_*.txt file happened to need to justify "how
+was this verified" at the time. This file is the one place that
+explains the mechanisms themselves: golden-diffing, cross-lineage
+corpus comparison, and running real emulators/interpreters instead of
+trusting host-native execution. See tests/mkfile and its DIRS for the
+top-level list of what `mk test` actually runs.
+
+Executing foreign-arch binaries: qemu-runner, not binfmt_misc
+------------------------------------------------------------------
+
+Every Linux-target hello-world/regression binary this project produces
+for a non-host architecture runs under the matching qemu-user binary,
+invoked directly (scripts/qemu-runner: qemu-i386, qemu-x86_64,
+qemu-arm, qemu-aarch64, qemu-mips, qemu-riscv32, qemu-riscv64) -- not
+via binfmt_misc (registering qemu as the kernel's transparent
+interpreter for foreign-arch ELF files). This is deliberate: binfmt_misc
+is host/CI-global kernel state, invisible from inside a container and
+dependent entirely on what some other setup step (setup-qemu-action,
+multiarch/qemu-user-static) did to the *host* outside this repo's
+control, and it has repeatedly picked the wrong emulator in practice
+(qemu-mipsn32 instead of plain qemu-mips; no riscv32 handler registered
+at all under Docker Desktop on macOS). Invoking the qemu-xxx binary
+directly needs only qemu-user installed, nothing kernel-registered, and
+sidesteps all of that host-dependent variability. See
+docs/claude_notes/notes_exec_elf.txt for the full arch-to-qemu-binary
+mapping and what this setup does and doesn't catch (some FPU corner
+cases are qemu's own emulation bugs, not toolchain bugs -- worth
+excluding before chasing a float-test failure through the compiler).
+
+Non-Linux targets get their own equivalent runner, one tier at a time
+---------------------------------------------------------------------------
+
+Every other OS target this project produces binaries for has needed
+its own way to actually execute them, each added only once a real
+runtime bug needed catching (not preemptively):
+
+  - **Windows (PE, -H10):** wine, on an x86_64 host only (wine
+    translates the Win32 API/ABI, not the CPU ISA, so it can't run
+    these binaries on arm64) -- this is what caught an actual output-
+    content bug (wrong hello-world text) invisible to build-only
+    testing. A separate, later tier (`mk test_windows`) runs the same
+    binaries with no wine layer at all, for when the host running the
+    test *is* Windows. See docs/claude_notes/notes_exec_pe.txt.
+  - **macOS (Mach-O, -H6):** darling, on a Linux CI host, for the
+    amd64 target specifically (arm64 is tested on real Apple Silicon
+    instead, since that's where the work was actually done). darling
+    translates Darwin syscalls via Linux libc, which is *why* the
+    amd64 hello test calls libSystem's `_write` through a GOT slot
+    instead of a raw Darwin syscall -- raw syscalls work on real
+    macOS but darling can't translate them. See
+    docs/claude_notes/notes_exec_macho.txt and notes_os_macos.txt.
+  - **wasm:** Node's own WASI implementation, via scripts/wasm-runner
+    (the wasm counterpart of scripts/qemu-runner) -- no CPU emulation
+    needed since wasm's whole point is host-portable bytecode, but
+    still needs *something* to actually execute the module and supply
+    WASI's fd_write. See docs/claude_notes/notes_wasm.txt.
+  - **Plan 9 (-H2):** the 5i (arm) and vi (mips) emulators this project
+    ships itself -- not a third-party tool -- driven via their own
+    debugger-style ':c'/'$q' command interface rather than a one-shot
+    interpreter mode, since neither provides one. See
+    docs/claude_notes/notes_abi_plan9.txt for the bugs this actually
+    surfaced once it was wired into `mk test`.
+
+The common thread: build-only testing (`all:` in a mkfile, or "it
+compiled and linked") repeatedly missed real bugs that only running
+the binary and checking its actual output caught -- a wrong hello-world
+message, a segfault, a silently-dropped write. Whenever a new OS/format
+target is added, build-only verification should be treated as a
+placeholder for real execution, not as sufficient signal on its own.
+
+Golden-diffing: pinning exact bytes, not just "it works"
+--------------------------------------------------------------
+
+tests/s/variants (and tests/c/variants) compare freshly-built output
+against checked-in golden files byte-for-byte, for cases where there's
+no independent oracle to compare against at runtime -- e.g.
+riprel_amd64.s and pe_amd64.s exist because there's no second amd64
+lineage to cross-check RIP-relative addressing or PE import-table
+layout against, and (at the time) no way to actually execute a PE
+binary either. This only protects against *regressions* in a
+previously-verified-by-hand layout; it says nothing about whether the
+golden file itself was ever correct, which is why each golden's
+introduction commit documents how it was manually verified once
+(hand-decoding load commands with otool, or the equivalent). Two
+preconditions this relies on that are easy to accidentally break:
+reproducible object files (assemblers' -r flag: don't embed the cwd in
+object-file history records) and reproducible executables (linkers'
+-s flag: stripping avoids embedding source paths in the symbol table)
+-- a golden-diff test that starts failing for no code-visible reason is
+worth checking against these two before assuming a real regression.
+
+Cross-lineage corpus comparison: how the principia/kencc reconciliation worked
+--------------------------------------------------------------------------------------
+
+The x86 and arm reconciliation work (docs/claude_notes/notes_arch_x86.txt,
+notes_arch_arm.txt) needed something golden-diffing can't provide: proof
+that two entire, independently-written toolchains (the principia-synced
+lineage and the kencc reference lineage) produce identical output across
+a real, large, pre-existing corpus of C and assembly -- not just the
+handful of files anyone thought to write a test for. tests/scripts/
+cmp-{c,s}-corpus.sh do this at the single-file level (compile/assemble
+every .c or .s file in principia-softwarica with both lineages, diff the
+objects, and bucket results into match/differ/onefail/bothfail --
+`differ.txt` is where every bug in those two files' notes was actually
+found), and tests/scripts/cmp-exec-corpus{,-arm}.sh do it end to end
+(build the *entire* principia OS twice, once per lineage -- libraries via
+iar with deterministic member headers, executables via the linker, the
+kernel itself -- and diff everything that comes out, including linking
+and booting the result under QEMU with rio and mothra actually working).
+This is a fundamentally different verification strategy from "write a
+test for the bug you already found": it finds bugs nobody would have
+thought to write a targeted test for first, at the cost of needing a
+full external corpus (principia-softwarica) checked out alongside this
+repo to run at all -- these scripts are not part of `mk test` and were
+run manually, by hand, during the reconciliation work.
+
+Verifying binary-parsing code needs a real binary, not just a clean build
+---------------------------------------------------------------------------------
+
+A lesson specific to lib_toolchain/libmach (docs/claude_notes/notes_libmach.txt)
+but really general to any code that decodes an executable/object-file
+format: "it compiles, it links, `iar` still archives fine, `mk test` is
+green" was insufficient signal for a change that touched executable.c's
+ELF-header decoding, because none of those checks actually exercise
+that code path -- `iar` never calls crackhdr()/uses Fhdr at all. The gap
+was only caught by manually running the new binary against a real target
+file and reading its actual output ("can't decode file header" instead
+of the expected format name). tests/libmach/ now exists specifically to
+pin this down as an automated regression rather than relying on manual
+verification every time, but the general rule stands for any future
+change in this area: after touching object/executable-format-decoding
+code, run the actual consumer (acid, 5i, vi, iar, ...) against a real
+target binary of the relevant format and check real output, not just
+`mk`.
+
+Regression tests as executable bug reports
+------------------------------------------------
+
+The great majority of bugs documented across every notes_arch_*.txt and
+notes_exec_*.txt file have a minimal, checked-in regression test
+(tests/c/regressions/, tests/s/regressions/, tests/c/variants/,
+tests/s/variants/) that was *confirmed to actually fail* against the
+pre-fix code, not just written to look plausible after the fact -- the
+standard practice visible throughout this project's commit history is
+to stash or revert the fix, rebuild, watch the test fail with the
+expected symptom, then restore the fix and confirm it passes.
+tests/scripts/bigmem-oom.sh is a good example of a test guarding *two*
+regressions in one script (reverting to sbrk() and reintroducing the
+malloc()-recursion trap both need to be caught, see
+docs/claude_notes/notes_os_macos.txt) rather than assuming a single
+symptom is enough. When adding a new regression test, actually breaking
+the fix and watching the test fail is the bar to clear, not just
+"this test would probably fail if the bug came back."

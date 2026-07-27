@@ -1,0 +1,175 @@
+lib_toolchain/libmach: two lineages, and the object-format porting story
+===========================================================================
+
+Scope: lib_toolchain/libmach (moved from debuggers/libmach in July
+2026), the object-file/executable-format/debug-info parsing library
+shared by linkers/ar (iar), debuggers/acid, and the machines/5i and
+machines/vi emulators. Not the executable-format-*production* side
+(that's docs/claude_notes/notes_exec_{macho,pe,elf}.txt) -- this file
+is about the code that *reads* object files and executables back, for
+archiving, debugging, and emulation.
+
+Two independent libmach implementations, and which one is authoritative
+--------------------------------------------------------------------------------
+
+This project carries two unrelated libmach lineages, analogous to the
+kencc-vs-principia split for compilers/assemblers/linkers
+(docs/claude_notes/notes_arch_{arm,x86}.txt) but for object-file
+parsing instead:
+
+  - **lib_toolchain/libmach** (`libmach.a`, linked via `-lmach`) -- the
+    Plan 9/inferno-derived lineage. Consumers: linkers/ar (iar), and
+    as of the 2026-07-22 work below, also debuggers/acid, machines/5i,
+    machines/vi.
+  - **src/libmach** (`libmach_.a`, linked via `-lmach_`) -- the go-era,
+    plan9port-derived lineage, with a richer API (Maprw read/write
+    callbacks, vlong/uvlong wire types instead of long/ulong, symbol
+    type signatures via Prog.sig). Consumers: everything under
+    src/cmd/ (ar, nm, cov, prof).
+
+**These are not meant to converge.** src/cmd/'s tools are meant to stay
+on src/libmach -- do not "fix" that by switching them to
+lib_toolchain/libmach. The two exist because they serve genuinely
+different consumer sets with different API expectations, the same way
+6ag/6cg/6lg (go-era) and 6a/6c/6l (plan9-era) coexist deliberately
+rather than one being a stepping stone to delete.
+
+The twist: unlike the compiler/assembler/linker split, where the go-era
+side usually turned out to carry the unnecessary hack and the plan9-era
+side was already correct (see e.g. the "revert go-era adaptations"
+commits for 7a/7c/7l, va/vc/vl, ia/ic/il), here it's the *reverse*:
+include/mach.h -- the single shared master header both lineages build
+against -- had already been updated to match src/libmach's richer API,
+not lib_toolchain/libmach's older one. Confirmed empirically:
+lib_toolchain/libmach's old map.c/sym.c/access.c/machdata.c no longer
+even *compiled* against the current mach.h (function signature
+conflicts), which is why they'd been `#TODO`'d out of its mkfile
+before this work. So porting had to flow src/libmach -> lib_toolchain/
+libmach, the opposite direction from the compiler-lineage story, and
+worth checking explicitly (which header is actually authoritative)
+before assuming a "go-era vs plan9-era" bug will resolve the same way
+twice.
+
+Porting map/sym/access/machdata/executable.c/per-arch object support
+------------------------------------------------------------------------------
+
+Bringing lib_toolchain/libmach back up to compile against the current
+mach.h, and extending it to cover every architecture this project
+targets, took several separate passes, each with its own lesson:
+
+- **map.c/sym.c/access.c/machdata.c**, plus v.c/vdb.c/vcodas.c (mips
+  disassembly, needed by machines/vi's mipsmach) and linux.c
+  (OS-specific attachproc()/ctlproc() stub, needed by debuggers/acid),
+  ported in from src/libmach, adapted to lib_toolchain/libmach's own
+  include convention (`<lib9.h>` + `<bio.h>` + `"mach.h"`, versus
+  src/libmach's `<u.h>` + `<libc.h>` + `<mach.h>`) -- the same
+  adaptation pattern already used when 6obj.c/7obj.c were ported
+  earlier. This first pass's own verification ("compiles, links, iar
+  still archives, `mk test` is green") turned out to be **insufficient**
+  -- see the executable.c story below.
+
+- **Per-arch object-file recognition (obj[] table in obj.c), added one
+  architecture at a time as each was switched to using iar:**
+  arm64 (.7, via 7obj.c/_is7/_read7), mips (.v, via vobj.c/_isv/_readv),
+  riscv (.i, via iobj.c/_isi/_readi) -- each ported from src/libmach the
+  same way, each needed because obj[] simply had no entry for that
+  ObjType before, so any attempt to iar-archive that arch's objects
+  failed with "unrecognized object type".
+
+- **A real out-of-bounds bug found switching arm64 to iar:** obj[] was
+  declared as `Obj obj[]` with no explicit size, so the compiler
+  inferred its size from the *highest listed index* (ObjAmd64 = 3) even
+  though Maxobjtype was already 6. objtype()'s own
+  `for(i=0;i<Maxobjtype;i++)` loop read two entries past the end of the
+  array and called whatever garbage bytes it found there as a function
+  pointer -- an immediate SIGBUS the moment arm64 was switched over.
+  Fixed by giving the array its real, explicit size. A one-line fix,
+  but the kind of bug that only a genuinely new consumer (the next arch
+  to be wired up) will trip over -- the array had presumably been
+  "wrong" in this same way for however long only 4 object types were
+  ever registered, silently safe purely because nothing ever iterated
+  past index 3 until Maxobjtype grew without the array declaration
+  growing to match.
+
+executable.c: the change that looked done but wasn't
+------------------------------------------------------------
+
+The first porting pass's verification bar ("compiles, links, iar still
+archives, `mk test` is green") missed something real: none of those
+checks exercise executable.c's ELF-header decoding at all, because
+iar -- lib_toolchain/libmach's only consumer at the time -- never calls
+crackhdr() or touches Fhdr in the first place. lib_toolchain/libmach's
+old executable.c had *zero* generic ELF e_machine dispatch, only
+Plan9/Inferno "boot image" recognition, so acid linked cleanly against
+it and then printed "can't decode file header" on every real Linux ELF
+binary handed to it -- a regression invisible to every automated check
+run so far, caught only by manually running the freshly-built acid
+against a real target file (tests/s/exit/exit_linux_arm.exe) and
+actually reading its output.
+
+Fixed by porting executable.c itself from src/libmach (same include-
+convention adaptation as above), which pulled in its private headers
+(a fuller elf.h with Ehdr64/ARM/SPARC64, versus the old 32-bit-only
+Irix-style one; macho.h; bootexec.h), which in turn needed 7.c
+(arm64's `Mach marm64` core definition -- distinct from the
+still-unported 7db.c's arm64 Machdata *debugger* table -- since
+executable.c's binfmt dispatch table references marm64 for FARM64
+recognition). All four files are private to executable.c alone.
+Verified this time against real target binaries: acid prints "elf
+executable" (matching src/libmach's own behavior) instead of erroring;
+5i correctly loads a real Plan 9 arm binary and correctly *rejects* a
+mips one with "bad magic number"; vi loads the Plan 9 mips binary; iar
+still archives/lists real .o files correctly. tests/libmach/ was added
+specifically to pin all of this down as an automated regression going
+forward -- see docs/claude_notes/notes_test_infra.txt's own framing of
+this as a general lesson, not a libmach-specific one: **after any
+change to object/executable-format-decoding code, run the actual
+consumer against a real target binary and check real output, not just
+`mk`.**
+
+The mmips shadow-definition bug: two Mach structs with the same name
+------------------------------------------------------------------------
+
+A separate, subtler bug in the freshly-ported code: executable.c
+declared its own tentative `Mach mmips;` right alongside the `extern`
+declaration it also needed, which shadowed v.c's real, fully-
+initialized `mmips` definition. Both object files coexist in
+libmach.a, and the linker happened to resolve every reference to
+executable.c's all-zero stub instead of v.c's real one -- leaving
+`mach->pgsize == 0`. adotout()'s `_round()` then divides by that zero
+pgsize on every FMIPS header parse: undefined behavior that happened to
+be *silent* on arm64 (UDIV returns 0 on divide-by-zero there, no trap)
+but faults with SIGFPE on amd64 (DIV traps) -- which is why `vi` only
+ever crashed in CI's amd64 runner and never locally on the arm64
+machine this work was mostly done on. The general lesson: a silent,
+architecture-dependent difference in what divide-by-zero *does* (trap
+vs. return 0) can hide a real bug for an arbitrarily long time if
+development happens to concentrate on the architecture where it's
+silent -- don't assume "works locally" rules out UB just because
+nothing crashed.
+
+A related, format-specific bug (mips page size), and where it actually lives
+--------------------------------------------------------------------------------------
+
+Not a libmach porting bug, but a data-correctness bug in libmach's own
+mips support once it existed: v.c's `mmips.pgsize` was hardcoded to
+0x1000 (4K), but linkers/vl rounds MIPS -H2 text to a 16K page
+boundary (see INITRND in linkers/vl/obj.c). crackhdr() used the wrong
+page size to compute txtaddr, so vi read the text segment from the
+wrong file offset entirely. Fixed to 16*1024, matching principia's own
+copy of this same file. This is the one bug in this file that's really
+about *emulator execution* (getting vi to run a real binary correctly)
+rather than about libmach's own porting/compilation story -- see
+docs/claude_notes/notes_abi_plan9.txt for the rest of that same
+bring-up session's bugs (the ones in 5i/vi's own instruction decode and
+syscall handling, not in libmach).
+
+Still not ported
+---------------------
+
+7db.c (arm64's Machdata debugger table -- debuggers/acid/main.c
+currently hardcodes `armmach` regardless of the actual target
+architecture, a pre-existing oddity unrelated to any of the work
+above, not yet fixed) and darwin.c/windows.c/cygwin.c (the other-OS
+process-attach stubs paralleling linux.c) remain unported, simply
+because no current lib_toolchain/libmach consumer needs them yet.

@@ -100,7 +100,9 @@ Struct-copy trailing bytes, and two missed-optimization carve-outs
 - regopt()'s fixed `Rgn region[NRGN=1000]` array gave up (warn + stop
   optimizing, not a crash) past that many candidate regions -- same
   fix shape as mips's vc (below): grow it dynamically starting at 300,
-  doubling via allocn().
+  doubling via allocn(). Still pending in 5c/6c/8c/ic -- see
+  docs/claude_notes/notes_shared_frontend_bugs.txt for the full
+  per-backend status of this and several other kencc-lineage-wide bugs.
 
 - mkvar() excluded every "."-prefixed pseudo-symbol from register-
   allocator tracking, including ".ret" -- carved out specifically so

@@ -169,6 +169,10 @@ one before any mips-specific test would have.
 Open / pending (see todo.org's "riscv toolchain" section for the source)
 -------------------------------------------------------------------------------
 
+See docs/claude_notes/notes_shared_frontend_bugs.txt for how this NaN
+bug and its status compare across every other backend, not just
+riscv/mips.
+
 - **boolgen()/comrel() NaN-comparison bug -- deeper than a one-line
   fix.** Shared kencc-lineage code: boolgen() applies comrel[] (the
   integer logical-complement table, OLT<->OGE, OEQ<->ONE, etc.)

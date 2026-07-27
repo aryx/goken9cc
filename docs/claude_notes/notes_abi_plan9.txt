@@ -1,0 +1,137 @@
+Plan 9's native syscall ABI, and running -H2 binaries under emulation
+========================================================================
+
+Scope: this file is about Plan 9's own syscall interface -- the
+convention a -H2 (native, headerless) binary uses to ask the kernel
+(or an emulator standing in for one) to do something -- as opposed to
+docs/claude_notes/notes_exec_elf.txt/notes_exec_macho.txt/
+notes_exec_pe.txt, which are about the *executable-file* formats used
+for non-Plan-9 targets. Plan 9 has no separate "exec format" note of
+its own (see docs/claude_notes/notes_os_plan9.txt) because -H2 has
+stayed simple enough not to need one; what actually turned out to have
+real, non-obvious content was the syscall convention itself, and the
+machines/5i and machines/vi emulators' own bugs in interpreting it.
+See lib_core/libc/9syscall/sys.h, machines/5i/, machines/vi/, and
+tests/s/mini/hello_plan9_{arm,mips}.s.
+
+The syscall numbering table, and its coupling to principia
+------------------------------------------------------------------
+
+lib_core/libc/9syscall/sys.h assigns one number per syscall (NOP=0,
+RFORK=1, EXEC=2, ..., up through ERRSTR=39), grouped by comment into
+process/memory/file/directory/namespace/time/ipc/concurrency/security
+syscalls. The file's own first line is a "coupling: principia, must be
+kept in sync" comment -- this numbering is not this project's own
+invention to change freely, it has to match principia-softwarica's
+copy exactly, because a -H2 binary built by this toolchain and a -H2
+binary built by principia's own tools both need to mean the same thing
+by "syscall number 11". A machine-readable copy of this table (or its
+name-to-number mapping, sysctab[]) is duplicated into every consumer
+that needs to decode or print syscalls -- machines/5i/syscall.c and
+machines/vi's own equivalent both `#include` this same header rather
+than each maintaining their own numbering.
+
+Calling convention: number in a register, arguments on the stack, trap
+------------------------------------------------------------------------------
+
+Unlike Linux's per-arch conventions (register-passed arguments, see
+docs/claude_notes/notes_exec_elf.txt), every Plan 9 syscall stub in
+this toolchain follows the same shape regardless of argument count:
+the syscall number goes in a fixed register, the arguments are written
+to the stack starting 4 bytes past the frame pointer (leaving the
+first word for what the trap handler needs), and a trap instruction
+hands control to the kernel/emulator. Concretely, from
+tests/s/mini/hello_plan9_{arm,mips}.s:
+
+  - arm: syscall number in R0, arguments stored at 4(R13), 8(R13), ...
+    (R13 is SP), trap via `SWI $0`.
+  - mips: syscall number in R1, arguments stored at 4(R29), 8(R29), ...
+    (R29 is SP), trap via `SYSCALL`.
+
+No x86 Plan 9 emulator exists in this repo, so hello_plan9_386.exe
+stays build-only -- there's no way to verify what convention it would
+need at runtime here, only that 8l can produce the -H2 bytes.
+
+Four bugs found bringing hello_plan9_{arm,mips}.exe up under 5i/vi
+------------------------------------------------------------------------
+
+Building these -H2 binaries had worked for a while; actually *running*
+them under the 5i (arm) and vi (mips) emulators had not been exercised
+end to end until it was, which immediately surfaced four independent
+bugs (one commit, 80f819d11, fixed all four together):
+
+1. **A `bool` truncation corrupted the ARM instruction decoder itself,
+   not just syscall handling.** 5i's `bool` is `uint8` (see u.h), and
+   expressions like `x & (1<<N)` for N>=8 have no bits at all in the
+   low byte -- narrowing the result into a `bool` local silently
+   zeroed it every time. This zeroed `prebit`/`ubit`/`bbit`/`wbit`/
+   `lbit` in Iswap()/Imem1()/Imem2(), which turned a PC-relative
+   literal load (`LDR $hello(SB), R1`, exactly what the hello test
+   uses to find its own string constant) into a *store* instead --
+   silently overwriting the very code that follows it in memory.
+   Fixed by retyping those locals to plain `int`. Not a syscall bug at
+   all, but found in the same bring-up pass and worth knowing about if
+   you're debugging 5i and a `bool` local is involved in bit
+   manipulation.
+
+2. **ulong sign-extension corrupted vi's instruction dispatch.**
+   ifetch()/getmem_w()/getmem_4() composed a 32-bit instruction or
+   memory word the obvious way (`va[0]<<24 | va[1]<<16 | ...`), computed
+   as a 32-bit `int`, then returned it through `ulong` -- 64 bits on
+   these hosts, unlike the 32-bit hosts this code was written for. A
+   result with the high bit set reads as negative as an `int`, and
+   sign-extends when widened to a 64-bit `ulong`, corrupting the top 32
+   bits of what's supposed to be a plain 32-bit word. Harmless in 5i
+   (every consumer there re-masks with an explicit 32-bit constant
+   before use) but fatal in vi's own unmasked `itab[(ir)>>26]` opcode
+   dispatch -- an arbitrary 64-bit index into a small table, segfaulting
+   on a wild access. Fixed by retyping the instruction/`reg.ir` fields
+   and these three functions to `u32int`, matching the int32 migration
+   already underway elsewhere in this codebase (see
+   docs/claude_notes/notes_arch_amd64.txt's long-vs-int32 story for the
+   same underlying "code assumed a 32-bit host" theme, in a completely
+   different part of the tree).
+
+3. **syswrite() forwarded the emulated PWRITE offset into the real
+   host pwrite(2) on stdout/stderr, which don't support seeking.** The
+   emulated program's Plan 9 PWRITE offset argument was passed straight
+   through to the host's own `pwrite(2)` on fd 1 -- fine when fd 1 is a
+   real seekable file, but `ESPIPE` (and a silently dropped write, since
+   the return value wasn't checked) when it's a pipe, which is exactly
+   what test harnesses and CI redirect stdout to. Also corrupts
+   ordering against bout/bioout's own sequential writes on a regular
+   file. Fixed by routing fd 0/1/2 through plain `write()` instead,
+   which ignores the offset the way a terminal or pipe expects.
+
+4. **The test source files themselves had a stale, wrong syscall
+   number in a comment -- and it was actually used.**
+   tests/s/mini/hello_plan9_{arm,mips}.s hardcoded `MOVW $9 /*PWRITE*/`
+   -- but 9 is FD2PATH in the current sys.h numbering (see the table
+   above); PWRITE is 11. This isn't a bug in sys.h or in either
+   emulator, it's a bug in the hand-written test assembly itself,
+   presumably stale from an earlier numbering. Both hello files were
+   fixed to use the real PWRITE (11).
+
+Verifying these actually worked meant running the emulators against
+the real binaries and checking output, not just checking that they
+built -- see docs/claude_notes/notes_libmach.txt's own "verify with
+real binaries" lesson, which this bring-up reinforces from the
+emulator-execution side rather than the object-file-decoding side.
+tests/vi/smoke.sh previously pinned bug #2's wrong entry address as a
+*documented limitation* (skipping the ':c' run-to-completion command
+entirely) rather than as a known bug to fix -- worth remembering that
+a test explicitly working around a known-wrong value is a signal that
+whatever it's dodging is still there to fix, not that it's been
+accepted as correct behavior.
+
+What's not exercised at all
+--------------------------------
+
+Only PWRITE and EXITS have ever actually been exercised end to end
+(that's all hello-world needs). Every other syscall in sys.h --
+RFORK, EXEC, the whole namespace/mount family, NOTIFY/NOTED, the
+segment family, RENDEZVOUS/SEMACQUIRE -- has a number and a name in
+sysctab[] but no confirmed-working emulation path in 5i or vi. Treat
+any of those the way a freshly-added Optab row on a real arch would be
+treated before its first test (see docs/claude_notes/notes_wasm.txt's
+own framing of this): plausible, not proven.

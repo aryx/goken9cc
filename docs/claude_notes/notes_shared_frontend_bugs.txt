@@ -1,0 +1,190 @@
+The "shared" C-compiler backends that aren't actually shared
+================================================================
+
+5c/6c/7c/8c/vc/ic (and the kencc-lineage 5ck/8ck) all descend from the
+same original kencc/Plan 9 C compiler source, and their cgen.c/reg.c/
+txt.c files still look, structurally, like copies of one compiler
+retargeted per architecture -- the same functions, the same variable
+names (nodrat, region[], mkvar()), often the same comments. But they
+have diverged independently for decades, through separate lineages
+(plan9, kencc, principia, go-era, this project's own history) that
+didn't all get the same fixes at the same time. The result: a bug
+found and fixed in one backend is, structurally, *probably* present in
+several others too -- but "probably" is doing real work in that
+sentence, and the only way to know for sure is to check, per backend,
+not assume. This file catalogs the specific bugs of this shape found
+so far, with per-backend status verified directly from source (not
+just from commit messages or todo.org, which can go stale) at the time
+this was written. If you fix one of these in a backend not listed as
+already fixed, or find the status has changed, update this table
+rather than leaving it to bit-rot.
+
+Why this matters practically: when you fix one of these, check the others
+--------------------------------------------------------------------------------
+
+Every bug below was originally found in *one* backend (usually via
+diffing against 9front, kencc-riscv, or miller-riscv -- see
+docs/claude_notes/notes_arch_{arm64,mips,riscv}.txt for how those
+diffs were run) and only later discovered to also apply, unchanged, to
+siblings. The lesson isn't "go fix everything on this list" -- several
+entries are believed real but have never been observed to misbehave in
+this codebase's own test suite, and are listed as such -- it's:
+finding one of these patterns in a backend you're already working in
+is a strong prior that the sibling backends have the identical
+pattern, worth a five-minute grep before moving on.
+
+nodrat: the non-reentrant struct-copy scratch temp (universal, unfixed)
+-----------------------------------------------------------------------------
+
+Every one of 5c/5ck/6c/7c/8c/8ck/ic/vc declares the same global
+`nodrat`/`nrathole`/`symrathole` triple in gc.h and uses it as a single
+shared scratch Node for struct/union copies that need a temporary the
+current expression can't provide directly (ODOT struct-valued field
+access, OSTRUCT struct-to-struct assignment, OFUNC returning a
+struct). Confirmed by direct grep: `nodrat` appears exactly 9 times in
+every single one of these files' cgen.c, byte-for-byte the same usage
+pattern. Because it's one shared global Node, not a per-call local,
+nested expressions that each need a struct-sized temp at the same time
+(e.g. a struct-valued dot-expression appearing inside another struct
+copy) can silently clobber each other's temp. The code is aware enough
+to self-flag this -- `warn(n, "non-interruptable temporary")` appears
+at each call site -- but a warning that never actually fires when the
+clobbering happens is not the same as a fix. **Status: confirmed
+present, unfixed, in all 8 backends.** 9front eliminates nodrat
+entirely (replacing each use with a per-call `regsalloc()`'d local
+Node); porting that mechanically to any one backend is the known fix,
+just not yet done anywhere in this tree.
+
+Missing `l = uncomma(l);` in OFUNC (indirect call through a comma expression)
+-------------------------------------------------------------------------------------
+
+A callee reached through a comma expression -- `(sideeffect(), fp)(args)`
+-- needs `l` (the callee) stripped of its leading OCOMMA before the
+"is this a plain indirect call" check (`l->op == OIND`), or it hits
+`diag(n, "bad function call")` or miscompiles. Verified directly from
+source (not just commit messages) by checking every backend's OFUNC
+case in cgen.c for `l = uncomma(l);` as the first line:
+
+    fixed:   7c, 8c, 8ck, vc
+    missing: 5c, 5ck, 6c, ic
+
+vc's own fix commit (landed as part of the mips 9front-unification
+pass) only checked against 8c/8ck/7c at the time and didn't survey
+5c/5ck/ic -- this file is the first place all four missing backends
+are actually listed, from a direct source check. No probe constructed
+in this codebase so far has visibly discriminated buggy-vs-fixed
+behavior on 6c specifically (per todo.org) -- same epistemic status as
+several other items below: a real, verbatim logic gap, just not yet
+observed to misbehave here.
+
+boolgen()/comrel(): floating-point comparisons unsound under NaN
+------------------------------------------------------------------------
+
+boolgen() applies comrel[] (the integer logical-complement table:
+OLT<->OGE, OLE<->OGT, OEQ<->ONE, ...) to a relational operator
+*unconditionally*, before checking whether the comparison is actually
+floating-point. That complement is valid for integers (a total order)
+but not for IEEE-754 under NaN -- "!(x < y)" is not equivalent to
+"x >= y" when either operand is NaN (both directions are false for
+NaN). Verified directly from source by checking which backends' txt.c
+has the compensating NaN-safe branch-substitution mechanism
+(ABMI/ABPL/ABHI/ABLS standing in for the naive signed branches):
+
+    has the compensating fix: 5c, 7c (arm, arm64 -- via a mechanism
+      ported from principia-softwarica, independent of the 9front
+      diffing that found this same class of bug elsewhere)
+    confirmed broken, live, under investigation: vc, ic (mips, riscv --
+      "x = 0.0/0.0; y = 1.0;" wrongly evaluates x>y/x>=y as true on
+      riscv, x<y/x<=y as true on mips)
+    not checked: 6c, 8c, 8ck
+
+The riscv/mips investigation (see
+docs/claude_notes/notes_arch_riscv.txt) found the obvious fix --
+moving comrel[]'s application to only the integer-specific branches --
+does NOT work; it just relocates which operators come out wrong. Root
+cause is deeper: ic's own gopcode() synthesizes OGE/OGT from FLE/FLT
+plus an inverted branch sense (RISC-V's FPU has no native FGT/FGE), and
+that synthesis is independently NaN-unsound, so comrel[] is partly
+*compensating* for it rather than purely redundant with it. Given that
+6c/8c/8ck are unchecked, and x86/amd64 have their own from-scratch FPU
+comparison story (x87/SSE, not RISC-V's FCMP-family instructions), do
+not assume this needs the same fix shape there without checking their
+own float-comparison codegen first.
+
+Growable regopt() region array (missed optimization, not a correctness bug)
+-----------------------------------------------------------------------------------
+
+regopt()'s optimization pass tracks candidate optimization regions in
+a fixed-size `Rgn region[NRGN]` array and, on overflow, warns and
+simply stops optimizing further rather than crashing. Verified
+directly from source:
+
+    growable (fixed): 7c, vc -- region starts small (300), grows via
+      allocn() as needed, no fixed cap
+    still fixed-size (pending): 5c, 6c, 8c, ic -- all still have the
+      literal `if(nregion >= NRGN)` overflow check
+
+Not a correctness bug anywhere -- past the cap, codegen is simply less
+optimized, not wrong. No dedicated test exists for any backend: NVAR
+(the cap on distinct tracked variables) already limits how large a
+function's region count can practically get, and cheap synthetic
+generators used while landing the 7c/vc fixes didn't reliably trigger
+the old cap either. Real risk is a large, real-world function (like
+the ones this bug's fixes were actually motivated by finding) silently
+degrading rather than erroring.
+
+mkvar()'s ".ret" exclusion (missed optimization, not a correctness bug)
+------------------------------------------------------------------------------
+
+mkvar() excludes every "."-prefixed pseudo-symbol from register-
+allocator tracking -- reasonable for most of them, but ".ret" (the
+function return-value pseudo-variable) is a real optimization
+candidate like any other variable, not scratch bookkeeping. Verified
+directly from source (the specific `strcmp(s->name, ".ret") != 0`
+carve-out):
+
+    carved out (fixed): 7c, vc
+    not carved out (pending): 5c, 6c, 8c, ic
+
+Same missed-optimization-not-correctness-bug status as the regopt()
+item above, and landed alongside it in both backends that have it --
+worth checking together if porting either one.
+
+sprint()/strcpy() unbounded-buffer overflows (partially fixed, ongoing)
+------------------------------------------------------------------------------
+
+Distinct from the four bugs above in that this one isn't a single
+function duplicated per backend -- it's a *style* of bug (writing into
+a fixed-size buffer with no length check) that recurs anywhere this
+codebase's C sources use old-Plan-9-style sprint()/strcpy() instead of
+snprint(). Confirmed instances:
+
+    fixed: va's and 7a's assemble() (both had an identical fixed
+      `char ofile[100]`/raw strcpy() stack overflow on a long source
+      path -- see docs/claude_notes/notes_arch_mips.txt and
+      notes_arch_arm64.txt)
+    pending: vl/list.c and vl/pass.c (unbounded sprint() into fixed
+      buffers with arbitrary-length symbol names interpolated -- same
+      bug class, not yet observed to crash, but matching the pattern);
+      cck/lexbody's shared macexpand() (unbounded strcpy into a fixed
+      2000-byte buffer, pulled into every frontend that includes
+      cck/lexbody, i.e. potentially all of them, not just va)
+
+Unlike the four bugs above, this one has no clean "which backends have
+it, which don't" table, because it isn't one function -- it's a
+pattern that could recur anywhere sprint()/strcpy() meets an
+attacker- or user-controlled-length string. Treat any new sighting of
+this pattern as its own instance, not as evidence the whole class is
+resolved once one instance is fixed.
+
+What's deliberately NOT on this list
+------------------------------------------
+
+The long-vs-int32-on-a-64-bit-host bug class (five instances found in
+6a/6c/6l alone, plus the Bits/NVAR ulong-vs-uint32 stack smash shared
+by 8c and every backend using compilers/cc/bits.c) is the same *shape*
+of problem -- one bug pattern, independently present or independently
+fixed across multiple backends -- but already has its own thorough
+write-up in docs/claude_notes/notes_arch_amd64.txt and
+notes_arch_x86.txt. Not repeated here to avoid two files going stale
+independently; follow those cross-references instead.

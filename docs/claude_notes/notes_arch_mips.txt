@@ -50,6 +50,11 @@ see linkers/vl/sched.c's sched().
 vc: three register-allocator/codegen carve-outs, one real correctness bug
 --------------------------------------------------------------------------------
 
+See docs/claude_notes/notes_shared_frontend_bugs.txt for the full
+per-backend status table of the three items below (which of 5c/6c/8c/ic
+also have each one, verified directly from source) -- this section
+only covers what's specific to vc/mips.
+
 - regopt()'s fixed `Rgn region[600]` array gave up (warn + stop
   optimizing, not a crash) past 600 candidate regions. Ported 9front's
   growable version (starts at 300, doubles via allocn() as needed).

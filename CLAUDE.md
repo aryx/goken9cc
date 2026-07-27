@@ -104,20 +104,48 @@ These are syncweb chunk markers linking source code to the Noweb documentation i
 
 Working notes gathered while bringing up or fixing a specific area,
 written for a future Claude session to read before touching that area
-again — not user-facing documentation. One file per executable format
-or per-arch toolchain, e.g. `notes_exec_macho.txt` (Mach-O/PIE/dyld),
-`notes_exec_pe.txt` (PE/COFF), `notes_exec_elf.txt` (ELF across archs),
-`notes_arch_{arm,arm64,x86,amd64,mips,riscv}.txt` (per-arch codegen/ABI
-fixes), `notes_wasm.txt` (the ea/ec/el design). Conventions:
-- `notes_exec_*.txt` = executable-format internals; `notes_arch_*.txt`
-  = codegen/ABI internals for one arch's toolchain — keep format-
-  specific and arch-specific content in the right file rather than
+again — not user-facing documentation. Organized along a few axes,
+each with its own filename prefix:
+- `notes_exec_{macho,pe,elf}.txt` — executable-*format* internals
+  (headers, sections, load commands) for a target OS.
+- `notes_arch_{arm,arm64,x86,amd64,mips,riscv}.txt` — codegen/ABI
+  internals for one arch's compiler/assembler/linker.
+- `notes_os_{macos,linux,windows,plan9,xv6}.txt` — building and
+  running goken *itself* on that OS as a host (as opposed to
+  `notes_exec_*`, which is about binaries goken produces *for* that
+  OS). Several of these are placeholders reflecting real project
+  state (e.g. Plan 9/xv6 as build hosts are still TODO) — that's
+  intentional, not a gap to fill preemptively.
+- `notes_abi_plan9.txt` — Plan 9's native syscall ABI and running -H2
+  binaries under the 5i/vi emulators; the one syscall convention that
+  isn't tied to any of the exec-format files above.
+- `notes_shared_frontend_bugs.txt` — a per-backend status table for
+  bugs that recur across 5c/6c/7c/8c/vc/ic because their cgen.c/reg.c
+  look shared but have diverged independently; update this table
+  (verify from source, not from memory) whenever you land or find one
+  of these instead of re-describing the same bug in a new arch file.
+- `notes_test_infra.txt` — the testing *methodology* itself
+  (qemu-runner vs binfmt_misc, golden-diffing, cross-lineage corpus
+  comparison, wine/darling/wasm-runner) as opposed to any one test.
+- `notes_libmach.txt` — lib_toolchain/libmach's own object-format
+  parsing story, shared by iar/acid/5i/vi.
+- `notes_wasm.txt` — the ea/ec/el design (wasm is architecture and
+  executable format in one, hence no separate `notes_exec_wasm.txt`).
+
+Conventions:
+- Keep content in the file whose axis it actually belongs to (format
+  vs. arch vs. host-OS vs. syscall-ABI vs. cross-cutting bug pattern
+  vs. test methodology vs. a specific shared library) rather than
   duplicating it, and cross-reference the sibling file instead.
 - Concerned with **done, verified work** — the bug, the root cause,
   the fix, how it was tested — not open TODOs; point at `todo.org` for
   what's still pending rather than restating it.
 - Before starting similar work in a new area (a new arch, a new OS
-  target, a new exec format), check whether a `notes_arch_*`/
-  `notes_exec_*` file already exists for it and read it first.
+  target, a new exec format, a new shared library), check whether a
+  note already exists for it and read it first.
 - When starting genuinely new, substantial work in an area with no
-  existing note, create one following this same structure.
+  existing note, create one following this same structure — including
+  a new axis/prefix if the content genuinely doesn't fit an existing
+  one, the way `notes_abi_*`/`notes_shared_frontend_bugs`/
+  `notes_test_infra`/`notes_libmach` were added alongside the original
+  `notes_exec_*`/`notes_arch_*`/`notes_os_*` split.

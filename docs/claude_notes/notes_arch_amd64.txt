@@ -126,15 +126,17 @@ What's landed vs. what todo.org still lists as open
 Still open, not re-derived here: 6c's OAS hardleft paths (two spots)
 drop a nested assignment's value into `nn` (present identically in
 8c/8ck, so any fix should land in all three together); 6c is missing
-`l = uncomma(l);` at the top of its OFUNC case, unlike every sibling
-backend (vc/8c/8ck/7c all already have it -- 6c is the odd one out);
-missing SSE3/SSE4.1 mnemonics 9front carries (JMPF, HADDPD/PS, ROUNDSD/
-SS/PD/PS, DPPD/DPPS, etc. -- a real missing feature, not a bug, and
-goken deliberately doesn't chase 9cc's fuller AVX/VEX superset either);
-and an incomplete negative-frame clamp in linkers/6l/pass.c (low-impact,
-only reachable via a hand-written negative TEXT frame directive, not
-real C source). Several cross-cutting items (growable regopt() NRGN,
-".ret" register tracking, sprint()->snprint() cleanup, and especially
-the nodrat struct-copy-temp non-reentrancy bug shared by every backend
-in this tree) apply here too but are tracked once, under mips's
-section, rather than duplicated per arch.
+`l = uncomma(l);` at the top of its OFUNC case -- also true of 5c/5ck/
+ic, not just 6c, see docs/claude_notes/notes_shared_frontend_bugs.txt
+for the full per-backend table; missing SSE3/SSE4.1 mnemonics 9front
+carries (JMPF, HADDPD/PS, ROUNDSD/SS/PD/PS, DPPD/DPPS, etc. -- a real
+missing feature, not a bug, and goken deliberately doesn't chase 9cc's
+fuller AVX/VEX superset either); and an incomplete negative-frame clamp
+in linkers/6l/pass.c (low-impact, only reachable via a hand-written
+negative TEXT frame directive, not real C source). Several cross-
+cutting items (growable regopt() NRGN, ".ret" register tracking,
+sprint()->snprint() cleanup, and especially the nodrat struct-copy-temp
+non-reentrancy bug shared by every backend in this tree, confirmed
+present verbatim in all 8) apply here too but are tracked once, in
+docs/claude_notes/notes_shared_frontend_bugs.txt, rather than
+duplicated per arch.
