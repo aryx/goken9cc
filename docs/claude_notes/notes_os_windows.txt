@@ -18,10 +18,70 @@ Per README.md and changes.txt, goken currently builds on Windows only
 via Windows Subsystem for Linux (WSL) or Cygwin -- i.e., by way of a
 POSIX-compatible layer, not against native Windows toolchains (MSVC,
 or clang/mingw invoked directly from a native shell). Both of those
-compatibility layers make the host look enough like Linux that no
-Windows-specific host-build content has accumulated yet: whatever
-POSIX-layer quirks might exist haven't surfaced as distinct bugs
-worth recording separately from the ordinary Linux-host path.
+compatibility layers make the host look enough like Linux that little
+Windows-specific host-build content has accumulated -- but see below
+for two bugs Cygwin *did* surface, both from 2026-07-27.
+
+Bug: GOOS=cygwin leaks from host config into target auto-detection
+--------------------------------------------------------------------
+
+`./configure` (commit 7e34006cf, 2026-07-22) sets `GOOS=cygwin` in
+`mkconfig` to record the *host* build platform, needed so the rest of
+configure/mkfiles can key Cygwin-specific bootstrap decisions off it.
+But `mk` puts every mk variable into the environment of each recipe's
+shell, so this same `GOOS=cygwin` leaks into any linker invocation
+that doesn't pass `-H` explicitly. The go-era linkers (`src/cmd/{5,6,8}l`
+built as `5lg`/`6lg`/`8lg`) fall back to auto-detecting HEADTYPE from
+`$GOOS` when `-H` is absent (see `src/cmd/6l/obj.c:138-153`, matching
+only linux/darwin/freebsd/windows), so on a Cygwin host they printed
+"goos is not known: cygwin" and silently defaulted to the wrong
+(Plan 9) header instead of ELF Linux. This only worked "by accident"
+on Linux/macOS hosts, where host GOOS happened to equal the target.
+
+Hit via `tests/s/mini/mkfile`'s three `_`-suffixed recipes
+(`hello_linux_{386,amd64,arm}_.exe`), the only ones in that file
+relying on the auto-detect fallback instead of passing `-H` like
+every sibling recipe. Fixed by adding `-H7` to those three recipes
+(commit 1d59f803f) rather than touching the more invasive
+host-vs-target GOOS plumbing. Any *other* recipe anywhere in the tree
+that omits `-H` on a go-era linker and runs on a Cygwin host is
+exposed to the same failure mode -- worth grepping for if new ones
+turn up.
+
+Bug: gethunk()'s malloc() doesn't zero memory, unlike the sbrk() it replaced
+------------------------------------------------------------------------------
+
+Several `gethunk()` implementations across the tree were switched from
+`sbrk()` to `malloc()` to fix a different, unrelated macOS/arm64 sbrk
+cap issue (see the "claude:" comments at each site). That swap is only
+safe if the caller re-zeroes the chunk: the whole hunk-allocator
+convention (`alloc()`/`lookup()` in `compilers/cck/lexbody`, and
+equivalents elsewhere) relies on freshly carved-out structs having
+all-zero fields except the ones explicitly set -- e.g. `lookup()`
+allocates a new `Sym` and only sets `name`/`link`/`type`/`value`,
+leaving `macro`/`sym` at their assumed-zero default. `sbrk()` gave
+that for free (fresh kernel pages are zero-filled); `malloc()` does
+not promise it.
+
+`compilers/cc/utils.c` and `linkers/5lk/obj.c` already carried the
+fix (`memset(h, 0, nh)` right after the `malloc()`), but
+`compilers/cck/macbody` -- the `gethunk()` shared via `#include
+"../../compilers/cck/macbody"` by `assemblers/{va,ia,7a,6a,8ak,5ak}`
+-- had been missed. On Linux this went unnoticed because glibc's
+first few heap allocations in a short-lived process are often
+already-zero mmap'd pages, masking the missing memset; Cygwin's
+allocator does not give that same accidental cover. Surfaced as `va`
+(the mips assembler) segfaulting in `macexpand()` on any source file
+with two or more distinct new symbols (`TEXT`/`GLOBL` names) --
+reproduced down to a 2-line `GLOBL a(SB), $4 / GLOBL b(SB), $4` file,
+confirmed via Cygwin's `strace` + `addr2line` pointing at
+`compilers/cck/macbody:374`'s `*s->macro` dereference, where `s->macro`
+held leftover heap garbage instead of NULL for the second symbol.
+Fixed by adding the same `memset(h, 0, nh)` to that shared
+`gethunk()`. Verified by rebuilding `va` alone (`mk install` in
+`assemblers/va`) and rerunning `mk` in `tests/s/mini`, which now
+completes with exit 0 including `hello_linux_mips.exe` and
+`hello_plan9_mips.exe`.
 
 What would actually belong here
 -------------------------------------

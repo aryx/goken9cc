@@ -872,6 +872,18 @@ gethunk(void)
 		yyerror("out of memory");
 		errorexit();
 	}
+	/* claude: unlike sbrk's fresh kernel pages, malloc() does not zero
+	 * its memory, but this arena's callers rely on that guarantee --
+	 * e.g. lexbody's lookup() allocates a new Sym and only sets
+	 * name/link/type/value, leaving macro/sym at their assumed-zero
+	 * default. Without this memset, a nonzero leftover byte in a new
+	 * Sym's macro field makes yylex()'s "if(s->macro)" wrongly treat an
+	 * ordinary identifier as a macro invocation and crash inside
+	 * macexpand() dereferencing garbage. Same fix already applied to
+	 * this same sbrk->malloc swap in compilers/cc/utils.c and
+	 * linkers/5lk/obj.c; this copy (shared by va/ia/6a/7a/8ak/5ak via
+	 * #include "../../compilers/cck/macbody") had been missed. */
+	memset(h, 0, nh);
 	hunk = h;
 	nhunk = nh;
 	thunk += nh;
