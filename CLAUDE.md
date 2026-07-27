@@ -99,3 +99,25 @@ These are syncweb chunk markers linking source code to the Noweb documentation i
 
 - `docs/iwp9/iwp9.nw` — main book ("Goken: The Plan 9 Toolchain Reborn")
 - `docs/*.pdf` — historical Plan 9 documentation (asm, compiler, mk, rc, yacc, acid)
+
+## Claude engineering notes (docs/claude_notes/)
+
+Working notes gathered while bringing up or fixing a specific area,
+written for a future Claude session to read before touching that area
+again — not user-facing documentation. One file per executable format
+or per-arch toolchain, e.g. `notes_exec_macho.txt` (Mach-O/PIE/dyld),
+`notes_exec_pe.txt` (PE/COFF), `notes_exec_elf.txt` (ELF across archs),
+`notes_arch_{arm,arm64,x86,amd64,mips,riscv}.txt` (per-arch codegen/ABI
+fixes), `notes_wasm.txt` (the ea/ec/el design). Conventions:
+- `notes_exec_*.txt` = executable-format internals; `notes_arch_*.txt`
+  = codegen/ABI internals for one arch's toolchain — keep format-
+  specific and arch-specific content in the right file rather than
+  duplicating it, and cross-reference the sibling file instead.
+- Concerned with **done, verified work** — the bug, the root cause,
+  the fix, how it was tested — not open TODOs; point at `todo.org` for
+  what's still pending rather than restating it.
+- Before starting similar work in a new area (a new arch, a new OS
+  target, a new exec format), check whether a `notes_arch_*`/
+  `notes_exec_*` file already exists for it and read it first.
+- When starting genuinely new, substantial work in an area with no
+  existing note, create one following this same structure.
