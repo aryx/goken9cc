@@ -212,12 +212,25 @@ Three levels, in the order they were actually used as -H10 matured:
    test_macos` -- runs the already-built PE binaries directly with no
    wine layer, for when the host running the test target is Windows
    itself. Verified end-to-end building and running
-   hello_windows_386.exe / hello_windows_amd64.exe. A Windows amd64
-   tests/c/mini2 build (windows_amd64.s, kernel32 stubs mirroring
-   macos_amd64.s/linux_amd64.s) exists but is not yet wired into
-   WINDOWS_DIRS: compiling print_nofloat_no64.c with 6c hits a pre-
-   existing, Windows-independent cck bug ("cant rewrite typestr for op
-   NE") -- documented as a disabled target rather than worked around.
+   hello_windows_386.exe / hello_windows_amd64.exe.
+
+   A Windows amd64 tests/c/mini2 build (windows_amd64.s, kernel32
+   stubs mirroring macos_amd64.s/linux_amd64.s) existed but was left
+   out of WINDOWS_DIRS: compiling print_nofloat_no64.c with 6c hit a
+   segfault/miscompile that looked Windows-independent (see
+   docs/claude_notes/notes_os_windows.txt for the actual root cause --
+   a missing memset() in the shared compilers/cck/macbody hunk
+   allocator, unrelated to PE at all). Fixed 2026-07-27; tests/c/mini2
+   now builds and passes test_windows.
+
+   tests/c/mini also gained xwrite_windows_amd64.s/xexit_windows_amd64.s
+   (2026-07-27, same session), the PE counterpart to
+   xwrite_macos_amd64.s/xexit_macos_amd64.s -- xwrite is called twice
+   per run (unlike the single-shot entry point in hello_windows_amd64.s
+   above), so unlike that file it must save/restore SP around the
+   ANDQ-based Win64 stack realignment or the second call's RET pops a
+   corrupted return address. Both tests/c/mini and tests/c/mini2 are
+   now in WINDOWS_DIRS alongside tests/s/mini.
 
 Build-system gotcha: two build systems, two places to list pe.$O
 ------------------------------------------------------------------

@@ -84,3 +84,24 @@ helloc_macos_amd64.exe: helloc.c
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
 
+
+# Windows amd64: PE32+ (6l -H 10), kernel32.dll GetStdHandle/WriteFile/
+# ExitProcess via xwrite_windows_amd64.s/xexit_windows_amd64.s (mirrors
+# xwrite_macos_amd64.s/xexit_macos_amd64.s -- same helloc.c, same
+# start_amd64.s reused as-is since it is OS-independent). 6l -H 10 never
+# produces a PIE/ASLR image, so no -z here (unlike helloc_macos_amd64.exe
+# above, where -H6 forces PIE). Runs natively on the Windows test host
+# (no wine needed -- the host IS Windows here, unlike the wine-under-Linux
+# path in ../../s/mini/mkfile's `test` target). Driven from the top-level
+# `mk test_windows`.
+helloc_windows_amd64.exe: helloc.c
+   6c -Damd64 -c helloc.c
+   6a -Damd64 -c start_amd64.s
+   6a -Damd64 -c xwrite_windows_amd64.s
+   6a -Damd64 -c xexit_windows_amd64.s
+   iar rc libmini.a start_amd64.6 xwrite_windows_amd64.6 xexit_windows_amd64.6
+   6l -s -H 10 -L. -o $target -E _start helloc.6
+
+test_windows:V: helloc_windows_amd64.exe
+        ./helloc_windows_amd64.exe | cmp /dev/stdin helloc.expected.txt
+

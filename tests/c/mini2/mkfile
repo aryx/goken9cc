@@ -106,16 +106,23 @@ test_wasm:V: regress_wasm.wasm
 # 6l -H 10 never produces a PIE/ASLR image, so no -z here (unlike
 # macos_amd64.exe below, where -H6 forces PIE).
 #
-# claude: BLOCKED as of 2026-07-24 -- compiling print_nofloat_no64.c with
-# plain `6c -Damd64` fails deterministically ("cant rewrite typestr for
-# op NE" on `if(*p != '%') continue;`, compilers/cck/funct.c), and adding
-# -z to route around it turns that into a nondeterministic segfault
-# instead (memory fault, ~5/5 repro) rather than fixing anything. Neither
-# is a Windows-specific problem: both reproduce with plain `6c -Damd64 -c
-# print_nofloat_no64.c` with no OS/PE-specific flags at all, i.e. this
-# looks like a pre-existing cck Type.funct-table bug on this host,
-# unrelated to this test_windows addition. Left un-worked-around pending
-# investigation; see conversation with the user from that date.
+# claude: was BLOCKED 2026-07-24 - 2026-07-27 -- compiling
+# print_nofloat_no64.c with plain `6c -Damd64` failed deterministically
+# ("cant rewrite typestr for op NE" on `if(*p != '%') continue;`), and
+# adding -z to route around it turned that into a nondeterministic
+# segfault instead (memory fault, ~5/5 repro). Both symptoms traced to
+# the same root cause, not a Windows-specific bug at all: compilers/cck/
+# macbody's gethunk() had been switched from sbrk() to malloc() for an
+# unrelated macOS/arm64 fix, but unlike sbrk() malloc() doesn't zero its
+# memory, and this codebase's whole hunk allocator (used by every 6c
+# compile, not just this one) relies on freshly carved structs being
+# zero except the fields explicitly set. Fixed by zeroing the arena
+# (see compilers/cck/macbody and docs/claude_notes/notes_os_windows.txt);
+# both symptoms above disappeared after that fix plus a full toolchain
+# rebuild (`mk install`, since assemblers/compilers that #include
+# macbody directly aren't relinked just by editing it -- their .o files
+# have to be forced stale, e.g. by touching/removing them, for mk to
+# notice).
 helloprintf_windows_amd64.exe: helloprintf.c
    6c -Damd64 -c test.c
    6c -Damd64 -c print_nofloat_no64.c
