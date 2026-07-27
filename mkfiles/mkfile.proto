@@ -12,11 +12,17 @@ ROOT=$TOP/ROOT
 OS=5678ijve
 CPUS=arm arm64 386 amd64 riscv riscv64 mips wasm
 
-# note: CFLAGS itself (the host-compiler flags: -O0/-ggdb/--std=gnu89/...)
-# is NOT defined here since it's gcc/clang specific -- see
-# mkfiles/boot-gcc/mkfile and mkfiles/boot-clang/mkfile. Kept here only:
-# LDFLAGS's -L is understood by both gcc/clang (host bootstrap) and by
-# goken's own linkers (5l/6l/7l/8l/...), so it stays generic.
+# -I$TOP/include, -I$TOP/include/ALL and -I. are understood both by the
+# host bootstrap compiler (gcc/clang) and by goken's own Xc compilers
+# (-I is parsed in compilers/cc/lex.c, shared by all of them), so they
+# stay here as CFLAGS_COMMON for a future self-hosted 'mk objtype=$cputype'
+# build to reuse. The rest of CFLAGS (-O0/-ggdb/--std=gnu89/... and
+# -I$TOP/BOOT/include, the host libc-adaptation headers) is gcc/clang
+# (host bootstrap) specific and lives in mkfiles/boot-gcc/mkfile and
+# mkfiles/boot-clang/mkfile instead. LDFLAGS's -L is likewise generic:
+# understood by both the host linker and goken's own linkers
+# (5l/6l/7l/8l/...).
+CFLAGS_COMMON=-I$TOP/include -I$TOP/include/ALL -I.
 #note: SANITIZE is optionally set by ./configure --asan
 LDFLAGS=-L$ROOT/$cputype/lib $SANITIZE
 
