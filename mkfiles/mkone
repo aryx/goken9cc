@@ -9,6 +9,7 @@ $O.out:	$OFILES $LIB
 	$LD $LDFLAGS -o $target $prereq $LDLIBS
 
 %.$O:	$HFILES		# don't combine with following %.$O rules
+
 # note: -o must come *before* the source file -- see mkfiles/mksyslib
 %.$O:	%.c
 	$CC $CFLAGS $CFLAGS_EXTRA -o $target $stem.c
