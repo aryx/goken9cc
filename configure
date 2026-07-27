@@ -34,14 +34,19 @@ set -eu
 
 # Parse options
 SANITIZE=
+CCKIND=gcc
 for arg in "$@"; do
     case "$arg" in
         --asan)
             SANITIZE='-fsanitize=address'
             ;;
+        --clang)
+            CCKIND=clang
+            ;;
         --help|-h)
             echo "Usage: ./configure [options]"
             echo "  --asan    Build with AddressSanitizer (memory error detector)"
+            echo "  --clang   Bootstrap goken with clang instead of gcc"
             exit 0
             ;;
         *)
@@ -91,7 +96,16 @@ echo 'Generating ./mkconfig'
 #old: now in mkfiles/mkfile.proto included from mkfiles/$objtype/mkfile
 #  CPUS=arm amd64 386
 #  OS=568
-echo "objtype=$GOARCH" > mkconfig
+#
+# objtype vs cputype: objtype now selects a *build flavor* mkfile
+# (mkfiles/boot-gcc or mkfiles/boot-clang), not a CPU. Those bootstrap
+# mkfiles use the host C compiler (gcc/clang) to build goken itself.
+# cputype is the actual host CPU (amd64/arm64/...) and is what
+# ROOT/$cputype/{bin,lib} and the host-specific CFLAGS_ARCH are keyed
+# on. This split is what will let a future objtype=self-$cputype mkfile
+# set CC=$CC_ (e.g. 7c) to self-host goken with goken instead of gcc.
+echo "objtype=boot-$CCKIND" > mkconfig
+echo "cputype=$GOARCH" >> mkconfig
 echo "GOOS=$GOOS" >> mkconfig
 echo "GOARCH=$GOARCH" >> mkconfig
 #still needed? used in golang

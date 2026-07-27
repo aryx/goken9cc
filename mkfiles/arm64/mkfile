@@ -1,20 +1,9 @@
 <$TOP/mkfiles/mkfile.proto
 
-# flags explanations:
-# - the -signed-char is needed otherwise compilers/8c/mul.c will be buggy
-#   see https://abstractexpr.com/2023/04/30/the-anomaly-of-the-char-type-in-c/
-# - the --std=gnu89 is needed because recent gcc have too many warnings
-#   by default that prevents to compile goken
-# - the -Wno-cpp is to avoid certain errors
-#alt: CC=quietgcc -c ...
-CC=gcc -c --std=gnu89 -Wno-cpp -fsigned-char
-LD=gcc
-AS=gcc
-O=o
-
-# used in tests/
-O_=7
-CC_=7c
-LD_=7l
-AS_=7a
-AR_=iar
+# the goken cross-toolchain itself: used by tests/ (mk objtype=arm64) and,
+# once self-hosting is viable, as CC/AS/LD for the top-level build too
+O=7
+CC=7c
+LD=7l
+AS=7a
+AR=iar

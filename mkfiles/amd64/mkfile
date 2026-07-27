@@ -1,13 +1,9 @@
 <$TOP/mkfiles/mkfile.proto
 
-CC=gcc -Wno-cpp --std=gnu89 -c
-LD=gcc
-AS=gcc
-O=o
-
-# used in tests/
-O_=6
-CC_=6c
-LD_=6l
-AS_=6a
-AR_=iar
+# the goken cross-toolchain itself: used by tests/ (mk objtype=amd64) and,
+# once self-hosting is viable, as CC/AS/LD for the top-level build too
+O=6
+CC=6c
+LD=6l
+AS=6a
+AR=iar

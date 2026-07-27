@@ -1,0 +1,4 @@
+# no extra host CFLAGS needed to build goken's own C sources with
+# gcc/clang on an arm host (theoretical: this project has no 32-bit
+# ARM host today, uname only ever yields amd64/arm64)
+CFLAGS_ARCH=

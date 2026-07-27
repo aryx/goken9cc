@@ -1,0 +1,13 @@
+<$TOP/mkfiles/mkfile.proto
+<$TOP/mkfiles/hostflags/$cputype/mkfile
+
+# same role as mkfiles/boot-gcc/mkfile but bootstrapping with clang
+# instead of gcc (./configure --clang). Untested so far (boot-gcc is
+# the default and the only path exercised in CI); $CFLAGS_ARCH's flags
+# (-fsigned-char, -m32, ...) are accepted by clang too but the exact
+# set may need adjusting once this path is actually exercised.
+CC=clang -c --std=gnu89 -Wno-cpp $CFLAGS_ARCH
+#alt: could use lld?
+LD=clang
+AS=clang
+O=o

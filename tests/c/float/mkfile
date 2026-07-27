@@ -4,22 +4,23 @@ TOP=../../..
 all:V: helloprintf.exe
 clean:V:
 	rm -f *.[5678ijv] *.exe *.a
-test_one:V: all
+test_one:V:
+	mk 'objtype='$cputype all
 	./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
 
 CPP_FLAGS=-D$objtype
 
 # can use -v for verbose mode to help debug
-#LATER: add rune.$O_ in libprint.a? and use functions from it?
+#LATER: add rune.$O in libprint.a? and use functions from it?
 helloprintf.exe: helloprintf.c
-   #$CC_ $CPP_FLAGS -c rune.c
-   $CC_ $CPP_FLAGS -c vlrt.c
-   $CC_ $CPP_FLAGS -c print.c
-   $CC_ $CPP_FLAGS -c float.c
-   $CC_ $CPP_FLAGS -c helloprintf.c
-   $AS_ $CPP_FLAGS -c linux_$objtype.s
-   $AR_ rc libprint.a linux_$objtype.$O_ print*.$O_ float*.$O_ vlrt.$O_
-   $LD_ -L. -o $target -E _main helloprintf.$O_
+   #$CC $CPP_FLAGS -c rune.c
+   $CC $CPP_FLAGS -c vlrt.c
+   $CC $CPP_FLAGS -c print.c
+   $CC $CPP_FLAGS -c float.c
+   $CC $CPP_FLAGS -c helloprintf.c
+   $AS $CPP_FLAGS -c linux_$objtype.s
+   $AR rc libprint.a linux_$objtype.$O print*.$O float*.$O vlrt.$O
+   $LD -L. -o $target -E _main helloprintf.$O
 
 #TODO: arm_
 #TODO: arm: qemu-arm's legacy ARM FPA "FIX" (float64->int32, used by

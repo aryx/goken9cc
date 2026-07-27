@@ -1,0 +1,5 @@
+# flags needed to build goken's own C sources with gcc/clang on a 386 host:
+# - the -m32 to force 32bits arch
+# - the -mfpmath=sse is to avoid mismatch when interpreting float literals
+#   so that the compilation of tests/c/misc/f_1_e_126.c leads to same code
+CFLAGS_ARCH=-m32 -mfpmath=sse -sse2

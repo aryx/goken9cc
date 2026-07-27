@@ -1,20 +1,16 @@
 <$TOP/mkfiles/mkfile.proto
 
-# See mkfiles/arm64/mkfile for the flag rationale (-fsigned-char, gnu89, ...).
-CC=gcc -c --std=gnu89 -Wno-cpp -fsigned-char
-LD=gcc
-AS=gcc
-O=o
-
-# used in tests/: the RISC-V (rv64) lineage. ja/jc/jl are the *same*
+# the goken cross-toolchain itself: used by tests/ (mk objtype=riscv64) and,
+# once self-hosting is viable, as CC/AS/LD for the top-level build too.
+# The RISC-V (rv64) lineage. ja/jc/jl are the *same*
 # binaries as ia/ic/il (assemblers/ia/mkfile, compilers/ic/mkfile,
 # linkers/il/mkfile install them under both names); their main()s
 # auto-select thechar='j' (64-bit) from argv[0]'s basename (or, for
 # ia/il, a -j flag too), the original inferno 'i'/'j' dual-width riscv
 # convention -- there is no separate top-level arch letter for riscv64
 # the way arm64 got its own '7' distinct from arm's '5'. Object ext .j.
-O_=j
-CC_=jc
-LD_=jl
-AS_=ja
-AR_=iar
+O=j
+CC=jc
+LD=jl
+AS=ja
+AR=iar

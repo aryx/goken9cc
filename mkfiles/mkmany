@@ -3,7 +3,7 @@
 PROGS=${TARG:%=$O.%}
 MANFILES=${TARG:%=%.man}
 
-BIN=$ROOT/$objtype/bin
+BIN=$ROOT/$cputype/bin
 BINS=${TARG:%=$BIN/%}
 
 all:V: $PROGS

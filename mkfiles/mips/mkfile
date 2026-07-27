@@ -1,8 +1,9 @@
 <$TOP/mkfiles/mkfile.proto
 
-# used in tests/
-O_=v
-CC_=vc
-LD_=vl
-AS_=va
-AR_=iar
+# the goken cross-toolchain itself: used by tests/ (mk objtype=mips) and,
+# once self-hosting is viable, as CC/AS/LD for the top-level build too
+O=v
+CC=vc
+LD=vl
+AS=va
+AR=iar

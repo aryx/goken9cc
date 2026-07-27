@@ -1,0 +1,5 @@
+# the -fsigned-char is needed to build goken's own C sources with
+# gcc/clang on an arm64 host, otherwise compilers/8c/mul.c will be buggy
+# (plain `char` defaults to unsigned on arm64, unlike amd64/386); see
+# https://abstractexpr.com/2023/04/30/the-anomaly-of-the-char-type-in-c/
+CFLAGS_ARCH=-fsigned-char

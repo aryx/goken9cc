@@ -19,7 +19,7 @@ CPUS=arm arm64 386 amd64 riscv riscv64 mips wasm
 #coupling: scripts/build-mk.sh CFLAGS
 GCCFLAGS=-O0 -fno-inline -ggdb $SANITIZE -I$TOP/BOOT/include
 CFLAGS=$GCCFLAGS -I$TOP/include -I$TOP/include/ALL -I. 
-LDFLAGS=-L$ROOT/$objtype/lib $SANITIZE
+LDFLAGS=-L$ROOT/$cputype/lib $SANITIZE
 
 LEX=lex
 #alt: bison but not always super compatible. apparently on my Linux /bin/yacc

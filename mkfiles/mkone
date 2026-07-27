@@ -1,6 +1,8 @@
 # -*- sh -*-
 
-BIN=$ROOT/$objtype/bin
+# this used to be $ROOT/$objtype/bin but now that objtype=boot-gcc
+# in booting context, we use cputype instead
+BIN=$ROOT/$cputype/bin
 
 all:V:	$O.out
 $O.out:	$OFILES $LIB

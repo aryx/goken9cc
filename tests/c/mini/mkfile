@@ -1,23 +1,24 @@
-# can use $CC_ -S to see the assembly code
+# can use $CC -S to see the assembly code
 TOP=../../..
 <$TOP/mkfiles/$objtype/mkfile
 
 all:V: helloc.exe
 clean:V:
         rm -f *.[5678ijv] *.exe *.a
-test_one:V: all
+test_one:V:
+        mk 'objtype='$cputype all
         ./helloc.exe | cmp /dev/stdin helloc.expected.txt
 
 #TODO? 'ar rc'? in principia we use 'ar vu'
-#old: $LD_ -X to require NOSPLIT for all linked code, especially in $stem.6
-#alt: ar rc libmini.a *.$O_   below
+#old: $LD -X to require NOSPLIT for all linked code, especially in $stem.6
+#alt: ar rc libmini.a *.$O   below
 helloc.exe: helloc.c
-   $CC_ -D$objtype -c $prereq
-   $AS_ -D$objtype -c start_$objtype.s
-   $AS_ -D$objtype -c xwrite_$objtype.s
-   $AS_ -D$objtype -c xexit_$objtype.s
-   $AR_ rc libmini.a start_$objtype.$O_ xwrite_$objtype.$O_ xexit_$objtype.$O_
-   $LD_ -L. -o $target -E _start helloc.$O_
+   $CC -D$objtype -c $prereq
+   $AS -D$objtype -c start_$objtype.s
+   $AS -D$objtype -c xwrite_$objtype.s
+   $AS -D$objtype -c xexit_$objtype.s
+   $AR rc libmini.a start_$objtype.$O xwrite_$objtype.$O xexit_$objtype.$O
+   $LD -L. -o $target -E _start helloc.$O
 
 ARCHS=386 amd64 arm arm64 mips riscv
 test:V:

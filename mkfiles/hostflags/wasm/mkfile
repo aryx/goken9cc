@@ -1,0 +1,2 @@
+# wasm is never a build host (it's a compile target only)
+CFLAGS_ARCH=

@@ -1,0 +1,3 @@
+# no extra host CFLAGS needed to build goken's own C sources with
+# gcc/clang on a mips host (theoretical: this project has no mips host today)
+CFLAGS_ARCH=

@@ -1,0 +1,2 @@
+# see mkfiles/hostflags/arm64/mkfile for the -fsigned-char rationale
+CFLAGS_ARCH=-fsigned-char

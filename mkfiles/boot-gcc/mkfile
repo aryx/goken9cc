@@ -1,0 +1,21 @@
+<$TOP/mkfiles/mkfile.proto
+<$TOP/mkfiles/hostflags/$cputype/mkfile
+
+# the host bootstrap compiler: builds goken's own C sources (compilers/,
+# assemblers/, linkers/, lib_core/, ...) using gcc, so that the goken
+# cross-tools (5c/6c/7c/8c/...) exist in the first place.
+#
+# the --std=gnu89 is needed because recent gcc have too many warnings
+# by default that prevent compiling goken, and -Wno-cpp is to avoid
+# certain errors; $CFLAGS_ARCH (from mkfiles/hostflags/$cputype/mkfile)
+# adds any flags needed for this specific host CPU.
+#
+# once the cross-tools can compile lib_core/libc themselves, a later
+# 'mk objtype=$cputype' build (see mkfiles/$cputype/mkfile) can use them
+# as CC/AS/LD instead of gcc, to self-host goken with goken.
+CC=gcc -c --std=gnu89 -Wno-cpp $CFLAGS_ARCH
+#alt: could use ld?
+LD=gcc
+#alt: could use gas?
+AS=gcc
+O=o

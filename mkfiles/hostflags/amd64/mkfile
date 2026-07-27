@@ -1,0 +1,3 @@
+# no extra host CFLAGS needed to build goken's own C sources with
+# gcc/clang on an amd64 host
+CFLAGS_ARCH=
