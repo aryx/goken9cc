@@ -162,9 +162,38 @@ swit1(C1 *c1, int nc, int32 def, Node *n)
 	diag(Z, "switch not implemented yet in ec");
 }
 
+/*
+ * claude: ported from ic/swt.c almost verbatim (see docs/notes_wasm.txt) --
+ * buffers up to NSNAME bytes at a time into the shared `.string` blob
+ * (symstring, wired up once in cck/lex.c), flushing each full chunk as
+ * an ADATA record. Uses p->reg to carry the chunk's byte count, not
+ * p->from.scale (6c's convention): ec/e.out.h's Adr has no scale
+ * field, and el/obj.c's ADATA reader already expects the count in
+ * `reg` (outcode()'s generic 3rd-argument slot -- see its own
+ * comment), matching every other ADATA-emitting backend that doesn't
+ * have a scale field either (ic among them).
+ */
 long
 outstring(char *s, long n)
 {
-	USED(s);
-	return n;
+	long r;
+
+	if(suppress)
+		return nstring;
+	r = nstring;
+	while(n) {
+		string[mnstring] = *s++;
+		mnstring++;
+		nstring++;
+		if(mnstring >= NSNAME) {
+			gpseudo(ADATA, symstring, nodconst(0L));
+			p->from.offset += nstring - NSNAME;
+			p->reg = NSNAME;
+			p->to.type = D_SCONST;
+			memmove(p->to.sval, string, NSNAME);
+			mnstring = 0;
+		}
+		n--;
+	}
+	return r;
 }

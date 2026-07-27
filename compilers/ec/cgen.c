@@ -159,6 +159,27 @@ rval(Node *n)
 		rval(l);
 		return;
 
+	case OADDR:
+		/* claude: a C global/static's address is already a link-time
+		 * constant (see gaddr()'s own comment) -- string literals hit
+		 * this path too, since cck/com.c's OSTRING case turns a string
+		 * into an ONAME (class CSTATIC, sym=symstring) that decays to
+		 * `char*` via an implicit OADDR, same as any other array-to-
+		 * pointer decay. A *local*'s address is a different story: it
+		 * would need a real stack slot (the shadow-stack redesign
+		 * docs/notes_wasm.txt's "Open questions" describes), not just
+		 * retagging a naddr() result, so that case still diag()s. */
+		if(l->op != ONAME) {
+			diag(n, "cgen: address-of not implemented yet: %O", l->op);
+			return;
+		}
+		if(islocal(l)) {
+			diag(n, "cgen: address-of a local not implemented yet (needs the shadow-stack redesign, see docs/notes_wasm.txt)");
+			return;
+		}
+		gaddr(l);
+		return;
+
 	default:
 		diag(n, "cgen: not implemented yet: %O", n->op);
 	}

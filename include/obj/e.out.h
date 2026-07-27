@@ -408,7 +408,15 @@ enum	as
 	 * rather than overloading that field with new meaning. One
 	 * operand, D_SCONST: one char per parameter ('W'=i32/'Q'=i64/
 	 * 'F'=f32/'D'=f64), then a result-type char or 'V' for void.
-	 * Emitted by ec's gtext() right after ATEXT for the same symbol.
+	 * Emitted by ec's gpseudo() right after ATEXT for the same symbol
+	 * (see txt.c's own comment for why gpseudo() rather than a per-arch
+	 * gtext() hook). Hand-written .s files needing a real (non-'V',
+	 * non-nullary) signature -- any TEXT called from ec-compiled C,
+	 * since the wasm validator checks the call site's argument count/
+	 * types against the callee's declared type -- spell this directly
+	 * via ea's `SIGNATURE sym(SB), $"sig"` directive (assemblers/ea/
+	 * a.y), right after that TEXT, the same placement ec's own codegen
+	 * always uses.
 	 */
 	ASIGNATURE,
 

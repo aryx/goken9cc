@@ -202,6 +202,7 @@ struct Itab itab[] =
 
     "TEXT",		LDEF,		ATEXT,
     "GLOBL",		LDEF,		AGLOBL,
+    "SIGNATURE",	LDEF,		ASIGNATURE,
     "DATA",		LDATA,		ADATA,
     "WORD",		LWORD,		AWORD,
 

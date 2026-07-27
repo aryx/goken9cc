@@ -6,9 +6,10 @@ this toolchain: assemblers/ea, linkers/el, include/e.out.h, and now
 compilers/ec (the C compiler backend, reusing compilers/cck's shared
 frontend). Written to be read before touching any of those. The "Open
 questions for ec" section at the end tracks what's still unimplemented
-(floats, strings, variadic/printf) now that the bootstrap, if/else,
-and all of C's loop constructs (while, for, do while, including
-nesting/break/continue and loop rotation) are done.
+(floats, variadic/printf) now that the bootstrap, if/else, all of C's
+loop constructs (while, for, do while, including nesting/break/
+continue and loop rotation), string literals, and address-of for
+globals/statics are done.
 
 See tests/s/mini/hello_wasm.s (hand-written ea assembly) and
 tests/s/mini/hello_wasm.wat (the same program in traditional
@@ -16,6 +17,18 @@ WebAssembly Text, for comparison) for ea/el, and
 tests/c/mini2/regress_wasm.c for ec (straight-line arithmetic,
 recursion, if/else, and all of while/for/do-while -- see that file's
 own comments for what each function checks).
+
+tests/c/mini2/hellowrite_wasm.c is this arch's first *real*,
+running tests/c/mini2 example -- an actual C program's stdout compared
+against expected.txt via cmp, the same way every other arch's
+helloprintf.exe is checked, rather than regress_wasm.c's self-checking
+return-code trick. It isn't helloprintf.c itself (real variadic printf
+needs the address-taken-local/shadow-stack work below first -- see its
+own comment for exactly why write() doesn't); tests/s/mini/mkfile's
+storeorder_wasm.s is a from-a-different-angle sibling: hand-assembled
+rather than ec-compiled, and built specifically to catch a real
+STOREx-operand-order bug (below) rather than to demonstrate a full C
+program.
 
 
 Why 'e' for the arch letter
@@ -360,6 +373,78 @@ emits it as a single local-decl entry in the function body's code
 section, so wasm actually reserves those extra slots instead of
 leaving them undeclared.
 
+String literals (OSTRING) and address-of for globals/statics: both
+turned out to already be almost entirely wired up by shared frontend
+code, needing only two small, arch-specific pieces. outstring()
+(ec/swt.c) is close to a verbatim port of ic/swt.c's (riscv): buffer up
+to NSNAME bytes into the shared `.string` blob (symstring, wired up
+once in cck/lex.c) and flush each full chunk as an ADATA record, using
+`p->reg` to carry the chunk's byte count -- not `p->from.scale` (6c's
+convention): ec's Adr has no scale field, and el/obj.c's ADATA reader
+already expects the count in `reg` (outcode()'s generic 3rd-argument
+slot), matching every other ADATA-emitting backend without a scale
+field either. gclean() (ec/txt.c) already had the matching flush-and-
+GLOBL-emit logic in place from the start (modeled on every other
+arch's gclean()), so this alone was enough for string literals to
+work end to end. Address-of: cck/com.c's generic array-to-pointer
+decay already wraps a string literal (or any array) in an OADDR node
+when used where a pointer is expected -- ec just needed a `case
+OADDR:` in cgen.c's rval() to handle it, and for a global/static ONAME
+that's exactly what gaddr() (ec/txt.c) already did (it predates this
+session, written for OAS's own "address first" sequencing) -- pushes
+the naddr()-computed D_OREG/D_STATIC-or-D_EXTERN address, retagged to
+D_CONST, the same trick ea/a.y's own pushaddr() uses for `$msg(SB)`.
+Address-of a *local* still diag()s (needs the shadow-stack redesign
+below, not yet started).
+
+A real bug found while building on top of this (tests/c/mini2/
+hellowrite_wasm.c, see its own comment): ea's `STOREx addr` convenience
+form (a.y's pushaddr()-fused grammar rule, symmetric with `LOADx addr`)
+emits the address-push instruction *at that line*, immediately before
+the store opcode -- correct only when the value being stored is also a
+bare immediate pushed by that same line. When the value instead comes
+from an earlier, separate instruction (a LOCALGET of a real argument,
+say -- exactly the shape any real store, hand-written or ec-compiled,
+normally has), the fused form gets the stack order backwards: it ends
+up as [value, address] instead of the [address, value] a real
+i32.store needs (e.out.h's own ALOADx/ASTOREx comment says address is
+always evaluated first). There is no way to fix this from inside one
+bison reduction -- the address-push and the value-push are two
+different lines' worth of emitted code, in the order those lines
+appear, and pushaddr() always runs at the STORE line, after whatever
+came before it. This had gone uncaught because no test exercised
+STOREx with a non-constant value -- el/asm.c's own top comment
+correctly flagged loads/stores as implemented-but-unverified. Confirmed
+empirically (a hand-assembled STOREW writing a runtime value produced
+0x00 instead of the stored byte, matching "address ends up written
+into where the value should have been read from") before fixing it, to
+avoid chasing a theory that happened to be wrong. Fixed by adding a
+second, un-fused STORE form -- `STOREW $0` -- that emits only the bare
+opcode with a literal memarg offset, taking both operands from
+whatever the caller already pushed in whatever order it chose (kept
+alongside, not replacing, the `addr` form, which is still correct for
+LOAD and for a constant-valued STORE). Regression test:
+tests/s/mini/storeorder_wasm.s, which builds the same "Hello,
+world\n" every other hello_*.exe in that directory checks, one byte at
+a time through a runtime STOREB (via a genuine CALL boundary, so the
+value truly arrives via LOCALGET, not folded away by anything) instead
+of DATA -- a regression here fails exactly like a silently-wrong hello
+program would, not just a narrow assertion.
+
+A second, smaller gap found in the same effort: a hand-written .s TEXT
+called from ec-compiled C needs a real (non-void, non-nullary)
+signature for the wasm validator's call-site type check to pass, but
+ASIGNATURE (see e.out.h's own comment) was ec-only -- nothing let
+hand-assembly declare one. Fixed by adding a `SIGNATURE sym(SB),
+$"sig"` directive to ea (a.y/lex.c), reusing ASIGNATURE and el/obj.c's
+existing reader verbatim (it already handled ASIGNATURE from either
+source, having never actually checked who emitted it) -- purely an
+assembler-side addition, no linker changes needed. tests/c/mini2/
+wasi_wasm.s's write() (wrapping the WASI fd_write import into libc's
+write(fd,buf,n) shape, the wasm counterpart of linux_amd64.s/
+macos_amd64.s/windows_amd64.s) is the first real user, and doubles as
+its test.
+
 
 Open questions for ec (not yet started)
 -------------------------------------------
@@ -375,19 +460,22 @@ exists today, kept here so it doesn't have to be re-derived:
     or LLVM's CFGStackify) instead of the direct construction it does
     today.
 
-  - The address-taken-local split. e.out.h's D_AUTO/D_PARAM already
-    reserve the concept: a C local/param whose address is never taken
-    compiles straight to a D_LOCAL (fast, a true wasm local, as
-    implemented today); one that is address-taken (or too large to
-    fit in a single wasm value type) needs a slot in the shadow stack
-    instead, addressed relative to SPGLOBAL the way D_AUTO/D_PARAM
-    work on every other arch. Deciding which case a given C variable
-    falls into is ec's job -- probably a pass very similar to how
-    existing backends already decide which C locals become register
-    variables versus stack-resident ones, just with a binary
-    fast/slow split instead of "how many registers are free". This is
-    the hard blocker for variadic printf (which needs `&arg` to be a
-    real, contiguous address).
+  - The address-taken-local split. Address-of a global/static is done
+    (cgen.c's OADDR case, see above) -- what's still open is locals.
+    e.out.h's D_AUTO/D_PARAM already reserve the concept: a C local/
+    param whose address is never taken compiles straight to a D_LOCAL
+    (fast, a true wasm local, as implemented today); one that is
+    address-taken (or too large to fit in a single wasm value type)
+    needs a slot in the shadow stack instead, addressed relative to
+    SPGLOBAL the way D_AUTO/D_PARAM work on every other arch. Deciding
+    which case a given C variable falls into is ec's job -- probably a
+    pass very similar to how existing backends already decide which C
+    locals become register variables versus stack-resident ones, just
+    with a binary fast/slow split instead of "how many registers are
+    free". This is the hard blocker for variadic printf (which needs
+    `&arg` to be a real, contiguous address) -- write() (tests/c/mini2/
+    hellowrite_wasm.c) doesn't need it: wasi_wasm.s's wrapper builds
+    its iovec out of a private global, never the caller's own frame.
 
   - The shadow stack's actual push/pop sequence at function entry/
     exit isn't designed yet: SPGLOBAL needs to be decremented by the

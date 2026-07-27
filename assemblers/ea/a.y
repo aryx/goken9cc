@@ -207,6 +207,43 @@ inst:
 		g.offset = pushaddr(&$2);
 		outcode($1, &nullgen, NOREG, &g);
 	}
+|	LSTORE '$' con
+	{
+		/*
+		 * claude: the `addr` form above is only safe when the value
+		 * being stored is a constant this same line can push *after*
+		 * pushaddr()'s address-push -- but pushaddr() always emits its
+		 * address-push right here, at this line, so if the value to
+		 * store was itself computed by an *earlier* line (a LOCALGET
+		 * of a real argument, say), the `addr` form gets the stack
+		 * order backwards: [value, address] instead of the [address,
+		 * value] a real i32.store needs (see e.out.h's ALOADx/ASTOREx
+		 * comment: address is always evaluated first). There is no
+		 * way to fix that from inside one bison reduction -- the
+		 * address-push and the value-push are two different lines'
+		 * worth of code, emitted in the order those lines appear, and
+		 * this rule fires (and so emits its own instruction) strictly
+		 * after whatever came before it.
+		 *
+		 * So this is the honest, un-fused form promised by e.out.h's
+		 * own comment ("one operand: the memarg offset... base address
+		 * ... pushed by whatever precedes"): `STOREW $0` emits nothing
+		 * but the bare opcode with a literal offset, taking both
+		 * operands from whatever the caller already pushed, in
+		 * whatever order the caller chose -- e.g. `CONSTW $buf(SB) /
+		 * LOCALGET LOCAL(1) / STOREW $0` for "store local 1's value at
+		 * buf". Kept alongside the `addr` form (not a replacement for
+		 * it) since `addr`'s fusion is still correct and convenient
+		 * for LOAD (a single operand, no ordering hazard) and for a
+		 * STORE whose value is a compile-time constant pushed by this
+		 * same call site.
+		 */
+		Gen g;
+		g = nullgen;
+		g.type = D_CONST;
+		g.offset = $3;
+		outcode($1, &nullgen, NOREG, &g);
+	}
 |	LDEF name ',' ximm
 	{
 		nlabelstack = 0;

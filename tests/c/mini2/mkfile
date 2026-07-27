@@ -86,18 +86,34 @@ test_macos_amd64:V: helloprintf_macos_amd64.exe regress7c_macos_amd64.exe
 	./regress7c_macos_amd64.exe
 
 
-# wasm regression test for compilers/ec (if/else + recursion so far --
-# see docs/notes_wasm.txt and regress_wasm.c's own comment). ec has no
-# printf/WASI runtime wired up yet, so unlike every recipe above this
-# is verified by calling runtests() directly and checking its return
-# value (scripts/wasm-call-runner.js), not by comparing captured
-# stdout against an expected.txt.
+# wasm regression test for compilers/ec's control flow (if/else,
+# while, for, do-while -- see docs/notes_wasm.txt and regress_wasm.c's
+# own comment). ec still has no *variadic* runtime (no real printf --
+# see hellowrite_wasm.c's own comment on why), so unlike every recipe
+# above this is verified by calling runtests() directly and checking
+# its return value (scripts/wasm-call-runner.js), not by comparing
+# captured stdout against an expected.txt.
 regress_wasm.wasm: regress_wasm.c
    ec -o regress_wasm.e regress_wasm.c
    el -o $target regress_wasm.e
 
-test_wasm:V: regress_wasm.wasm
+# real, running hello-world for wasm -- like every helloprintf.exe
+# recipe above, a C program's actual stdout compared against
+# expected.txt via cmp, just not literally calling printf() yet (see
+# hellowrite_wasm.c's own comment for the real blocker: variadic
+# printf needs address-taken locals, which needs the shadow-stack
+# redesign docs/notes_wasm.txt still lists as a TODO). wasi_wasm.s is
+# this arch's counterpart of linux_amd64.s/macos_amd64.s/
+# windows_amd64.s: write()/_start, adapted to WASI instead of a real
+# OS's syscall ABI -- see its own comment.
+hellowrite_wasm.wasm: hellowrite_wasm.c wasi_wasm.s
+   ec -o hellowrite_wasm.e hellowrite_wasm.c
+   ea wasi_wasm.s
+   el -o $target -I 'fd_write=wasi_snapshot_preview1.fd_write' hellowrite_wasm.e wasi_wasm.e
+
+test_wasm:V: regress_wasm.wasm hellowrite_wasm.wasm
 	node $TOP/scripts/wasm-call-runner.js regress_wasm.wasm runtests
+	node $TOP/scripts/wasm-runner.js hellowrite_wasm.wasm | cmp /dev/stdin hellowrite_wasm.expected.txt
 
 
 # Windows amd64: PE32+ (6l -H 10), kernel32.dll GetStdHandle/WriteFile/
