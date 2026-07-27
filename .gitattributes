@@ -1,0 +1,5 @@
+# https://github.com/github/linguist/blob/master/docs/overrides.md
+# Don't consider test files in language stats for the repository on Github
+tests/** linguist-documentation
+benchs/** linguist-documentation
+GO/** linguist-documentation
