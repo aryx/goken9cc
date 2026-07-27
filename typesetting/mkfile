@@ -1,5 +1,4 @@
 TOP=..
-<$TOP/mkconfig
 
 #TODO: htmlroff: misc runestrcmp and a few other
 # grap: need old lex

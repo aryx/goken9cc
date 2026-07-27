@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 
 # float/ contains just temporary tests
 DIRS=exit features mini regressions variants

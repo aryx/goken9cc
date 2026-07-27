@@ -1,5 +1,4 @@
 TOP=..
-<$TOP/mkconfig
 
 DIRS=s c rc libmach 5i vi
 

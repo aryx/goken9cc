@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 
 # Regression tests for lib_toolchain/libmach's consumers (linkers/ar,
 # debuggers/acid, machines/5i, machines/vi). See smoke.sh for why.

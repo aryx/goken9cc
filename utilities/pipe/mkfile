@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 # for mc to remove plan9 specific draw.h and rio/acme extensions

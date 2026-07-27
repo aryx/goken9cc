@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=il		# also makes jl (for riscv64)

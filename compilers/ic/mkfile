@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=ic		# also makes jc (for riscv64)

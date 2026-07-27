@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 
 DIRS=diff misc
 

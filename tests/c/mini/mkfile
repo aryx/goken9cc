@@ -1,6 +1,5 @@
 # can use $CC_ -S to see the assembly code
 TOP=../../..
-<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 all:V: helloc.exe

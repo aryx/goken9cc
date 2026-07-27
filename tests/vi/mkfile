@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 
 test:V:
 	@{cd $TOP/machines/vi; mk}

@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 
 # backquote.rc?
 test:V:

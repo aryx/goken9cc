@@ -1,5 +1,4 @@
 TOP=../../..
-<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 # The directory is cov because the source is portable and general.

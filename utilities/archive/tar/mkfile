@@ -1,5 +1,4 @@
 TOP=../../..
-<$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
 
 LDLIBS=-lstring -l9 -lm

@@ -1,5 +1,4 @@
 TOP=..
-<$TOP/mkconfig
 
 # lex depends on yacc so let's build yacc first
 DIRS=yacc lex

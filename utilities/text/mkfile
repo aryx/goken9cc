@@ -1,5 +1,4 @@
 TOP=../..
-<$TOP/mkconfig
 
 #TODO grep
 DIRS=awk misc
