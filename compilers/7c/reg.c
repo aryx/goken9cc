@@ -558,7 +558,7 @@ mkvar(Adr *a, int docon)
 {
 	Var *v;
 	int i, t, n, et, z;
-	int32 o;
+	vlong o;
 	Bits bit;
 	Sym *s;
 
@@ -573,7 +573,28 @@ mkvar(Adr *a, int docon)
 	if(s == S) {
 		if(t != D_CONST || !docon || a->reg != NREG)
 			goto none;
+		/* claude: naddr()'s OCONST case never sets a->etype (only
+		 * ONAME does), so `et = a->etype` above is reading
+		 * whatever was already in this Adr -- unreliable for a
+		 * bare constant, hence the explicit default below. But
+		 * TLONG (4 bytes) is only a safe default when the
+		 * constant's value actually fits in 4 bytes: `o` used to
+		 * be declared `int32`, silently truncating any 64-bit
+		 * constant assigned from a->offset (a vlong field) right
+		 * above, and every consumer of this Var's ->etype (e.g.
+		 * addmove(), deciding AMOV vs AMOVW when reloading a
+		 * registerized constant) trusted that truncated width --
+		 * so a plain `x = 0x0123456789ABCDEFULL;` got its high 32
+		 * bits silently dropped once the constant was registerized
+		 * across its two uses (compare against Results/regress or
+		 * see tests/c/regressions/arm64_uvlong_const_registerize.c
+		 * for an isolated repro). o is now the real vlong value, so
+		 * this checks whether it actually round-trips through a
+		 * 32-bit sign-extension before assuming TLONG is safe.
+		 */
 		et = TLONG;
+		if((vlong)(int32)o != o)
+			et = TVLONG;
 	}
 	if(t == D_CONST) {
 		if(s == S && sval(o))

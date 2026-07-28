@@ -270,6 +270,78 @@ plausibly latent since arm64 support was first added and just never
 exercised by a `if (some_vlong_var)` pattern with no explicit
 comparison operator until vmach.c's widening surfaced it.
 
+Large uvlong constants: two independent truncation bugs, one still open
+---------------------------------------------------------------------------------
+
+Not 9front-diff-derived (the mkvar() half is goken-original; the
+addpool() half ports a relevant slice of an already-known 9front fix,
+see below) -- found while porting benchs/compcert/sha3.c and
+siphash24.c to build under goken's own toolchain. Both compute wrong
+hashes despite building and running cleanly (no crash). Isolated in
+tests/c/regressions/arm64_uvlong_shift32.c, which bundles both bugs
+below; each was confirmed independently via its own minimal repro
+before combining.
+
+1. `x != 0x0123456789ABCDEFULL` (a plain constant failing to compare
+   equal to itself, once assigned to a variable and reloaded): found by
+   bisecting with `-N` (disables regopt() entirely -- correct) vs `-R`
+   (runs regopt() but skips peep() -- already wrong), narrowing the bug
+   into regopt()/reg.c specifically, not the peephole optimizer.
+   compilers/7c/reg.c's mkvar() forces `et = TLONG` for any bare
+   (symbol-less) constant being registerized, on the reasoning that
+   naddr()'s OCONST case never sets `a->etype` (only ONAME does), so
+   trusting it is unsafe -- true, but TLONG (4 bytes) is only a safe
+   *default* when the constant's value actually fits in 4 bytes. Worse,
+   mkvar()'s own local `o` (holding `a->offset`, the constant's real
+   value) was declared `int32`, silently truncating any 64-bit constant
+   right there regardless of `et`. Every consumer trusting the
+   resulting Var's ->etype (addmove(), deciding AMOV vs AMOVW when
+   reloading a registerized constant) inherited the wrong width. Fixed:
+   `o` is now `vlong`, and `et` only defaults to TLONG when the value
+   round-trips through a 32-bit sign extension
+   (`(vlong)(int32)o == o`). 9front's own mkvar() also widened `o` to
+   vlong and dropped the `et = TLONG` default (it's commented out, not
+   deleted) -- but 9front's naddr() has the *identical* gap (never sets
+   a->etype for OCONST either), so their version appears to rely on
+   some other invariant not fully traced here rather than being a
+   clean drop-in; this fix instead explicitly recomputes the width from
+   the value, which doesn't depend on that invariant either way.
+
+2. `s32 != 0x100000000ULL` (`1ULL << 32`, or any other 64-bit-valued
+   constant consumed by something other than a plain assignment -- here
+   a CMP): `7l -a`'s disassembly showed `CMP $4294967296,R9` encoded
+   with a 4-byte literal-pool entry holding 0 (the low 32 bits of
+   4294967296, which are all zero) instead of the real 8-byte value --
+   linkers/7l/span.c's addpool() only widens a pool entry to 8 bytes
+   (ADWORD) when the *instruction needing it* is itself AMOV; every
+   other opcode (CMP, ADD, ...) always got a 4-byte (AWORD) entry
+   regardless of whether the constant actually fit. This is the same
+   shape bug 9front already fixed in 1d330c0bd ("7l: deal with huge
+   (negative or > 24bit) register offsets, fix LACON, avoid DWORD in
+   constant pool when we can sign extend") -- ported just the relevant
+   condition (`cmp(C_VCON, c) && (uvlong)(a->offset & 0xFFFFFFFFULL) !=
+   (uvlong)a->offset` as an additional `||` alternative alongside the
+   existing `p->as == AMOV` check), not the rest of that commit's
+   LACON/isaddcon rework, which doesn't apply cleanly to goken's
+   current (pre-that-commit) addpool() shape.
+
+Both fixes verified via tests/c/regressions/arm64_uvlong_shift32.c
+(all four checks: constant self-compare, shift-by-4 sanity check,
+shift-by-32, shift-by-33) and cross-checked with several additional
+ad hoc repros covering adjacent operations that turned out fine and
+are worth recording as ruled out: ROTL-by-32 (`(x<<32)|(x>>32)`,
+siphash24.c's own idiom), XOR-assign and add with large constants,
+global `const uint64[]` array initializers, and register-count
+(variable-amount, not compile-time-constant) shifts up to 63 -- all
+independently correct after the two fixes above.
+
+sha3.c and siphash24.c are **not** unblocked by this alone, despite
+being the motivating case: both still fail every single test vector
+after both fixes land. At least one more, distinct bug remains
+somewhere in what these two programs do that the ad hoc repros above
+don't yet cover -- not isolated within this pass's budget. See
+benchs/compcert/mkfile's own "still blocked" note.
+
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------
 

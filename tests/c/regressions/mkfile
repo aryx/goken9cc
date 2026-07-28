@@ -7,9 +7,9 @@
 # the running credits list (for the ones that do have an upstream origin).
 #
 # Every .check target below, and `test:V:` itself, verifies an
-# ALREADY-FIXED bug stays fixed -- a regression gate. arm64_uvlong_
-# shift32.c and hexfloat_literal.c (found while porting benchs/compcert/
-# {sha3,siphash24,bisect}.c to build under goken's own toolchain, see
+# ALREADY-FIXED bug stays fixed -- a regression gate. hexfloat_literal.c
+# and elif_defined_silent_false.c (found while porting benchs/compcert/
+# {bisect,aes}.c to build under goken's own toolchain, see
 # docs/claude_notes/notes_libc_selfhost.txt) are the opposite: real,
 # confirmed, but still UNFIXED bugs, kept here as minimal repros for
 # whoever picks them up, deliberately NOT wired into `test:V:` -- doing
@@ -17,6 +17,11 @@
 # which isn't a useful regression gate and would just need inverting
 # (and deleting) the moment either bug is actually fixed. See each
 # file's own comment for exactly how to verify by hand in the meantime.
+# arm64_uvlong_shift32.c *was* in that category too, but both bugs it
+# isolates are now fixed (see its own comment and
+# docs/claude_notes/notes_arch_arm64.txt) -- wired into test:V: below,
+# even though the benchmarks that motivated finding it (sha3.c,
+# siphash24.c) are still blocked by a separate, distinct, unfixed bug.
 
 # mips_aut3_align: no runtime crash to check (see the comment in the
 # .c file for why) -- instead greps vc -A's own alignment trace and
@@ -85,7 +90,7 @@
 # 5l (-lXXX, and a direct .a path alongside -l, matching principia's
 # own kernel mkfile style) both now work and compute the right runtime
 # division/modulo results, not just "it linked".
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -200,6 +205,18 @@ arm64_vlong_if_branch.check:V: arm64_vlong_if_branch.c arm64_regressions_start.s
 		echo 'ok: arm64_vlong_if_branch.exe exit 0'
 	if not {
 		echo 'FAILED: arm64_vlong_if_branch.exe (got '$st')'
+		exit failed
+	}
+
+arm64_uvlong_shift32.check:V: arm64_uvlong_shift32.c arm64_regressions_start.s
+	7c -Darm64 -c arm64_uvlong_shift32.c
+	7a -c arm64_regressions_start.s
+	7l -H7 -o arm64_uvlong_shift32.exe -E _main arm64_uvlong_shift32.7 arm64_regressions_start.7
+	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_uvlong_shift32.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: arm64_uvlong_shift32.exe exit 0'
+	if not {
+		echo 'FAILED: arm64_uvlong_shift32.exe (got '$st')'
 		exit failed
 	}
 

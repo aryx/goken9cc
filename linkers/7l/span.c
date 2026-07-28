@@ -210,7 +210,22 @@ addpool(Prog *p, Adr *a)
 	t = zprg;
 	t.as = AWORD;
 	sz = 4;
-	if(p->as == AMOV) {
+	/* claude: was `if(p->as == AMOV)` only -- a genuinely 64-bit
+	 * constant used as an operand to any OTHER instruction (CMP, ADD,
+	 * ...) that needs the literal pool (i.e. doesn't fit that
+	 * instruction's own immediate encoding) still got a 4-byte
+	 * (AWORD) pool entry, silently truncating it to its low 32 bits.
+	 * `CMP $4294967296,R9` (0x100000000, needs bit 32) is a real,
+	 * minimal repro: aclass() classifies the constant C_VCON, but the
+	 * pool entry it gets truncates to 0, so the comparison silently
+	 * runs against 0 instead -- see
+	 * tests/c/regressions/arm64_uvlong_shift32.c. Extend to DWORD
+	 * whenever the constant doesn't already fit as its own low 32
+	 * bits (matches 9front's 1d330c0bd, ported here rather than
+	 * verbatim since goken's addpool() predates that commit's other,
+	 * unrelated LACON/isaddcon changes).
+	 */
+	if(p->as == AMOV || (cmp(C_VCON, c) && (uvlong)(a->offset & 0xFFFFFFFFULL) != (uvlong)a->offset)) {
 		t.as = ADWORD;
 		sz = 8;
 	}

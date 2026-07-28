@@ -174,18 +174,18 @@ clean:V:
 #   (0x3) dereferenced inside the recursive BottomUpTree/DeleteTree
 #   path after the first tree already printed correctly -- not yet
 #   root-caused, possibly related to mandelbrot's but not confirmed.
-# - sha3.c, siphash24.c: a third, more fundamental real bug -- large
-#   64-bit (uvlong/`unsigned long long`) constants are already wrong
-#   after a plain load-and-compare (`x == 0x0123456789ABCDEFULL`
-#   evaluates false), and 64-bit shifts by amounts >= 32 are wrong too
-#   (confirmed via minimal, isolated repros outside this benchmark
-#   corpus -- shift by 4 is correct, shift by 32/33 is not). Neither
-#   program's own printf/print calls use %lld/%llx (only sha1.c, which
-#   passes, and siphash24.c's debug-only paths do, and separately *that*
-#   combination crashes outright) -- this is the hash computations
-#   themselves going wrong via ordinary uvlong arithmetic, not a
-#   print-layer issue. Compiler-internals territory, not investigated
-#   further than isolating the symptom.
+# - sha3.c, siphash24.c: two of the three bugs originally suspected
+#   here are now fixed in the compiler/linker (a constant-registerization
+#   width bug in compilers/7c/reg.c's mkvar(), and a literal-pool
+#   truncation bug in linkers/7l/span.c's addpool() -- see
+#   tests/c/regressions/arm64_uvlong_shift32.c and
+#   docs/claude_notes/notes_arch_arm64.txt for the full writeups), but
+#   both programs still fail every test vector after those fixes -- at
+#   least one more, distinct bug remains, not yet isolated. Re-verified
+#   individually correct post-fix and NOT the remaining cause: basic
+#   64-bit shift/rotate/add/xor with large constants, global const-array
+#   initializers, and register-count (variable-amount) shifts up to 63.
+#   Compiler-internals territory, still open.
 # - knucleotide.c: needs a real FILE*/fopen/fgets/fclose/realloc/
 #   strdup -- a much bigger step than every other program here, none
 #   of which touch real file I/O.
