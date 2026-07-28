@@ -1,5 +1,28 @@
 #include "l.h"
 
+/* claude: this table looks generated rather than hand-written -- it lists
+ * 5334 values encodable as an ARM64 "bitmask immediate" (the operand form
+ * used by AND/ORR/EOR/ANDS-immediate), sorted by value, so findmask() below
+ * can binary-search a candidate immediate and recover its (s,e,r) encoding
+ * fields. The 5334 count matches the known-complete set of ARM64 logical
+ * immediates (see the ARM ARM's DecodeBitMasks pseudocode), which is
+ * consistent with that reading but isn't proof by itself.
+ *
+ * Provenance is uncertain beyond this repo's own history: the file is
+ * byte-identical to 9front's sys/src/cmd/7l/bits.c, which entered 9front's
+ * git history in one commit (569bdc426, "7l: add arm64 linker (initial
+ * sync)") with no earlier history and no generator script alongside it --
+ * i.e. it was imported already-generated from whatever arm64 port predates
+ * that sync (commonly attributed in 9fans discussion to Charles Forsyth's
+ * arm64 work, but unconfirmed here). This repo's own copy came in via "add
+ * 7a/7l/7c from 9-cc", equally history-less. No generator for this specific
+ * table has been located.
+ *
+ * For a from-scratch (not necessarily the original) implementation of the
+ * enumeration algorithm this table matches, see:
+ *   - http://dinfuehr.com/blog/encoding-of-immediate-values-on-aarch64/
+ *   - https://github.com/uw-unsat/serval-bpf/blob/00838174659034e9527e67d9eccd2def2354cec6/racket/test/arm64/gen-logic-imm.py
+ */
 static Mask bitmasks[] = {
 	1,	64,	0,	0x00000000000001LL,
 	1,	64,	63,	0x00000000000002LL,
