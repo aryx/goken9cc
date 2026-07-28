@@ -57,7 +57,7 @@ all:V: $GCCO0BINS $GCCO3BINS $CLANGO0BINS $CLANGO3BINS
 # project builds and installs its own cmp/diff (utilities/compare/), and
 # those open() their arguments literally instead of special-casing '-' as
 # stdin, so 'cmp -s - Results/$i' silently "FAILED" every entry once
-# ROOT/$objtype/bin is ahead of the system cmp on $PATH. /dev/stdin is a
+# ROOT/arch/$objtype/bin is ahead of the system cmp on $PATH. /dev/stdin is a
 # real path any cmp can open, so it works with either implementation.
 test:V: all
 	for(opt in gcc-O0 gcc-O3 clang-O0 clang-O3){

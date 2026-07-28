@@ -7,7 +7,7 @@
 #
 # Uses bash's own `time` builtin (via TIMEFORMAT) rather than an external
 # date/time command: this project installs its own 'date' and no 'time'
-# at all under ROOT/$objtype/bin, and once that directory is ahead of the
+# at all under ROOT/arch/$objtype/bin, and once that directory is ahead of the
 # system ones on $PATH (as it is after `source env.sh`), an external-command
 # approach would silently pick up the wrong tool. bash's `time` is a shell
 # keyword, so it is immune to $PATH.

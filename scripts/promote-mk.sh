@@ -17,7 +17,7 @@ fi
 . ./mkconfig
 set -x
 
-cp ROOT/$GOARCH/bin/mk bin/
-cp ROOT/$GOARCH/bin/rc bin/
-cp ROOT/$GOARCH/bin/ed bin/
-cp ROOT/$GOARCH/bin/yacc bin/
+cp ROOT/arch/$objtype/bin/mk bin/
+cp ROOT/arch/$objtype/bin/rc bin/
+cp ROOT/arch/$objtype/bin/ed bin/
+cp ROOT/arch/$objtype/bin/yacc bin/

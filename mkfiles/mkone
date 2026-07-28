@@ -1,8 +1,9 @@
 # -*- sh -*-
 
-# this used to be $ROOT/$objtype/bin but now that objtype=boot-gcc
-# in booting context, we use cputype instead
-BIN=$ROOT/$cputype/bin
+# keyed by objtype (not cputype) so a host-bootstrap build
+# (objtype=boot-gcc/boot-clang) and a self-hosted build for the same
+# target (objtype=arm64/amd64/...) never share a directory
+BIN=$ROOT/arch/$objtype/bin
 
 all:V:	$O.out
 $O.out:	$OFILES $LIB
@@ -41,7 +42,7 @@ clean:V:
 	rm -f *.[$OS] [$OS].out y.tab.? lex.yy.c y.debug y.output $TARG $CLEANFILES $OFILES *.$O $O.out
 nuke:V:
         mk clean
-	rm -f *.acid $BIN/$TARG
+	rm -f *.acid $BIN/$TARG $NUKEFILES
 
 safeinstall:V: $O.out
 	test -e $BIN/$TARG && mv $BIN/$TARG $BIN/_$TARG

@@ -42,7 +42,8 @@ RUN mk
 RUN mk install
 
 ENV GOOS="linux"
-ENV PATH="/src/ROOT/amd64/bin:/src/ROOT/arm64/bin:${PATH}"
+# coupling: env.sh -- objtype is always boot-gcc here (Ubuntu image only installs gcc)
+ENV PATH="/src/ROOT/arch/boot-gcc/bin:${PATH}"
 
 ###############################################################################
 # Stage2: Just binaries (on amd64/arm64)

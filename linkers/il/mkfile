@@ -40,3 +40,6 @@ elf.$O:	../lk/elf.c
 install:V:	$BIN/$TARG $BIN/jl
 $BIN/jl:	$O.out
 	cp $prereq $target
+
+# so 'mk nuke' also removes jl, not just il (see mkfiles/mkone's nuke:)
+NUKEFILES=$BIN/jl

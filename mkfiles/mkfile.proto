@@ -24,7 +24,7 @@ CPUS=arm arm64 386 amd64 riscv riscv64 mips wasm
 # (5l/6l/7l/8l/...).
 CFLAGS_COMMON=-I$TOP/include -I$TOP/include/ALL -I.
 #note: SANITIZE is optionally set by ./configure --asan
-LDFLAGS=-L$ROOT/$cputype/lib $SANITIZE
+LDFLAGS=-L$ROOT/arch/$objtype/lib $SANITIZE
 
 LEX=lex
 #alt: bison but not always super compatible. apparently on my Linux /bin/yacc

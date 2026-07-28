@@ -39,7 +39,7 @@ y.output
 # yacc debugging info on grammar 
 y.debug
 
-/ROOT/*/bin/
+/ROOT/arch/*/bin/
 
 # ----------------------------------------------------------------------------
 # Specific files

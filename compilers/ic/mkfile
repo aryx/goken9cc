@@ -39,3 +39,6 @@ p%.$O: $TOP/src/cmd/cc/p%.c
 install:V:	$BIN/$TARG $BIN/jc
 $BIN/jc:	$O.out
 	cp $prereq $target
+
+# so 'mk nuke' also removes jc, not just ic (see mkfiles/mkone's nuke:)
+NUKEFILES=$BIN/jc

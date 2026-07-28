@@ -23,3 +23,6 @@ lex.$O:	$TOP/compilers/cck/macbody $TOP/compilers/cck/lexbody $TOP/compilers/cck
 install:V:	$BIN/$TARG $BIN/ja
 $BIN/ja:	$O.out
 	cp $prereq $target
+
+# so 'mk nuke' also removes ja, not just ia (see mkfiles/mkone's nuke:)
+NUKEFILES=$BIN/ja

@@ -40,7 +40,7 @@ ROOT=$TOP/ROOT
 
 #coupling: mkfiles/mkfile.proto and mkfiles/boot-gcc/mkfile
 CFLAGS="-Wno-cpp --std=gnu89 -c -I$TOP/BOOT/include -I$TOP/include -I$TOP/include/ALL -I. -O0 -fno-inline -ggdb"
-LDFLAGS="-L$ROOT/$GOARCH/lib"
+LDFLAGS="-L$ROOT/arch/$objtype/lib"
 
 ###############################################################################
 # Building the necessary libs (lib9, libbio, libregexp, libstring)
@@ -126,7 +126,7 @@ gcc $CFLAGS -DPLAN9PORT utf/runetype.c -o utf/runetype.o
 gcc $CFLAGS -DPLAN9PORT lock.c -o lock.o
 gcc $CFLAGS -DPLAN9PORT mallocz.c -o mallocz.o
 ar rsc lib9.a _p9dir.o _exits.o argv0.o atoi.o cleanname.o dirfstat.o dirfwstat.o dirstat.o dirwstat.o dup.o errstr.o exec.o execl.o exitcode.o exits.o getenv.o getfields.o getwd.o goos.o unsharp.o get9root.o main.o math/nan.o nulldir.o open.o readn.o seek.o strecpy.o sysfatal.o time.o tokenize.o await.o getuser.o jmp.o notify.o rfork.o ctime.o zoneinfo.o fmt/dofmt.o fmt/fltfmt.o fmt/fmt.o fmt/fmtfd.o fmt/fmtfdflush.o fmt/fmtlocale.o fmtlock2.o fmt/fmtnull.o fmt/fmtprint.o fmt/fmtquote.o fmt/fmtrune.o fmt/fmtstr.o fmt/fmtvprint.o fmt/fprint.o fmt/nan64.o fmt/print.o fmt/seprint.o fmt/smprint.o fmt/snprint.o fmt/sprint.o fmt/strtod.o fmt/vfprint.o fmt/vseprint.o fmt/vsmprint.o fmt/vsnprint.o fmt/charstod.o fmt/pow10.o utf/rune.o utf/utfecpy.o utf/utflen.o utf/utfnlen.o utf/utfrrune.o utf/utfrune.o utf/utfutf.o utf/runetype.o lock.o mallocz.o
-cp lib9.a $TOP/ROOT/$GOARCH/lib/lib9.a
+cp lib9.a $TOP/ROOT/arch/$objtype/lib/lib9.a
 
 
 cd $TOP/lib_core/libbio
@@ -147,7 +147,7 @@ gcc $CFLAGS -c bread.c
 gcc $CFLAGS -c bseek.c
 gcc $CFLAGS -c bwrite.c
 ar rsc libbio.a bbuffered.o bfildes.o bflush.o bgetc.o bgetrune.o bgetd.o binit.o boffset.o bprint.o bputc.o bputrune.o brdline.o brdstr.o bread.o bseek.o bwrite.o
-cp libbio.a $TOP/ROOT/$GOARCH/lib/libbio.a
+cp libbio.a $TOP/ROOT/arch/$objtype/lib/libbio.a
 
 cd $TOP/lib_strings/libregexp
 gcc $CFLAGS -c regcomp.c
@@ -158,7 +158,7 @@ gcc $CFLAGS -c regaux.c
 gcc $CFLAGS -c rregexec.c
 gcc $CFLAGS -c rregsub.c
 ar rsc libregexp.a regcomp.o regerror.o regexec.o regsub.o regaux.o rregexec.o rregsub.o
-cp libregexp.a $TOP/ROOT/$GOARCH/lib/libregexp.a
+cp libregexp.a $TOP/ROOT/arch/$objtype/lib/libregexp.a
 
 cd $TOP/lib_strings/libstring
 # libstring is needed just for one function in rc/processes.c (for `{...}),
@@ -183,7 +183,7 @@ gcc $CFLAGS -c s_terminate.c
 gcc $CFLAGS -c s_tolower.c
 gcc $CFLAGS -c s_unique.c
 ar rsc libstring.a s_alloc.o s_append.o s_array.o s_copy.o s_getline.o s_grow.o s_memappend.o s_nappend.o s_parse.o s_putc.o s_rdinstack.o s_read.o s_read_line.o s_reset.o s_terminate.o s_tolower.o s_unique.o
-cp libstring.a $TOP/ROOT/$GOARCH/lib/libstring.a
+cp libstring.a $TOP/ROOT/arch/$objtype/lib/libstring.a
 
 ###############################################################################
 # Building the programs! (mk, yacc, rc, ed)
@@ -214,16 +214,16 @@ gcc $CFLAGS -c varsub.c
 gcc $CFLAGS -c word.c
 gcc $CFLAGS -c Posix.c
 gcc $LDFLAGS -o o.out globals.o utils.o dumpers.o archive.o bufblock.o env.o file.o graph.o lex.o main.o match.o mk.o parse.o rc.o recipe.o rule.o run.o shprint.o symtab.o var.o varsub.o word.o Posix.o -lregexp -lbio -l9 -lm
-cp o.out $TOP/ROOT/$GOARCH/bin/mk
+cp o.out $TOP/ROOT/arch/$objtype/bin/mk
 
 cd $TOP/generators/yacc
 gcc $CFLAGS -c yacc.c
 gcc $LDFLAGS -o o.out yacc.o -lbio -l9 -lm
-cp o.out $TOP/ROOT/$GOARCH/bin/yacc
+cp o.out $TOP/ROOT/arch/$objtype/bin/yacc
 
 
 cd $TOP/rc
-$TOP/ROOT/$GOARCH/bin/yacc -d syn.y
+$TOP/ROOT/arch/$objtype/bin/yacc -d syn.y
 gcc $CFLAGS -DUnix -c code.c
 gcc $CFLAGS -DUnix -c exec.c
 gcc $CFLAGS -DUnix -c getflags_.c
@@ -253,14 +253,14 @@ gcc $CFLAGS -DUnix -c main.c
 gcc $CFLAGS -DUnix -c y.tab.c
 gcc $CFLAGS -DUnix -c unix.c
 gcc $LDFLAGS -o o.out code.o exec.o getflags_.o glob.o here.o io.o lex.o pcmd.o pfnc.o simple.o trap.o tree.o var.o processes.o globals.o utils.o error.o words.o executils.o status.o builtins.o input.o path.o env.o fmt.o main.o y.tab.o unix.o -lstring -l9 -lm
-cp o.out $TOP/ROOT/$GOARCH/bin/rc
+cp o.out $TOP/ROOT/arch/$objtype/bin/rc
 
 # We now also compile 'ed' because it is needed by mkenam and it is simpler
 # to reduce external deps.
 cd $TOP/utilities/text/misc/
 gcc $CFLAGS -c ed.c
 gcc $LDFLAGS -o o.out ed.o -lregexp -lbio -l9 -lm
-cp o.out $TOP/ROOT/$GOARCH/bin/ed
+cp o.out $TOP/ROOT/arch/$objtype/bin/ed
 
 ###############################################################################
 # Cleaning up
@@ -269,4 +269,4 @@ cp o.out $TOP/ROOT/$GOARCH/bin/ed
 # Safer to delete the generated libs as we may have forgotten objects
 # that are not needed for mk/rc but might be needed by other programs
 # (especially libc.a).
-rm -f $TOP/ROOT/$GOARCH/lib/*.a
+rm -f $TOP/ROOT/arch/$objtype/lib/*.a

@@ -3,7 +3,10 @@
 PROGS=${TARG:%=$O.%}
 MANFILES=${TARG:%=%.man}
 
-BIN=$ROOT/$cputype/bin
+# keyed by objtype (not cputype) so a host-bootstrap build
+# (objtype=boot-gcc/boot-clang) and a self-hosted build for the same
+# target (objtype=arm64/amd64/...) never share a directory
+BIN=$ROOT/arch/$objtype/bin
 BINS=${TARG:%=$BIN/%}
 
 all:V: $PROGS

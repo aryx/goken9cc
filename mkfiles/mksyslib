@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-LIB=$ROOT/$cputype/lib/$LIBNAME
+LIB=$ROOT/arch/$objtype/lib/$LIBNAME
 
 all:V:  $LIB
 
