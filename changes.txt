@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, start kenccs unification, wasm ea/ec/el)
+* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, start kenccs unification, wasm ea/ec/el, multiplatform libc)
 
 ** toolchain
 - import 5a/5c/5l and 8a/8c/8l from principia (and rename the 5a/5l/5c
@@ -234,6 +234,29 @@
 - experimental support for riscv64
 - experimental support for wasm: assembler+linker only (ea/el),
   hello world (WASI fd_write) working
+
+** libs
+- lib_core/libc: a real, reusable libc.a (fmt/printf + basic Linux
+  syscalls) self-hosted by goken's own toolchain (7c/6c/vc/ic/jc), no
+  gcc involved, for arm64/amd64/mips/riscv/riscv64; see
+  tests/c/hello_libc (thx Claude)
+- syscalls are declarative: a small "//sys name(args) (ret) = SYS_NAME"
+  .decl spec per OS/arch (in the spirit of GO/pkg/syscall/mksyscall.sh),
+  parsed by scripts/mksyscall.sh into a generated (and committed, like
+  Go does) zsyscall_*.c wrapper around one generic _syscall6 asm
+  trampoline per arch
+- reused/adapted portable pieces from principia (u.h, port/*.c incl.
+  vlrt.c) and, for riscv (no principia/9front port to draw from),
+  from ~/xxx/miller-riscv/ROOT/{riscv,riscv64}/include/u.h -- every
+  ABI claim re-verified against this project's own compilers' -S
+  output and real qemu execution rather than trusted as-is, which
+  caught a real riscv64-only bug (long is 4 bytes there despite
+  8-byte pointers)
+- byproduct fixes found while bringing this up: a vlong-typed `?:`-as-
+  call-argument gap in src/cmd/cc/com64.c (7c/vc/ic/jc's frontend, now
+  matching compilers/cc/com64.c's already-correct version), and
+  vl/il's linker -lXXX resolution ignoring -L entirely
+
 
 ** internals
 - split include/ like in principia (and GO/pkg) with include/{core,obj,exec,...}

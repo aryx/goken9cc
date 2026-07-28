@@ -20,6 +20,7 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
   - early WebAssembly backend (ea/ec/el) by Claude Code
   - separately ported a large batch of 9front fixes (mostly Cinap lenrek work) into the mips and arm64 toolchains (va/vc/vl, 7a/7c/7l)
   - brought up riscv64 for real (it was only commented-out stubs before)
+  - self-hosted `libc.a` (fmt/printf plus basic Linux syscalls), built entirely by goken's own compilers with no gcc involved, for arm64, amd64, mips, riscv, and riscv64, with syscalls declared through a small Go-`mksyscall.sh`-inspired generator (see `tests/c/hello_libc`)
   - fixed the arm and mips emulators (5i/vi) so they actually run their Plan 9 hello-world tests
   - much richer test infra: tests now run for many architectures under qemu/Linux, and many operating systems with wine (for Windows) and Node (for wasm) all from Linux CI; also check output against expected.txt instead of just checking the build succeeds; new tests/s/variants and tests/c/variants compare the object files and executables produced by the principia vs. kencc lineages to catch mismatches
 - **Q2 2026** &mdash; v0.3: presented goken9cc at IWP9, the International Workshop on Plan 9.
