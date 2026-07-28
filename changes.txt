@@ -237,9 +237,16 @@
 
 ** libs
 - lib_core/libc: a real, reusable libc.a (fmt/printf + basic Linux
-  syscalls) self-hosted by goken's own toolchain (7c/6c/vc/ic/jc), no
-  gcc involved, for arm64/amd64/mips/riscv/riscv64; see
-  tests/c/hello_libc (thx Claude)
+  syscalls) self-hosted by goken's own toolchain (7c/6c/8c/5c/vc/ic/jc),
+  no gcc involved, for every Linux arch this project targets
+  (arm64/amd64/386/arm/mips/riscv/riscv64); see tests/c/hello_libc
+  (thx Claude)
+- found and fixed a genuinely new linkers/5l bug along the way (not
+  present in 9front or principia's own 5l either, just never
+  triggered there): arm's software divide/modulo helpers
+  (_div/_divu/_mod/_modu, needed since arm has no hardware integer
+  divide) failed to link when pulled from an actual library (-lc)
+  instead of a directly-named object file
 - syscalls are declarative: a small "//sys name(args) (ret) = SYS_NAME"
   .decl spec per OS/arch (in the spirit of GO/pkg/syscall/mksyscall.sh),
   parsed by scripts/mksyscall.sh into a generated (and committed, like
