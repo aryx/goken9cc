@@ -1,3 +1,5 @@
+#include <u.h>
+#include <libc.h>
 #include "utf.h"
 #include "utfdef.h"
 
