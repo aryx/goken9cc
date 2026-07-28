@@ -1,12 +1,12 @@
-// Declarative syscall spec for linux/amd64, in the spirit of
+// Declarative syscall spec for darwin/arm64, in the spirit of
 // GO/pkg/syscall's "//sys name(args) (ret) = SYS_NAME" comments (see
-// GO/pkg/syscall/syscall_linux.go), parsed by scripts/mksyscall.sh into
-// zsyscall_linux_amd64.c. Every wrapper just calls the one generic
-// _syscall6 trampoline (lib_core/libc/syscall/os/linux/svc_amd64.s), so
+// GO/pkg/syscall/syscall_darwin.go), parsed by scripts/mksyscall.sh into
+// zsyscall_darwin_arm64.c. Every wrapper just calls the one generic
+// _syscall6 trampoline (lib_core/libc/syscall/os/darwin/svc_arm64.s), so
 // adding a syscall here is the only step needed -- no new assembly.
 //
 // lib_core/libc/mkfile builds this one with the vlong argtype (see
-// scripts/mksyscall.sh's own comment, and syscall_linux_amd64.h's): a
+// scripts/mksyscall.sh's own comment, and syscall_darwin_arm64.h's): a
 // plain `long` is only 4 bytes even on this 64-bit arch, so a pointer
 // argument (e.g. write()'s buf) cast through `(long)` would be
 // silently truncated before ever reaching _syscall6.

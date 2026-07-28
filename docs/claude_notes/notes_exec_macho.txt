@@ -12,7 +12,13 @@ docs/claude_notes/notes_exec_elf.txt (Linux) and docs/claude_notes/notes_exec_pe
 cover the other two executable formats this toolchain emits; general
 macOS build/toolchain notes not specific to Mach-O output (building
 goken itself on a Mac) belong in docs/claude_notes/notes_os_macos.txt
-instead.
+instead. A real, self-hosted libc.a (write/exit via raw syscalls, the
+same fmt/*.c-based print() every other GOOS uses) now sits on top of
+this -H6 work for darwin/arm64 -- lib_core/libc/syscall/os/darwin/,
+verified via tests/c/hello_libc's test_macos_arm64 target -- see
+docs/claude_notes/notes_libc_selfhost.txt's "darwin/arm64" section for
+that story (including a real bug this Mach-O bring-up's own debugging
+methodology, described below, was what found).
 
 What the arm64 kernel demands of an executable
 ----------------------------------------------

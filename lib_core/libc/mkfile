@@ -1,17 +1,30 @@
 TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
-# linux only for now; other GOOS combinations are the next incremental
-# step once this one is proven (see lib_core/libc/{os,arch,syscall}/ --
-# built to make that additive, not a rewrite). arm64/amd64/mips/riscv/
-# riscv64 are done; 386/arm would each need their own u.h/rt0.s/
-# syscall/arch/$cputype pieces the same way (see the existing arches
-# for the pattern -- each arch's ABI, especially varargs slot width,
-# whether the raw syscall trampoline's first arg needs to come from a
-# register or FP, and (riscv64's own surprise) whether `long` is
-# actually wide enough to carry a pointer, must be verified against
-# that compiler's own -S output and real qemu execution, not assumed
-# from another arch -- see docs/claude_notes/notes_libc_selfhost.txt).
+# GOOS defaults to linux (every existing caller relies on this default;
+# a command-line 'GOOS=darwin' override, same style as objtype/cputype,
+# is how tests/c/hello_libc and lib_core/libc's own install target
+# select the other one). linux: 386/amd64/arm/arm64/mips/riscv/riscv64
+# all done. darwin: arm64 done, following the exact same additive
+# per-OS pattern (see lib_core/libc/syscall/os/darwin/ -- numbers.h,
+# .decl, svc_$cputype.s) rather than a rewrite of the linux pieces.
+# Adding a new arch to an existing GOOS, or a new GOOS to an existing
+# arch, each need their own u.h/rt0.s/syscall/os/$GOOS/ pieces the same
+# way (see the existing combinations for the pattern -- each arch's
+# ABI, especially varargs slot width, whether the raw syscall
+# trampoline's first arg needs to come from a register or FP, and
+# (riscv64's own surprise) whether `long` is actually wide enough to
+# carry a pointer, must be verified against that compiler's own -S
+# output and real execution, not assumed from another arch/OS -- see
+# docs/claude_notes/notes_libc_selfhost.txt). Crucially, svc.s (the raw
+# syscall trampoline) turned out NOT to be OS-independent per arch --
+# darwin/arm64 uses a different register for the syscall number and a
+# different trap immediate than linux/arm64 -- which is why it now
+# lives under syscall/os/$GOOS/ instead of syscall/arch/$cputype/ (it
+# was moved there from the latter -- see git history on
+# syscall/os/linux/svc_$cputype.s for the original per-arch-only
+# layout, which worked only by coincidence for every Linux arch so far).
+GOOS=linux
 
 LIBNAME=libc.a
 
@@ -102,8 +115,8 @@ PORTOFILES=\
 	port/vlrt.$O\
 
 SYSCALLOFILES=\
-	syscall/arch/$cputype/svc.$O\
-	syscall/os/linux/zsyscall_linux_$cputype.$O\
+	syscall/os/$GOOS/svc_$cputype.$O\
+	syscall/os/$GOOS/zsyscall_${GOOS}_$cputype.$O\
 
 # $ARCHEXTRAOFILES: for arch-specific runtime support beyond rt0.s that
 # only some arches need (e.g. arm has no hardware integer divide, so
@@ -140,10 +153,25 @@ HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 # output is what lets goken cross-compile syscall wrappers for an OS
 # you don't have. After editing a .decl, regenerate and commit the
 # diff in the same change.
-# riscv64 needs vlong-cast syscall args (see scripts/mksyscall.sh's own
-# comment); every other arch's `long` is already pointer-wide.
-syscall/os/linux/zsyscall_linux_$cputype.c:	syscall/os/linux/syscall_linux_$cputype.decl
-	if(~ $cputype riscv64)
+# arm64/amd64/riscv64 need vlong-cast syscall args (see
+# scripts/mksyscall.sh's own comment). This is NOT just a riscv64
+# quirk, despite how it was first described here: every compiler in
+# this tree defines `long` as 4 bytes (SZ_LONG in compilers/*c/gc.h),
+# on every arch, including these three -- it's only the ones whose
+# pointers are ALSO 4 bytes (386/arm/mips/riscv32: SZ_IND==SZ_LONG)
+# that get away with the plain `long` prototype below. arm64 and
+# amd64 have 8-byte pointers (SZ_IND=8) with that same 4-byte `long`,
+# so they silently truncated pointer syscall args (e.g. write's buf)
+# to 32 bits exactly like riscv64 -- found via real macOS execution of
+# hello_libc (garbage in the upper 32 bits of a stack-passed argument
+# slot XNU/dyld doesn't happen to leave zeroed, where a fresh Linux
+# process stack did by luck), not via -S inspection; see
+# docs/claude_notes/notes_libc_selfhost.txt for the write-up, including
+# why this was masked on Linux this whole time. mips/riscv/386/arm's
+# `long` is genuinely pointer-wide (SZ_IND==SZ_LONG==4 for all of
+# them), so they're unaffected and keep the plain `long` prototype.
+syscall/os/$GOOS/zsyscall_${GOOS}_$cputype.c:	syscall/os/$GOOS/syscall_${GOOS}_$cputype.decl
+	if(~ $cputype riscv64 arm64 amd64)
 		$TOP/scripts/mksyscall.sh $prereq vlong > $target
 	if not
 		$TOP/scripts/mksyscall.sh $prereq > $target

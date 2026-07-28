@@ -144,14 +144,13 @@ hello_macos_amd64.exe: hello_macos_amd64.s
 
 # the codesign step is mandatory on arm64 macOS: the kernel SIGKILLs
 # unsigned (or non-PIE, or static) arm64 executables at exec() time.
-# It is skipped when cross-building from Linux (CI), where the binary
-# can not run anyway. See docs/notes_macos.txt for the whole story.
+# scripts/macos-codesign is a no-op when cross-building from Linux
+# (CI), where the binary can not run anyway. See
+# docs/claude_notes/notes_exec_macho.txt for the whole story.
 hello_macos_arm64.exe: hello_macos_arm64.s
    7a -c $prereq
    7l -H6 -o $target -E _start hello_macos_arm64.7
-   if(~ `{uname} Darwin) codesign -s - -f $target
-   if not true
-#`
+   ../../../scripts/macos-codesign $target
 
 # Same as hello_macos_amd64 but calls libSystem's _write instead of a raw
 # syscall: -I declares the import, 6lg binds it (LC_DYLD_INFO) into the writep

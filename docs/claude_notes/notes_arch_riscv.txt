@@ -273,26 +273,31 @@ be actively misleading once, see below:
   different registers (here, a caller's raw SP vs a callee's FP) which
   are easy to conflate.
 
-- Real, riscv64-specific bug (not present on any other arch this tree
-  targets): jc's `long` stays 4 bytes even though riscv64 is a genuine
-  64-bit arch with 8-byte pointers -- confirmed via a direct sizeof()
-  probe (sizeof(long)==4, sizeof(char*)==8 on jc). A `typedef unsigned
-  long uintptr;` (correct on arm64/amd64, which *do* have an 8-byte
-  `long`) silently truncates any pointer cast through it here. This
-  broke two things independently until fixed: (1) va_arg's own
+- Real riscv64 bug (later found NOT to be riscv64-specific -- see the
+  correction below): jc's `long` stays 4 bytes even though riscv64 is
+  a genuine 64-bit arch with 8-byte pointers -- confirmed via a direct
+  sizeof() probe (sizeof(long)==4, sizeof(char*)==8 on jc). A `typedef
+  unsigned long uintptr;`, believed at the time to be correct on
+  arm64/amd64 (wrongly -- both actually have this same SZ_LONG=4-with-
+  8-byte-pointers property, see docs/claude_notes/notes_libc_selfhost.txt's
+  "darwin/arm64: a second GOOS, and the vlong bug it exposed" section
+  for the correction, found months later while bringing up darwin/arm64
+  hello_libc), silently truncates any pointer cast through it here.
+  This broke two things independently until fixed: (1) va_arg's own
   8-byte-alignment rounding, which computed a wild address and
   segfaulted under qemu-riscv64 the moment a real va_arg macro (not
   just equivalent inline code) exercised it -- fixed by typing
   include/arch/riscv64/u.h's uintptr/intptr as `unsigned long
   long`/`long long` instead, matching what miller-riscv's own u.h
   already does (see plan9front.txt's riscv section); (2) the
-  lib_core/libc/syscall/arch/riscv64's _syscall6 trampoline's own
+  lib_core/libc/syscall/os/linux/svc_riscv64.s trampoline's own
   argument type -- a `long`-typed a1 (e.g. write()'s buf) would
   truncate a real pointer before ever reaching the syscall. Fixed by
   declaring _syscall6's a1..a6 as `vlong` specifically for riscv64 in
   syscall_linux_riscv64.h, and generating that arch's zsyscall_*.c with
   vlong casts (scripts/mksyscall.sh's optional 2nd argument) instead of
-  the default `long`.
+  the default `long`. arm64 and amd64 got the identical fix later, once
+  the same bug was found in them too.
 
 - linkers/il/obj.c's objfile() had the exact same -lXXX-ignores--L bug
   as linkers/vl/obj.c (see

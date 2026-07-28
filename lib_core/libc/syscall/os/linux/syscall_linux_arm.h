@@ -1,5 +1,5 @@
 /* Glue the generated zsyscall_linux_arm.c needs: the raw arm
- * trampoline (lib_core/libc/syscall/arch/arm/svc.s) and this OS's
+ * trampoline (lib_core/libc/syscall/os/linux/svc_arm.s) and this OS's
  * syscall numbers.
  */
 #include "numbers_arm.h"

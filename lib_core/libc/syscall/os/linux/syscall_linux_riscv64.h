@@ -1,5 +1,5 @@
 /* Glue the generated zsyscall_linux_riscv64.c needs: the raw riscv64
- * trampoline (lib_core/libc/syscall/arch/riscv64/svc.s) and this OS's
+ * trampoline (lib_core/libc/syscall/os/linux/svc_riscv64.s) and this OS's
  * syscall numbers.
  *
  * a1..a6 are deliberately `vlong`, not `long`: like every Plan9 C

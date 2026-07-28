@@ -1,5 +1,5 @@
-Self-hosting a real libc.a: lib_core/libc/{fmt,port,syscall,arch}/, Linux
-==========================================================================
+Self-hosting a real libc.a: lib_core/libc/{fmt,port,syscall,arch}/, Linux + darwin/arm64
+==========================================================================================
 
 Notes on building a genuinely reusable, self-hosted C library --
 lib_core/libc/, producing libc.a -- compiled entirely by goken's own
@@ -7,14 +7,16 @@ Xc/Xa/Xl toolchain (not gcc/clang), as opposed to every prior test in
 this tree, which either links no library at all (tests/c/mini/) or
 links against a hand-rolled, per-test assembly stub duplicated in each
 test directory (tests/c/mini2/linux_$arch.s, tests/c/vlong/vlrt.c+
-print.c). Linux only so far; arm64, amd64, mips, riscv, riscv64, 386,
-and arm are all done now -- every arch this project's toolchain
-targets on Linux. The directory layout (lib_core/libc/{os,arch,
+print.c). Linux: arm64, amd64, mips, riscv, riscv64, 386, and arm are
+all done -- every arch this project's toolchain targets on Linux.
+darwin: arm64 done too now (July 2026), the first non-Linux GOOS --
+see its own section below. The directory layout (lib_core/libc/{os,arch,
 syscall}/ split by $OS and $cputype) was built to make adding archs
-additive, and stayed that way through all seven; the same discipline
-still applies to any future OS this gets extended to (darwin, windows,
-plan9, xv6): verify every ABI claim empirically for the new target
-(via `Xc -S` probes *and real execution*, not -S alone -- see below)
+additive, and stayed that way through all seven Linux arches; the same
+discipline carried over to adding darwin as a second GOOS, with one
+correction along the way (see "svc.s turned out not to be
+OS-independent" below): verify every ABI claim empirically for the
+new target (via `Xc -S` probes *and real execution*, not -S alone -- see below)
 rather than assuming it matches an existing one. No two arches here
 actually agree on every axis: arm64/mips/arm/riscv share register-
 passing for the first arg, amd64/386 don't; arm64/amd64 share
@@ -58,8 +60,16 @@ Directory layout
                                 verbatim, preserving syncweb markers, or
                                 new but OS/arch-independent)
       arch/$cputype/rt0.s   -- process startup (_main), one per arch
-      syscall/arch/$cputype/svc.s        -- the *one* raw syscall
-                                             trampoline per arch
+                                (genuinely OS-independent -- it only
+                                calls main()/exit() by symbol name, so
+                                one file serves every GOOS for a given
+                                arch; confirmed true for darwin/arm64
+                                too, see below)
+      syscall/os/$OS/svc_$cputype.s      -- the *one* raw syscall
+                                             trampoline per (OS, arch)
+                                             pair (NOT arch-only -- see
+                                             "svc.s turned out not to
+                                             be OS-independent" below)
       syscall/os/$OS/*.decl              -- declarative syscall specs
       syscall/os/$OS/numbers_$cputype.h  -- syscall number constants
       syscall/os/$OS/zsyscall_$OS_$cputype.c -- generated (see below);
@@ -110,13 +120,17 @@ addition, no new assembly, *except* on mips, where a syscall needing a
 notes_arch_mips.txt) -- not needed yet since only write/exit are
 wired up.
 
-One arch needs a variant of the generic wrapper shape: riscv64's
-`long` is only 4 bytes (see below), so a pointer argument cast through
-the default `(long)` would truncate before ever reaching _syscall6.
-scripts/mksyscall.sh takes an optional 2nd positional argument (the
-cast type, default "long") for exactly this -- lib_core/libc/mkfile
-passes "vlong" only for riscv64's generation rule. Deliberately a
-positional argument, not an environment variable: this project's rc
+Three arches need a variant of the generic wrapper shape: riscv64's,
+arm64's, and amd64's `long` is only 4 bytes (see below and the
+"vlong" section further down -- this was originally believed to be a
+riscv64-only quirk, and wasn't, see that section for the correction),
+so a pointer argument cast through the default `(long)` would
+truncate before ever reaching _syscall6. scripts/mksyscall.sh takes an
+optional 2nd positional argument (the cast type, default "long") for
+exactly this -- lib_core/libc/mkfile passes "vlong" for riscv64/
+arm64/amd64's generation rule (any arch where SZ_IND > SZ_LONG in that
+arch's compilers/*c/gc.h). Deliberately a positional argument, not an
+environment variable: this project's rc
 (rc/unix.c) has a no-op Updenv(), so a `VAR=val cmd`-shaped mkfile
 recipe silently fails to actually set the variable in the environment
 a forked subprocess (like this script, or its own awk) sees -- a
@@ -131,6 +145,144 @@ syscall numbers stop being hand-written and start getting scraped from
 each target OS's own kernel headers, generating this file will require
 a host of that OS, so committing the output is what lets goken
 cross-compile for an OS you don't have).
+
+darwin/arm64: a second GOOS, and the vlong bug it exposed
+------------------------------------------------------------
+
+Added July 2026, on the strength of -H6 Mach-O output already working
+(docs/claude_notes/notes_exec_macho.txt) and the user's own machine being
+macOS arm64. Verification: lib_core/libc && mk 'objtype=arm64'
+'cputype=arm64' 'GOOS=darwin' install, then tests/c/hello_libc's
+test_macos_arm64 target (mk 'objtype=arm64' 'cputype=arm64'
+test_macos_arm64) -- no qemu involved, this actually executes the
+Mach-O binary on the real host, ad-hoc signed via scripts/macos-codesign.
+
+GOOS is a real mk variable now, not a hardcoded "linux" throughout
+lib_core/libc/mkfile: it defaults to linux (every existing caller
+relies on this, unchanged behavior) and both lib_core/libc/mkfile
+itself and tests/c/hello_libc/mkfile's test_macos_arm64 target pass
+'GOOS=darwin' explicitly, positionally on the mk command line -- same
+"rc's Updenv() is a no-op" reasoning as scripts/mksyscall.sh's own
+cast-type argument above, not a coincidence: it's the same class of
+footgun this codebase has already been bitten by once. Watch the `${GOOS}`
+vs `$GOOS_` distinction in any path built by concatenating GOOS directly
+against another variable with an underscore (e.g. zsyscall_${GOOS}_$cputype.c) --
+`$GOOS_$cputype` silently parses as the variable named "GOOS_" (undefined,
+empty) followed by $cputype, not as "$GOOS" + "_" + "$cputype". Caught during
+this work because the mkfile's own SYSCALLOFILES referenced a file
+that then failed to resolve ("mk: don't know how to make
+'syscall/os/darwin/syscall_arm64.decl'" -- note the missing "darwin_"
+in that message, the tell).
+
+darwin/arm64's raw syscall convention (lib_core/libc/syscall/os/darwin/
+numbers_arm64.h, svc_arm64.s) differs from linux/arm64's in exactly the
+two ways already documented in notes_exec_macho.txt from the -H6
+bring-up: the syscall number goes in R16 (not R8), and the trap is
+SVC $0x80 (not SVC $0, which on Darwin is a different, Mach, trap
+table). BSD syscall numbers, no class prefix (that's an amd64/x86
+Darwin quirk, not an arm64 one). Everything else about the trampoline
+-- args in R0-R5, num arriving in the caller's R0 unspilled, the whole
+FP-vs-register story -- is a plain AAPCS64 calling-convention fact and
+so is identical to linux/arm64's, confirmed by reusing arch/arm64/rt0.s
+completely unmodified for both GOOSes (see "Directory layout" above).
+
+svc.s turned out not to be OS-independent
+--------------------------------------------
+
+The original (Linux-only) directory layout put svc.s under
+syscall/arch/$cputype/, i.e. one trampoline per arch, implicitly
+assumed to be reusable across any future OS. Adding darwin/arm64
+proved that assumption wrong immediately (see the register/trap
+differences above), so svc.s moved to syscall/os/$OS/svc_$cputype.s --
+one per (OS, arch) pair, alongside the other already-per-OS files
+(numbers_$cputype.h, *.decl, zsyscall_*.c) it always logically
+belonged next to. This was a pure `git mv` for all seven existing
+Linux arches (386, amd64, arm, arm64, mips, riscv, riscv64) plus a
+path fixup in their own header comments and lib_core/libc/mkfile's
+SYSCALLOFILES/generation rule -- re-verified byte-for-byte unchanged
+by rebuilding+relinking all seven afterward (see "Verification" below
+for the caveat about not having qemu/Docker available to *run* six of
+those seven during this particular session).
+
+The pointer-truncation bug this exposed (arm64, and amd64 too)
+-------------------------------------------------------------------
+
+hello_libc's first real run on macOS printed nothing (exit 0, no
+output) -- the exact "silently wrong, not crashed" symptom
+notes_exec_macho.txt already warns about. lldb tracing (breakpoint on
+the SVC instruction's address, not by symbol -- 7l's -H6 output has no
+symbol table, see that file's own debugging section) showed write()'s
+x0/x1/x2 arguments full of garbage in their upper 32 bits: e.g. fd=1
+arrived as x0=0x100000001.
+
+Root cause: this compiler defines `long` as 4 bytes on *every* arch
+(SZ_LONG in compilers/*c/gc.h -- checked all seven: 386/arm/mips/riscv
+have SZ_IND==SZ_LONG==4 too, genuinely fine, but arm64 and amd64 both
+have SZ_IND=8 with that same SZ_LONG=4). _syscall6's prototype declared
+its args as plain `long`, so `(long)buf` in the generated
+zsyscall_*.c wrapper truncated a real 8-byte pointer to 4 bytes before
+it ever reached the outgoing-call stack slot -- confirmed via `7c -S`:
+the compiler correctly computes and sign-extends the value into a
+64-bit register (`sxtw x9, w0`), then legitimately stores only the low
+32 bits of it (`MOVW`, not `MOV`) into the argument's 8-byte-strided
+stack slot, per its own (undersized) idea of the value's type. Not a
+compiler bug -- 7c is behaving correctly relative to `long` genuinely
+being 4 bytes here; the bug was in lib_core/libc's own choice of `long`
+for _syscall6's prototype. The upper 4 bytes of each 8-byte slot are
+simply whatever was already on the stack, never written. This is
+*exactly* riscv64's already-known-and-fixed bug (see the "vlong" section
+above), just never recognized as applying to arm64/amd64 too -- the
+prior write-up's claim that "every other arch's `long` is already
+pointer-wide" was empirically wrong for these two, just never caught
+because nothing had actually run natively and looked at real (non-luckily-
+zeroed) stack contents until this darwin bring-up. It silently existed
+in linux/arm64's and linux/amd64's hello_libc this whole time too --
+masked because a fresh Linux process stack happens to be zeroed in
+exactly the region these outgoing-argument slots land in this early in
+program execution, while macOS/dyld leaves real garbage there. Same
+"Linux got lucky, macOS didn't" shape as the *unrelated*, already-
+documented xwrite-stub bug in notes_exec_macho.txt -- a second,
+independent instance of that general failure mode, not the same bug
+recurring.
+
+Fix: arm64 and amd64 now get the same treatment riscv64 already had --
+scripts/mksyscall.sh's vlong argtype, and `vlong a1..a6` in their
+_syscall6 prototype (syscall_$OS_$cputype.h) instead of `long`. Verified
+via `7c -S` before/after: every outgoing-argument store for write()/exit()
+changed from MOVW (32-bit) to MOV (64-bit); rebuilt+relinked and
+confirmed hello_libc prints correctly on real macOS arm64 afterward.
+amd64's linux/hello_libc could not be executed to confirm the runtime
+fix on this session's host (no qemu-x86_64, no working Docker daemon --
+see "Verification" below) -- the fix was applied there on the strength
+of the identical root cause (SZ_LONG=4, SZ_IND=8, same `(long)buf`
+truncation site, confirmed via `6c -S`), not from an observed amd64
+failure of its own. mips/riscv/386/arm are genuinely unaffected
+(SZ_IND==SZ_LONG==4 for all four) and keep the plain `long` prototype.
+
+A second, unrelated build-hygiene footgun surfaced while testing this:
+mksyslib's `$AR rc $LIBNAME $prereq` merges into whatever local libc.a
+intermediate archive is already sitting in lib_core/libc/ instead of
+starting fresh. Switching cputype or GOOS between builds without an
+intervening `mk clean` (or, worse, a `clean` whose own `*.$O` glob only
+matches the *current* $O suffix, so it never removes a differently-
+suffixed stale object from a previous arch) leaves iar merging
+incompatible members and failing with "inconsistent object file" --
+and since $OFILES don't change between a linux and darwin build of the
+same cputype, mk's own timestamp-based staleness check then considers
+the already (possibly corrupt) installed $LIB up to date and skips
+rebuilding it, silently linking against stale bits. tests/c/hello_libc/
+mkfile's test_macos_arm64 target works around this with an explicit
+`rm -f libc.a` plus `mk -a` (force) before every install -- not fixed
+in mksyslib itself (shared by every library in the tree, most of which
+never vary GOOS/cputype in a single session the way this one now does,
+so a broader fix there wasn't attempted this pass).
+
+Also fixed in passing: numbers_arm64.h, syscall_darwin_arm64.h, and
+all seven of the just-moved svc_$cputype.s files' sibling .decl/.h
+comments had a couple of stale `syscall/arch/$cputype/svc.s` path
+references left over from the move above -- caught by grepping for the
+old path across syscall/, not by a build failure (a comment typo, not
+a code bug).
 
 Verifying an arch's calling convention before trusting it
 --------------------------------------------------------------
@@ -200,14 +352,19 @@ Bugs found along the way (not arch-specific ABI facts -- see the per-arch notes 
   shape -- worth checking 5l/6l/8l before assuming they're fine. Full
   writeup in notes_arch_mips.txt (vl) and notes_arch_riscv.txt (il).
 
-- riscv64-only: `long` stays 4 bytes there (like every Plan9 C
-  compiler in this tree) despite riscv64 having 8-byte pointers, so
-  anything typed `unsigned long`/`long` as a stand-in for "pointer-
-  wide integer" (a va_arg alignment computation, a syscall trampoline
-  argument) silently truncates. Not a compiler bug -- a real property
-  of this arch that's easy to get wrong when adapting a `ulong`-based
-  uintptr/intptr pattern that's correct on arm64/amd64 (where `long`
-  really is 8 bytes). Full writeup in notes_arch_riscv.txt.
+- riscv64: `long` stays 4 bytes there (like every Plan9 C compiler in
+  this tree, on every arch -- see the "darwin/arm64" section below for
+  the correction to this bullet's own original, too-narrow framing)
+  despite riscv64 having 8-byte pointers, so anything typed `unsigned
+  long`/`long` as a stand-in for "pointer-wide integer" (a va_arg
+  alignment computation, a syscall trampoline argument) silently
+  truncates. Not a compiler bug -- a real property of this arch that's
+  easy to get wrong when adapting a `ulong`-based uintptr/intptr
+  pattern from elsewhere. Full writeup in notes_arch_riscv.txt. This
+  turned out not to be riscv64-only after all: arm64 and amd64 have
+  the exact same SZ_LONG=4-with-8-byte-pointers property and the exact
+  same bug, just not caught until later -- see "darwin/arm64: a second
+  GOOS, and the vlong bug it exposed" above.
 
 - arm-only: a genuinely new linkers/5l bug, and the one item on this
   list that checked out and confirmed 5l specifically (per the "worth
@@ -249,3 +406,31 @@ fix landed in that shared cc.a -- plus tests/c/vlong's own multi-arch
 test (the most relevant existing regression coverage for the
 com64.c/vlrt.c-adjacent changes), tests/c/mini2's, and
 tests/c/regressions' (arm_div_from_lib.c specifically, for the 5l fix).
+
+darwin/arm64: `lib_core/libc && mk 'objtype=arm64' 'cputype=arm64'
+'GOOS=darwin' install`, then tests/c/hello_libc's `mk 'objtype=arm64'
+'cputype=arm64' test_macos_arm64` -- no qemu, runs the real Mach-O
+binary directly on the host after ad-hoc signing it (scripts/
+macos-codesign), same spirit as tests/s/mini's pre-existing
+test_macos_arm64 target. Passes on real Apple Silicon macOS.
+
+Caveat specific to the session that did the svc.s relocation and the
+arm64/amd64 vlong fix above: verification of the *other six* Linux
+arches (386, amd64, mips, riscv, riscv64, and arm64 itself under
+GOOS=linux) was compile-and-link-only, not run-and-compare -- the host
+doing this work had neither qemu-user installed nor a running Docker
+daemon (`make build-docker-test` is the normal way to get both). All
+six rebuilt and relinked cleanly (confirming the file move and the
+${GOOS} mk-variable-boundary fix didn't break anything structurally),
+and the vlong fix for arm64/amd64 was verified correct via `7c -S`/
+`6c -S` before/after (MOVW -> MOV on every outgoing syscall argument
+store) plus real execution on darwin/arm64 specifically -- but actual
+qemu execution of linux/arm64's and the other five arches' hello_libc
+with these changes has NOT been re-confirmed since before this
+session's edits. Do that (`make build-docker-test`, or qemu-user
+locally) before trusting this doc's "all seven pass" claim above at
+full strength again. Separately, and unrelated to this work: amd64's
+hello_libc currently fails to *link* at all on this same host (a 6l
+"doasm: notfound" error, reproduces on unmodified code too) -- see
+todo.org's "6l (linker)" section, not re-described here since it's an
+open TODO, not landed work.

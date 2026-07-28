@@ -6,11 +6,11 @@
 
 long write(int fd, void* buf, long n)
 {
-	return (long)_syscall6(SYS_write, (long)fd, (long)buf, (long)n, 0, 0, 0);
+	return (long)_syscall6(SYS_write, (vlong)fd, (vlong)buf, (vlong)n, 0, 0, 0);
 }
 
 void exit(int code)
 {
-	_syscall6(SYS_exit, (long)code, 0, 0, 0, 0, 0);
+	_syscall6(SYS_exit, (vlong)code, 0, 0, 0, 0, 0);
 }
 

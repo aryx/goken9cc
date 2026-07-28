@@ -1,5 +1,5 @@
 /* Glue the generated zsyscall_linux_mips.c needs: the raw mips
- * trampoline (lib_core/libc/syscall/arch/mips/svc.s) and this OS's
+ * trampoline (lib_core/libc/syscall/os/linux/svc_mips.s) and this OS's
  * syscall numbers.
  */
 #include "numbers_mips.h"

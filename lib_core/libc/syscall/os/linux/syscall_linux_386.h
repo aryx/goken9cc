@@ -1,5 +1,5 @@
 /* Glue the generated zsyscall_linux_386.c needs: the raw 386
- * trampoline (lib_core/libc/syscall/arch/386/svc.s) and this OS's
+ * trampoline (lib_core/libc/syscall/os/linux/svc_386.s) and this OS's
  * syscall numbers.
  */
 #include "numbers_386.h"
