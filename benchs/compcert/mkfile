@@ -80,8 +80,67 @@ bench:V: all
 
 clean:V:
 	rm -f $GCCO0BINS $GCCO3BINS $CLANGO0BINS $CLANGO3BINS
+	rm -f *.[5678vij] $GOKENBINS
 
-# TODO: once goken can build this corpus, add %.goken-5/6/7/8 style
-# targets (per docs/notes on the arch letters) alongside the gcc/clang
-# ones above, add them to bench.sh's VARIANTS, and fold them into
-# test/bench too. gcc -O0 stays the baseline.
+# goken's own toolchain (Xc/Xa/Xl), one program + one arch via
+# 'mk 'cputype='<arch> goken' (defaults to $cputype from mkconfig, e.g.
+# arm64). The arch->tool-letter table below (copied from mkfiles/
+# {5,6,7,8,v,i,j}/mkfile) is spelled out as plain rc variables inside
+# the recipe, rather than pulled in via the shared mkfiles/$objtype/
+# mkfile include like tests/ does: that include also (re)defines
+# $CFLAGS/$CC/$LD, which this file already uses for the gcc/clang
+# targets above, so reusing it here would silently clobber them (mk's
+# variable expansion is late-bound to a value's *final* assignment in
+# the file, not a snapshot at point of use -- there's no mk-level way
+# to save a copy first).
+#
+# include/APE/ (a minimal, *not* full Plan9 APE) maps stdio.h ->
+# u.h+libc.h (printf aliased to print) so these UNIX-style benchmark
+# sources build against goken's own self-hosted libc.a (lib_core/libc/)
+# unmodified. That libc.a needs to be built+installed for the target
+# arch first:
+#   cd $TOP/lib_core/libc && mk 'objtype='<arch> 'cputype='<arch> install
+#
+# Only fib is wired up so far -- most of the rest of PROGS also needs
+# string.h/math.h/ctype.h APE stubs and the libc functions behind them
+# (memcpy, sin/cos/sqrt/..., isalpha/...), to be added on demand as
+# each benchmark is brought up, not preemptively -- extend GOKENPROGS
+# then, and fold this into bench.sh's VARIANTS/test/bench once more
+# than one benchmark is wired up.
+TOP=../..
+GOKENPROGS=fib
+GOKENBINS=${GOKENPROGS:%=%.goken}
+GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
+
+goken:V: $GOKENBINS
+
+%.goken: %.c
+	switch($cputype){
+	case arm64
+		gc=7c; gl=(7l); go=7
+	case amd64
+		gc=6c; gl=(6l); go=6
+	case 386
+		gc=8c; gl=(8l); go=8
+	case arm
+		gc=5c; gl=(5l -H7); go=5
+	case mips
+		gc=vc; gl=(vl); go=v
+	case riscv
+		gc=ic; gl=(il); go=i
+	case riscv64
+		gc=jc; gl=(jl); go=j
+	case *
+		echo 'goken: unsupported cputype: '$cputype >[1=2]
+		exit 1
+	}
+	$gc $GOKENCFLAGS -D$cputype -c $stem.c
+	$gl -L$TOP/ROOT/arch/$cputype/lib -o $target -E _main $stem.$go -lc
+
+test_goken:V: goken
+	for(p in $GOKENPROGS){
+		if($TOP/scripts/qemu-runner $cputype ./$p.goken | cmp -s /dev/stdin Results/$p)
+			echo $p': passed ('$cputype')'
+		if not
+			echo $p': FAILED ('$cputype')'
+	}
