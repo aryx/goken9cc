@@ -102,8 +102,8 @@ clean:V:
 #   cd $TOP/lib_core/libc && mk 'objtype='<arch> 'cputype='<arch> install
 #
 # fib, integr, lists, fftw, fannkuch, nsieve, nsievebits, perlin,
-# spectral, nbody, fft, sha1, qsort, chomp, almabench are wired up so
-# far, each needing progressively more of include/APE/ (stdio.h's
+# spectral, nbody, fft, sha1, qsort, chomp, almabench, fftsp are wired
+# up so far, each needing progressively more of include/APE/ (stdio.h's
 # putc/putchar/stdout/NULL/size_t/atoi/atol, stdlib.h/stddef.h/
 # string.h/math.h/assert.h/ctype.h now genuinely empty -- everything
 # they'd declare is already reachable via stdio.h, which every program
@@ -125,7 +125,12 @@ clean:V:
 # needed stdio.h to #undef PI right after pulling it in from
 # include/math/basic.h (used internally by e.g. atan2.c, but never
 # meant to be visible to APE-shimmed application code) -- see
-# stdio.h's own comment for why that's safe.
+# stdio.h's own comment for why that's safe. fftsp.c needed cosf/
+# sinf/fabsf, which don't exist as genuine single-precision
+# implementations here -- stdio.h just widens to double, calls the
+# existing cos/sin/fabs, and narrows back (fine for this consumer,
+# which only wants reference/consistency checking, not exact
+# single-precision rounding at every step).
 #
 # Still blocked, each for a different reason (not pursued further this
 # pass -- see docs/claude_notes/notes_libc_selfhost.txt for anything
@@ -149,8 +154,6 @@ clean:V:
 #   themselves going wrong via ordinary uvlong arithmetic, not a
 #   print-layer issue. Compiler-internals territory, not investigated
 #   further than isolating the symptom.
-# - fftsp.c: needs cosf/sinf/fabsf (float, not double, precision) --
-#   no float-specific math functions exist here at all yet.
 # - bisect.c: needs stderr/fputs (no FILE*-shaped stream abstraction
 #   exists yet, unlike stdout's fd-1 placeholder) and has a cascading
 #   parse error past that point not yet isolated.
@@ -182,7 +185,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 

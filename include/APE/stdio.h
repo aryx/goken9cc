@@ -45,6 +45,19 @@
  * just the standard C name for the same thing. */
 #define NULL nil
 
+/* math.h's cosf/sinf/fabsf: no float (single)-precision math functions
+ * exist in this libc at all, only double (cos/sin/fabs, already
+ * ported -- see include/math/basic.h). Rather than a second,
+ * genuinely single-precision implementation of each, these just widen
+ * to double, call the existing one, and narrow back -- fine for
+ * fftsp.c (the first and, so far, only consumer), which only uses
+ * these for reference/consistency checking, not for anything relying
+ * on getting IEEE-754-exact single-precision rounding at every step.
+ */
+#define cosf(x) ((float)cos((double)(x)))
+#define sinf(x) ((float)sin((double)(x)))
+#define fabsf(x) ((float)fabs((double)(x)))
+
 /* stddef.h's size_t: `ulong`, matching malloc/calloc/free's own
  * parameter types (include/core/mem.h) -- an existing, already-decided
  * project convention (predates this file), not this shim's to
