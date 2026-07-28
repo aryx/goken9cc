@@ -101,12 +101,25 @@ clean:V:
 # arch first:
 #   cd $TOP/lib_core/libc && mk 'objtype='<arch> 'cputype='<arch> install
 #
-# Only fib is wired up so far -- most of the rest of PROGS also needs
-# string.h/math.h/ctype.h APE stubs and the libc functions behind them
-# (memcpy, sin/cos/sqrt/..., isalpha/...), to be added on demand as
-# each benchmark is brought up, not preemptively -- extend GOKENPROGS
-# then, and fold this into bench.sh's VARIANTS/test/bench once more
-# than one benchmark is wired up.
+# fib, integr, lists, fftw, fannkuch, nsieve, nsievebits are wired up
+# so far, each needing progressively more of include/APE/ (stdio.h's
+# putc/stdout, stddef.h's NULL, string.h's memset et al, stdlib.h's
+# malloc/calloc/free via lib_core/libc/port/minimal_malloc.c -- a
+# deliberately temporary bump allocator, see its own header comment).
+# math.h isn't wired up at all yet (no sqrt/pow/floor in this libc),
+# which blocks spectral/perlin/binarytrees/almabench/nbody/fft/fftsp/
+# bisect/aes and a few others; ctype.h blocks knucleotide. ac/qsort.c
+# needs a real rand() and the real qsort() library function, neither
+# of which exist yet either. vmach.c is a different kind of blocker,
+# not a missing stub: it stores `(long)pc` (a pointer) into a
+# `long stack[]`, which truncates on this compiler the same way the
+# syscall-argument bug did (see docs/claude_notes/notes_libc_selfhost.txt)
+# -- but that one is the *source*'s own assumption, not a libc gap, so
+# fixing it means an actual goken-specific fork of vmach.c (long ->
+# vlong), not a header addition; not done, to avoid forking a
+# benchmark also used for the gcc/clang comparison without deciding
+# that's the right call first. Extend GOKENPROGS as more get wired up,
+# and fold this into bench.sh's VARIANTS/test/bench alongside it.
 #
 # arm64 on a Darwin host: %.goken's `$gl` (7l here) has no explicit -H
 # flag, so it falls back to the host's own compiled-in GOOS default
@@ -116,7 +129,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 

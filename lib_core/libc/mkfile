@@ -113,6 +113,7 @@ PORTOFILES=\
 	port/assert.$O\
 	port/strerror.$O\
 	port/vlrt.$O\
+	port/minimal_malloc.$O\
 
 SYSCALLOFILES=\
 	syscall/os/$GOOS/svc_$cputype.$O\

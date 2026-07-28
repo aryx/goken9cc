@@ -22,9 +22,21 @@ reps=${REPS:-1}
 
 # Every "$stem.$variant" binary mkfile can produce, in display order.
 # gcc-O0 (VARIANTS[0]) is the fixed baseline all speedup columns are
-# computed against -- add new compilers/opt-levels (clang, later goken's
-# %.goken-5/6/7/8) here, not by changing what the baseline is.
-VARIANTS=(gcc-O0 gcc-O3 clang-O0 clang-O3)
+# computed against -- add new compilers/opt-levels (clang) here, not by
+# changing what the baseline is.
+#
+# "goken" is %.goken from mkfile's own goken:/%.goken: rules -- only
+# built for whichever $cputype was last built (see mkfile's own
+# comment: 'mk cputype=<arch> goken', no per-arch suffix, since only
+# one arch's worth of goken binaries exists on disk at a time). Not
+# every $prog this script can be called with has a goken variant built
+# (see mkfile's GOKENPROGS, currently just fib) -- time_one below just
+# reports a blank/error for a prog.goken that doesn't exist, so only
+# pass progs that do when including this variant. 7c/6c/etc apply no
+# optimization at all (no -O flag concept the way gcc/clang have one),
+# so treat this column as "unoptimized, self-hosted toolchain" rather
+# than expecting it to land near either -O0 or -O3.
+VARIANTS=(gcc-O0 gcc-O3 clang-O0 clang-O3 goken)
 BASELINE=${VARIANTS[0]}
 
 time_one() {
