@@ -14,3 +14,5 @@ CC=jc
 LD=jl
 AS=ja
 AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/riscv64

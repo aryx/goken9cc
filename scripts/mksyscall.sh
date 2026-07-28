@@ -7,12 +7,29 @@
 # assembly per syscall or per arity.
 #
 # usage: mksyscall.sh some.decl > zsyscall_xxx.c
-set -eu
-
-if [ $# -ne 1 ]; then
-	echo "usage: mksyscall.sh file.decl" >&2
+# usage: mksyscall.sh some.decl vlong > zsyscall_xxx.c
+#
+# optional 2nd arg (default "long"): the type each argument is cast to
+# before being passed into _syscall6. Every arch but one is fine with
+# the default -- `long` is always wide enough to carry that arch's own
+# pointers without truncation. riscv64 is the exception: like every
+# Plan9 C compiler in this tree, its `long` stays 4 bytes even though
+# it's a genuine 64-bit arch with 8-byte pointers (see
+# include/arch/riscv64/u.h's header comment), so casting e.g. write()'s
+# `buf` through `(long)` would silently truncate it. lib_core/libc/mkfile
+# passes "vlong" for riscv64 specifically; every other arch's _syscall6
+# stays `long`-typed and omits this argument.
+#
+# deliberately a positional arg, not an environment variable: this
+# project's own rc has a no-op Updenv() (see
+# docs/claude_notes/notes_libc_selfhost.txt), so a `VAR=val cmd` mkfile
+# recipe silently fails to propagate to this script's own subprocess
+# (awk) -- a positional arg has no such dependency.
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+	echo "usage: mksyscall.sh file.decl [argtype]" >&2
 	exit 1
 fi
+syscallarg=${2:-long}
 
 base=$(basename "$1" .decl)
 
@@ -23,7 +40,7 @@ echo "#include <libc.h>"
 echo "#include \"$base.h\""
 echo
 
-awk '
+awk -v syscallarg="$syscallarg" '
 /^\/\/sys[ \t]/ {
 	line = $0
 	sub(/^\/\/sys[ \t]+/, "", line)
@@ -67,7 +84,7 @@ awk '
 		if (argstr != "")
 			argstr = argstr ", "
 		argstr = argstr ptype " " pname
-		callargs = callargs ", (long)" pname
+		callargs = callargs ", (" syscallarg ")" pname
 		nargs++
 	}
 	for (i = nargs; i < 6; i++)

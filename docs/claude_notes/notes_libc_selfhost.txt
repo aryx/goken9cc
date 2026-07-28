@@ -7,21 +7,23 @@ Xc/Xa/Xl toolchain (not gcc/clang), as opposed to every prior test in
 this tree, which either links no library at all (tests/c/mini/) or
 links against a hand-rolled, per-test assembly stub duplicated in each
 test directory (tests/c/mini2/linux_$arch.s, tests/c/vlong/vlrt.c+
-print.c). Linux only so far; arm64, amd64, and mips are done (this
-covers all three). 386/arm/riscv/riscv64 are not, but the directory
+print.c). Linux only so far; arm64, amd64, mips, riscv, and riscv64
+are done (this covers all five). 386/arm are not, but the directory
 layout (lib_core/libc/{os,arch,syscall}/ split by $OS and $cputype) is
 built to make adding them additive -- follow the pattern below, but
 verify every ABI claim below empirically for the new arch (via `Xc -S`
-probes) rather than assuming it matches an existing one; arm64 and
-mips already turned out to disagree in more than one respect despite
-both being "the first argument comes in a register" arches (see
-below).
+probes *and real qemu execution*, not -S alone -- see below) rather
+than assuming it matches an existing one; no two arches done so far
+actually agree on every axis (arm64/mips share register-passing for
+the first arg but not slot width; amd64/arm64 share slot width but not
+register-passing; riscv shares mips's natural-packing *and* needs its
+own 8-byte-alignment rule neither arm64 nor mips has).
 
-Read docs/claude_notes/notes_arch_amd64.txt's and
-notes_arch_mips.txt's own new sections for the full per-arch ABI
-write-ups (calling convention, varargs slot layout); this file is the
-cross-cutting design story and the bugs found along the way that
-weren't arch-specific.
+Read docs/claude_notes/notes_arch_amd64.txt's, notes_arch_mips.txt's,
+and notes_arch_riscv.txt's own relevant sections for the full per-arch
+ABI write-ups (calling convention, varargs slot layout); this file is
+the cross-cutting design story and the bugs found along the way that
+weren't purely arch-specific.
 
 Why this exists: fmt/*.c wants a real libc, not a per-test stub
 ------------------------------------------------------------------------
@@ -72,6 +74,19 @@ via syncweb the way mk/rc/the arm toolchain/utilities/ already are, so
 staying close to principia's existing shape now, rather than
 inventing a divergent one, is deliberate).
 
+riscv/riscv64 have no principia or 9front equivalent to draw from at
+all (see plan9front.txt's "riscv" section) -- their u.h files are
+instead adapted from ~/xxx/miller-riscv/ROOT/{riscv,riscv64}/include/u.h
+(Richard Miller's Plan9 riscv port), credited there. Same "adapt, don't
+blindly trust" discipline applied: miller-riscv is a different,
+independently-implemented compiler, so every va_start/va_arg claim
+from it was re-verified against this project's own ic/jc -S output and
+real qemu execution -- worth doing even when a seemingly-authoritative
+reference exists, since it caught a genuine, riscv64-specific bug (see
+below) that a straight copy would have carried over silently (miller's
+own u.h actually gets it right; the bug was in an early draft of
+*this* project's adaptation, not in the source being adapted from).
+
 Declarative syscalls, Go-`mksyscall.sh`-style
 ------------------------------------------------
 
@@ -89,6 +104,19 @@ addition, no new assembly, *except* on mips, where a syscall needing a
 5th/6th argument would need svc.s itself extended (see
 notes_arch_mips.txt) -- not needed yet since only write/exit are
 wired up.
+
+One arch needs a variant of the generic wrapper shape: riscv64's
+`long` is only 4 bytes (see below), so a pointer argument cast through
+the default `(long)` would truncate before ever reaching _syscall6.
+scripts/mksyscall.sh takes an optional 2nd positional argument (the
+cast type, default "long") for exactly this -- lib_core/libc/mkfile
+passes "vlong" only for riscv64's generation rule. Deliberately a
+positional argument, not an environment variable: this project's rc
+(rc/unix.c) has a no-op Updenv(), so a `VAR=val cmd`-shaped mkfile
+recipe silently fails to actually set the variable in the environment
+a forked subprocess (like this script, or its own awk) sees -- a
+positional argument has no such dependency and was not worth
+re-verifying whether the bug still applies.
 
 zsyscall_*.c is deliberately committed to the repo, unlike most
 generated files in this tree (.gitignore excludes y.tab.[ch], for
@@ -120,13 +148,18 @@ caller writes even the callee's first argument to the stack before the
 CALL, confirmed by probing a variadic call *site*, not just a
 function's own prologue). This second fact directly decides whether
 that arch's svc.s needs a register-vs-FP special case for `num` (arm64,
-mips: yes; amd64: no, `num+0(FP)` just works). Do not skip this step
-for a future arch on the assumption that "it's another 32-bit RISC
-arch, it'll be like mips" or "it's another 64-bit arch, it'll be like
-arm64" -- amd64 turned out to share arm64's slot-width rule but not
-its register-passing rule, and mips shares arm64's register-passing
-rule but not its slot-width rule. No two arches done so far actually
-match on both axes.
+mips, riscv/riscv64: yes; amd64: no, `num+0(FP)` just works). Do not
+skip this step for a future arch on the assumption that "it's another
+32-bit RISC arch, it'll be like mips" or "it's another 64-bit arch,
+it'll be like arm64" -- amd64 shares arm64's slot-width rule but not
+its register-passing rule; mips shares arm64's register-passing rule
+but not its slot-width rule; riscv shares mips's natural-packing rule
+*and* needs an 8-byte-alignment rule neither arm64 nor mips has (see
+notes_arch_riscv.txt). No two arches done so far actually match on
+every axis -- and for riscv specifically, -S inspection alone once
+gave a wrong answer that only real qemu execution caught (see that
+same notes file); trust execution over static reading when the two
+disagree.
 
 Bugs found along the way (not arch-specific ABI facts -- see the per-arch notes for those)
 ------------------------------------------------------------------------------------------------
@@ -142,16 +175,34 @@ Bugs found along the way (not arch-specific ABI facts -- see the per-arch notes 
   vlong-typed `?:` used as a call argument; src/cmd/cc/com64.c (the
   older, separate frontend that 7c/vc/ic actually build against) was
   missing the same OCOND/OLIST/OCOMMA cases and hit "unknown vlong
-  %O". Only surfaced on mips (vc) because arm64/amd64 are 64-bit-native
-  and never enter this vlong-emulation code path at all (`machcap()`
-  bails out immediately for them). Full writeup, including exactly
-  which two nodes fail and why, in
+  %O". Only surfaced on mips (vc) and riscv (ic) because arm64/amd64
+  are 64-bit-native and never enter this vlong-emulation code path at
+  all (`machcap()` bails out immediately for them); ic/jc share the
+  fix (both link against the same src/cmd/cc/cc.a) but needed a
+  separate relink after the fix landed to actually pick it up -- an
+  easy step to forget when a fix lands in a *library* multiple final
+  binaries link against, not the binary you're testing directly. Full
+  writeup, including exactly which nodes fail and why, in
   docs/claude_notes/notes_shared_frontend_bugs.txt.
 
-- linkers/vl/obj.c's objfile() resolved `-lXXX` straight to a
-  hardcoded `/usr/vlib/libXXX.a`, never consulting the `-L` list at
-  all (linkers/7l/pobj.c's equivalent already does this correctly via
-  findlib()). Full writeup in notes_arch_mips.txt.
+- linkers/vl/obj.c's and linkers/il/obj.c's objfile() both resolved
+  `-lXXX` straight to a hardcoded `/usr/{v,i}lib/libXXX.a`, never
+  consulting the `-L` list at all (linkers/7l/pobj.c's equivalent
+  already does this correctly via findlib()). Same fix ported to both
+  (il needed one extra step: a forward declaration of findlib(), since
+  unlike vl's file, il/obj.c defines objfile() textually before
+  findlib()). This is now the *second* occurrence of this exact bug
+  shape -- worth checking 5l/6l/8l before assuming they're fine. Full
+  writeup in notes_arch_mips.txt (vl) and notes_arch_riscv.txt (il).
+
+- riscv64-only: `long` stays 4 bytes there (like every Plan9 C
+  compiler in this tree) despite riscv64 having 8-byte pointers, so
+  anything typed `unsigned long`/`long` as a stand-in for "pointer-
+  wide integer" (a va_arg alignment computation, a syscall trampoline
+  argument) silently truncates. Not a compiler bug -- a real property
+  of this arch that's easy to get wrong when adapting a `ulong`-based
+  uintptr/intptr pattern that's correct on arm64/amd64 (where `long`
+  really is 8 bytes). Full writeup in notes_arch_riscv.txt.
 
 Verification
 --------------
@@ -167,8 +218,11 @@ silently masked the qemu-runner omission in tests/c/hello_libc/mkfile
 until it was added; ./hello.exe "just working" is not proof
 qemu-runner is actually being invoked, check the mkfile). Full-tree
 regression check after any change to shared code (com64.c, vl/obj.c,
-fmt/fltfmt.c all being shared with the gcc/BOOT build and/or other
-arches): `mk 'objtype=boot-gcc' all` from the repo root, plus
+il/obj.c, fmt/fltfmt.c all being shared with the gcc/BOOT build and/or
+other arches): `mk 'objtype=boot-gcc' all` from the repo root -- and
+after touching anything under src/cmd/cc/ specifically, remember every
+one of 7c/vc/ic (and jc, the same binary as ic) needs relinking, not
+just recompiling, to pick up a fix landed in that shared cc.a -- plus
 tests/c/vlong's own multi-arch test (the most relevant existing
 regression coverage for the com64.c/vlrt.c-adjacent changes) and
 tests/c/mini2's.

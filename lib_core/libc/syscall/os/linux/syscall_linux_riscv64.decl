@@ -1,0 +1,15 @@
+// Declarative syscall spec for linux/riscv64 (rv64), in the spirit of
+// GO/pkg/syscall's "//sys name(args) (ret) = SYS_NAME" comments (see
+// GO/pkg/syscall/syscall_linux.go), parsed by scripts/mksyscall.sh into
+// zsyscall_linux_riscv64.c. Every wrapper just calls the one generic
+// _syscall6 trampoline (lib_core/libc/syscall/arch/riscv64/svc.s), so
+// adding a syscall here is the only step needed -- no new assembly.
+//
+// lib_core/libc/mkfile builds this one with SYSCALLARG=vlong (see
+// scripts/mksyscall.sh's own comment, and syscall_linux_riscv64.h's):
+// a plain `long` is only 4 bytes even on this 64-bit arch, so a
+// pointer argument (e.g. write()'s buf) cast through `(long)` would
+// be silently truncated before ever reaching _syscall6.
+
+//sys write(int fd, void *buf, long n) long = SYS_write
+//sys exit(int code) void = SYS_exit

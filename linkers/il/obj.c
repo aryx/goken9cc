@@ -264,6 +264,8 @@ errorexit(void)
 	exits(0);
 }
 
+static char*	findlib(char*);	// claude: defined later in this file; forward decl needed by objfile()'s new -L handling below
+
 void
 objfile(char *file)
 {
@@ -275,13 +277,19 @@ objfile(char *file)
 	struct ar_hdr arhdr;
 	char *e, *start, *stop;
 
+	// claude: was resolving -lXXX straight to a hardcoded
+	// /usr/$Xlib/libXXX.a (or /$plan9/lib/libXXX.a under -9), ignoring
+	// -L entirely -- same bug as linkers/vl/obj.c had (see
+	// docs/claude_notes/notes_shared_frontend_bugs.txt), same fix:
+	// use findlib() to search libdir[] (the -L list) instead.
 	if(file[0] == '-' && file[1] == 'l') {
-		if(debug['9'])
-			sprint(name, "/%s/lib/lib", thestring);
-		else
-			sprint(name, "/usr/%clib/lib", thechar);
-		strcat(name, file+2);
-		strcat(name, ".a");
+		snprint(pname, sizeof(pname), "lib%s.a", file+2);
+		e = findlib(pname);
+		if(e == nil) {
+			diag("cannot find library: %s", file);
+			errorexit();
+		}
+		snprint(name, sizeof(name), "%s/%s", e, pname);
 		file = name;
 	}
 	if(debug['v'])

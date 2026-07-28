@@ -3,13 +3,15 @@ TOP=../..
 
 # linux only for now; other GOOS combinations are the next incremental
 # step once this one is proven (see lib_core/libc/{os,arch,syscall}/ --
-# built to make that additive, not a rewrite). arm64/amd64/mips are
-# done; 386/arm/riscv/riscv64 would each need their own u.h/rt0.s/
-# syscall/arch/$cputype pieces the same way (see arm64's/amd64's/mips's
-# for the pattern -- each arch's ABI, especially varargs slot width and
+# built to make that additive, not a rewrite). arm64/amd64/mips/riscv/
+# riscv64 are done; 386/arm would each need their own u.h/rt0.s/
+# syscall/arch/$cputype pieces the same way (see the existing arches
+# for the pattern -- each arch's ABI, especially varargs slot width,
 # whether the raw syscall trampoline's first arg needs to come from a
-# register or FP, must be verified against that compiler's own -S
-# output, not assumed from another arch).
+# register or FP, and (riscv64's own surprise) whether `long` is
+# actually wide enough to carry a pointer, must be verified against
+# that compiler's own -S output and real qemu execution, not assumed
+# from another arch -- see docs/claude_notes/notes_libc_selfhost.txt).
 
 LIBNAME=libc.a
 
@@ -128,5 +130,10 @@ HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 # output is what lets goken cross-compile syscall wrappers for an OS
 # you don't have. After editing a .decl, regenerate and commit the
 # diff in the same change.
+# riscv64 needs vlong-cast syscall args (see scripts/mksyscall.sh's own
+# comment); every other arch's `long` is already pointer-wide.
 syscall/os/linux/zsyscall_linux_$cputype.c:	syscall/os/linux/syscall_linux_$cputype.decl
-	$TOP/scripts/mksyscall.sh $prereq > $target
+	if(~ $cputype riscv64)
+		$TOP/scripts/mksyscall.sh $prereq vlong > $target
+	if not
+		$TOP/scripts/mksyscall.sh $prereq > $target

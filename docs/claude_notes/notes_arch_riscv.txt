@@ -235,6 +235,76 @@ riscv/mips.
   reg.c's paint3() (real but unverified perf tweak, dead code, same
   shape as an analogous unported arm64 item).
 
+lib_core/libc bring-up: ABI facts, and two more bugs (not miller-riscv-derived)
+--------------------------------------------------------------------------------------
+
+Building a self-hosted libc.a (lib_core/libc/, see
+docs/claude_notes/notes_libc_selfhost.txt for the cross-cutting story
+covering arm64/amd64/mips/riscv/riscv64 together) needed real ic/jc
+ABI facts beyond what the earlier bring-up above already established.
+Verified via `ic -S`/`jc -S` on throwaway probes AND, critically, via
+actual qemu-riscv/qemu-riscv64 execution of real va_start/va_arg
+sequences -- a purely static (-S-only) check of this one turned out to
+be actively misleading once, see below:
+
+- Calling convention: only the first named parameter arrives in a
+  register (R8), exactly like arm64/mips -- a compiler-generated
+  function only spills it to its FP+0 home slot if its address is
+  actually taken. Every other argument packs at its natural sizeof()
+  width (like mips, unlike arm64/amd64's uniform-8-byte-slot rule),
+  *except* any 8-byte-or-wider type (double, vlong, and on riscv64
+  specifically also any pointer) forces the list/stack pointer to
+  round up to the next 8-byte-aligned address first (unlike mips,
+  which enforces no such alignment at all). See
+  include/arch/{riscv,riscv64}/u.h's own va_arg comment.
+
+- The one place static -S inspection actively misled: comparing a
+  call site's caller-written offsets (e.g. a double vararg landing at
+  what looked like "16(R2)" after an 8-byte pointer-typed first
+  argument) against a naive `&fmt+1`-based va_start computation (which
+  gave "FP+8") looked like a real mismatch -- implying va_start needed
+  extra rounding logic it turned out NOT to need. Actually running the
+  naive formula under qemu-riscv64 gave the *correct* value at offset
+  0 (i.e. `&start+1`, no rounding), immediately falsifying the static
+  read. The real lesson generalizes: for anything touching a calling
+  convention's exact byte layout, treat -S output as a hypothesis to
+  confirm by running real code under qemu, not as ground truth on its
+  own -- especially when comparing offsets computed relative to two
+  different registers (here, a caller's raw SP vs a callee's FP) which
+  are easy to conflate.
+
+- Real, riscv64-specific bug (not present on any other arch this tree
+  targets): jc's `long` stays 4 bytes even though riscv64 is a genuine
+  64-bit arch with 8-byte pointers -- confirmed via a direct sizeof()
+  probe (sizeof(long)==4, sizeof(char*)==8 on jc). A `typedef unsigned
+  long uintptr;` (correct on arm64/amd64, which *do* have an 8-byte
+  `long`) silently truncates any pointer cast through it here. This
+  broke two things independently until fixed: (1) va_arg's own
+  8-byte-alignment rounding, which computed a wild address and
+  segfaulted under qemu-riscv64 the moment a real va_arg macro (not
+  just equivalent inline code) exercised it -- fixed by typing
+  include/arch/riscv64/u.h's uintptr/intptr as `unsigned long
+  long`/`long long` instead, matching what miller-riscv's own u.h
+  already does (see plan9front.txt's riscv section); (2) the
+  lib_core/libc/syscall/arch/riscv64's _syscall6 trampoline's own
+  argument type -- a `long`-typed a1 (e.g. write()'s buf) would
+  truncate a real pointer before ever reaching the syscall. Fixed by
+  declaring _syscall6's a1..a6 as `vlong` specifically for riscv64 in
+  syscall_linux_riscv64.h, and generating that arch's zsyscall_*.c with
+  vlong casts (scripts/mksyscall.sh's optional 2nd argument) instead of
+  the default `long`.
+
+- linkers/il/obj.c's objfile() had the exact same -lXXX-ignores--L bug
+  as linkers/vl/obj.c (see
+  docs/claude_notes/notes_shared_frontend_bugs.txt) -- resolved
+  straight to a hardcoded /usr/ilib/libXXX.a, never consulting
+  findlib()/libdir[] at all. Same fix ported (il needed an extra
+  forward declaration of the now-earlier-referenced static findlib(),
+  since unlike vl's file, il/obj.c defines objfile() before findlib()).
+  Given this is now the *second* arch found with this exact bug (vl,
+  il), worth checking 5l/6l/8l for the same pattern before assuming
+  they're fine just because nothing has hit it yet.
+
 What has real test coverage today
 --------------------------------------
 
@@ -247,3 +317,9 @@ actually fail without its fix (not just written after the fact) by
 temporarily reverting and rebuilding. jc is riscv64-only among the
 compiler side of this bring-up -- ic's own thechar='j' path is what
 was fixed, there is no separate "jc-specific" source file.
+
+tests/c/hello_libc now also covers both riscv and riscv64: a real
+libc.a (fmt/printf, syscalls) built entirely by ic/ia/il and jc/ja/jl,
+linked with -lc, run under qemu-riscv/qemu-riscv64 via
+scripts/qemu-runner, output compared against expected.txt -- see
+notes_libc_selfhost.txt.

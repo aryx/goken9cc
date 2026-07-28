@@ -8,3 +8,5 @@ CC=ic
 LD=il
 AS=ia
 AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/riscv

@@ -266,6 +266,23 @@ ported from anywhere, so it isn't listed here -- see git log instead.
    optab.c "type" field change, 2 -> 1, matching miller-riscv exactly).
    See tests/c/regressions/riscv64_sraiw.c.
 
+ - include/arch/{riscv,riscv64}/u.h's base scalar typedefs and
+   va_start/va_arg shape (the general "round to N-byte slot, and for
+   riscv also 8-byte-align an 8-byte-or-wider vararg" structure) are
+   adapted from ~/xxx/miller-riscv/ROOT/{riscv,riscv64}/include/u.h --
+   the only riscv reference this project has at all, credited above.
+   Not a straight copy though, and one detail from it doesn't apply
+   here: goken's own ic/jc is an independently-implemented compiler,
+   not the same binary as miller-riscv's, so every va_start/va_arg
+   claim was re-verified against real ic/jc -S output and actual
+   qemu-riscv/qemu-riscv64 execution of a real va_arg sequence (not
+   just static inspection -- see docs/claude_notes/notes_arch_riscv.txt
+   for why the latter mattered) rather than trusted as-is. One real,
+   riscv64-specific bug surfaced this way that miller-riscv's own
+   uintptr/intptr typedefs (correctly `unsigned long long`/`long long`
+   there, not `unsigned long`/`long`) already avoid: see that same
+   notes file for the full story.
+
 ** amd64 (6a/6c/6l)
 
  - 6l: linkers/6l/optab.c's APSLLQ (packed 64-bit shift-left-by-
