@@ -70,3 +70,24 @@ typedef ulong size_t;
  */
 extern int atoi(char *s);
 extern long atol(char *s);
+
+/* include/math/basic.h (reached above via libc.h) defines PI
+ * (== PIO2+PIO2) for this project's own internal trig implementations
+ * (e.g. lib_core/libc/port/atan2.c) -- but it was never meant to be
+ * part of what APE-shimmed application code sees, and ordinary C
+ * source is free to define its own PI (ISO C's <math.h> doesn't
+ * define one; even where some libcs do as an extension, it's usually
+ * spelled M_PI specifically to leave PI alone). almabench.c does
+ * exactly that with an unguarded `#define PI 3.14159...`, which this
+ * compiler's preprocessor treats as a hard error, not a harmless
+ * identical redefinition. #undef here, right where every other
+ * benchs/compcert/*.c program that cares (fft.c, fftsp.c) already
+ * guards its own PI with `#ifndef PI` -- they'll just fall back to
+ * defining their own literal once this is gone, numerically identical
+ * to PIO2+PIO2 (fft.c's own passing test already proves that
+ * equivalence holds). Safe to undef unconditionally: nothing in
+ * lib_core/libc/port/*.c goes through this APE header at all (they
+ * #include u.h/libc.h directly), so this can't affect PI where it's
+ * actually needed internally.
+ */
+#undef PI
