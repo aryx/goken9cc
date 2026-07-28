@@ -36,12 +36,55 @@ typedef unsigned char	u8;
 typedef unsigned short	u16;	
 typedef unsigned int	u32;
 
-#if defined(__ppc__) || defined(__PPC__)
+/* Original used `#if defined(__ppc__) || defined(__PPC__)` /
+ * `#elif defined(__i386__) || defined(__x86_64__) || ...` for
+ * endianness detection. Rewritten (still compiled by both gcc/clang,
+ * for the existing comparison this file is also built for, and by
+ * goken's own toolchain -- see benchs/compcert/mkfile) because
+ * goken's own preprocessor (5c/6c/7c/8c/vc/ic) doesn't support #if
+ * with an expression at all ("unknown #: if", confirmed empirically),
+ * and #elif combined with defined() is worse than a clean error: it
+ * *compiles* without complaint but silently always evaluates its own
+ * condition as false, unconditionally falling through as if it were a
+ * plain #else -- see tests/c/regressions/ and
+ * docs/claude_notes/notes_libc_selfhost.txt for both findings.
+ *
+ * The replacement below uses only #ifdef/#ifndef/#else/#endif (no
+ * #if, no #elif) chained together to express the original's OR logic,
+ * so it parses identically on both toolchains -- and keeps checking
+ * for the *same* real macros gcc/clang predefine (__ppc__/__PPC__),
+ * rather than silently discarding that detection in favor of
+ * something that only happens to still give the right answer on this
+ * project's own (little-endian) hosts. mips is also checked, only
+ * meaningful for goken's own build (gcc/clang here never see -Dmips
+ * at all -- see benchs/compcert/mkfile's own GCCO0BINS-style rules --
+ * so that #ifdef is simply never true for them) -- it's the only
+ * big-endian arch goken's toolchain targets (see e.g.
+ * lib_core/libc/port/vlrt.c's own #ifdef mips for the same
+ * distinction); everything else goken builds for (arm, arm64, 386,
+ * amd64, riscv, riscv64) is little-endian, same as every real x86/arm
+ * host gcc/clang run this comparison on. One thing genuinely lost,
+ * not just moved: the original's `#error "unknown endianness"`
+ * fallback for an unrecognized arch -- expressing "none of the above
+ * matched" needs #if/#elif's actual "else" semantics across more than
+ * two cases, which isn't available here; a build for some exotic arch
+ * this project doesn't target would now silently default to
+ * little-endian instead of failing loudly. Acceptable for the actual
+ * set of toolchains/arches in play here, but a real, deliberate
+ * trade-off, not a wash.
+ */
+#ifdef __ppc__
 #define ARCH_BIG_ENDIAN
-#elif defined(__i386__) || defined(__x86_64__) || defined(__ARMEL__) || defined(__AARCH64EL__)
-#undef ARCH_BIG_ENDIAN
-#else
-#error "unknown endianness"
+#endif
+#ifdef __PPC__
+#ifndef ARCH_BIG_ENDIAN
+#define ARCH_BIG_ENDIAN
+#endif
+#endif
+#ifdef mips
+#ifndef ARCH_BIG_ENDIAN
+#define ARCH_BIG_ENDIAN
+#endif
 #endif
 
 #ifdef ARCH_BIG_ENDIAN

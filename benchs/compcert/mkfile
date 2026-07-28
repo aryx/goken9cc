@@ -139,7 +139,23 @@ clean:V:
 # was changed directly to its decimal equivalent (see that file's own
 # comment for why it's the exact same double value, not a new one, and
 # why that doesn't affect the gcc/clang comparison this same file is
-# also built for below).
+# also built for below). aes.c's own endianness detection used
+# `#if defined(__ppc__) || ...` / `#elif defined(__i386__) || ...`,
+# which goken's own preprocessor can't parse at all ("unknown #: if"),
+# rewritten to a chain of plain #ifdef/#ifndef/#else/#endif (no #if,
+# no #elif at all -- see aes.c's own comment for the full reasoning,
+# including a second, independent #elif-plus-defined() bug this
+# uncovered along the way: it compiles with no error but silently
+# always evaluates false, so a mechanical #if -> #ifdef, #elif ->
+# #elif swap would have quietly miscompiled instead of just failing
+# loudly). Careful to still check the *same* real gcc/clang-predefined
+# macros (__ppc__/__PPC__), not just something that happens to still
+# resolve correctly on this project's own little-endian hosts --
+# gcc/clang built this same file both before and after, confirmed
+# passing both times, not just goken. The new #elif-plus-defined()
+# bug is captured minimally at
+# tests/c/regressions/elif_defined_silent_false.c, same "documented,
+# unfixed, not wired into test:V:" treatment as the other two.
 #
 # Still blocked, each for a different reason (not pursued further this
 # pass -- see docs/claude_notes/notes_libc_selfhost.txt for anything
@@ -163,10 +179,6 @@ clean:V:
 #   themselves going wrong via ordinary uvlong arithmetic, not a
 #   print-layer issue. Compiler-internals territory, not investigated
 #   further than isolating the symptom.
-# - aes.c: `#if defined(__ppc__) || ...` for endianness detection --
-#   7c's preprocessor doesn't accept this `#if defined(...)` form at
-#   all ("unknown #: if"), a preprocessor limitation, not a missing
-#   macro.
 # - vmach.c: a different kind of blocker than the real bugs above --
 #   it stores `(long)pc` (a pointer) into a `long stack[]`, which
 #   truncates on this compiler the same way the syscall-argument bug
@@ -195,7 +207,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect aes
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 
