@@ -645,6 +645,16 @@ pass length each time, safer
 
 ** C compilers: 5c/6c/7c/8c/vc/ic/ec
 
+*** TODO migrate 7c/vc/ic off the Go-era src/cmd/cc frontend onto compilers/cc/
+    5c/8c already build against compilers/cc/cc.a (the newer, actively
+    maintained frontend); 7c/vc/ic still build against src/cmd/cc/cc.a,
+    a separate, older copy that has independently drifted (see the
+    com64.c OCOND/OLIST fix in
+    docs/claude_notes/notes_shared_frontend_bugs.txt, found while
+    building lib_core/libc for mips -- already fixed in compilers/cc/
+    but not in src/cmd/cc/, since they're not the same file).
+    Unifying onto one frontend removes this whole class of bug.
+
 ** assemblers: 5a/6a/7a/8a/va/ia/ea
 
 ** linkers: 5l/6l/7l/8l/vl/il/el

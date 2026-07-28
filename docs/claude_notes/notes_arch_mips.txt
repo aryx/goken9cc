@@ -108,6 +108,70 @@ other backend already does. Full story, including why riscv is what
 actually surfaced it, in docs/claude_notes/notes_arch_riscv.txt. See
 tests/c/regressions/float_const_oob.c.
 
+vl's objfile(): -lXXX ignored -L entirely, always resolved to /usr/vlib
+---------------------------------------------------------------------------
+
+linkers/vl/obj.c's objfile() resolved a `-lXXX` link argument by
+building `/usr/$Xlib/libXXX.a` (or `/$plan9/lib/libXXX.a` under -9)
+directly, never consulting `libdir[]` (the `-L` list `-L` flags
+populate) at all -- so `-L../../ROOT/arch/mips/lib -lc` silently
+ignored the `-L` and looked for `/usr/vlib/libc.a` instead, which
+doesn't exist on this project's Linux hosts, failing with "cannot open
+file". linkers/7l/pobj.c's own objfile() already does this correctly
+(builds `libXXX.a`, calls `findlib()` to search `libdir[]`, diags out
+only if genuinely not found anywhere on the list) -- ported that same
+shape into vl/obj.c verbatim, dropping the old hardcoded-path fallback
+(nothing in this tree relied on it: grepping for any existing `vl
+-lXXX` usage found none before this fix). Found while linking
+lib_core/libc's mips libc.a into tests/c/hello_libc's hello.exe -- see
+notes_libc_selfhost.txt. Verified via tests/c/vlong's own multi-arch
+test (which also does `vl -L. -lc`-shaped linking) still passing after
+the fix, plus the new hello_libc mips case actually finding the
+library instead of falling through to the dead default path.
+
+Calling convention: only the first argument is register-passed (R1); rest pack tight
+------------------------------------------------------------------------------------------
+
+Confirmed via `vc -S` on throwaway probes (both reading a fixed-arg
+function's own FP offsets, and what happens when `&firstarg` is
+explicitly taken): like arm64 (see notes_arch_arm64.txt), only the
+*first* named parameter arrives in a register (R1 here, not spilled to
+its FP+0 home slot unless the compiler-generated function's own
+address-taken code needs it there) -- a hand-written function reading
+the compiler's own calling convention (see
+lib_core/libc/syscall/arch/mips/svc.s's `_syscall6`) must read it from
+R1 directly, the same reasoning as arm64's svc.s.
+
+Unlike arm64/amd64 though, every argument *after* the first packs at
+its exact natural sizeof() width, with zero padding -- confirmed by
+placing a `double` right after two `int` args and finding it lands
+exactly 8 bytes along, not padded to some larger alignment. (This
+extends to genuinely no alignment enforcement at all: one probe placed
+a `double` at a 4-byte-only-aligned offset, and the compiler emitted a
+plain `MOVD` there anyway -- whether that's actually safe on real o32
+MIPS hardware, or just usually gets away with it under this project's
+own qemu-mips-only testing, wasn't investigated further.) This is also
+why the first argument's *un-populated* home slot still reserves 4
+bytes at FP+0: the second argument starts at FP+4, not FP+0 -- already
+relied on, unremarked, by tests/c/mini2/linux_mips.s's own write()
+stub (`buf+4(FP)`). include/arch/mips/u.h's va_list macros, adapted
+directly from principia's already-validated include/arch/mips/u.h,
+reflect this natural-packing rule exactly.
+
+Also worth flagging for future syscalls: real o32 Linux syscalls with
+a 5th/6th argument need those on the caller's *stack*, not a register
+(o32 only has 4 argument registers, A0-A3/R4-R7) -- a wrinkle unique to
+mips among the arches this project's lib_core/libc covers so far. Not
+implemented in svc.s since neither syscall needed this pass (write,
+exit) takes more than 3 args; see that file's own comment.
+
+Found while building lib_core/libc for mips -- see
+notes_libc_selfhost.txt for the fuller story, including the two other
+(non-mips-specific) bugs the same effort surfaced: the com64.c OCOND/
+OLIST gap (notes_shared_frontend_bugs.txt) and the missing-return
+6c-only compile error in the fmt/*.c files shared with every other
+arch here.
+
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------
 

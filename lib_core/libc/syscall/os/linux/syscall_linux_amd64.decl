@@ -1,0 +1,9 @@
+// Declarative syscall spec for linux/amd64, in the spirit of
+// GO/pkg/syscall's "//sys name(args) (ret) = SYS_NAME" comments (see
+// GO/pkg/syscall/syscall_linux.go), parsed by scripts/mksyscall.sh into
+// zsyscall_linux_amd64.c. Every wrapper just calls the one generic
+// _syscall6 trampoline (lib_core/libc/syscall/arch/amd64/svc.s), so
+// adding a syscall here is the only step needed -- no new assembly.
+
+//sys write(int fd, void *buf, long n) long = SYS_write
+//sys exit(int code) void = SYS_exit

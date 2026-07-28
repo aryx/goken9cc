@@ -120,6 +120,35 @@ zeroregm(n); return 1; }` (zeroregm() already existed in each compiler
 for exactly this "materialize a zero" purpose). See
 tests/c/regressions/mulzero.c.
 
+Calling convention: every argument is caller-stack-passed, none register-passed
+--------------------------------------------------------------------------------------
+
+Unlike arm64/mips (see notes_arch_arm64.txt's rt0.s/svc.s notes and
+notes_arch_mips.txt below), amd64 here passes *zero* arguments in
+registers -- confirmed via `6c -S` on throwaway probes, both reading a
+fixed-arg function's own FP offsets and the caller-side codegen at a
+variadic call site: the caller always writes every argument, including
+the callee's very first one, to the stack before the CALL instruction
+(`MOVL $0,(SP) / MOVL CX,8(SP) / ...`), and the callee reads them all
+via FP (`num+0(FP)`, `a1+8(FP)`, ...). This is why a hand-written
+function needing to read the compiler's own calling convention (see
+lib_core/libc/syscall/arch/amd64/svc.s's `_syscall6`) can address
+`num+0(FP)` directly, unlike arm64's/mips's equivalent, which both
+need a register-vs-FP special case for their first argument (see
+below, and notes_arch_arm64.txt).
+
+Also confirmed: every argument -- named or variadic, regardless of its
+own width -- occupies a full 8-byte-aligned stack slot, exactly like
+arm64 (see include/arch/amd64/u.h's va_list macros, byte-for-byte the
+same as arm64's for this reason). A preceding `int` (4 bytes) still
+leaves the next argument's slot 8 bytes further along, not 4.
+
+Found while building lib_core/libc for amd64 (see
+notes_libc_selfhost.txt); no bug here, just ABI facts that had to be
+verified empirically (via -S probes) rather than assumed by analogy to
+arm64, since the two turned out to differ in exactly one respect (the
+register-vs-stack question) and agree in another (the slot width).
+
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------
 

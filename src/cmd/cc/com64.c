@@ -288,6 +288,15 @@ com64(Node *n)
 			r->op = OFUNC;
 			r->type = types[TLONG];
 			return 1;
+		// claude: a ?: whose *result* type is vlong reaches here with
+		// n->right = OLIST(then,else) (see y.tab.c's OCOND parse
+		// action), so n->right->type is vlong too, making rv true --
+		// this case was missing (present in compilers/cc/com64.c,
+		// the newer frontend, but never backported here), so it fell
+		// through to the "unknown vlong %O" diag below instead. See
+		// docs/claude_notes/notes_shared_frontend_bugs.txt.
+		case OCOND:
+			return 1;
 		}
 	}
 
@@ -302,6 +311,12 @@ com64(Node *n)
 		case ORETURN:
 		case OAS:
 		case OIND:
+		// claude: same gap as OCOND above, for the OLIST(then,else)
+		// node ?: builds internally -- its own type is vlong too, so
+		// without this case it independently hit the same missing-
+		// case diag.
+		case OLIST:
+		case OCOMMA:
 			return 1;
 		case OADD:
 			a = nodaddv;

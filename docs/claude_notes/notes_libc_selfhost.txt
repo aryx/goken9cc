@@ -1,0 +1,174 @@
+Self-hosting a real libc.a: lib_core/libc/{fmt,port,syscall,arch}/, Linux
+==========================================================================
+
+Notes on building a genuinely reusable, self-hosted C library --
+lib_core/libc/, producing libc.a -- compiled entirely by goken's own
+Xc/Xa/Xl toolchain (not gcc/clang), as opposed to every prior test in
+this tree, which either links no library at all (tests/c/mini/) or
+links against a hand-rolled, per-test assembly stub duplicated in each
+test directory (tests/c/mini2/linux_$arch.s, tests/c/vlong/vlrt.c+
+print.c). Linux only so far; arm64, amd64, and mips are done (this
+covers all three). 386/arm/riscv/riscv64 are not, but the directory
+layout (lib_core/libc/{os,arch,syscall}/ split by $OS and $cputype) is
+built to make adding them additive -- follow the pattern below, but
+verify every ABI claim below empirically for the new arch (via `Xc -S`
+probes) rather than assuming it matches an existing one; arm64 and
+mips already turned out to disagree in more than one respect despite
+both being "the first argument comes in a register" arches (see
+below).
+
+Read docs/claude_notes/notes_arch_amd64.txt's and
+notes_arch_mips.txt's own new sections for the full per-arch ABI
+write-ups (calling convention, varargs slot layout); this file is the
+cross-cutting design story and the bugs found along the way that
+weren't arch-specific.
+
+Why this exists: fmt/*.c wants a real libc, not a per-test stub
+------------------------------------------------------------------------
+
+lib_core/libc/fmt/*.c (Plan9's real, portable printf implementation)
+is byte-identical to BOOT/lib9/fmt/*.c (symlinked, so gcc's BOOT build
+and goken's own self-hosted build share one copy of the source) -- the
+goal was to get goken's own Xc compilers to build *that*, plus enough
+Linux syscalls (write, exit) to actually run a program, rather than
+keep writing one-off minilibc stubs per test. tests/c/mini2/linux_$arch.s
+and tests/c/vlong/vlrt.c+print.c stay exactly as they are; this is
+purely additive infrastructure alongside them, not a replacement.
+
+Hard constraint carried through every file added here: lib_core/ code
+may only #include headers under include/, never a Unix/host header
+directly (that's lib9/'s privilege, not lib_core/'s) -- see
+include/arch/$cputype/u.h's own header comment on every arch.
+
+Directory layout
+------------------
+
+    lib_core/libc/
+      fmt/, utf/, math/     -- portable (symlinked from BOOT/lib9/{fmt,utf})
+      port/                 -- portable, but goken-only (memmove.c,
+                                strlen.c, ctype.c, vlrt.c, ... -- either
+                                copied from ~/principia/lib_core/libc/port/
+                                verbatim, preserving syncweb markers, or
+                                new but OS/arch-independent)
+      arch/$cputype/rt0.s   -- process startup (_main), one per arch
+      syscall/arch/$cputype/svc.s        -- the *one* raw syscall
+                                             trampoline per arch
+      syscall/os/$OS/*.decl              -- declarative syscall specs
+      syscall/os/$OS/numbers_$cputype.h  -- syscall number constants
+      syscall/os/$OS/zsyscall_$OS_$cputype.c -- generated (see below);
+                                             committed to the repo
+
+include/arch/$cputype/u.h holds each arch's base scalar typedefs plus
+va_list -- adapted from ~/principia/lib_core/libc/{arm,mips}/u.h and
+include/arch/{arm,386}/u.h where an arch's own file already exists
+there (mips's is copied close to verbatim; amd64 has no principia
+equivalent, since principia never had an x86-64 arch, so it was built
+fresh by empirical `6c -S` probing, following the same structure).
+Trimmed relative to principia's fuller versions -- no Rune/jmp_buf/
+mpdigit/FCR-FSR flags yet, since nothing under lib_core/libc uses them
+so far; add them, matching principia's shape, when something does (the
+user's stated intent is to eventually sync these files with principia
+via syncweb the way mk/rc/the arm toolchain/utilities/ already are, so
+staying close to principia's existing shape now, rather than
+inventing a divergent one, is deliberate).
+
+Declarative syscalls, Go-`mksyscall.sh`-style
+------------------------------------------------
+
+Per explicit design direction: a small `//sys name(args) (ret) =
+SYS_NAME` comment spec (syscall_$OS_$cputype.decl), in the spirit of
+GO/pkg/syscall/mksyscall.sh, parsed by scripts/mksyscall.sh (POSIX
+sh+awk, matching this project's existing script-language convention --
+no new language dependency) into a generated C file
+(zsyscall_$OS_$cputype.c) with one thin wrapper per syscall, each just
+calling a single generic `_syscall6(num, a1..a6)` trampoline (mirroring
+Go's own Syscall6: always lower to the widest arity, pad unused
+argument slots with 0, rather than one hand-written asm entry point
+per syscall or per arity). Adding a syscall is then a one-line .decl
+addition, no new assembly, *except* on mips, where a syscall needing a
+5th/6th argument would need svc.s itself extended (see
+notes_arch_mips.txt) -- not needed yet since only write/exit are
+wired up.
+
+zsyscall_*.c is deliberately committed to the repo, unlike most
+generated files in this tree (.gitignore excludes y.tab.[ch], for
+instance) -- see lib_core/libc/mkfile's own comment on the generation
+rule for the full rationale (small reviewable glue code; and once
+syscall numbers stop being hand-written and start getting scraped from
+each target OS's own kernel headers, generating this file will require
+a host of that OS, so committing the output is what lets goken
+cross-compile for an OS you don't have).
+
+Verifying an arch's calling convention before trusting it
+--------------------------------------------------------------
+
+The one recurring risk in this work: assuming a new arch's ABI matches
+an arch already done, instead of checking. The concrete methodology
+used for amd64 and mips (and arm64 before them, in the original pass):
+write a tiny throwaway .c file with a fixed-arg function taking mixed
+types (int, long, double, in different orders) and compile it with
+`Xc -S`, reading the emitted FP-relative offsets directly off the
+listing -- this reveals both the per-argument slot width/padding rule
+(arm64/amd64: uniform 8 bytes regardless of type; mips: exact
+sizeof(), no padding) and, separately, whether the *first* named
+parameter arrives via a register (arm64, mips: yes, via R0/R1 --
+readable directly in hand-written asm with no compiler prologue, but
+only spilled to its FP+0 home slot by a *compiler-generated* function,
+and only if that function's own code takes the argument's address) or
+purely via the stack like every other argument (amd64: yes -- the
+caller writes even the callee's first argument to the stack before the
+CALL, confirmed by probing a variadic call *site*, not just a
+function's own prologue). This second fact directly decides whether
+that arch's svc.s needs a register-vs-FP special case for `num` (arm64,
+mips: yes; amd64: no, `num+0(FP)` just works). Do not skip this step
+for a future arch on the assumption that "it's another 32-bit RISC
+arch, it'll be like mips" or "it's another 64-bit arch, it'll be like
+arm64" -- amd64 turned out to share arm64's slot-width rule but not
+its register-passing rule, and mips shares arm64's register-passing
+rule but not its slot-width rule. No two arches done so far actually
+match on both axes.
+
+Bugs found along the way (not arch-specific ABI facts -- see the per-arch notes for those)
+------------------------------------------------------------------------------------------------
+
+- fmt/fltfmt.c's xsub1() fell off the end after abort() with no
+  `return` statement -- harmless (abort() never returns) and silent on
+  gcc/7c, but 6c treats it as a hard error ("no return at end of
+  function"). Fixed with an explicit unreachable `return 0;`. Trivial,
+  no dedicated regression test (a missing-return compile diagnostic,
+  not a behavioral bug).
+
+- compilers/cc/com64.c (the newer frontend) already handles a
+  vlong-typed `?:` used as a call argument; src/cmd/cc/com64.c (the
+  older, separate frontend that 7c/vc/ic actually build against) was
+  missing the same OCOND/OLIST/OCOMMA cases and hit "unknown vlong
+  %O". Only surfaced on mips (vc) because arm64/amd64 are 64-bit-native
+  and never enter this vlong-emulation code path at all (`machcap()`
+  bails out immediately for them). Full writeup, including exactly
+  which two nodes fail and why, in
+  docs/claude_notes/notes_shared_frontend_bugs.txt.
+
+- linkers/vl/obj.c's objfile() resolved `-lXXX` straight to a
+  hardcoded `/usr/vlib/libXXX.a`, never consulting the `-L` list at
+  all (linkers/7l/pobj.c's equivalent already does this correctly via
+  findlib()). Full writeup in notes_arch_mips.txt.
+
+Verification
+--------------
+
+Each arch: `lib_core/libc && mk 'objtype='$cputype 'cputype='$cputype
+all` (builds libc.a and installs it to ROOT/arch/$cputype/lib/), then
+tests/c/hello_libc (`mk 'objtype='$cputype 'cputype='$cputype
+test_one`) -- compiles hello.c against libc.a via `-lc`, links with
+`-E _main`, and runs the result through scripts/qemu-runner explicitly
+(not relying on binfmt_misc, per that script's own stated rationale --
+this host has binfmt_misc registered for every arch already, which
+silently masked the qemu-runner omission in tests/c/hello_libc/mkfile
+until it was added; ./hello.exe "just working" is not proof
+qemu-runner is actually being invoked, check the mkfile). Full-tree
+regression check after any change to shared code (com64.c, vl/obj.c,
+fmt/fltfmt.c all being shared with the gcc/BOOT build and/or other
+arches): `mk 'objtype=boot-gcc' all` from the repo root, plus
+tests/c/vlong's own multi-arch test (the most relevant existing
+regression coverage for the com64.c/vlrt.c-adjacent changes) and
+tests/c/mini2's.

@@ -1,21 +1,37 @@
 TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
-# arm64/linux only for now; other cputype/GOOS combinations are the next
-# incremental step once this one is proven (see lib_core/libc/{os,arch,
-# syscall}/ -- built to make that additive, not a rewrite).
+# linux only for now; other GOOS combinations are the next incremental
+# step once this one is proven (see lib_core/libc/{os,arch,syscall}/ --
+# built to make that additive, not a rewrite). arm64/amd64/mips are
+# done; 386/arm/riscv/riscv64 would each need their own u.h/rt0.s/
+# syscall/arch/$cputype pieces the same way (see arm64's/amd64's/mips's
+# for the pattern -- each arch's ABI, especially varargs slot width and
+# whether the raw syscall trampoline's first arg needs to come from a
+# register or FP, must be verified against that compiler's own -S
+# output, not assumed from another arch).
 
 LIBNAME=libc.a
 
-# note: deliberately NOT setting CFLAGS_EXTRA= here (even to empty) --
-# mk leaves a never-assigned var as literal "$CFLAGS_EXTRA" text for rc
-# to expand at runtime, and rc correctly turns a truly-unset variable
-# into zero words. An explicit CFLAGS_EXTRA= assignment instead makes mk
-# substitute it eagerly as a one-element empty-string list, which shows
-# up as a stray empty argv entry -- and 7c's strict flag-then-positional
-# argument parsing (unlike gcc's) stops scanning for flags at the first
-# such non-flag argument, silently misreading -o/$target/$stem.c after
-# it as more input files instead.
+# -D$cputype (appended to the CFLAGS mkfiles/$cputype/mkfile already
+# set): needed by port/vlrt.c's #ifdef mips (big- vs little-endian
+# struct layout for the 64-bit-in-two-32-bit-words emulation this and
+# every other 32-bit target need -- see that file's own comment). Safe
+# to set even though it's unused by 64-bit-native targets (arm64/amd64
+# never call into vlrt.c's helpers at all, since compilers/cc's
+# machcap() skips vlong emulation entirely for them).
+#
+# note: unlike this, CFLAGS_EXTRA below is deliberately NOT set (even
+# to empty) -- mk leaves a never-assigned var as literal "$CFLAGS_EXTRA"
+# text for rc to expand at runtime, and rc correctly turns a truly-unset
+# variable into zero words. An explicit CFLAGS_EXTRA= assignment instead
+# makes mk substitute it eagerly as a one-element empty-string list,
+# which shows up as a stray empty argv entry -- and 7c's strict
+# flag-then-positional argument parsing (unlike gcc's) stops scanning
+# for flags at the first such non-flag argument, silently misreading
+# -o/$target/$stem.c after it as more input files instead. CFLAGS
+# doesn't have this problem: it's always a real, non-empty value.
+CFLAGS=$CFLAGS -D$cputype
 
 # fmt/*.c: the same Plan9 fmt implementation BOOT/lib9/ already builds
 # with gcc (byte-identical files), now compiled with goken's own 7c.
@@ -80,6 +96,7 @@ PORTOFILES=\
 	port/errno.$O\
 	port/assert.$O\
 	port/strerror.$O\
+	port/vlrt.$O\
 
 SYSCALLOFILES=\
 	syscall/arch/$cputype/svc.$O\

@@ -4,15 +4,15 @@ TOP=../../..
 # unlike tests/c/mini*, this one links against a real, reusable libc.a
 # (lib_core/libc/), not a hand-rolled per-test stub -- so it needs that
 # built and installed first:
-#   cd $TOP/lib_core/libc && mk 'objtype=arm64' 'cputype=arm64' install
-# arm64/linux only for now (see lib_core/libc/mkfile).
+#   cd $TOP/lib_core/libc && mk 'objtype='$cputype 'cputype='$cputype install
+# linux only for now (see lib_core/libc/mkfile). arm64/amd64/mips done.
 
 all:V: hello.exe
 clean:V:
 	rm -f *.[5678ijv] *.exe
 test_one:V:
 	mk 'objtype='$cputype all
-	./hello.exe | cmp /dev/stdin expected.txt
+	$TOP/scripts/qemu-runner $cputype ./hello.exe | cmp /dev/stdin expected.txt
 
 hello.exe: hello.c
    $CC $CFLAGS -D$objtype -c hello.c

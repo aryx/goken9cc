@@ -7,3 +7,5 @@ CC=6c
 LD=6l
 AS=6a
 AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/amd64

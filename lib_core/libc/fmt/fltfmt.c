@@ -134,6 +134,8 @@ xsub1(char *a, int n)
 	 * so that it has a nonzero first digit.
 	 */
 	abort();
+	return 0;	// claude: unreachable (abort() never returns), but
+			// 6c -- unlike 7c/gcc -- errors on a missing return here
 }
 
 /*

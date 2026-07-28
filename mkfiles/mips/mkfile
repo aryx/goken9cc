@@ -7,3 +7,5 @@ CC=vc
 LD=vl
 AS=va
 AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/mips
