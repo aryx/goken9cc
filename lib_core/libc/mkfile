@@ -114,6 +114,16 @@ PORTOFILES=\
 	port/strerror.$O\
 	port/vlrt.$O\
 	port/minimal_malloc.$O\
+	port/floor.$O\
+	port/sqrt.$O\
+	port/sin.$O\
+	port/exp.$O\
+	port/log.$O\
+	port/pow.$O\
+	port/fmod.$O\
+	port/atan.$O\
+	port/atan2.$O\
+	port/asin.$O\
 
 SYSCALLOFILES=\
 	syscall/os/$GOOS/svc_$cputype.$O\

@@ -101,25 +101,63 @@ clean:V:
 # arch first:
 #   cd $TOP/lib_core/libc && mk 'objtype='<arch> 'cputype='<arch> install
 #
-# fib, integr, lists, fftw, fannkuch, nsieve, nsievebits are wired up
-# so far, each needing progressively more of include/APE/ (stdio.h's
-# putc/stdout, stddef.h's NULL, string.h's memset et al, stdlib.h's
-# malloc/calloc/free via lib_core/libc/port/minimal_malloc.c -- a
-# deliberately temporary bump allocator, see its own header comment).
-# math.h isn't wired up at all yet (no sqrt/pow/floor in this libc),
-# which blocks spectral/perlin/binarytrees/almabench/nbody/fft/fftsp/
-# bisect/aes and a few others; ctype.h blocks knucleotide. ac/qsort.c
-# needs a real rand() and the real qsort() library function, neither
-# of which exist yet either. vmach.c is a different kind of blocker,
-# not a missing stub: it stores `(long)pc` (a pointer) into a
-# `long stack[]`, which truncates on this compiler the same way the
-# syscall-argument bug did (see docs/claude_notes/notes_libc_selfhost.txt)
-# -- but that one is the *source*'s own assumption, not a libc gap, so
-# fixing it means an actual goken-specific fork of vmach.c (long ->
-# vlong), not a header addition; not done, to avoid forking a
-# benchmark also used for the gcc/clang comparison without deciding
-# that's the right call first. Extend GOKENPROGS as more get wired up,
-# and fold this into bench.sh's VARIANTS/test/bench alongside it.
+# fib, integr, lists, fftw, fannkuch, nsieve, nsievebits, perlin,
+# spectral, nbody, fft are wired up so far, each needing progressively
+# more of include/APE/ (stdio.h's putc/stdout/NULL/size_t/atoi/atol,
+# stdlib.h/stddef.h/string.h/math.h/assert.h/ctype.h now genuinely
+# empty -- everything they'd declare is already reachable via stdio.h,
+# which every program here includes -- see stdio.h's own comment for
+# the scoped assumption this relies on). malloc/calloc/free are
+# lib_core/libc/port/minimal_malloc.c, a deliberately temporary bump
+# allocator (see its own header comment). floor/sqrt/sin/cos/exp/log/
+# pow/fmod/atan/atan2/asin/acos are lib_core/libc/port/{floor,sqrt,
+# sin,exp,log,pow,fmod,atan,atan2,asin}.c, ported from
+# ~/principia/lib_core/libc/port/ (self-contained given frexp/ldexp/
+# modf/NaN/isNaN/isInf already existed here).
+#
+# Still blocked, each for a different reason (not pursued further this
+# pass -- see docs/claude_notes/notes_libc_selfhost.txt for anything
+# investigated in depth):
+# - mandelbrot.c: a real 7c/7a bug, MOVB reg,reg not reliably
+#   zero-extending a char through several register copies before a
+#   varargs call -- found via a garbled binary PBM stream.
+# - binarytrees.c: a different real bug, a garbage/near-null pointer
+#   (0x3) dereferenced inside the recursive BottomUpTree/DeleteTree
+#   path after the first tree already printed correctly -- not yet
+#   root-caused, possibly related to mandelbrot's but not confirmed.
+# - almabench.c: its own `#define PI 3.14159...` collides with
+#   include/math/basic.h's own `#define PI (PIO2+PIO2)`, already
+#   in scope via stdio.h -- this compiler treats any macro
+#   redefinition as a hard error, even by a different value. Fixing it
+#   means changing math/basic.h's own PI (a core, non-APE header used
+#   well beyond this benchmark corpus), not adding a stub -- not done
+#   without deciding that's the right call first.
+# - fftsp.c: needs cosf/sinf/fabsf (float, not double, precision) --
+#   no float-specific math functions exist here at all yet.
+# - bisect.c: needs stderr/fputs (no FILE*-shaped stream abstraction
+#   exists yet, unlike stdout's fd-1 placeholder) and has a cascading
+#   parse error past that point not yet isolated.
+# - aes.c: `#if defined(__ppc__) || ...` for endianness detection --
+#   7c's preprocessor doesn't accept this `#if defined(...)` form at
+#   all ("unknown #: if"), a preprocessor limitation, not a missing
+#   macro.
+# - qsort.c: needs a real rand() and the real library qsort()
+#   function, neither of which exist yet.
+# - vmach.c: a different kind of blocker than the two real bugs above
+#   -- it stores `(long)pc` (a pointer) into a `long stack[]`, which
+#   truncates on this compiler the same way the syscall-argument bug
+#   did (see docs/claude_notes/notes_libc_selfhost.txt). But that one
+#   is the *source*'s own assumption, not a libc gap, so fixing it
+#   means an actual goken-specific fork of vmach.c (long -> vlong), not
+#   a header addition -- not done, to avoid forking a benchmark also
+#   used for the gcc/clang comparison without deciding that's the
+#   right call first.
+# - knucleotide.c: needs a real FILE*/fopen/fgets/fclose/realloc/
+#   strdup -- a much bigger step than every other program here, none
+#   of which touch real file I/O.
+#
+# Extend GOKENPROGS as more get wired up, and fold this into
+# bench.sh's VARIANTS/test/bench alongside it.
 #
 # arm64 on a Darwin host: %.goken's `$gl` (7l here) has no explicit -H
 # flag, so it falls back to the host's own compiled-in GOOS default
@@ -129,7 +167,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 

@@ -41,20 +41,28 @@
  * just the standard C name for the same thing. */
 #define NULL nil
 
-/* stdlib.h's atoi/atol/malloc/calloc/free: implemented in
- * lib_core/libc/port/{atol,minimal_malloc}.c but, unlike memset/
- * strlen/etc (already declared by libc.h itself, via core/mem.h and
- * base/str.h), never had a libc.h-level prototype of their own.
- * Explicit prototypes matter here more than they might look: an
- * implicit (undeclared) function call defaults to returning `int`,
- * which would truncate malloc()'s real `void*` return value on any
- * 64-bit arch -- exactly the class of bug
- * docs/claude_notes/notes_libc_selfhost.txt already documents finding
- * elsewhere in this project (syscall arguments truncated through a
- * too-narrow type).
+/* stddef.h's size_t: `ulong`, matching malloc/calloc/free's own
+ * parameter types (include/core/mem.h) -- an existing, already-decided
+ * project convention (predates this file), not this shim's to
+ * override. Yes, that caps a single object's declared size at 4GB in
+ * principle (`long` is only 4 bytes on this compiler even on 64-bit
+ * arches -- see docs/claude_notes/notes_libc_selfhost.txt's vlong
+ * writeup), but nothing built against this libc needs more than a few
+ * MB, and picking a wider size_t here would just mean every call site
+ * silently truncates back down to ulong at the actual malloc() call
+ * anyway -- inconsistent, not safer.
+ */
+typedef ulong size_t;
+
+/* stdlib.h's atoi/atol: implemented in lib_core/libc/port/atol.c but,
+ * unlike malloc/free (include/core/mem.h) or memset/strlen/etc
+ * (include/core/mem.h, include/base/str.h), never had a libc.h-level
+ * prototype of their own. Worth having explicitly: an implicit
+ * (undeclared) function call defaults to returning `int`, which is
+ * technically already atoi's/atol's own width for atoi, but not
+ * atol's (`long` return silently truncated to `int` without a real
+ * declaration) -- see docs/claude_notes/notes_libc_selfhost.txt for
+ * the syscall-layer version of this same class of bug.
  */
 extern int atoi(char *s);
 extern long atol(char *s);
-extern void *malloc(ulong n);
-extern void *calloc(ulong n, ulong size);
-extern void free(void *p);

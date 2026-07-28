@@ -36,6 +36,16 @@ enum { HEAPSIZE = 64*1024*1024 };
 static char heap[HEAPSIZE];
 static char *heapnext = heap;
 
+/* ulong, matching include/core/mem.h's own extern malloc(ulong)/
+ * free(void*) declarations (already present before this file existed
+ * -- this just fills in the implementation) and calloc(ulong, ulong)
+ * (was commented out there, uncommented as part of adding this file).
+ * Yes, this means allocations are capped at 4GB in principle (`long`
+ * is only 4 bytes on this compiler even on 64-bit arches -- see
+ * docs/claude_notes/notes_libc_selfhost.txt) -- an existing, already-
+ * decided project convention this file matches rather than overrides;
+ * nothing built against this libc so far needs more than a few MB.
+ */
 void*
 malloc(ulong n)
 {

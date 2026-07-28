@@ -3,9 +3,9 @@ extern  void*   malloc(ulong);
 extern  void    free(void*);
 extern  void*   mallocz(ulong, bool);
 extern  void*   realloc(void*, ulong);
+extern  void*   calloc(ulong, ulong);
 // less useful
 //extern  ulong   msize(void*);
-//extern  void*   calloc(ulong, ulong);
 //extern  void*   mallocalign(ulong, ulong, long, ulong);
 
 extern  void*   memset(void*, int, ulong);

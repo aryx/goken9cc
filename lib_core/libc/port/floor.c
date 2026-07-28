@@ -1,0 +1,33 @@
+/*s: libc/port/floor.c */
+/*s: libc includes */
+#include    <u.h>
+#include    <libc.h>
+/*e: libc includes */
+/*s: function [[floor]] */
+/*
+ * floor and ceil-- greatest integer <= arg
+ * (resp least >=)
+ */
+double
+floor(double d)
+{
+    double fract;
+
+    if(d < 0) {
+        fract = modf(-d, &d);
+        if(fract != 0.0)
+            d += 1;
+        d = -d;
+    } else
+        modf(d, &d);
+    return d;
+}
+/*e: function [[floor]] */
+/*s: function [[ceil]] */
+double
+ceil(double d)
+{
+    return -floor(-d);
+}
+/*e: function [[ceil]] */
+/*e: libc/port/floor.c */
