@@ -627,6 +627,33 @@ bcomplex(Node *n, Node *c)
 	if(c != Z && n->op == OCONST && deadheads(c))
 		return 1;
 	if(typev[n->type->etype] && machcap(Z)) {
+		/* claude: was cgen(b, Z) -- see
+		 * docs/claude_notes/notes_arch_arm64.txt for the full
+		 * writeup. cgen()'s OEQ/ONE/... case bails out with just
+		 * nullwarn(l, r) (no codegen at all) whenever its `nn`
+		 * destination is Z, since normally that means "comparison
+		 * result unused" (e.g. `x == y;` as a statement). Here `nn`
+		 * is *always* Z by construction, but the caller (gen()'s
+		 * OIF case, in this same file) still expects a compare+
+		 * branch to have been emitted as a side effect, and grabs
+		 * `p` (the last-emitted Prog) right afterward to backpatch
+		 * its target address once known. With no branch emitted,
+		 * `p` still points at whatever unrelated instruction came
+		 * before this "if", and the later patch() call corrupts
+		 * that instruction's to.offset/to.type instead -- 7c's
+		 * arm64 backend is the only one that actually reaches this
+		 * path (typev[]&&machcap(Z) is true here but every other
+		 * caller of a raw `if (vlong_expr)` on other native-64-bit
+		 * archs, e.g. amd64, goes through the boolgen() fallback
+		 * below instead; not root-caused why the two diverge, but
+		 * confirmed by direct comparison of 6c's and 7c's -g
+		 * codegen traces on an identical repro). boolgen() (unlike
+		 * cgen()) always emits the compare+branch unconditionally,
+		 * only gating the *value-materialization* epilogue on
+		 * nn!=Z, so it leaves `p` in the state gen()'s OIF caller
+		 * actually needs. Matches compilers/cck/pgen.c's own
+		 * bcomplex(), which already made this same call correctly.
+		 */
 		b = &nod;
 		b->op = ONE;
 		b->left = n;
@@ -634,7 +661,7 @@ bcomplex(Node *n, Node *c)
 		*b->right = *nodconst(0);
 		b->right->type = n->type;
 		b->type = types[TLONG];
-		cgen(b, Z);
+		boolgen(b, 1, Z);
 		return 0;
 	}
 	bool64(n);

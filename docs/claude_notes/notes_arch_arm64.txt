@@ -161,6 +161,115 @@ path and 7a crashed the same way ("*** stack smashing detected ***").
 Same fix, same 9front origin: strdup()/smprint() instead of fixed
 buffers. See tests/s/regressions/arm64_long_filename.s.tmpl.
 
+bcomplex()'s vlong fast path: `if (x)` silently emitted no branch at all
+---------------------------------------------------------------------------------
+
+Not a 9front-diff fix -- goken-original, found while porting benchs/
+compcert/vmach.c to build under goken's own toolchain (after widening
+its `stack[]`/`sp` from `long` to `long long`, needed since this
+compiler's `long` stays 4 bytes even on 64-bit arches -- see
+notes_libc_selfhost.txt's vlong writeup). Presented at first as a
+linker (7l) crash -- "illegal combination MOV REG NONE SBRA" from
+linkers/7l/span.c's oplook(), on a MOV instruction whose destination
+looked like a local variable but was classified as a branch target,
+with the diagnostic printing a *different* garbage offset on each of
+its two prints. Two false leads chased before finding the real cause,
+both worth recording since they're easy to re-suspect from the
+symptom alone:
+
+- Suspected 7l/span.c's aclass()/oplook() combination-matching logic
+  itself (misclassifying a large AUTO offset as C_SBRA) -- span.c
+  behaves correctly on this input; the Prog it's classifying was
+  already corrupted by the time it got there.
+- Suspected the local variable being named `sp` colliding with the
+  arch's real SP register once widened to 8 bytes -- a `/tmp`-isolated
+  rename test appeared to fix it once, but repeated in-place testing
+  showed the identical failure under any variable name, and eventually
+  a nondeterministic *mix* of pass/fail on unchanged source across
+  repeated builds -- which turned out to be an artifact of testing via
+  `mk`'s full multi-program suite (parallel builds / stale `.7`/
+  `.goken` artifacts from a previous run) rather than a fresh, isolated
+  single-file rebuild. A clean `rm` + direct `7c`+`7l` invocation
+  reproduced the *exact same* failure 100% of the time, no
+  nondeterminism at all, once the parallel-suite noise was removed.
+
+Root cause, found via `7l -a`'s disassembly listing plus `-g` codegen
+traces compared side by side between 7c (fails) and 6c (works, same
+source, `-Damd64` instead of `-Darm64`): `if (some_vlong_expr)` -- a
+raw truthiness test on a `long long`/`vlong` value, with no explicit
+comparison operator written -- goes through src/cmd/cc/pgen.c's
+bcomplex() (shared by every "if"/"for"/"while" condition, called from
+gen()'s OIF case in the same file). bcomplex() has a dedicated fast
+path for vlong conditions on archs with native 64-bit register support
+(`typev[n->type->etype] && machcap(Z)` -- true for every 64-bit-native
+backend this project has, not just arm64): it synthesizes a
+`left != 0` (ONE) comparison node and calls `cgen(b, Z)`. But
+compilers/7c/cgen.c's own OEQ/ONE/... case, when handed `nn == Z`
+(always true here, since bcomplex() always passes Z), does exactly
+`nullwarn(l, r); break;` -- correct for that check's *other* caller (a
+genuine `x == y;` expression-statement whose result is unused) but
+here it means **no code gets emitted at all**. Control returns to
+bcomplex(), which returns 0 as if a branch had been emitted; gen()'s
+OIF case then grabs the compiler's global "last emitted instruction"
+pointer (`p`) right after, assuming (correctly, for the *fallback*
+path two lines below, `bool64(n); boolgen(n, 1, Z);`) that it's a
+pending conditional branch to backpatch once the branch target is
+known. With nothing actually emitted, `p` is left pointing at whatever
+unrelated instruction preceded the "if" -- the later backpatch
+(patch(), just two field writes: `to.offset`/`to.type = D_BRANCH`)
+corrupts *that* instruction instead. The "if" body's own code then
+runs completely unconditionally, spliced in right after the corrupted
+instruction, since no branch exists to skip over it.
+
+Confirmed 7c-specific despite bcomplex() living in shared kencc-lineage
+code: 6c/amd64 hits the identical `typev[...] && machcap(Z)` condition
+(machcap(Z) with a null node is an unconditional `return 1` on every
+backend checked) but takes a visibly different route in its own
+`-g` trace, going straight into boolgen() with no synthesized ONE node
+at all. Traced to 6c linking against a *different* shared frontend
+fork -- compilers/cck/pgen.c, not src/cmd/cc/pgen.c (7c/vc/ic still use
+the latter; see todo.org's "migrate 7c/vc/ic off src/cmd/cc" item).
+compilers/cck/pgen.c's own bcomplex() (behind an additional
+`newvlongcode` gate, itself always true) calls `boolgen(b, 1, Z)`
+directly instead of `cgen(b, Z)` -- already fixed there, just never
+ported back to the copy 7c still builds against.
+
+Considered switching 7c's mkfile wholesale to build against
+compilers/cck instead of src/cmd/cc (matching 6c/8c's existing
+precedent, and todo.org's stated direction) rather than patching
+src/cmd/cc directly. Attempted live: cck's cc.h has real, non-cosmetic
+differences from src/cmd/cc/cc.h (several `int32`-vs-`long` forward-
+declaration mismatches needing mechanical fixup: outstring/gextern/
+exreg/ncast) plus one non-mechanical gap -- cck has no `#pragma
+textflag NOSPLIT` mechanism at all (no `textflag` global, ATEXT's flag
+byte comes from a plain `profileflg`-derived NOPROF instead), which
+compilers/7c/txt.c's gpseudo() relies on (a deliberate goken-specific
+addition per its own "goken: new" comment, not upstream kencc/9front
+behavior). A full migration is a real, separate, larger task -- not
+attempted here; see todo.org for tracking it as its own item alongside
+its already-listed vc/ic siblings.
+
+Fixed instead with the minimal, surgical change: src/cmd/cc/pgen.c's
+bcomplex() now calls `boolgen(b, 1, Z)` instead of `cgen(b, Z)` in the
+vlong fast path, mirroring cck's already-proven-correct version
+exactly. boolgen() always emits the compare-and-branch unconditionally
+(only its own value-materialization epilogue is gated on `nn != Z`),
+so it leaves the "last emitted instruction" state gen()'s OIF caller
+actually needs. Verified: 30/30 clean rebuild-and-run of vmach.goken
+(no nondeterminism at all once isolated from the parallel-suite
+artifact issue above), all 18 previously-passing benchs/compcert
+programs still pass after the fix, and
+tests/c/regressions/arm64_vlong_if_branch.c (checks actual runtime
+behavior, not just "did it link") fails against the pre-fix compiler
+and passes against the fixed one, confirmed by temporarily reverting
+the fix and rebuilding. Since bcomplex() is called for every "if"/
+"for"/"while" condition project-wide, not just vlong ones, and the
+buggy path only triggers for the specific `typev[...] && machcap(Z)`
+combination (a raw truthiness test on a 64-bit-native value), this was
+plausibly latent since arm64 support was first added and just never
+exercised by a `if (some_vlong_var)` pattern with no explicit
+comparison operator until vmach.c's widening surfaced it.
+
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------
 

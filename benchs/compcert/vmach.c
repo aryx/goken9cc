@@ -50,11 +50,43 @@ enum wordcode_instruct {
 #define Push7(x,y,z,t,u,v,w) \
   sp-=7, sp[6]=x, sp[5]=y, sp[4]=z, sp[3]=t, sp[2]=u, sp[1]=v, sp[0]=w
 
-long stack[STACKSIZE];
+/* stack[]/sp: `long long`, not `long`. The original used plain `long`
+ * throughout, which is fine on a real 64-bit host (gcc/clang: `long`
+ * is genuinely 8 bytes there) but not on goken's own toolchain, where
+ * `long` stays 4 bytes even on 64-bit arches (see
+ * docs/claude_notes/notes_libc_selfhost.txt's vlong writeup) -- this
+ * stack holds actual return-address *pointers* alongside plain
+ * integers (see WCALL1/WCALL3's `(long)pc` and WRETURN's
+ * `pc = (unsigned int *) sp[1]`), so a narrower-than-pointer element
+ * type silently truncated every pushed return address, corrupting
+ * control flow. `long long` (not this project's own `vlong` typedef,
+ * which real gcc/clang's <stdio.h> doesn't define -- this file is
+ * also built for the existing gcc/clang comparison, see
+ * benchs/compcert/mkfile) is a real ISO C type both toolchains
+ * recognize, and is genuinely 8 bytes on both, so this is a value-
+ * preserving widening on gcc/clang (already 8-byte `long` there) and
+ * an actual fix on goken. wordcode_interp()'s own *return* type stays
+ * plain `long`, unchanged: it only ever returns a small computed
+ * integer (never a pointer -- see WSTOP), which fits comfortably
+ * either way, and main()'s own `printf("... %ld\n", ...)` calls
+ * expect exactly that width, not `long long`.
+ *
+ * Once `sp` is widened to `long long *` above, this file used to hit
+ * a real 7c (compiler) bug -- not a 7l/linker bug, and not tied to the
+ * `sp` name colliding with the arch's real SP register (both were dead
+ * ends chased before finding the actual cause; see git history and
+ * docs/claude_notes/notes_arch_arm64.txt). `if (some_vlong_expr)`
+ * silently emitted no compare-and-branch on arm64 at all, corrupting
+ * whatever instruction happened to precede the "if" instead -- fixed
+ * in src/cmd/cc/pgen.c's bcomplex(), see
+ * tests/c/regressions/arm64_vlong_if_branch.c for the isolated repro
+ * and full root-cause writeup.
+ */
+long long stack[STACKSIZE];
 
 long wordcode_interp(unsigned int* code)
 {
-  long * sp;
+  long long * sp;
   unsigned int * pc;
   unsigned int instr;
   int extra_args = 0;
@@ -66,9 +98,9 @@ long wordcode_interp(unsigned int* code)
     switch (Opcode) {
 
     case WCALL1: case WCALL1_pop1: {
-      long arg = Op1;
+      long long arg = Op1;
       Adjust1;
-      Push3((long)pc, extra_args, arg);
+      Push3((long long)pc, extra_args, arg);
       pc += Imm16s;
       extra_args = 0;
       break;
@@ -79,24 +111,24 @@ long wordcode_interp(unsigned int* code)
       break;
     }
     case WBRANCHIF: case WBRANCHIF_pop1: {
-      long arg = Op1;
+      long long arg = Op1;
       Adjust1;
       if (arg) pc += Imm16s;
       break;
     }
     case WCALL3: {
       unsigned int ext = *pc++;
-      long arg1 = Extraop1(ext);
-      long arg2 = Extraop2(ext);
-      long arg3 = Extraop3(ext);
+      long long arg1 = Extraop1(ext);
+      long long arg2 = Extraop2(ext);
+      long long arg3 = Extraop3(ext);
       Adjustbyte1;
-      Push5((long)pc, extra_args, arg3, arg2, arg1);
+      Push5((long long)pc, extra_args, arg3, arg2, arg1);
       pc += Imm16s;
       extra_args = 2;
       break;
     }
     case WRETURN: {
-      long res = Op1;
+      long long res = Op1;
       Adjustbyte2;
       if (extra_args > 0) {
         printf("Over-application.\n");
@@ -115,25 +147,25 @@ long wordcode_interp(unsigned int* code)
       break;
     }
     case WLTINT: {
-      long arg1 = Op1, arg2 = Op2;
+      long long arg1 = Op1, arg2 = Op2;
       Adjustbyte3;
       Push1(arg1 < arg2);
       break;
     }
     case WADDINT: {
-      long arg1 = Op1, arg2 = Op2;
+      long long arg1 = Op1, arg2 = Op2;
       Adjustbyte3;
       Push1(arg1 + arg2);
       break;
     }
     case WOFFSETINT: {
-      long arg = Op1;
+      long long arg = Op1;
       Adjustbyte2;
       Push1(arg + Imm8s);
       break;
     }
     case WDUP: {
-      long arg = Op1;
+      long long arg = Op1;
       Push1(arg);
       break;
     }
@@ -148,7 +180,7 @@ long wordcode_interp(unsigned int* code)
       break;
     }
     case WSTOP: {
-      long res = Op1;
+      long long res = Op1;
       Adjustbyte2;
       return res;
       break;

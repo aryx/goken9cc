@@ -156,6 +156,13 @@ clean:V:
 # bug is captured minimally at
 # tests/c/regressions/elif_defined_silent_false.c, same "documented,
 # unfixed, not wired into test:V:" treatment as the other two.
+# vmach.c needed its `stack[]`/local `sp` pointer widened from `long`
+# to `long long` (see the comment above wordcode_interp() in vmach.c
+# itself for why), which then surfaced a genuine 7c bug --
+# `if (some_vlong_expr)` silently emitted no compare-and-branch at all
+# on arm64 -- fixed in the compiler (src/cmd/cc/pgen.c's bcomplex()),
+# not worked around here, per tests/c/regressions/
+# arm64_vlong_if_branch.c's full writeup.
 #
 # Still blocked, each for a different reason (not pursued further this
 # pass -- see docs/claude_notes/notes_libc_selfhost.txt for anything
@@ -179,19 +186,6 @@ clean:V:
 #   themselves going wrong via ordinary uvlong arithmetic, not a
 #   print-layer issue. Compiler-internals territory, not investigated
 #   further than isolating the symptom.
-# - vmach.c: a different kind of blocker than the real bugs above --
-#   it stores `(long)pc` (a pointer) into a `long stack[]`, which
-#   truncates on this compiler the same way the syscall-argument bug
-#   did (see docs/claude_notes/notes_libc_selfhost.txt). But that one
-#   is the *source*'s own assumption, not a libc gap, so fixing it
-#   means editing vmach.c itself (long -> vlong for the stack array),
-#   not a header addition -- not done yet. bisect.c's own DBL_EPSILON
-#   fix above is a real precedent for editing this directory's shared
-#   benchmark source directly when the change is a semantic no-op for
-#   the existing gcc/clang comparison (same value, different literal
-#   syntax); vmach.c's fix wouldn't quite be that (a real type change,
-#   even if the computed result should be identical) -- worth a second
-#   look, just not assumed automatically from this one.
 # - knucleotide.c: needs a real FILE*/fopen/fgets/fclose/realloc/
 #   strdup -- a much bigger step than every other program here, none
 #   of which touch real file I/O.
@@ -207,7 +201,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect aes
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect aes vmach
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 
