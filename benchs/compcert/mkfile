@@ -107,6 +107,14 @@ clean:V:
 # each benchmark is brought up, not preemptively -- extend GOKENPROGS
 # then, and fold this into bench.sh's VARIANTS/test/bench once more
 # than one benchmark is wired up.
+#
+# arm64 on a Darwin host: %.goken's `$gl` (7l here) has no explicit -H
+# flag, so it falls back to the host's own compiled-in GOOS default
+# (linkers/7l/obj.c's HEADTYPE==-1 case) -- a real -H6 Mach-O on this
+# machine, needing lib_core/libc's arm64 libc.a to have been built with
+# GOOS=darwin (see lib_core/libc/mkfile) and ad-hoc signing (done by
+# the $TOP/scripts/macos-codesign call below) before it will run.
+# test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
 GOKENPROGS=fib
 GOKENBINS=${GOKENPROGS:%=%.goken}
@@ -136,6 +144,7 @@ goken:V: $GOKENBINS
 	}
 	$gc $GOKENCFLAGS -D$cputype -c $stem.c
 	$gl -L$TOP/ROOT/arch/$cputype/lib -o $target -E _main $stem.$go -lc
+	$TOP/scripts/macos-codesign $target
 
 test_goken:V: goken
 	for(p in $GOKENPROGS){
@@ -143,4 +152,62 @@ test_goken:V: goken
 			echo $p': passed ('$cputype')'
 		if not
 			echo $p': FAILED ('$cputype')'
+	}
+
+# macOS-native (no qemu): 'goken' below already produces and
+# ad-hoc-signs a real -H6 Mach-O on a Darwin host by default (7l falls
+# back to the host's own compiled-in GOOS when no -H flag is given --
+# see linkers/7l/obj.c's HEADTYPE==-1 case), so this just runs it
+# directly, same spirit as tests/c/hello_libc/mkfile's
+# test_macos_arm64. cputype is forced to arm64 here (unlike test_goken
+# above, which uses whatever $cputype the caller passed) since amd64
+# needs its own separate recipe below, not just a different cputype --
+# see its comment for why. The explicit libc.a rebuild+reinstall
+# (GOOS=darwin, forced with -a after an 'rm -f libc.a') is not
+# optional: found the hard way (a real "Bad system call" / SIGSYS
+# crash, not just a lucky pass/fail) that %.goken's implicit-Mach-O
+# default silently links against *whatever* libc.a happens to already
+# be installed at $TOP/ROOT/arch/arm64/lib -- if that's a linux/arm64
+# one (e.g. left over from rebuilding lib_core/libc for the qemu-based
+# test_goken path, or from tests/c/hello_libc's own regression
+# checks), the resulting Mach-O executes real Linux syscall numbers
+# under XNU, which the kernel rejects outright. Same shared-install-
+# path footgun as tests/c/hello_libc/mkfile's test_macos_arm64 already
+# guards against; see docs/claude_notes/notes_libc_selfhost.txt.
+test_goken_macos_arm64:V:
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm64' 'cputype=arm64' 'GOOS=darwin' install }
+	mk -a 'cputype=arm64' goken
+	for(p in $GOKENPROGS){
+		if(./$p.goken | cmp -s /dev/stdin Results/$p)
+			echo $p': passed (macos/arm64)'
+		if not
+			echo $p': FAILED (macos/arm64)'
+	}
+
+# macOS-native amd64 (no qemu; runs via Rosetta 2 on Apple Silicon, or
+# natively on an Intel Mac): unlike arm64 above, this can NOT just
+# reuse the shared %.goken/goken rule with cputype=amd64, for the same
+# reason tests/c/hello_libc/mkfile's hello_macos_amd64.exe needed its
+# own separate rule instead of reusing hello.exe's: 6l -H6 is always
+# PIE, but plain 6c happily folds a symbol's address into an
+# instruction as an absolute immediate, which 6l then can't encode
+# against a Mach-O PIE target ("doasm: notfound"). Needs `-z` on
+# *every* 6c compile involved, including libc.a's own (fmtalloc, used
+# by fmt/fmt.c, is exactly such a symbol) -- see
+# tests/c/hello_libc/mkfile's test_macos_amd64 for the fuller
+# writeup, and docs/claude_notes/notes_exec_macho.txt for the general
+# story. GOOS=darwin plus CFLAGS_EXTRA=-z on the libc.a install line
+# mirrors that exactly, then the actual fib.c compile also needs -z
+# directly (unlike arm64, which never needs anything beyond the plain
+# %.goken recipe).
+test_goken_macos_amd64:V:
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=darwin' 'CFLAGS_EXTRA=-z' 'RT0OFILE=arch/amd64/rt0_darwin.6' install }
+	for(p in $GOKENPROGS){
+		6c -I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/amd64 -I. -Damd64 -z -c $p.c
+		6l -L$TOP/ROOT/arch/amd64/lib -s -H6 -o $p.goken -E _main $p.6 -lc
+		$TOP/scripts/macos-codesign $p.goken
+		if(./$p.goken | cmp -s /dev/stdin Results/$p)
+			echo $p': passed (macos/amd64)'
+		if not
+			echo $p': FAILED (macos/amd64)'
 	}

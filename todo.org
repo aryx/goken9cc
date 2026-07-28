@@ -557,25 +557,6 @@ changes.txt, not an oversight; low priority
 
 *** 6l (linker)
 
-**** TODO amd64 hello_libc fails to link: "doasm: notfound" on fmtinstall's CMPQ
-claude:
-Found incidentally while regression-checking lib_core/libc's darwin/
-arm64 bring-up (see docs/claude_notes/notes_libc_selfhost.txt) on a
-fresh macOS-arm64-hosted checkout -- pre-existing, not caused by that
-work (reproduced identically after `git stash`ing every change from
-that session). `cd tests/c/hello_libc && mk 'objtype=amd64'
-'cputype=amd64' all` fails linking hello.exe against amd64's libc.a:
-`__fmtinstall: doasm: notfound from=12 to=78 (1356) CMPQ
-DX,$fmtalloc<17>+1032(SB)` -- 6l can't encode a CMPQ against a
-constant-pool-relative address in __fmtinstall (fmt/fmtlocale.c). Not
-yet root-caused (no time spent on it this session, since it's outside
-this project's current focus and every other arch's hello_libc links
-fine); could not confirm whether this is a genuine 6l addressing-mode
-gap or something host-specific (this may be the first time amd64
-hello_libc has ever actually been linked on an arm64-hosted checkout
-of goken9cc rather than via Docker/x86_64 CI, so a host-arch-dependent
-angle hasn't been ruled out either)
-
 **** RELAX autoffset negative-frame clamp is incomplete
 claude:
 linkers/6l/pass.c:510-511 clamps the local `autoffset` to 0 when

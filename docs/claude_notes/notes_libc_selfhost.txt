@@ -1,5 +1,5 @@
-Self-hosting a real libc.a: lib_core/libc/{fmt,port,syscall,arch}/, Linux + darwin/arm64
-==========================================================================================
+Self-hosting a real libc.a: lib_core/libc/{fmt,port,syscall,arch}/, Linux + darwin/arm64 + darwin/amd64
+==========================================================================================================
 
 Notes on building a genuinely reusable, self-hosted C library --
 lib_core/libc/, producing libc.a -- compiled entirely by goken's own
@@ -60,11 +60,13 @@ Directory layout
                                 verbatim, preserving syncweb markers, or
                                 new but OS/arch-independent)
       arch/$cputype/rt0.s   -- process startup (_main), one per arch
-                                (genuinely OS-independent -- it only
-                                calls main()/exit() by symbol name, so
-                                one file serves every GOOS for a given
-                                arch; confirmed true for darwin/arm64
-                                too, see below)
+                                -- but NOT unconditionally OS-independent;
+                                darwin/amd64 needs its own
+                                arch/amd64/rt0_darwin.s, see "rt0.s
+                                needed a GOOS-specific override too"
+                                below. RT0OFILE in this mkfile picks
+                                which one, same override mechanism as
+                                CFLAGS_EXTRA.
       syscall/os/$OS/svc_$cputype.s      -- the *one* raw syscall
                                              trampoline per (OS, arch)
                                              pair (NOT arch-only -- see
@@ -74,6 +76,31 @@ Directory layout
       syscall/os/$OS/numbers_$cputype.h  -- syscall number constants
       syscall/os/$OS/zsyscall_$OS_$cputype.c -- generated (see below);
                                              committed to the repo
+
+This $OS/$ARCH split (and the arch/$cputype/rt0.s + syscall/os/$OS/
+naming specifically) traces back to how GO/pkg/runtime is laid out in
+this same repo's own Go-era snapshot: GO/pkg/runtime/{linux,darwin,
+...}/{amd64,386,arm}/{rt0.s,sys.s} -- confirmed by direct comparison
+while bringing up darwin/amd64 (see below): GO/pkg/runtime/darwin/
+amd64/sys.s uses the exact same `0x2000000`-prefixed BSD syscall
+numbers this project's own svc_amd64.s independently converged on, and
+GO/pkg/syscall/asm_darwin_amd64.s the same DI/SI/DX/R10/R8/R9 argument
+registers and bare SYSCALL trap. The `//sys name(args) (ret) =
+SYS_NAME` decl convention and scripts/mksyscall.sh are likewise
+modeled on GO/pkg/syscall/mksyscall.sh and that package's own `//sys`
+comments. Interestingly, that old Go snapshot's linux/amd64/rt0.s and
+darwin/amd64/rt0.s are byte-identical ("Darwin and Linux use the same
+linkage to main") -- true for Go at the time because 2010-era Darwin
+executables used the static LC_UNIXTHREAD entry (kernel jumps straight
+to your code, argc/argv already on the stack, exactly like Linux; see
+docs/claude_notes/notes_exec_macho.txt's own account of why that
+approach is dead on today's arm64 kernel). This project's own -H6 work
+moved to the modern LC_MAIN/dyld-calls-you-with-registers convention
+instead, something that old Go snapshot never had to handle (Apple
+Silicon didn't exist in 2010) -- which is exactly why arch/$cputype/
+rt0.s's original "one file, every GOOS" assumption, itself inherited
+from that same old Go precedent, turned out not to survive amd64's
+bring-up. Go wasn't wrong for its era; the ground moved.
 
 include/arch/$cputype/u.h holds each arch's base scalar typedefs plus
 va_list -- adapted from ~/principia/lib_core/libc/{arm,mips}/u.h and
@@ -284,6 +311,99 @@ references left over from the move above -- caught by grepping for the
 old path across syscall/, not by a build failure (a comment typo, not
 a code bug).
 
+darwin/amd64: a fourth combination, tested via Rosetta 2 on Apple Silicon
+---------------------------------------------------------------------------------
+
+Added right after darwin/arm64, same session's later half. Verification:
+lib_core/libc && mk 'objtype=amd64' 'cputype=amd64' 'GOOS=darwin'
+'CFLAGS_EXTRA=-z' 'RT0OFILE=arch/amd64/rt0_darwin.6' install, then
+tests/c/hello_libc's test_macos_amd64 and benchs/compcert's
+test_goken_macos_amd64 -- both run the real Mach-O binary directly via
+Rosetta 2 (`arch -x86_64 /usr/bin/true` confirms it's installed; no
+extra setup needed once it is) since this session's host is Apple
+Silicon, not a real x86_64 Mac. Three new things showed up that
+darwin/arm64 didn't need, in the order they were found:
+
+1. -H7 is not optional for the *existing* Linux path either. 6l/7l/8l
+   (unlike vl/il/jl, which always default to ELF) fall back to the
+   host's own compiled-in GOOS when no -H flag is given at all
+   (linkers/{6,7,8}l/obj.c's HEADTYPE==-1 case) -- so tests/c/hello_libc/
+   mkfile's hello.exe rule, which had never passed -H7 explicitly,
+   silently built a Mach-O (not ELF) on this Darwin host. arm64 never
+   exposed this (7c has no non-PIE-unsafe codegen path at all, so a
+   stray implicit Mach-O still linked and ran fine there), but amd64
+   immediately hit point 2 below and failed outright. Fixed by adding
+   -H7 unconditionally to that one rule; re-verified the resulting
+   binaries are real ELF for all seven Linux arches (`file` on each),
+   not just compile-and-link success, since compile-and-link succeeding
+   is not proof of the right output format (this is exactly how the
+   386/arm ones would have silently mis-built too: 8l defaults to Plan 9
+   format absent -H7, on this host or any non-Linux one; 5l defaults to
+   Plan 9 unconditionally, regardless of host).
+
+2. -z has to reach *every* 6c compile that ends up in the final
+   binary, not just the test program's own. 6l -H6 is always PIE, but
+   plain 6c folds a symbol's address into an instruction as an absolute
+   immediate (e.g. fmt/fmt.c's fmtalloc, used for a CMPQ bounds check)
+   -- 6l can't encode that against a PIE target ("doasm: notfound").
+   `-z` (already implemented, see notes_exec_macho.txt's PIE section)
+   makes 6c materialize such addresses into a register instead, but
+   passing it only to hello.c's own compile still failed: libc.a's own
+   fmt/fmt.c object needed it too. Fixed via lib_core/libc/mkfile's
+   pre-existing CFLAGS_EXTRA extension point (originally added just for
+   this kind of one-off flag injection, per its own header comment) --
+   'CFLAGS_EXTRA=-z' on the install command line, no mkfile changes
+   needed.
+
+3. arch/amd64/rt0.s's argc/argv assumption doesn't hold for darwin.
+   Found via a real SIGSEGV running fib.c (the first program wired up
+   here that actually reads argc/argv -- hello.c's main() takes none).
+   6c-compiled code, including this project's own main(), always
+   expects its arguments passed on the stack by the immediate caller
+   (see linux/amd64/rt0.s's own comment) -- true of a raw Linux ELF
+   entry (kernel already lays out argc/argv on the stack) but not of
+   dyld's LC_MAIN convention on amd64, confirmed via lldb breaking at
+   _main's own first instruction (not at dyld's entry, which
+   `process launch --stop-at-entry` stops at instead and gives
+   misleading register contents for this purpose): RDI=argc, RSI=argv,
+   RDX=envp, RCX=apple, a real C-ABI register calling convention,
+   matching Apple's documented "looks like main()" contract for
+   LC_MAIN. arm64 never needed this bridge -- not luck, but a real ABI
+   coincidence: dyld's arm64 convention is also register-based (X0=argc,
+   X1=argv), and 7c's own compiled calling convention *also* passes a
+   function's first argument via X0 (see "Verifying an arch's calling
+   convention" below), so forwarding X0 unmodified into `BL main`
+   happens to already do the right thing there. amd64 has no such
+   luck (6c's calling convention is stack-only, full stop -- see
+   "Verifying an arch's calling convention" below for why), so
+   arch/amd64/rt0_darwin.s is a genuine second file: move DI/SI into
+   AX/BX, then write them to the stack slots a 6c-compiled main(int,
+   char**) expects, before calling it. lib_core/libc/mkfile's new
+   RT0OFILE variable selects it, same override-on-the-command-line
+   idiom as CFLAGS_EXTRA above (see that mkfile's own RT0OFILE
+   comment). envp/apple (RDX/RCX) are not forwarded -- nothing here
+   reads them, and Plan9 C's traditional main() signature has no slot
+   for them anyway. See this file's own "This $OS/$ARCH split... traces
+   back to..." paragraph above for why old Go-era code in this repo
+   never had to solve this: it predates LC_MAIN entirely.
+
+None of these three are darwin/arm64-specific gaps rediscovered late;
+they're genuinely new failure modes amd64 alone exposes (non-PIE-safe
+default codegen existing at all, and a calling convention rt0.s must
+actively bridge rather than being able to just forward registers
+unchanged). benchs/compcert/mkfile's test_goken_macos_arm64 also picked
+up an unrelated but real hardening fix in the same pass: it wasn't
+force-rebuilding+reinstalling libc.a before linking (unlike tests/c/
+hello_libc/mkfile's test_macos_arm64, which always has), so it could
+silently link a Mach-O against whatever GOOS's libc.a happened to
+already be installed at $ROOT/arch/arm64/lib -- caught as a real "Bad
+system call" (SIGSYS) crash after a linux/arm64 libc.a was left
+installed there by unrelated regression testing earlier in the same
+session, executing real Linux syscall numbers under XNU. Same
+shared-install-path story as the "A second, unrelated build-hygiene
+footgun" paragraph above; fixed the same way (rm -f + mk -a install
+every time, not just for amd64).
+
 Verifying an arch's calling convention before trusting it
 --------------------------------------------------------------
 
@@ -414,23 +534,32 @@ binary directly on the host after ad-hoc signing it (scripts/
 macos-codesign), same spirit as tests/s/mini's pre-existing
 test_macos_arm64 target. Passes on real Apple Silicon macOS.
 
+darwin/amd64: `lib_core/libc && mk 'objtype=amd64' 'cputype=amd64'
+'GOOS=darwin' 'CFLAGS_EXTRA=-z' 'RT0OFILE=arch/amd64/rt0_darwin.6'
+install`, then test_macos_amd64/test_goken_macos_amd64, both under
+Rosetta 2 on this session's Apple Silicon host (no qemu, no real Intel
+Mac needed). Also passes.
+
 Caveat specific to the session that did the svc.s relocation and the
-arm64/amd64 vlong fix above: verification of the *other six* Linux
-arches (386, amd64, mips, riscv, riscv64, and arm64 itself under
-GOOS=linux) was compile-and-link-only, not run-and-compare -- the host
-doing this work had neither qemu-user installed nor a running Docker
-daemon (`make build-docker-test` is the normal way to get both). All
-six rebuilt and relinked cleanly (confirming the file move and the
-${GOOS} mk-variable-boundary fix didn't break anything structurally),
-and the vlong fix for arm64/amd64 was verified correct via `7c -S`/
-`6c -S` before/after (MOVW -> MOV on every outgoing syscall argument
-store) plus real execution on darwin/arm64 specifically -- but actual
-qemu execution of linux/arm64's and the other five arches' hello_libc
-with these changes has NOT been re-confirmed since before this
-session's edits. Do that (`make build-docker-test`, or qemu-user
-locally) before trusting this doc's "all seven pass" claim above at
-full strength again. Separately, and unrelated to this work: amd64's
-hello_libc currently fails to *link* at all on this same host (a 6l
-"doasm: notfound" error, reproduces on unmodified code too) -- see
-todo.org's "6l (linker)" section, not re-described here since it's an
-open TODO, not landed work.
+arm64/amd64 vlong fix (see above) and the darwin/amd64 bring-up (see
+its own section above): verification of the Linux arches other than
+arm64/amd64 (386, mips, riscv, riscv64) was compile-and-link-only, not
+run-and-compare -- this host has neither qemu-user installed nor a
+running Docker daemon (`make build-docker-test` is the normal way to
+get both). All four rebuilt and relinked cleanly, and additionally now
+produce genuinely correct ELF output (confirmed with `file`, not just
+compile-and-link success -- see the darwin/amd64 section's point 1
+above for why that distinction matured this session), but actual qemu
+execution has NOT been re-confirmed since before this session's edits.
+Do that (`make build-docker-test`, or qemu-user locally) before
+trusting this doc's "all seven pass" claim at full strength again.
+linux/arm64 and linux/amd64 specifically WERE re-verified this
+session, both compile-link AND correct-ELF-output (also via `file`,
+same caveat about qemu execution not being re-run applying to them
+too). The amd64 6l "doasm: notfound" issue previously logged here as
+a pre-existing, unrelated bug (see prior revisions of this file, and
+todo.org's git history) turned out to be neither pre-existing-and-
+unrelated nor a real 6l bug: it was this same session's -H7-not-
+optional finding (point 1 in the darwin/amd64 section above) --
+todo.org's corresponding entry has been removed now that the actual
+cause is understood and fixed.

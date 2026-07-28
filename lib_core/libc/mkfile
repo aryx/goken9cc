@@ -126,8 +126,23 @@ SYSCALLOFILES=\
 # above: mk must never see an explicit "ARCHEXTRAOFILES=" for archs
 # that don't need it, so rc's own true-unset-vanishes-to-zero-words
 # behavior applies instead of mk's eager one-empty-element-list one.
+# RT0OFILE: arch/$cputype/rt0.s is genuinely OS-independent for every
+# (GOOS, arch) pair *except* darwin/amd64 -- dyld's LC_MAIN calling
+# convention there passes argc/argv in registers (RDI/RSI), unlike a
+# raw Linux ELF entry (argc/argv already on the stack, which is what
+# 6c-compiled code, including linux/amd64's own rt0.s, expects) or
+# arm64's dyld entry (X0/X1, which happens to already match 7c's own
+# register-based first-argument convention -- no bridging needed
+# there either, by a real ABI coincidence, not luck; see
+# docs/claude_notes/notes_libc_selfhost.txt). So amd64/rt0_darwin.s
+# exists as a second, GOOS-specific file (same shape as syscall/os/
+# darwin/svc_amd64.s needing its own file, above), selected by
+# overriding this variable on the command line -- see
+# tests/c/hello_libc/mkfile's test_macos_amd64 for the override.
+RT0OFILE=arch/$cputype/rt0.$O
+
 ARCHOFILES=\
-	arch/$cputype/rt0.$O\
+	$RT0OFILE\
 	$ARCHEXTRAOFILES\
 
 OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $SYSCALLOFILES $ARCHOFILES

@@ -21,6 +21,16 @@
 # target's binary uniformly and leave actually *running* the Mach-O
 # ones to the host-gated test_macos target (see the top-level mkfile).
 #
+# Also skips (rather than errors on) a file that isn't Mach-O at all --
+# codesign(1) rejects those outright. This matters for any recipe (e.g.
+# benchs/compcert/mkfile's shared %.goken rule, used by every cputype
+# through the same code path) that can't tell ahead of time whether a
+# given build actually produced a Mach-O binary: on a Darwin host, 7l/
+# 6l default to -H6 (Mach-O) when targeting arm64/amd64, but 5l/vl/il/
+# jl (arm/mips/riscv/riscv64) have no Mach-O support at all and emit
+# something else regardless of host -- calling this unconditionally on
+# all of those must stay a no-op, not a build failure.
+#
 # Usage: macos-codesign <file.exe> [more-files.exe ...]
 
 set -e
@@ -30,5 +40,7 @@ if [ "$(uname)" != "Darwin" ]; then
 fi
 
 for f; do
-	codesign -s - -f "$f"
+	case "$(file -b "$f")" in
+	Mach-O*) codesign -s - -f "$f" ;;
+	esac
 done
