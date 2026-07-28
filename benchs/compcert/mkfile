@@ -130,7 +130,16 @@ clean:V:
 # implementations here -- stdio.h just widens to double, calls the
 # existing cos/sin/fabs, and narrows back (fine for this consumer,
 # which only wants reference/consistency checking, not exact
-# single-precision rounding at every step).
+# single-precision rounding at every step). bisect.c needed two
+# things: stdio.h gained stderr/fprintf/fputs (deliberately narrower
+# than the real, variadic fprintf -- see stdio.h's own comment), and
+# bisect.c's own `#define DBL_EPSILON 0x1p-52` -- a C99 hex-float
+# literal this compiler's lexer can't parse at all (see
+# tests/c/regressions/hexfloat_literal.c for the isolated repro) --
+# was changed directly to its decimal equivalent (see that file's own
+# comment for why it's the exact same double value, not a new one, and
+# why that doesn't affect the gcc/clang comparison this same file is
+# also built for below).
 #
 # Still blocked, each for a different reason (not pursued further this
 # pass -- see docs/claude_notes/notes_libc_selfhost.txt for anything
@@ -154,9 +163,6 @@ clean:V:
 #   themselves going wrong via ordinary uvlong arithmetic, not a
 #   print-layer issue. Compiler-internals territory, not investigated
 #   further than isolating the symptom.
-# - bisect.c: needs stderr/fputs (no FILE*-shaped stream abstraction
-#   exists yet, unlike stdout's fd-1 placeholder) and has a cascading
-#   parse error past that point not yet isolated.
 # - aes.c: `#if defined(__ppc__) || ...` for endianness detection --
 #   7c's preprocessor doesn't accept this `#if defined(...)` form at
 #   all ("unknown #: if"), a preprocessor limitation, not a missing
@@ -166,10 +172,14 @@ clean:V:
 #   truncates on this compiler the same way the syscall-argument bug
 #   did (see docs/claude_notes/notes_libc_selfhost.txt). But that one
 #   is the *source*'s own assumption, not a libc gap, so fixing it
-#   means an actual goken-specific fork of vmach.c (long -> vlong), not
-#   a header addition -- not done, to avoid forking a benchmark also
-#   used for the gcc/clang comparison without deciding that's the
-#   right call first.
+#   means editing vmach.c itself (long -> vlong for the stack array),
+#   not a header addition -- not done yet. bisect.c's own DBL_EPSILON
+#   fix above is a real precedent for editing this directory's shared
+#   benchmark source directly when the change is a semantic no-op for
+#   the existing gcc/clang comparison (same value, different literal
+#   syntax); vmach.c's fix wouldn't quite be that (a real type change,
+#   even if the computed result should be identical) -- worth a second
+#   look, just not assumed automatically from this one.
 # - knucleotide.c: needs a real FILE*/fopen/fgets/fclose/realloc/
 #   strdup -- a much bigger step than every other program here, none
 #   of which touch real file I/O.
@@ -185,7 +195,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 

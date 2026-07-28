@@ -41,6 +41,22 @@
  * argument. */
 #define putchar(c) print("%c", (c))
 
+/* stderr/fprintf/fputs: same "not a real FILE*" placeholder as stdout
+ * above, plus deliberately NOT the real (variadic) fprintf signature
+ * -- every consumer so far (benchs/compcert/bisect.c's two malloc/
+ * calloc-failure error paths, which never actually run in practice
+ * for this corpus's small allocations) only ever calls fprintf(stderr,
+ * "literal message\n") with no extra format arguments, so a plain
+ * 2-arg macro covers it. This is a real, narrower-than-standard
+ * limitation, not full fprintf: a future caller passing extra
+ * printf-style arguments gets a loud macro-arity compile error, not
+ * silently wrong output -- extend properly (real varargs forwarding)
+ * if that's ever actually needed instead of widening this comment.
+ */
+#define stderr 2
+#define fprintf(stream, msg) print(msg)
+#define fputs(msg, stream) print(msg)
+
 /* stddef.h's NULL: u.h already defines `nil` as ((void*)0); NULL is
  * just the standard C name for the same thing. */
 #define NULL nil

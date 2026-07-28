@@ -17,7 +17,18 @@
 #include <string.h>
 #include <math.h>
 
-#define DBL_EPSILON 0x1p-52
+/* DBL_EPSILON: decimal literal, not the original C99 hex-float
+ * constant (0x1p-52, i.e. 2^-52) -- this project's own goken
+ * toolchain doesn't support that syntax at all (see
+ * tests/c/regressions/hexfloat_literal.c for an isolated repro, and
+ * docs/claude_notes/notes_libc_selfhost.txt for the story). Exact
+ * same double value either way -- not a coincidence: it's the
+ * literal this file's own main() already writes out longhand a few
+ * dozen lines below for the same constant. gcc/clang parse both forms
+ * identically, so this doesn't affect the existing gcc/clang
+ * comparison this file is also built for (see benchs/compcert/mkfile).
+ */
+#define DBL_EPSILON 2.2204460492503131e-16
 
 void  *allocvector(size_t size) 
 {
