@@ -169,3 +169,100 @@ assembler 161/0, compiler 1932/0, and the full A/B world build
 swap already done for 8a/8c/8l), with 5ak/5ck/5lk demoted to the
 kencc-reference names -- arm reaching full symmetry with x86's earlier
 reconciliation.
+
+lib_core/libc bring-up: ABI facts, and a genuinely new 5l bug
+--------------------------------------------------------------------
+
+Building a self-hosted libc.a for arm (see
+docs/claude_notes/notes_libc_selfhost.txt for the cross-cutting story
+covering all seven arches this now spans) needed real 5c ABI facts:
+
+- Calling convention: only the first named parameter arrives in a
+  register (R0), exactly like arm64/mips/riscv -- confirmed against
+  `5c -S` output, a compiler-generated function only spills it to its
+  FP+0 home slot if its address is actually taken. Every other
+  argument packs at its exact natural sizeof() width -- like mips
+  (not riscv: no 8-byte-alignment rounding for doubles/vlong) -- and,
+  since arm is little-endian (unlike mips), a narrower-than-4-byte
+  value sits at the *start* of its 4-byte slot, not the end. See
+  include/arch/arm/u.h's own va_arg comment; the macros there are
+  taken close to verbatim from ~/principia/include/arch/arm/u.h
+  (already validated there), just re-derived from real 5c -S output
+  first rather than trusted blind -- this is the same "adapt, don't
+  copy blind" discipline applied to every arch in this pass.
+
+- arm has no hardware integer divide instruction, so 5c emits calls to
+  runtime helpers (_div, _divu, _mod, _modu) for any C division/
+  modulo -- copied verbatim into lib_core/libc/arch/arm/div.s from
+  tests/c/mini2/linux_arm.s's own copy (itself "from
+  principia/libc/arm/div.s"), wired in via lib_core/libc/mkfile's new
+  $ARCHEXTRAOFILES hook (see that mkfile's own comment -- kept out of
+  the generic ARCHOFILES list since no other arch needs it).
+
+- A real, previously-undiscovered bug surfaced pulling those helpers
+  from an actual library (libc.a, via -lc) instead of naming their
+  object file directly on the link command line (every prior arm test
+  in this tree -- tests/c/mini2, tests/c/vlong -- did the latter, which
+  sidesteps this entirely): linkers/5l/noop.c's initdiv() only ever
+  looks for _div/_divu/_mod/_modu's TEXT definitions in the program
+  text already loaded by the time it runs from noops() -- which is
+  *after* loadlib()'s one-shot library-scanning pass (see main.c's
+  loadlib()/patch()/dodata()/follow()/noops() ordering) -- so a
+  definition living inside a library never gets pulled in; noops()
+  just diagnoses "undefined: _div" and gives up.
+
+  Confirmed NOT a regression or something already fixed upstream:
+  ~/xxx/9front/5l/{obj,noop}.c and ~/principia/linkers/5l/{main,noop}.c
+  have the exact same code shape (the early initdiv() call gated
+  behind `dlm`/dynamic-module builds only, the lazy call from noops()
+  as the only path for normal static links, library[]/libraryp
+  populated only via an embedded `#pragma lib` directive, never from a
+  plain -lXXX flag or a library named directly on the command line).
+  This project's own principia-synced arm kernel build (the bcm/
+  raspberry-pi 9pi kernel, cmp-exec-corpus-arm.sh, see "Reaching full
+  parity" above) already linked successfully with this exact
+  unfixed 5l -- which doesn't mean it was silently broken, it means
+  the kernel's actual C source apparently never emits a bare 32-bit
+  ADIV/AMOD reachable through a library pull (constant divisions get
+  optimized to shifts by 5c; wide/runtime division mostly goes through
+  vlrt.c's separate _divv/_modv instead). Verified directly: relinking
+  a tiny division-using test against a library built the same way
+  principia's own kernel mkfile does (a .a path given directly,
+  alongside -l to disable the unrelated #pragma-lib auto-loading
+  mechanism) reproduces the identical "undefined: _div" failure on
+  unfixed 5l -- so this really is a general, previously-unexercised
+  gap, not something specific to -lc or to this project's own link
+  invocations.
+
+  Fixed with two pieces, both needed together:
+  (1) linkers/5l/main.c's object-loading loop now also records every
+      -lXXX flag *and* every plain filename ending in ".a" into
+      library[] (previously populated only by the #pragma-lib
+      mechanism) as it processes argv, so a later library rescan has
+      something to search regardless of which style named the library;
+  (2) a new needsdiv() pre-scan (noop.c), called from main.c right
+      after the first loadlib() and *before* patch(), cheaply checks
+      whether the program uses any ADIV/ADIVU/AMOD/AMODU at all and,
+      if so, calls initdiv() right there -- early enough that a
+      library pull-in (now safe to trigger, via loadlib(), from inside
+      initdiv() itself, marking the missing symbols SXREF first the
+      same way the existing dlm branch already does) still runs before
+      patch()/dodata()/follow()/noops() assume every object is loaded.
+      noops()'s own lazy call to initdiv() stays as a no-op fallback
+      for anything the pre-scan somehow missed (guarded by initdiv()'s
+      own `if(prog_div != P) return;`) -- it no longer does the actual
+      library-pulling work itself, since that's provably unsafe once
+      patch() has already run (an earlier version of this fix that
+      called loadlib() straight from noops() got past "undefined:
+      _div" only to hit "illegal combination"/"bad rrr" span() errors
+      instead, from the just-loaded code having skipped patch()'s
+      branch resolution and dodata()/follow()'s passes entirely).
+
+  linkers/5lk/{main,noop}.c (the demoted kencc-reference lineage) has
+  the identical bug, unfixed -- not touched here since 5c/5l are this
+  project's default arm toolchain now, but worth knowing if 5lk is
+  ever exercised the same way.
+
+  See tests/c/regressions/arm_div_from_lib.c for the regression test
+  (checks both the -lXXX and the -l-plus-direct-.a-path forms, and
+  real runtime division/modulo results, not just "it linked").

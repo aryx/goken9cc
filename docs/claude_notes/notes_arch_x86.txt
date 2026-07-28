@@ -120,3 +120,40 @@ was lost for this toolchain's own host-binary role either: Linux ELF
 (-H7) output stayed pinned byte-identical via the tests/s/variants
 goldens throughout, and neither 386 linker lineage has ever produced
 macOS binaries (only the go-era 6l does, see docs/claude_notes/notes_exec_macho.txt).
+
+Calling convention: no register-passed argument, natural packing, no alignment
+--------------------------------------------------------------------------------------
+
+Verified while building lib_core/libc for 386 (see
+docs/claude_notes/notes_libc_selfhost.txt for the cross-cutting
+story): confirmed via `8c -S` output, both a fixed-arg function's own
+FP offsets and a variadic call site's caller-written offsets. Like
+amd64 (its 64-bit sibling), 386 passes *no* argument in a register at
+all -- the caller always writes every argument, including the
+callee's first, to the stack before the call, so a hand-written
+function (see syscall/arch/386/svc.s's `_syscall6`) can address
+num+0(FP) directly, unlike arm-family arches (arm, arm64, mips, riscv),
+which all need a register-vs-FP special case for their first argument.
+
+Unlike amd64 though (uniform 8-byte slots), every argument here packs
+at its exact natural sizeof() width with zero padding/alignment at
+all -- classic i386 weak stack alignment (a double placed right after
+an int+long pair lands with zero gap, and the next int right after the
+double also lands with zero gap). Since values are little-endian, a
+narrower-than-4-byte value sits at the *start* of its 4-byte slot.
+include/arch/386/u.h's va_list macros are adapted from
+~/principia/include/arch/386/u.h (already validated there) but
+re-derived from real 8c -S output first, not trusted as-is -- the same
+discipline applied to every arch in this pass.
+
+No bugs found here (unlike arm's -- see notes_arch_arm.txt's own new
+section on a genuinely new linkers/5l bug found in the same pass):
+386's `_syscall6` clobbers BP for the (unused, in this pass) 6th
+syscall argument slot, matching the classic Linux i386 int $0x80 ABI
+(ebx,ecx,edx,esi,edi,ebp = args 1-6) -- verified this doesn't corrupt
+anything by actually running tests/c/hello_libc (which does call
+through several nested compiler-generated frames after the syscall
+returns) under qemu, not just by reasoning about it: 8c's own
+register allocator already excludes D_BP from general allocation (see
+compilers/8c/txt.c), so nothing compiler-generated was ever relying on
+it surviving a call.

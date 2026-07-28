@@ -7,23 +7,28 @@ Xc/Xa/Xl toolchain (not gcc/clang), as opposed to every prior test in
 this tree, which either links no library at all (tests/c/mini/) or
 links against a hand-rolled, per-test assembly stub duplicated in each
 test directory (tests/c/mini2/linux_$arch.s, tests/c/vlong/vlrt.c+
-print.c). Linux only so far; arm64, amd64, mips, riscv, and riscv64
-are done (this covers all five). 386/arm are not, but the directory
-layout (lib_core/libc/{os,arch,syscall}/ split by $OS and $cputype) is
-built to make adding them additive -- follow the pattern below, but
-verify every ABI claim below empirically for the new arch (via `Xc -S`
-probes *and real qemu execution*, not -S alone -- see below) rather
-than assuming it matches an existing one; no two arches done so far
-actually agree on every axis (arm64/mips share register-passing for
-the first arg but not slot width; amd64/arm64 share slot width but not
-register-passing; riscv shares mips's natural-packing *and* needs its
-own 8-byte-alignment rule neither arm64 nor mips has).
+print.c). Linux only so far; arm64, amd64, mips, riscv, riscv64, 386,
+and arm are all done now -- every arch this project's toolchain
+targets on Linux. The directory layout (lib_core/libc/{os,arch,
+syscall}/ split by $OS and $cputype) was built to make adding archs
+additive, and stayed that way through all seven; the same discipline
+still applies to any future OS this gets extended to (darwin, windows,
+plan9, xv6): verify every ABI claim empirically for the new target
+(via `Xc -S` probes *and real execution*, not -S alone -- see below)
+rather than assuming it matches an existing one. No two arches here
+actually agree on every axis: arm64/mips/arm/riscv share register-
+passing for the first arg, amd64/386 don't; arm64/amd64 share
+uniform-8-byte slot width, mips/arm/386/riscv share natural-packing
+instead; riscv alone additionally needs an 8-byte-alignment rule none
+of the others have; 386/arm agree with mips on natural-packing but
+(being little-endian, unlike mips) need little-endian sub-word
+placement instead of mips's big-endian one.
 
-Read docs/claude_notes/notes_arch_amd64.txt's, notes_arch_mips.txt's,
-and notes_arch_riscv.txt's own relevant sections for the full per-arch
-ABI write-ups (calling convention, varargs slot layout); this file is
-the cross-cutting design story and the bugs found along the way that
-weren't purely arch-specific.
+Read docs/claude_notes/notes_arch_{amd64,mips,riscv,x86,arm}.txt's own
+relevant sections for the full per-arch ABI write-ups (calling
+convention, varargs slot layout); this file is the cross-cutting
+design story and the bugs found along the way that weren't purely
+arch-specific.
 
 Why this exists: fmt/*.c wants a real libc, not a per-test stub
 ------------------------------------------------------------------------
@@ -204,6 +209,22 @@ Bugs found along the way (not arch-specific ABI facts -- see the per-arch notes 
   uintptr/intptr pattern that's correct on arm64/amd64 (where `long`
   really is 8 bytes). Full writeup in notes_arch_riscv.txt.
 
+- arm-only: a genuinely new linkers/5l bug, and the one item on this
+  list that checked out and confirmed 5l specifically (per the "worth
+  checking 5l/6l/8l" note above -- 6l/8l turned out fine, having no
+  equivalent divide-helper-lowering machinery at all). arm has no
+  hardware integer divide, so 5c lowers it to calls to runtime helpers
+  (_div/_divu/_mod/_modu); 5l's own logic for resolving those
+  (initdiv(), noop.c) only ever looked at program text already loaded
+  by the time it runs, which is *after* the point where pulling a new
+  definition from a library is still safe -- so a program needing them
+  from an actual library (as opposed to a directly-named object file,
+  what every prior arm test in this tree did) failed to link. Checked
+  against both ~/xxx/9front/5l/ and ~/principia/linkers/5l/: same bug,
+  present and unfixed in both -- this is goken-original work, not a
+  ported fix. Full writeup, including why principia's own arm kernel
+  build never happened to trigger it, in notes_arch_arm.txt.
+
 Verification
 --------------
 
@@ -216,13 +237,15 @@ test_one`) -- compiles hello.c against libc.a via `-lc`, links with
 this host has binfmt_misc registered for every arch already, which
 silently masked the qemu-runner omission in tests/c/hello_libc/mkfile
 until it was added; ./hello.exe "just working" is not proof
-qemu-runner is actually being invoked, check the mkfile). Full-tree
-regression check after any change to shared code (com64.c, vl/obj.c,
-il/obj.c, fmt/fltfmt.c all being shared with the gcc/BOOT build and/or
-other arches): `mk 'objtype=boot-gcc' all` from the repo root -- and
-after touching anything under src/cmd/cc/ specifically, remember every
-one of 7c/vc/ic (and jc, the same binary as ic) needs relinking, not
-just recompiling, to pick up a fix landed in that shared cc.a -- plus
-tests/c/vlong's own multi-arch test (the most relevant existing
-regression coverage for the com64.c/vlrt.c-adjacent changes) and
-tests/c/mini2's.
+qemu-runner is actually being invoked, check the mkfile). All seven
+arches (arm64, amd64, mips, riscv, riscv64, 386, arm) pass this. Full-
+tree regression check after any change to shared code (com64.c,
+vl/obj.c, il/obj.c, 5l/{main,noop,l}.c, fmt/fltfmt.c all being shared
+with the gcc/BOOT build and/or other arches): `mk 'objtype=boot-gcc'
+all` from the repo root -- and after touching anything under
+src/cmd/cc/ specifically, remember every one of 7c/vc/ic (and jc, the
+same binary as ic) needs relinking, not just recompiling, to pick up a
+fix landed in that shared cc.a -- plus tests/c/vlong's own multi-arch
+test (the most relevant existing regression coverage for the
+com64.c/vlrt.c-adjacent changes), tests/c/mini2's, and
+tests/c/regressions' (arm_div_from_lib.c specifically, for the 5l fix).

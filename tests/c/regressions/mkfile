@@ -40,7 +40,27 @@
 # bug (independently) on 8c and 8ck. Checks both that it compiles at
 # all and that it computes the right (zeroed) runtime result on all
 # three, not just "it didn't error".
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check
+#
+# arm_div_from_lib: not diff-derived -- a goken-original linker bug,
+# found while building lib_core/libc's arm libc.a (see the comment in
+# the .c file for the full root cause: initdiv()/noops() in
+# linkers/5l/noop.c only ever looked for arm's software divide/modulo
+# helpers (_div/_divu/_mod/_modu) in program text already loaded by
+# the time it runs, which is *after* loadlib()'s one-shot library scan
+# -- so a program needing them from a library (not a directly-named
+# object file) failed to link. Confirmed present in both
+# ~/xxx/9front/5l/ and ~/principia/linkers/5l/ (same source shape,
+# same gap) -- not a regression, a previously-undiscovered bug nobody
+# had a reason to trigger before (every prior arm test in this tree
+# linked the div helpers in directly; principia's own arm kernel build
+# apparently just never emits a bare div/mod reachable this way, per
+# this project's own notes on that kernel link having already
+# succeeded -- see docs/claude_notes/notes_arch_arm.txt and
+# notes_libc_selfhost.txt). Checks two ways a library can be given to
+# 5l (-lXXX, and a direct .a path alongside -l, matching principia's
+# own kernel mkfile style) both now work and compute the right runtime
+# division/modulo results, not just "it linked".
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -122,5 +142,29 @@ mulzero.check:V: mulzero.c mulzero_start_amd64.s mulzero_start_386.s
 		exit failed
 	}
 
+arm_div_from_lib.check:V: arm_div_from_lib.c arm_div_from_lib_lib.s arm_div_from_lib_start.s
+	5c -c arm_div_from_lib.c
+	5a -o arm_div_from_lib_lib.5 arm_div_from_lib_lib.s
+	5a -o arm_div_from_lib_start.5 arm_div_from_lib_start.s
+	iar rc libarmdivfromlib.a arm_div_from_lib_lib.5
+	# form 1: -lXXX (the common case, e.g. tests/c/hello_libc's -lc)
+	5l -H7 -L. -o arm_div_from_lib.exe -E _main arm_div_from_lib.5 arm_div_from_lib_start.5 -larmdivfromlib
+	st=`{ ../../../scripts/qemu-runner arm ./arm_div_from_lib.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: arm_div_from_lib.exe (-lXXX form) exit 0'
+	if not {
+		echo 'FAILED: arm_div_from_lib.exe (-lXXX form) (got '$st')'
+		exit failed
+	}
+	# form 2: -l plus a direct .a path (principia's own kernel mkfile style)
+	5l -l -H7 -o arm_div_from_lib_pistyle.exe -E _main arm_div_from_lib.5 arm_div_from_lib_start.5 libarmdivfromlib.a
+	st=`{ ../../../scripts/qemu-runner arm ./arm_div_from_lib_pistyle.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: arm_div_from_lib_pistyle.exe (-l + direct .a form) exit 0'
+	if not {
+		echo 'FAILED: arm_div_from_lib_pistyle.exe (-l + direct .a form) (got '$st')'
+		exit failed
+	}
+
 clean:V:
-	rm -f *.v *.j *.i *.o *.6 *.8 o.out *.exe
+	rm -f *.v *.j *.i *.o *.6 *.8 *.5 *.a o.out *.exe

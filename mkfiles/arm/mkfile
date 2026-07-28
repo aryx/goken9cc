@@ -7,3 +7,11 @@ CC=5c
 LD=5l -H7
 AS=5a
 AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/arm
+
+# arm has no hardware integer divide instruction, so 5c emits calls to
+# software helpers for any C division/modulo -- see
+# lib_core/libc/arch/arm/div.s (and lib_core/libc/mkfile's own
+# ARCHEXTRAOFILES comment for why this is set here, not there)
+ARCHEXTRAOFILES=arch/arm/div.$O

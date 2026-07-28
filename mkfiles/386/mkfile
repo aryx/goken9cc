@@ -7,3 +7,5 @@ CC=8c
 LD=8l
 AS=8a
 AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/386

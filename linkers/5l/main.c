@@ -243,8 +243,33 @@ main(int argc, char *argv[])
     lastp = firstp;
 
     // Loading (populates firstp, datap, and hash)
-    while(*argv)
+    //
+    // claude: also record every -lXXX argument, and any plain filename
+    // ending in ".a" (a library given as a direct path instead of
+    // -lXXX -- e.g. principia's own kernel mkfiles pass $LIB this way),
+    // into library[] (the same array loadlib() below rescans for
+    // symbols later marked SXREF) as it goes by -- initdiv() (noop.c,
+    // arm's software-divide helper lowering) needs to re-trigger a
+    // library scan for _div/_divu/_mod/_modu after noops() runs, which
+    // is *after* this loop and loadlib() below have both already
+    // completed once; with neither form ever recorded anywhere,
+    // initdiv()'s own loadlib() call had nothing to scan. Neither form
+    // needs re-adding here for its *own* sake: objfile() already knows
+    // how to resolve both (its own "-l" prefix handling, or just
+    // open()ing the path directly), this only makes the same string
+    // available for a *second* pass later. See
+    // tests/c/regressions/arm_div_from_lib.c.
+    while(*argv) {
+        char *arg, *dot;
+
+        arg = *argv;
+        dot = strrchr(arg, '.');
+        if(libraryp < nelem(library) &&
+           ((arg[0] == '-' && arg[1] == 'l') ||
+            (dot != nil && strcmp(dot, ".a") == 0)))
+            library[libraryp++] = arg;
         objfile(*argv++);
+    }
     /*s: [[main()]] load implicit libraries */
     if(!debug['l'])
         loadlib();
@@ -254,6 +279,19 @@ main(int argc, char *argv[])
     firstp = firstp->link;
     if(firstp == P)
         goto out;
+
+    // claude: if the program uses arm's software divide/modulo helpers
+    // (_div/_divu/_mod/_modu -- arm has no hardware integer divide),
+    // resolve them now, while a library pull-in (loadlib(), inside
+    // initdiv()) is still safe -- i.e. before patch()/dodata()/
+    // follow()/noops() below, all of which assume every object is
+    // already loaded. initdiv()'s own lazy call from inside noops()
+    // (for programs that reach it directly, without going through this
+    // early path) stays as a fallback that only diagnoses "undefined"
+    // rather than actually loading anything at that point, since it's
+    // too late to do so safely by then. See
+    // tests/c/regressions/arm_div_from_lib.c.
+    needsdiv();
 
     // Resolving
     /*s: [[main()]] resolving phase */

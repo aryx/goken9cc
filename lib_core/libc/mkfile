@@ -104,8 +104,17 @@ SYSCALLOFILES=\
 	syscall/arch/$cputype/svc.$O\
 	syscall/os/linux/zsyscall_linux_$cputype.$O\
 
+# $ARCHEXTRAOFILES: for arch-specific runtime support beyond rt0.s that
+# only some arches need (e.g. arm has no hardware integer divide, so
+# mkfiles/arm/mkfile sets this to arch/arm/div.$O -- the software
+# _div/_divu/_mod/_modu helpers 5c calls into). Left unset (not
+# assigned empty) everywhere else, same reasoning as CFLAGS_EXTRA
+# above: mk must never see an explicit "ARCHEXTRAOFILES=" for archs
+# that don't need it, so rc's own true-unset-vanishes-to-zero-words
+# behavior applies instead of mk's eager one-empty-element-list one.
 ARCHOFILES=\
 	arch/$cputype/rt0.$O\
+	$ARCHEXTRAOFILES\
 
 OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $SYSCALLOFILES $ARCHOFILES
 

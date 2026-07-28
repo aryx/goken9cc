@@ -340,6 +340,8 @@ extern  int     histgen;
 
 // library
 extern  bool xrefresolv;
+extern	char*	library[50];
+extern	int	libraryp;
 
 // advanced topics
 extern  bool armv4;
@@ -397,6 +399,7 @@ void    follow(void);
 void    noops(void);
 void    divsig(void);
 void    initdiv(void);
+void    needsdiv(void);
 void    nocache(Prog*);
 
 // layout.c
