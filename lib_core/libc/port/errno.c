@@ -1,6 +1,6 @@
 #include <u.h>
 #include <libc.h>
 
-/* storage for the extern declared in include/os/posix/errno.h (via
- * include/arch/arm64/errno.h's shim) */
+/* storage for the extern declared in include/os/posix/errno.h,
+ * reached via include/libc.h's #include "os/posix/errno.h" */
 int errno;

@@ -1,9 +1,9 @@
 #ifndef _FMT_H_
 #define _FMT_H_ 1
 
-//TODO? what for?
-#include <stdarg.h>
-
+// va_list is expected to already be defined by the time this header is
+// reached: every .c file includes <u.h> before <libc.h> (which pulls in
+// this file), and u.h is where each arch/host provides va_list.
 #include <utf.h>
 
 // most useful one

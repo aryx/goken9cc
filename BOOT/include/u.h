@@ -65,6 +65,7 @@ THE SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <setjmp.h>

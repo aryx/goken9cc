@@ -1,5 +1,4 @@
 #include <u.h>
-#include <errno.h>
 #include <libc.h>
 #include "fmtdef.h"
 

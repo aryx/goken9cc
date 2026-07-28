@@ -1,8 +1,10 @@
-/* Minimal POSIX-style errno, needed only because fmt/fltfmt.c and
- * fmt/strtod.c #include <errno.h> directly (for ERANGE, when a parsed
- * float overflows). include/errno.h is a thin shim to this file so
- * that literal #include <errno.h> resolves here instead of a real
- * Unix header (7c never searches /usr/include).
+/* Minimal POSIX-style errno, needed only because fmt/fltfmt.c uses
+ * errno/ERANGE (when a parsed float overflows). Reached only via
+ * include/libc.h's own #include "os/posix/errno.h" -- fmt/fltfmt.c and
+ * fmt/strtod.c themselves don't (and shouldn't) #include <errno.h>
+ * directly, since that's a portable Plan9-style file shared with the
+ * gcc/BOOT build, which gets a real errno.h from the host instead (see
+ * BOOT/include/u.h).
  */
 #ifndef _OS_POSIX_ERRNO_H_
 #define _OS_POSIX_ERRNO_H_ 1

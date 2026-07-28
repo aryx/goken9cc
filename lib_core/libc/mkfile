@@ -97,5 +97,19 @@ HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 # after the include so mksyslib's own 'all' rule stays the default
 # target (mk picks the *first* rule in the file when none is given on
 # the command line)
+#
+# zsyscall_*.c is checked into the repo (unlike y.tab.[ch], which
+# .gitignore deliberately excludes) -- this rule only regenerates it
+# when the .decl spec it's derived from is newer, as a dev convenience.
+# Committing it, like Go does for its own zsyscall_*.go, buys two
+# things a truly-throwaway generated file (y.tab.c) doesn't need:
+# (1) it's small, hand-checkable glue code worth reviewing in a diff,
+# not opaque parser tables; (2) once numbers_$OS_$ARCH.h stops being
+# hand-written and instead gets scraped from that OS's own kernel
+# headers (the mksysnum_linux.sh-equivalent step noted as future work),
+# generating it will require a host of that OS -- committing the
+# output is what lets goken cross-compile syscall wrappers for an OS
+# you don't have. After editing a .decl, regenerate and commit the
+# diff in the same change.
 syscall/os/linux/zsyscall_linux_$cputype.c:	syscall/os/linux/syscall_linux_$cputype.decl
 	$TOP/scripts/mksyscall.sh $prereq > $target
