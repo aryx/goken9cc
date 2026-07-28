@@ -93,6 +93,7 @@ UTFOFILES=\
 
 MATHOFILES=\
 	math/nan.$O\
+	math/lrand.$O\
 
 PORTOFILES=\
 	port/memmove.$O\
@@ -124,6 +125,8 @@ PORTOFILES=\
 	port/atan.$O\
 	port/atan2.$O\
 	port/asin.$O\
+	port/rand.$O\
+	port/qsort.$O\
 
 SYSCALLOFILES=\
 	syscall/os/$GOOS/svc_$cputype.$O\

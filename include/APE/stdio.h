@@ -37,6 +37,10 @@
  */
 #define putc(c, stream) print("%c", (c))
 
+/* putchar: same as putc(c, stdout), just without the (unused) stream
+ * argument. */
+#define putchar(c) print("%c", (c))
+
 /* stddef.h's NULL: u.h already defines `nil` as ((void*)0); NULL is
  * just the standard C name for the same thing. */
 #define NULL nil

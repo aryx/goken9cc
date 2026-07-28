@@ -102,18 +102,25 @@ clean:V:
 #   cd $TOP/lib_core/libc && mk 'objtype='<arch> 'cputype='<arch> install
 #
 # fib, integr, lists, fftw, fannkuch, nsieve, nsievebits, perlin,
-# spectral, nbody, fft are wired up so far, each needing progressively
-# more of include/APE/ (stdio.h's putc/stdout/NULL/size_t/atoi/atol,
-# stdlib.h/stddef.h/string.h/math.h/assert.h/ctype.h now genuinely
-# empty -- everything they'd declare is already reachable via stdio.h,
-# which every program here includes -- see stdio.h's own comment for
-# the scoped assumption this relies on). malloc/calloc/free are
-# lib_core/libc/port/minimal_malloc.c, a deliberately temporary bump
-# allocator (see its own header comment). floor/sqrt/sin/cos/exp/log/
-# pow/fmod/atan/atan2/asin/acos are lib_core/libc/port/{floor,sqrt,
-# sin,exp,log,pow,fmod,atan,atan2,asin}.c, ported from
-# ~/principia/lib_core/libc/port/ (self-contained given frexp/ldexp/
-# modf/NaN/isNaN/isInf already existed here).
+# spectral, nbody, fft, sha1, qsort, chomp are wired up so far, each
+# needing progressively more of include/APE/ (stdio.h's putc/putchar/
+# stdout/NULL/size_t/atoi/atol, stdlib.h/stddef.h/string.h/math.h/
+# assert.h/ctype.h now genuinely empty -- everything they'd declare is
+# already reachable via stdio.h, which every program here includes --
+# see stdio.h's own comment for the scoped assumption this relies on).
+# malloc/calloc/free are lib_core/libc/port/minimal_malloc.c, a
+# deliberately temporary bump allocator (see its own header comment).
+# floor/sqrt/sin/cos/exp/log/pow/fmod/atan/atan2/asin/acos are
+# lib_core/libc/port/{floor,sqrt,sin,exp,log,pow,fmod,atan,atan2,asin}.c,
+# and rand()/qsort() are lib_core/libc/port/{rand,qsort}.c plus
+# lib_core/libc/math/lrand.c (already present, just never compiled in
+# before) -- all ported from ~/principia/lib_core/libc/port/,
+# self-contained given frexp/ldexp/modf/NaN/isNaN/isInf already
+# existed here. qsort()/rand() also needed two libc.h #includes that
+# existed as header files (include/base/sort.h, include/rand/random.h)
+# but were never actually wired into libc.h's own #include chain --
+# same "anticipated, stubbed, never finished" shape as calloc's own
+# commented-out declaration (include/core/mem.h) before this pass.
 #
 # Still blocked, each for a different reason (not pursued further this
 # pass -- see docs/claude_notes/notes_libc_selfhost.txt for anything
@@ -125,6 +132,18 @@ clean:V:
 #   (0x3) dereferenced inside the recursive BottomUpTree/DeleteTree
 #   path after the first tree already printed correctly -- not yet
 #   root-caused, possibly related to mandelbrot's but not confirmed.
+# - sha3.c, siphash24.c: a third, more fundamental real bug -- large
+#   64-bit (uvlong/`unsigned long long`) constants are already wrong
+#   after a plain load-and-compare (`x == 0x0123456789ABCDEFULL`
+#   evaluates false), and 64-bit shifts by amounts >= 32 are wrong too
+#   (confirmed via minimal, isolated repros outside this benchmark
+#   corpus -- shift by 4 is correct, shift by 32/33 is not). Neither
+#   program's own printf/print calls use %lld/%llx (only sha1.c, which
+#   passes, and siphash24.c's debug-only paths do, and separately *that*
+#   combination crashes outright) -- this is the hash computations
+#   themselves going wrong via ordinary uvlong arithmetic, not a
+#   print-layer issue. Compiler-internals territory, not investigated
+#   further than isolating the symptom.
 # - almabench.c: its own `#define PI 3.14159...` collides with
 #   include/math/basic.h's own `#define PI (PIO2+PIO2)`, already
 #   in scope via stdio.h -- this compiler treats any macro
@@ -141,10 +160,8 @@ clean:V:
 #   7c's preprocessor doesn't accept this `#if defined(...)` form at
 #   all ("unknown #: if"), a preprocessor limitation, not a missing
 #   macro.
-# - qsort.c: needs a real rand() and the real library qsort()
-#   function, neither of which exist yet.
-# - vmach.c: a different kind of blocker than the two real bugs above
-#   -- it stores `(long)pc` (a pointer) into a `long stack[]`, which
+# - vmach.c: a different kind of blocker than the real bugs above --
+#   it stores `(long)pc` (a pointer) into a `long stack[]`, which
 #   truncates on this compiler the same way the syscall-argument bug
 #   did (see docs/claude_notes/notes_libc_selfhost.txt). But that one
 #   is the *source*'s own assumption, not a libc gap, so fixing it
@@ -167,7 +184,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 
