@@ -235,6 +235,9 @@
 - experimental support for wasm: assembler+linker only (ea/el),
   hello world (WASI fd_write) working
 
+** compilers
+- display warning by default and new -q (quiet) to remove the warnings
+
 ** libs
 - lib_core/libc: a real, reusable libc.a (fmt/printf + basic Linux
   syscalls) self-hosted by goken's own toolchain (7c/6c/8c/5c/vc/ic/jc),
