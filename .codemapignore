@@ -7,6 +7,10 @@
 # hide to C toolchain for go
 /src
 
+# hide kencc baseline
+[58][acl]k/
+/compilers/cck/
+
 # temporary
 /typesetting
 
