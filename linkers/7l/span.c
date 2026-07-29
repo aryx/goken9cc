@@ -338,8 +338,42 @@ isaddcon(vlong v)
 static int
 isbitcon(uvlong v)
 {
-	/*  fancy bimm32 or bimm64? */
-	return findmask(v) != nil || (v>>32) == 0 && findmask(v | (v<<32)) != nil;
+	/* claude: was `findmask(v) != nil || (v>>32)==0 &&
+	 * findmask(v|(v<<32)) != nil` -- the second half accepts any value
+	 * that's only encodable as a 32-bit-replicated bitmask pattern
+	 * (e.g. 0xFF: not a valid *64-bit* logical-immediate on its own,
+	 * but 0xFF|(0xFF<<32) is a valid "repeat every 32 bits" pattern).
+	 * This function is called from aclass() below, which classifies a
+	 * constant *without knowing which instruction width will consume
+	 * it* -- so accepting the 32-bit-only fallback here means a
+	 * genuinely 64-bit op (e.g. `uvlong v; v ^= 0xff;`, AEOR not
+	 * AEORW) can get classified as "fits as an immediate" and routed
+	 * to asmout.c's case 53, which then encodes it as a real 64-bit
+	 * EOR using that 32-bit-replicated mask -- correctly zeroing the
+	 * low byte, but *also* corrupting the same low byte of the high
+	 * 32-bit half, since a 64-bit-destination logical-immediate
+	 * instruction genuinely replicates its (sub-64) element pattern
+	 * across the whole register; there is no ARM64 encoding for
+	 * "touch only the low 32 bits of a 64-bit destination" other than
+	 * actually using the W-suffixed 32-bit instruction. Confirmed via
+	 * a minimal repro (tests/c/regressions/
+	 * arm64_bitcon_32bit_fallback.c): `uvlong v = ...; v ^= 0xff;`
+	 * silently corrupted a byte in the *upper* 32 bits too. Stricter
+	 * now: only a value that's a genuine 64-bit-spanning pattern
+	 * counts, so anything that previously relied on the fallback (only
+	 * really valid for 32-bit-width ops) now falls through aclass()'s
+	 * classification chain to C_LCON instead, which loads it through
+	 * the literal pool -- always correct, regardless of width, at the
+	 * cost of an extra load for the narrow set of values this affects
+	 * (fits 32-bit-replicated but not natively 64-bit) on truly
+	 * 32-bit-width operations that could otherwise have used a direct
+	 * immediate. See asmout.c's case 53 for the matching encode-time
+	 * fix (that fallback is now gated on the instruction's own width,
+	 * not applied unconditionally) and notes_arch_arm64.txt's "still
+	 * open" list for the fuller isbitcon32()/isbitcon64()-class-split
+	 * this was originally scoped as before landing this narrower fix.
+	 */
+	return findmask(v) != nil;
 }
 
 static int

@@ -107,7 +107,22 @@
 # checks both directions on 7c and 6c (one representative per frontend
 # fork that changed): the warning appears with no flags, and `-q`
 # silences it.
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check
+#
+# arm64_bitcon_upper_bits: not diff-derived -- a goken-original 7l
+# (linker) bug, found while porting benchs/compcert/siphash24.c to
+# build under goken's own toolchain (see the comment in the .c file,
+# and benchs/compcert/mkfile's siphash24.c note, for the full root
+# cause). `v ^= 0xff;` (v a 64-bit uvlong) silently corrupted the
+# *upper* 32 bits of v too: linkers/7l/asmout.c's immediate and/or/eor/
+# bic encoding (case 53) only marked an immediate as genuinely
+# 64-bit-wide when the raw value itself had nonzero upper bits --
+# wrong for a small-but-64-bit-only-encodable value like 0xFF, whose
+# upper 32 bits are legitimately zero despite needing the full 64-bit
+# element size to represent (findmask() already determines this
+# correctly via mask->e==64; the extra "raw value has nonzero upper
+# bits" condition was a false, unnecessary proxy for the same thing).
+# Now fixed to trust mask->e==64 alone.
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -271,6 +286,18 @@ warn_default_visible.check:V: hex_const_no_suffix_truncated.c
 		exit failed
 	}
 	rm -f /tmp/warn_default.$pid.out /tmp/warn_q.$pid.out /tmp/warn_default6.$pid.out /tmp/warn_q6.$pid.out
+
+arm64_bitcon_upper_bits.check:V: arm64_bitcon_upper_bits.c arm64_regressions_start.s
+	7c -Darm64 -c arm64_bitcon_upper_bits.c
+	7a -c arm64_regressions_start.s
+	7l -H7 -o arm64_bitcon_upper_bits.exe -E _main arm64_bitcon_upper_bits.7 arm64_regressions_start.7
+	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_bitcon_upper_bits.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: arm64_bitcon_upper_bits.exe exit 0'
+	if not {
+		echo 'FAILED: arm64_bitcon_upper_bits.exe (got '$st')'
+		exit failed
+	}
 
 clean:V:
 	rm -f *.v *.j *.i *.o *.6 *.8 *.5 *.a o.out *.exe

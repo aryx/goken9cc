@@ -729,12 +729,53 @@ asmout(Prog *p, Optab *o)
 		o1 = opirr(as);
 		s = o1 & S64? 64: 32;
 		mask = findmask(p->from.offset);
-		if(mask == nil)
+		/* claude: the v|(v<<32) fallback (a value that's only a valid
+		 * *32-bit*-replicated bitmask pattern, not a genuine 64-bit
+		 * one) must not be used to encode a real 64-bit-width (s==64)
+		 * instruction -- the hardware would replicate the pattern
+		 * into the upper 32 bits too, corrupting them. Only correct
+		 * for s==32, where a 32-bit-width instruction never touches
+		 * the upper half regardless of what the mask "would" produce
+		 * there. See isbitcon() in span.c (used by aclass(), which
+		 * decides whether a Prog even reaches this case at all) for
+		 * the matching classification-time fix and the full writeup.
+		 */
+		if(mask == nil && s == 32)
 			mask = findmask(p->from.offset | (p->from.offset<<32));
 		if(mask != nil){
 			o1 |= ((mask->r&(s-1))<<16) | (((mask->s-1)&(s-1))<<10);
 			if(s == 64){
-				if(mask->e == 64 && ((uvlong)p->from.offset>>32) != 0)
+				/* claude: was `if(mask->e == 64 && ((uvlong)
+				 * p->from.offset>>32) != 0)` -- the extra
+				 * "upper 32 bits nonzero" check is a false
+				 * proxy for "does this genuinely need a
+				 * 64-bit-wide (N=1) encoding". findmask()
+				 * already determined that authoritatively via
+				 * mask->e (the element size the pattern
+				 * actually requires): a value like 0xFF (8
+				 * contiguous one-bits, all else zero) has
+				 * mask->e==64 -- it is NOT expressible as any
+				 * smaller repeating element, since a smaller
+				 * element would force the upper and lower
+				 * halves to match, which they don't (upper
+				 * half is all zero, lower half isn't) -- yet
+				 * its raw value has zero upper bits, so the
+				 * old check wrongly skipped setting N=1,
+				 * encoding it as N=0 (a repeating sub-64-bit
+				 * element) instead. The hardware then
+				 * replicated the low-byte pattern into the
+				 * upper 32 bits of the destination too,
+				 * silently corrupting them (confirmed via
+				 * tests/c/regressions/
+				 * arm64_bitcon_upper_bits.c: `uvlong v = ...;
+				 * v ^= 0xff;` corrupted a byte in the upper
+				 * 32 bits it should never have touched). The
+				 * condition needing checking is simply
+				 * "does the pattern need the full 64-bit
+				 * element", which is exactly mask->e==64,
+				 * with no additional caveat.
+				 */
+				if(mask->e == 64)
 					o1 |= 1<<22;
 			}else{
 				u = (uvlong)p->from.offset >> 32;

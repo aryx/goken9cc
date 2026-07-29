@@ -335,22 +335,84 @@ global `const uint64[]` array initializers, and register-count
 (variable-amount, not compile-time-constant) shifts up to 63 -- all
 independently correct after the two fixes above.
 
-sha3.c and siphash24.c are **not** unblocked by these two fixes alone,
+sha3.c and siphash24.c were **not** unblocked by these two fixes alone,
 despite being the motivating case: both still failed every single test
 vector with just these two landed. sha3.c turned out to have a third,
 unrelated bug (a project-wide lexer gap, not arm64-specific -- see
 notes_shared_frontend_bugs.txt's "unsuffixed hex constant" entry) and
 is now fixed and wired up in benchs/compcert/mkfile via a source-level
-workaround. siphash24.c remains open: differential tracing (see
-notes_debug_techniques.txt) localized its remaining bug to the
-SIPROUND macro's chained add/rotate/xor sequence specifically under
-real register pressure (four live 64-bit accumulators) -- ad hoc
-repros of the same primitives individually (basic 64-bit shift/rotate/
-add/xor with large constants, ROTL-by-32 as its own idiom, global
-`const uint64[]` array initializers, register-count shifts up to 63)
-all came back correct, so it's not any one of those alone. Narrowed
-but not root-caused past that. See benchs/compcert/mkfile's own "still
-blocked" note.
+workaround. siphash24.c needed a fourth, distinct fix -- see below --
+and both benchmarks are now fully wired up.
+
+A 64-bit bitmask-immediate N-bit bug: 0xFF corrupting bits it never touched
+---------------------------------------------------------------------------------
+
+siphash24.c's SIPROUND does `v2 ^= 0xff;` on a 64-bit accumulator.
+Differential tracing (see notes_debug_techniques.txt) localized the
+remaining bug to exactly this line: after it, a byte in the *upper* 32
+bits of v2 -- ones the source never touches -- came out corrupted too.
+Several individually-tested primitives (basic 64-bit shift/rotate/add/
+xor with large constants, ROTL-by-32 as its own idiom, global `const
+uint64[]` array initializers, register-count shifts up to 63) all came
+back correct in isolation, which is what made this one hard to spot:
+it needed the *specific* combination of a small constant (0xFF) XORed
+into a 64-bit destination.
+
+Root cause, found by reading linkers/7l's raw (`7c -N`, no register
+optimizer) disassembly line by line against a Python re-implementation
+of SIPROUND used as ground truth: 0xFF is a genuine, self-contained
+ARM64 64-bit bitmask immediate on its own (8 contiguous one-bits
+starting at bit 0, no rotation needed) -- `findmask()` in linkers/7l/
+bits.c correctly determines this, returning a mask with `e==64` (the
+pattern requires the full 64-bit element size, since any smaller
+repeating element would force the upper and lower 32-bit halves to be
+identical, and they aren't: upper is all zero, lower isn't). But
+linkers/7l/asmout.c's case 53 (the and/or/eor/bic-with-immediate
+encoder) only set the ARM64 encoding's N bit -- which tells the
+hardware "this pattern is a genuine 64-bit element, don't replicate
+it" -- when the *raw constant value itself* had nonzero upper 32 bits:
+`if(mask->e == 64 && ((uvlong)p->from.offset>>32) != 0) o1 |= 1<<22;`.
+That extra condition is a false proxy: it happens to hold for most
+large constants that need e==64, but 0xFF needs e==64 for a completely
+different reason (it isn't a repeating pattern, not that it's "large")
+and its upper bits are legitimately zero -- so N stayed 0, and the
+hardware, seeing N=0, treated the pattern as a smaller repeating
+element and replicated the low-byte value into the upper 32 bits of
+the destination register too. Fixed by dropping the redundant/wrong
+`(...>>32)!=0` half of the condition -- `mask->e==64` alone is exactly
+the information needed, already computed by findmask() correctly.
+
+Also hardened along the way, found while reading the surrounding code
+rather than independently reproduced: isbitcon() (span.c, used by
+aclass() to classify a constant during instruction selection) had a
+second, latent path to the same class of bug -- a fallback that
+accepts any value only expressible as a *32-bit*-replicated pattern
+(`v|(v<<32)` found in the mask table even though `v` alone isn't), on
+the theory that it might still be usable for a 32-bit-width
+instruction. But aclass() classifies a constant without knowing which
+instruction width will actually consume it, and linkers/7l/asmout.c's
+own encode-time copy of this same fallback was applying it
+unconditionally too -- both now require the encoding instruction to
+actually be 32-bit-width (checked via asmout.c's own `s` variable,
+already computed there) before trusting a 32-bit-only mask. This is
+the "isbitcon() accepting oversized 32-bit bitmask immediates" item
+already on this file's "what's landed vs. still open" list below,
+originally scoped as needing a full isbitcon32()/isbitcon64() class
+split threaded through optab.c -- landed here as a narrower fix
+instead (tightening the two existing fallback call sites to check
+instruction width, rather than introducing new operand classes), which
+turned out sufficient for every case this session's test suite
+exercises; the fuller class-split may still be worth doing for
+completeness but no longer blocks anything found so far.
+
+Verified: tests/c/regressions/arm64_bitcon_upper_bits.c (fails against
+the pre-fix linker, passes after), all 21 benchs/compcert GOKENPROGS
+(including sha3.c and siphash24.c) pass after the fix, confirmed via a
+full clean rebuild-and-run, not just the one file that motivated
+finding it -- this code path (immediate-operand AND/OR/EOR/BIC) is
+exercised by any program using bitwise operators with a constant
+operand, not just siphash24.c, so this had real reach across the
+existing suite.
 
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------

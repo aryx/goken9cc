@@ -181,7 +181,17 @@ vlong/pointer conversion + immediate-offset folding (b117d7014), the
 gmove() same-address-skip typo, struct-copy trailing-byte drop, regopt()
 NRGN growable array, mkvar() .ret tracking, and the LDAR/STLR/LDXR/STXR/
 LDAXR/STLXR atomics fix (223e8ad00 + 61f6376b1) with a real qemu-verified
-test. Remaining, not done:
+test. Also since landed, not from the 9front diff (goken-original bugs
+found while porting benchs/compcert/{vmach,sha3,siphash24}.c -- see
+notes_arch_arm64.txt for the full writeups): bcomplex()'s vlong-
+condition fast path silently emitting no branch at all, two large-
+uvlong-constant truncation bugs (mkvar()'s constant-registerization
+width, addpool()'s literal-pool sizing), and isbitcon()'s oversized
+32-bit bitmask-immediate fallback plus asmout.c's related N-bit
+encoding bug (a narrower fix than the isbitcon32()/isbitcon64()
+class-split originally scoped below -- landed instead of that, not in
+addition to it; revisit the fuller split only if a new case turns up
+that the narrower fix doesn't cover). Remaining, not done:
 
 *** 7c (compiler)
 
@@ -243,19 +253,6 @@ unverifiable no-op. Skip unless someone wants to also port the codegen
 change that makes it reachable
 
 *** 7l (linker)
-
-**** fix isbitcon() accepting oversized 32-bit bitmask immediates
-claude:
-linkers/7l/span.c:324 `return findmask(v) != nil || (v>>32) == 0 &&
-findmask(v | (v<<32)) != nil;` doesn't check that the mask's bit-span
-actually fits a 32-bit (W-suffixed AND/ORR/EOR-immediate) encoding
-before accepting it as valid for either width. 9front splits this into
-isbitcon32()/isbitcon64() plus new C_BITCON32/C_BITCON64 operand classes
-threaded through optab.c (mask->s >= 32 rejection for the 32-bit case).
-This is the last Tier-1 item from the original plan; skipped so far
-because the fix isn't self-contained in span.c -- needs the paired
-optab.c entries and asmout.c consumers updated together, more invasive
-than the other Tier-1 fixes
 
 **** investigate: misaligned constant-offset global access fails to link
 claude:
