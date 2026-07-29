@@ -22,7 +22,7 @@ OFILES=\
 	5obj.$O\
 	6obj.$O\
 	8obj.$O\
-        $GOOS.$O\
+        $ostype.$O\
 
 #ifneq ($(GOOS),windows)
 #OFILES+=\

@@ -132,7 +132,7 @@ ROOTDIR=`{cd $TOP/ROOT; pwd}
 
 #bugfix: do not use $preqeq below because then HFILES are also passed
 goos.$O: goos.c
-	$CC $CFLAGS $CFLAGS_EXTRA '-DGOOS='"$GOOS" '-DGOARCH='"$GOARCH" '-DGOROOT='"$ROOTDIR" '-DGOVERSION='"goken" goos.c
+	$CC $CFLAGS $CFLAGS_EXTRA '-DGOOS='"$ostype" '-DGOARCH='"$cputype" '-DGOROOT='"$ROOTDIR" '-DGOVERSION='"goken" goos.c
 
 get9root.$O: get9root.c
 	$CC $CFLAGS $CFLAGS_EXTRA '-DGOROOT='"$ROOTDIR" get9root.c
