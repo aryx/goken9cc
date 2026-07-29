@@ -448,6 +448,51 @@ Bugs found along the way (not arch-specific ABI facts -- see the per-arch notes 
   no dedicated regression test (a missing-return compile diagnostic,
   not a behavioral bug).
 
+- fmt/dofmt.c's __charfmt() (the `%c` format verb) silently wrote
+  *nothing*, no error, whenever the byte handed to it had the high bit
+  set (value >= 128 unsigned, negative as a signed char) -- found while
+  unblocking benchs/compcert/mandelbrot.c, whose `putc(byte_acc,
+  stdout)` inner loop (byte_acc built up bit-by-bit, so it takes on
+  every value 0-255) silently lost every 128-255 byte, corrupting the
+  PBM image output. Root cause: __charfmt() delegated to __fmtcpy(),
+  which is written for copying UTF-8 *text* -- correct for its other
+  callers (%s, %q, float-formatting suffixes) but wrong here: any byte
+  >= Runeself (0x80) gets treated as the leading byte of a multi-byte
+  UTF-8 sequence and handed to fullrune()/chartorune(), and for a
+  single raw byte (the only byte %c ever has on hand) fullrune()
+  correctly reports "not a complete sequence" -- so __fmtcpy() silently
+  wrote nothing at all via its `else break;` path. %c's actual contract
+  in this codebase (see include/APE/stdio.h's own comment on putc()) is
+  "write exactly one raw byte, whatever its value" -- UTF-8 rune
+  formatting is %C's (__runefmt()) job, a separate, already-correct
+  function a few lines below in the same file. Fixed by having
+  __charfmt() write the byte directly via the FMTCHAR macro (already
+  used elsewhere in dofmt.c for plain non-rune output, e.g. numeric
+  padding), bypassing __fmtcpy()'s UTF-8 decoding entirely -- keeps the
+  same width-padding behavior, drops only the wrong rune
+  interpretation. This is a runtime-library bug, not a compiler bug: it
+  affects every program using %c/putc() with a byte value >= 128, on
+  every architecture (fmt/ is shared, not per-arch), and needed a
+  rebuilt libc.a, not a recompiled compiler, to pick up (`rm -f libc.a;
+  mk -a 'objtype='$cputype 'cputype='$cputype ['GOOS='$goos] install`
+  -- the `mk -a` matters here too, same "changing a shared .c file
+  doesn't necessarily get noticed by a plain `mk install`" lesson as
+  the macbody build-system gotcha in notes_shared_frontend_bugs.txt).
+  Debugging path worth remembering: a 4096-byte tight loop
+  (`putc((char)(i&0xff), stdout)` for i in 0..4095) made the pattern
+  obvious once traced byte-by-byte -- contiguous runs of 0..127 came
+  through correctly, every 128..255 byte in each 256-iteration cycle
+  was simply missing, which is what pointed at a *value-dependent* bug
+  in the formatting/write path rather than, say, a syscall-wrapper
+  return-value bug (the initial, wrong theory -- the darwin syscall
+  wrappers really do skip checking the carry-flag error convention, per
+  this file's other notes, but that wasn't what was happening here).
+  See tests/c/regressions/fmt_charfmt_high_bit.c (verified via
+  snprint(), which exercises the identical dofmt()/__charfmt() code
+  path without needing to capture a real fd's output) and its
+  fmt_charfmt_high_bit.check_macos_arm64 target in tests/c/regressions/
+  mkfile.
+
 - compilers/cc/com64.c (the newer frontend) already handles a
   vlong-typed `?:` used as a call argument; src/cmd/cc/com64.c (the
   older, separate frontend that 7c/vc/ic actually build against) was

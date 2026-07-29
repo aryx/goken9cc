@@ -195,6 +195,92 @@ that the narrower fix doesn't cover). Remaining, not done:
 
 *** 7c (compiler)
 
+**** binarytrees.c: pointer corruption after a variadic print() call, tree-size-dependent
+claude:
+Found while trying to unblock benchs/compcert/binarytrees.c (see
+docs/claude_notes/notes_debug_techniques.txt for the "renaming an
+identifier"/"reading -S output"/"snprint() instead of write()"
+techniques already documented from this session, none of which
+fully cracked this one -- this entry exists instead of a notes_*.txt
+writeup precisely because the investigation is NOT done). Real,
+reproducible SIGSEGV (EXC_BAD_ACCESS, address in the 0x1-0x4 range --
+looks like a small leftover integer misread as a pointer, not a wild
+address) on darwin/arm64, isolated to DeleteTree()'s traversal
+dereferencing a corrupted `tree` pointer, several calls into its own
+recursion -- NOT the first call. Confirmed NOT a tree-construction bug:
+ItemCheck(stretchTree), which recursively visits the exact same nodes
+DeleteTree() will, runs immediately beforehand and prints the
+byte-for-byte correct checksum -- so the tree is provably intact right
+up until something *between* that ItemCheck() call and the DeleteTree()
+call corrupts it.
+
+Narrowed via progressive isolation (real binarytrees.c, unmodified
+argc/atol structure preserved throughout -- see below for a *separate*,
+unrelated bug that structure exposed):
+- Deleting the `printf("stretch tree...", stretchDepth,
+  ItemCheck(stretchTree))` call entirely (replacing it with a
+  standalone `ItemCheck(stretchTree)` whose result is merely used, not
+  printed) makes DeleteTree(stretchTree) survive completely, at the
+  exact same tree depth that crashes with the printf present.
+- A print() call with a *literal-only* format string (no `%` verbs at
+  all) between ItemCheck() and DeleteTree() does NOT corrupt anything.
+- A print() call with exactly one integer format verb (tried both %li
+  and %d, same result either way) DOES reproduce the corruption --
+  but only once the tree is large enough (matching the real
+  minDepth=4/N=16/stretchDepth=17 shape; the identical one-verb print()
+  call at shallow depths, e.g. stretchDepth ~4-10, does not corrupt
+  anything). Depth-vs-N bisection to find the *exact* threshold, and
+  which resource (heap[] bump-allocator offset? absolute pointer
+  magnitude? stack depth from the deeper BottomUpTree/ItemCheck
+  recursion?) actually gates it, was not completed -- environment
+  interference (see below) cut the session short.
+- A raw write() syscall (bypassing print()/vfprint()/dofmt() entirely)
+  between the same two calls does NOT corrupt anything -- rules out the
+  syscall wrapper itself as the culprit; the bug is somewhere in the
+  formatting path specifically (dofmt()/__ifmt()/vfprint()'s own
+  256-byte stack buffer are the remaining suspects, not yet examined
+  for e.g. an overflow past the declared size).
+- Checked main()'s own disassembly (7l -a plus lldb, real numeric SP
+  offsets, not the assembler's symbolic name+offset(FP)/(SP) labels
+  which can be misleading -- see notes_debug_techniques.txt): the
+  vararg's own stack write (`str w9, [sp, #0x10]`) and stretchTree's
+  own storage slot (`[sp, #0x50]`) do NOT overlap at the byte level in
+  main()'s frame, ruling out the simplest "caller's own outgoing
+  vararg write clobbers its own local variable's slot" theory. The
+  corruption has to be happening somewhere inside the
+  print()/vfprint()/dofmt() call chain itself, or via some subtler
+  stack-layout interaction not yet identified.
+- lldb address-based breakpoints (`breakpoint set -a <addr>`) were
+  unreliable on this project's own -H6 Mach-O output throughout this
+  investigation -- confirmed "set" with a real resolved address, but
+  did not actually stop execution at that address, even for addresses
+  causally before the crash. Watchpoints set post-crash are therefore
+  unusable too (wrong frame). Not yet root-caused whether this is a
+  general property of this project's minimal Mach-O output (missing
+  some load command lldb depends on for breakpoint infrastructure) or
+  something else; worth checking against a real, gcc/clang-produced
+  Mach-O on the same host before assuming it's lldb-side.
+- Session ended with the host's endpoint security software (see
+  notes_debug_techniques.txt's existing writeup on this) quarantining
+  every freshly-built ad-hoc-signed binary, in every directory tried,
+  well past the "usually clears within a few attempts" window that
+  writeup describes -- blocking further empirical bisection entirely.
+  Retry this investigation once that clears.
+
+Separate, unrelated bug hit while trying to control tree depth via a
+real command-line argument (`./binarytrees.goken 16`) instead of
+editing source constants, worth its own follow-up: on darwin/arm64,
+reading `argv[1][0]` in a goken-built program crashes immediately
+(SIGSEGV) as soon as *any* real command-line argument is passed --
+confirmed with a 5-line isolated repro (print argc, which is correct,
+then dereference argv[1] directly, which crashes) having nothing to do
+with atol()/printf()/binarytrees.c at all. Not investigated further
+this pass; likely in the arm64 rt0.s/_main argv-setup path. The actual
+benchs/compcert test suite invocation never passes command-line args
+(matches how Results/binarytrees itself was generated), so this isn't
+blocking that specific benchmark, but it's a real, separate bug in its
+own right and worth its own regression test once picked up.
+
 **** fix regalloc type-mismatch in compound multiply/divide/mod assign
 claude:
 compilers/7c/cgen.c:290,293 (case OASLMUL/OASLDIV/OASLMOD/OASMUL/OASDIV/

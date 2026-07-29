@@ -259,7 +259,27 @@ macdef(void)
 	len = 1;
 	ischr = 0;
 	for(;;) {
-		if(isalpha(c) || c == '_') {
+		/* claude: was `if(isalpha(c) || c == '_')` unconditionally --
+		 * this scans the macro body for occurrences of a parameter
+		 * name to replace with a `#<letter>` placeholder, but did so
+		 * even while inside a string/char literal (ischr != 0),
+		 * treating any letter there as a potential identifier. A
+		 * macro like `#define putc(c, stream) print("%c", (c))`
+		 * (parameter named `c`, which also appears as the conversion
+		 * character in "%c") had the 'c' *inside the string literal*
+		 * wrongly matched against the parameter name and replaced by
+		 * the placeholder for argument 0 -- expanding
+		 * `putc(byte_acc, stdout)` into `print("%byte_acc", (byte_acc))`
+		 * instead of `print("%c", (byte_acc))`. Confirmed via
+		 * tests/c/regressions/cpp_macro_param_in_string.c and while
+		 * unblocking benchs/compcert/mandelbrot.c (see
+		 * docs/claude_notes/notes_shared_frontend_bugs.txt). C
+		 * requires macro parameter substitution to never occur inside
+		 * string or character literals; ischr already tracks exactly
+		 * that state for the rest of this loop, so identifier
+		 * scanning just needs to respect it too.
+		 */
+		if(!ischr && (isalpha(c) || c == '_')) {
 			np = symb;
 			*np++ = c;
 			c = getc();

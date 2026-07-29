@@ -203,16 +203,57 @@ clean:V:
 # isbitcon()'s separate 32-bit-replicated-pattern fallback no longer
 # gets applied to a genuinely 64-bit-width instruction.
 #
+# mandelbrot.c needed no source changes at all -- both bugs it exposed
+# were genuine toolchain bugs, found via its `putc(byte_acc, stdout)`
+# inner loop (byte_acc takes on every value 0-255 while building up a
+# PBM image bit-by-bit, an unusually thorough exerciser of %c/putc()).
+# A previous pass's "Still blocked" note here mischaracterized the
+# symptom as a 7c/7a MOVB zero-extension bug -- that theory didn't pan
+# out; the two real root causes were both elsewhere:
+# (1) include/APE/stdio.h's `#define putc(c, stream) print("%c",
+#     (c))` expanded wrong whenever byte_acc's own variable name
+#     collided with the macro's parameter name spelling as it happened
+#     to inside the macro body's own string literal -- a preprocessor
+#     bug (parameter substitution incorrectly applying inside a string
+#     literal), present identically in all three frontend forks this
+#     tree builds against. See tests/c/regressions/
+#     cpp_macro_param_in_string.c and docs/claude_notes/
+#     notes_shared_frontend_bugs.txt.
+# (2) Once past that, every byte_acc value with the high bit set
+#     (128-255) written via %c silently produced *no output at all* --
+#     a runtime-library bug in lib_core/libc/fmt/dofmt.c's __charfmt(),
+#     which routed through UTF-8-decoding logic meant for text (%s/%q),
+#     not a single raw byte. Fixed in fmt/dofmt.c (shared, not
+#     per-arch) -- see tests/c/regressions/fmt_charfmt_high_bit.c and
+#     docs/claude_notes/notes_libc_selfhost.txt.
+# Output now matches Results/mandelbrot byte-for-byte.
+#
 # Still blocked, each for a different reason (not pursued further this
 # pass -- see docs/claude_notes/notes_libc_selfhost.txt for anything
 # investigated in depth):
-# - mandelbrot.c: a real 7c/7a bug, MOVB reg,reg not reliably
-#   zero-extending a char through several register copies before a
-#   varargs call -- found via a garbled binary PBM stream.
-# - binarytrees.c: a different real bug, a garbage/near-null pointer
-#   (0x3) dereferenced inside the recursive BottomUpTree/DeleteTree
-#   path after the first tree already printed correctly -- not yet
-#   root-caused, possibly related to mandelbrot's but not confirmed.
+# - binarytrees.c: a real bug, deeply investigated but not yet
+#   root-caused -- no longer assumed related to mandelbrot's two bugs
+#   above now that those are both confirmed fixed and unrelated in
+#   mechanism (a preprocessor substitution bug and a %c/UTF-8-decoding
+#   bug, neither of which involves pointers). Confirmed: the tree
+#   itself is built correctly (ItemCheck(stretchTree) prints the exact
+#   right checksum); DeleteTree(stretchTree)'s later traversal then
+#   dereferences a corrupted pointer, several recursive calls in, not
+#   on its first call. Narrowed to a real, tree-size-dependent
+#   interaction with a *preceding* print() call that has exactly one
+#   integer format verb (removing that print() call, or shrinking the
+#   verb count to zero, or shrinking the tree, each independently make
+#   it disappear) -- but the exact mechanism inside dofmt()/vfprint()
+#   wasn't pinned down before the host's endpoint security software
+#   started quarantining every freshly-built binary faster than the
+#   documented "retry a few times" workaround could keep up with (see
+#   notes_debug_techniques.txt), cutting the investigation short. Full
+#   writeup of everything ruled in/out so far -- including a *separate*,
+#   unrelated bug found along the way (reading argv[1] crashes
+#   immediately on darwin/arm64, not exercised by this benchmark's own
+#   no-args invocation) -- in todo.org's "7c (compiler)" section, not a
+#   notes_*.txt file (per docs/claude_notes/README's own convention:
+#   those are for done, verified work, and this isn't done yet).
 # - knucleotide.c: needs a real FILE*/fopen/fgets/fclose/realloc/
 #   strdup -- a much bigger step than every other program here, none
 #   of which touch real file I/O.
@@ -228,7 +269,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect aes vmach sha3 siphash24
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect aes vmach sha3 siphash24 mandelbrot
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 

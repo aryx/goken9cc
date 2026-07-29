@@ -215,15 +215,52 @@ __fmtrcpy(Fmt *f, const void *vm, int n)
 	return 0;
 }
 
-/* fmt out one character */
+/* claude: was `x[0] = va_arg(...); f->prec = 1; return __fmtcpy(f,
+ * (const char*)x, 1, 1);` -- __fmtcpy() is written for copying UTF-8
+ * *text* (used elsewhere for %s/%q and friends, where that's exactly
+ * right): any byte >= Runeself (0x80) is treated as the leading byte
+ * of a multi-byte UTF-8 sequence, decoded via chartorune(), and
+ * re-encoded via FMTRUNE's runetochar() on the way out. For a single
+ * raw byte with the high bit set, fullrune() correctly reports "not a
+ * complete sequence" (there's only ever the one byte on hand here),
+ * so __fmtcpy() hit its `else break;` case -- silently writing
+ * *nothing* and returning success, with no error surfaced anywhere.
+ * `%c`'s contract in this codebase is "write exactly one raw byte,
+ * whatever its value" (see include/APE/stdio.h's own comment on
+ * putc()), not "format one UTF-8 rune" -- that's __runefmt()/%C's job,
+ * a few lines below, which already exists separately. Confirmed via
+ * tests/c/regressions/fmt_charfmt_high_bit.c and while unblocking
+ * benchs/compcert/mandelbrot.c's `putc(byte_acc, stdout)` (see
+ * docs/claude_notes/notes_libc_selfhost.txt): a lone `putc((char)200,
+ * stdout);` emitted nothing at all. Fixed by writing the byte directly
+ * via FMTCHAR (already used elsewhere in this file for plain,
+ * non-rune single-character output, e.g. numeric padding) instead of
+ * routing through __fmtcpy()'s UTF-8-decoding path -- keeps the same
+ * width-padding behavior __fmtcpy() provided, drops only the wrong
+ * rune interpretation.
+ */
 int
 __charfmt(Fmt *f)
 {
-	char x[1];
+	char x, *t, *s;
+	ulong fl;
+	int w;
 
-	x[0] = va_arg(f->args, int);
-	f->prec = 1;
-	return __fmtcpy(f, (const char*)x, 1, 1);
+	x = va_arg(f->args, int);
+	fl = f->flags;
+	w = 0;
+	if(fl & FmtWidth)
+		w = f->width;
+	if(!(fl & FmtLeft) && __fmtpad(f, w - 1) < 0)
+		return -1;
+	t = (char*)f->to;
+	s = (char*)f->stop;
+	FMTCHAR(f, t, s, x);
+	f->nfmt++;
+	f->to = t;
+	if(fl & FmtLeft && __fmtpad(f, w - 1) < 0)
+		return -1;
+	return 0;
 }
 
 /* fmt out one rune */

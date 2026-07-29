@@ -278,6 +278,55 @@ truncation bug's own repro, and warn_default_visible.check in
 tests/c/regressions/mkfile for a regression test confirming the
 warning now shows without `-w` and is suppressed by `-q`.
 
+Macro parameter substituted inside a string/char literal in its own body (universal; now fixed in all three)
+------------------------------------------------------------------------------------------------------------------
+
+claude: found while unblocking benchs/compcert/mandelbrot.c: include/
+APE/stdio.h's `#define putc(c, stream) print("%c", (c))` expanded
+`putc(byte_acc, stdout)` into `print("%byte_acc", (byte_acc))` instead
+of `print("%c", (byte_acc))` -- the macro's own parameter name `c` also
+appears as a character inside the string literal `"%c"` in the macro
+body, and the preprocessor wrongly substituted it there too. C
+requires macro parameter substitution to never occur inside string or
+character literals.
+
+Root cause is in the macro-body *encoder* (not the expander): the
+function that scans a `#define`d body at definition time (macdef() in
+src/cmd/cc/macbody, compilers/cck/macbody, and compilers/cc/mac.c) and
+replaces each occurrence of a parameter name with an internal `#
+<letter>` placeholder was applying its identifier-matching check
+(`isalpha(c) || c == '_'`) unconditionally -- including while inside a
+string or character literal, a state the same loop already tracks
+correctly via a local `ischr` variable for other purposes (skipping
+escape sequences, etc.) but wasn't consulting for this check. Fixed by
+adding `!ischr &&` to the condition, identically in all three files.
+See tests/c/regressions/cpp_macro_param_in_string.c for the minimal
+repro/regression test (checked on 7c, 6c, and 8c -- one representative
+compiler per frontend fork).
+
+**Status: fixed in all three.** Confirmed identically present before
+the fix (verified via `-S` output showing the corrupted `"%42"` string
+data instead of `"%c"`) and confirmed fixed after, on 7c (src/cmd/cc
+lineage), 6c (compilers/cck lineage), and 8c (compilers/cc lineage).
+
+claude: build-system gotcha hit while verifying the fix actually landed
+in the *installed* compiler binaries, worth remembering for any future
+macbody/mac.c edit: `mac.$O: macbody` is commented out in both
+compilers/cck/mkfile and compilers/cc/mkfile, so a plain `mk install`
+after editing macbody never notices mac.c needs recompiling -- `mk -a
+install` (force) is required. And for 6c specifically, compilers/6c/
+itself doesn't compile mac.c at all -- it links a *prebuilt*
+compilers/cck/cc.a archive (built separately, from compilers/cck/'s own
+mkfile), so `mk -a install` inside compilers/6c/ alone just relinks 6c
+against a *stale* cc.a. compilers/cck/ needs its own `mk -a install`
+first (which rebuilds cc.a with the fix inside it), then compilers/6c/'s.
+8c didn't hit this because compilers/8c/'s own `mk -a install` already
+rebuilds compilers/cc/cc.ao (mac.o included) as part of the same
+invocation -- 8c and 5c apparently don't share a prebuilt-library
+indirection the way 6c does. Worth checking whether 5c has the same
+gotcha as 6c next time either is touched, rather than assuming 8c's
+straightforward rebuild generalizes.
+
 What's deliberately NOT on this list
 ------------------------------------------
 

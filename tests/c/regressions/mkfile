@@ -122,7 +122,34 @@
 # correctly via mask->e==64; the extra "raw value has nonzero upper
 # bits" condition was a false, unnecessary proxy for the same thing).
 # Now fixed to trust mask->e==64 alone.
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check
+#
+# cpp_macro_param_in_string: not diff-derived -- a goken-original bug
+# in all three frontend forks' shared macro-body encoder (src/cmd/cc/
+# macbody for 7c/vc/ic, compilers/cck/macbody for 6c, compilers/cc/
+# mac.c for 5c/8c -- identically), found while porting benchs/compcert/
+# mandelbrot.c to build under goken's own toolchain (see the comment in
+# the .c file, and benchs/compcert/mkfile's mandelbrot.c note, for the
+# full root cause). A `#define`d macro parameter name that also
+# appeared as a character inside a string/char literal in the same
+# macro body got wrongly substituted there too, violating C's rule
+# that parameter substitution never applies inside literals. Checked
+# on one representative compiler per frontend fork (7c, 6c, 8c),
+# matching warn_default_visible's approach below. Deliberately links
+# against no libc (see the .c file's own comment).
+#
+# claude: build-system gotcha hit while verifying this fix actually
+# landed in the installed binaries -- both compilers/cck/mkfile and
+# compilers/cc/mkfile have their `mac.$O: macbody` dependency line
+# commented out, so a plain `mk install` after editing macbody never
+# notices mac.c needs recompiling; `mk -a install` is required. And for
+# 6c specifically, compilers/6c/ itself doesn't compile mac.c at all --
+# it links a *prebuilt* compilers/cck/cc.a archive, so `mk -a install`
+# inside compilers/6c/ alone relinks 6c against a stale cc.a. cck's own
+# `mk -a install` (which rebuilds cc.a) has to run first, then 6c's.
+# 8c didn't hit this because compilers/8c/'s own `mk -a install`
+# rebuilds compilers/cc/cc.ao (mac.o included) as part of the same
+# invocation. See docs/claude_notes/notes_shared_frontend_bugs.txt.
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -296,6 +323,49 @@ arm64_bitcon_upper_bits.check:V: arm64_bitcon_upper_bits.c arm64_regressions_sta
 		echo 'ok: arm64_bitcon_upper_bits.exe exit 0'
 	if not {
 		echo 'FAILED: arm64_bitcon_upper_bits.exe (got '$st')'
+		exit failed
+	}
+
+cpp_macro_param_in_string.check:V: cpp_macro_param_in_string.c arm64_regressions_start.s mulzero_start_amd64.s mulzero_start_386.s
+	7c -Darm64 -c cpp_macro_param_in_string.c
+	7a -c arm64_regressions_start.s
+	7l -H7 -o cpp_macro_arm64.exe -E _main cpp_macro_param_in_string.7 arm64_regressions_start.7
+	6c -Damd64 -c cpp_macro_param_in_string.c
+	6a -c mulzero_start_amd64.s
+	6l -o cpp_macro_amd64.exe -E _main cpp_macro_param_in_string.6 mulzero_start_amd64.6
+	8c -D386 -c cpp_macro_param_in_string.c
+	8a -c mulzero_start_386.s
+	8l -o cpp_macro_386.exe -E _main cpp_macro_param_in_string.8 mulzero_start_386.8
+	for (a_exe in 'arm64 cpp_macro_arm64.exe' 'amd64 cpp_macro_amd64.exe' '386 cpp_macro_386.exe') {
+		a=`{echo $a_exe | awk '{print $1}'}
+		exe=`{echo $a_exe | awk '{print $2}'}
+		st=`{ ../../../scripts/qemu-runner $a ./$exe; echo $status }
+		if (~ $st 0)
+			echo 'ok: '$exe' exit 0'
+		if not {
+			echo 'FAILED: '$exe' (got '$st')'
+			exit failed
+		}
+	}
+
+# fmt_charfmt_high_bit: a runtime-library bug (lib_core/libc/fmt/
+# dofmt.c), not a compiler/linker one -- unlike every other check in
+# this file, needs a freshly-rebuilt libc.a, not just a compiler/
+# linker rebuild. See the .c file's own comment for the full story and
+# why this isn't in plain `test:V:` alongside the others. Modeled on
+# tests/c/hello_libc/mkfile's test_macos_arm64 (same forced-rebuild-of-
+# libc.a-then-link-then-run-natively shape); read that mkfile's own
+# comment before touching this recipe.
+fmt_charfmt_high_bit.check_macos_arm64:V: fmt_charfmt_high_bit.c
+	@{ cd ../../../lib_core/libc; rm -f libc.a; mk -a 'objtype=arm64' 'cputype=arm64' 'GOOS=darwin' install }
+	7c -Darm64 -c fmt_charfmt_high_bit.c
+	7l -H6 -L../../../ROOT/arch/arm64/lib -o fmt_charfmt_high_bit.exe -E _main fmt_charfmt_high_bit.7 -lc
+	../../../scripts/macos-codesign fmt_charfmt_high_bit.exe
+	st=`{ ./fmt_charfmt_high_bit.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: fmt_charfmt_high_bit.exe exit 0'
+	if not {
+		echo 'FAILED: fmt_charfmt_high_bit.exe (got '$st')'
 		exit failed
 	}
 

@@ -117,6 +117,93 @@ introduced the corruption, before you read any code:
   to misread as "this instruction looks fine" if you don't check the
   hex.
 
+Renaming a suspect identifier to correlate corruption with its name
+----------------------------------------------------------------------------
+
+When garbled output *looks* like it could be a stray identifier leaking
+into the wrong place (e.g. a string that should read "%c" instead reads
+something else entirely), and you have a specific suspect name in mind,
+rename that one identifier in a minimal repro and rebuild. If the
+garbled output changes to track the new name, that confirms the bug is
+substituting the identifier itself (a symbol-table/macro-expansion
+bug), not corrupting memory at some fixed offset unrelated to the name.
+This is how benchs/compcert/mandelbrot.c's `print("%c", (c))` bug was
+distinguished from a generic buffer-overrun theory early: renaming the
+macro parameter from `c` to some other letter changed *what* the
+corrupted string contained, immediately pointing at macro-parameter
+substitution rather than, say, a fixed-size scratch buffer being
+overwritten by unrelated data. See notes_shared_frontend_bugs.txt's
+"Macro parameter substituted inside a string/char literal" entry for
+the bug this caught.
+
+Reading `-S` assembly output to verify a fix without executing anything
+----------------------------------------------------------------------------
+
+Not every environment has qemu-user available to actually *run* a
+cross-arch regression test's binary (this project's own dev host
+often doesn't -- see notes_test_infra.txt). When the bug under test
+manifests as wrong compile-time output (a corrupted string literal, a
+wrong constant, a missing instruction) rather than needing runtime
+execution to observe, `Xc -S file.c` and grepping the resulting
+assembly for the specific `DATA`/instruction in question is a fast,
+completely execution-free way to confirm a fix landed -- e.g. `7c -S
+cpp_macro_param_in_string.c | grep 'DATA.*string'` showing
+`$"%c\z..."` (fixed) vs `$"%42\z..."` (bug) directly, no linking or
+qemu-runner needed at all. Combine with git stash on just the fixed
+source file (see notes_test_infra.txt's stash-based verification
+pattern) to see both the before and after in the same repro without
+ever running the binary.
+
+Using snprint() instead of intercepting write() to test format-string bugs
+----------------------------------------------------------------------------
+
+To test a bug in the fmt/ library's formatting logic itself (dofmt(),
+__charfmt(), etc.) without needing to capture what actually got written
+to a real file descriptor, use snprint()/vsnprint() -- they format into
+a caller-provided memory buffer through the *exact same* dofmt() code
+path print()/fprint() use, just without the syscall at the end. Much
+simpler than trying to intercept the write() syscall (a locally-defined
+function of the same name will NOT override a call to the real,
+already-linked write() in this codebase's simple static-linking model
+-- there's no symbol interposition support to lean on). See tests/c/
+regressions/fmt_charfmt_high_bit.c for a worked example: it detects the
+%c-drops-high-bit-bytes bug purely by checking snprint()'s return value
+and buffer contents, no file descriptor or qemu-runner involved.
+
+Verifying a fix actually reached the *installed* binary, not just the source
+------------------------------------------------------------------------------------
+
+A fix compiling cleanly in isolation (e.g. via a quick `-S` check, per
+the technique above) is not proof the *installed* compiler/linker
+binary a regression test will actually invoke has picked it up. Two
+distinct footguns found together while wiring up
+cpp_macro_param_in_string.check (see notes_shared_frontend_bugs.txt's
+entry on the underlying bug for the fuller story):
+
+- A dependency line in the relevant mkfile may be commented out (e.g.
+  `#mac.$O: macbody` in compilers/cck/mkfile and compilers/cc/mkfile),
+  so a plain `mk install` after editing a #include'd body file like
+  macbody silently rebuilds nothing. `mk -a install` (force) is
+  required whenever you can't trust the dependency graph is complete.
+- Some per-arch compiler directories don't compile their own frontend
+  source at all -- they link a *prebuilt* library archive built by a
+  sibling directory (compilers/6c/ links compilers/cck/cc.a rather than
+  compiling mac.c itself). `mk -a install` inside the leaf directory
+  only relinks against whatever that archive already contains; if the
+  archive itself is stale, the leaf binary stays stale too, silently.
+  Rebuild the library's own directory first (compilers/cck/, in this
+  example), then the leaf.
+
+The reliable way to actually confirm a fix landed in the binary you're
+about to trust: don't just check that the build reported success --
+re-run the same `-S`/behavioral check *after* the full rebuild chain,
+on the freshly-installed binary. That's what caught this: 8c picked up
+the fix on the first `mk -a install` (its own directory rebuilds its
+library inline), but 6c silently didn't until compilers/cck/ was
+rebuilt explicitly first -- a difference invisible from either build's
+"success" output alone, only visible by re-checking the actual
+resulting assembly.
+
 macOS/Darwin-specific execution debugging
 --------------------------------------------
 
