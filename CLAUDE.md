@@ -127,6 +127,14 @@ each with its own filename prefix:
 - `notes_test_infra.txt` — the testing *methodology* itself
   (qemu-runner vs binfmt_misc, golden-diffing, cross-lineage corpus
   comparison, wine/darling/wasm-runner) as opposed to any one test.
+- `notes_debug_techniques.txt` — *debugging* methodology (as opposed
+  to `notes_test_infra.txt`'s test-running methodology): differential
+  tracing against a reference compiler, progressive source
+  minimization, the `7c -N`/`-R`/`-g` flags for isolating which pass
+  introduced a bug, reading compiler warnings (visible by default; `-q`
+  silences them), and macOS-host-specific gotchas (Falcon quarantine
+  vs. a plain wrong-cwd bug looking identical). Read before a long
+  debugging session, not just after one.
 - `notes_libmach.txt` — lib_toolchain/libmach's own object-format
   parsing story, shared by iar/acid/5i/vi.
 - `notes_wasm.txt` — the ea/ec/el design (wasm is architecture and
@@ -147,5 +155,9 @@ Conventions:
   existing note, create one following this same structure — including
   a new axis/prefix if the content genuinely doesn't fit an existing
   one, the way `notes_abi_*`/`notes_shared_frontend_bugs`/
-  `notes_test_infra`/`notes_libmach` were added alongside the original
-  `notes_exec_*`/`notes_arch_*`/`notes_os_*` split.
+  `notes_test_infra`/`notes_debug_techniques`/`notes_libmach` were
+  added alongside the original `notes_exec_*`/`notes_arch_*`/
+  `notes_os_*` split.
+- Also worth updating specifically: `notes_debug_techniques.txt`,
+  whenever a debugging *session* (not just the bug it found) surfaces
+  a technique reusable beyond that one bug.

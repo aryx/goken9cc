@@ -97,11 +97,17 @@ introduced the corruption, before you read any code:
   `-g` level already, the bug is in codegen (cgen.c/txt.c), not
   optimization; if `-g` traces match but final output doesn't, the bug
   is downstream (reg.c/peep.c or the linker).
-- `-w`: enables warnings that are silently suppressed by default.
-  Don't skip this when a program "compiles clean but computes wrong" --
-  it can point straight at the bug. The sha3.c literal-truncation bug
-  produced a "truncated constant" warning on the exact lines at fault,
-  entirely invisible without `-w`.
+- Read the compiler's warnings. Don't skip this when a program
+  "compiles clean but computes wrong" -- it can point straight at the
+  bug. The sha3.c literal-truncation bug (see notes_shared_frontend_
+  bugs.txt's "unsuffixed hex constant" entry) produced a "truncated
+  constant" warning on the exact lines at fault, but at the time this
+  was found it was invisible unless `-w` was passed -- warnings are
+  visible by default now (as of the same session; `-q` silences them
+  instead), specifically *because* this bug was found this way and
+  demonstrated how much a default-off warning can hide. If you're
+  reading this on an older checkout where warnings still default off,
+  pass `-w` explicitly rather than trusting a "clean" build.
 - `7l -a`: prints the linker's disassembly listing (address, raw
   encoded bytes, and the Plan 9 assembly mnemonic) for everything it
   processed, interleaved with any diagnostics -- read the raw
