@@ -163,6 +163,20 @@ clean:V:
 # on arm64 -- fixed in the compiler (src/cmd/cc/pgen.c's bcomplex()),
 # not worked around here, per tests/c/regressions/
 # arm64_vlong_if_branch.c's full writeup.
+# sha3.c needed two of the same uvlong compiler/linker fixes as vmach.c
+# above (see tests/c/regressions/arm64_uvlong_shift32.c) plus one more,
+# specific to this file: its round-constant table used bare (no U/L/
+# ULL suffix) hex literals, several needing more than 32 bits, which
+# this toolchain's lexer silently truncates instead of promoting to
+# vlong/uvlong (a real, still-unfixed, project-wide lexer gap -- see
+# tests/c/regressions/hex_const_no_suffix_truncated.c and
+# docs/claude_notes/notes_shared_frontend_bugs.txt) -- worked around
+# here by adding explicit ULL suffixes (a complete no-op for gcc/
+# clang, which already inferred that type themselves), same "safe,
+# semantically-neutral source edit" shape as bisect.c's DBL_EPSILON
+# fix above, not a fix to the lexer itself given its much larger blast
+# radius (every integer literal compiled by this toolchain, not just
+# this one table).
 #
 # Still blocked, each for a different reason (not pursued further this
 # pass -- see docs/claude_notes/notes_libc_selfhost.txt for anything
@@ -174,18 +188,21 @@ clean:V:
 #   (0x3) dereferenced inside the recursive BottomUpTree/DeleteTree
 #   path after the first tree already printed correctly -- not yet
 #   root-caused, possibly related to mandelbrot's but not confirmed.
-# - sha3.c, siphash24.c: two of the three bugs originally suspected
-#   here are now fixed in the compiler/linker (a constant-registerization
-#   width bug in compilers/7c/reg.c's mkvar(), and a literal-pool
-#   truncation bug in linkers/7l/span.c's addpool() -- see
-#   tests/c/regressions/arm64_uvlong_shift32.c and
+# - siphash24.c: two of the three bugs originally suspected for this
+#   program and sha3.c (below) are now fixed in the compiler/linker (a
+#   constant-registerization width bug in compilers/7c/reg.c's mkvar(),
+#   and a literal-pool truncation bug in linkers/7l/span.c's addpool()
+#   -- see tests/c/regressions/arm64_uvlong_shift32.c and
 #   docs/claude_notes/notes_arch_arm64.txt for the full writeups), but
-#   both programs still fail every test vector after those fixes -- at
-#   least one more, distinct bug remains, not yet isolated. Re-verified
-#   individually correct post-fix and NOT the remaining cause: basic
-#   64-bit shift/rotate/add/xor with large constants, global const-array
-#   initializers, and register-count (variable-amount) shifts up to 63.
-#   Compiler-internals territory, still open.
+#   siphash24.c specifically still fails every test vector after those
+#   fixes -- differential tracing (see docs/claude_notes/
+#   notes_debug_techniques.txt) localized it to the SIPROUND macro's
+#   chained add/rotate/xor sequence under real register pressure (4
+#   live 64-bit accumulators), not any of the simpler primitives
+#   individually re-verified correct post-fix (basic 64-bit shift/
+#   rotate/add/xor with large constants, global const-array
+#   initializers, register-count shifts up to 63) -- narrowed but not
+#   yet root-caused past that. Compiler-internals territory, still open.
 # - knucleotide.c: needs a real FILE*/fopen/fgets/fclose/realloc/
 #   strdup -- a much bigger step than every other program here, none
 #   of which touch real file I/O.
@@ -201,7 +218,7 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
-GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect aes vmach
+GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect aes vmach sha3
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
 

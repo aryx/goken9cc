@@ -7,21 +7,25 @@
 # the running credits list (for the ones that do have an upstream origin).
 #
 # Every .check target below, and `test:V:` itself, verifies an
-# ALREADY-FIXED bug stays fixed -- a regression gate. hexfloat_literal.c
-# and elif_defined_silent_false.c (found while porting benchs/compcert/
-# {bisect,aes}.c to build under goken's own toolchain, see
-# docs/claude_notes/notes_libc_selfhost.txt) are the opposite: real,
-# confirmed, but still UNFIXED bugs, kept here as minimal repros for
-# whoever picks them up, deliberately NOT wired into `test:V:` -- doing
-# so would need asserting today's actually-wrong behavior as "passing",
-# which isn't a useful regression gate and would just need inverting
-# (and deleting) the moment either bug is actually fixed. See each
-# file's own comment for exactly how to verify by hand in the meantime.
+# ALREADY-FIXED bug stays fixed -- a regression gate. hexfloat_literal.c,
+# elif_defined_silent_false.c, and hex_const_no_suffix_truncated.c
+# (found while porting benchs/compcert/{bisect,aes,sha3}.c to build
+# under goken's own toolchain, see docs/claude_notes/
+# notes_libc_selfhost.txt and notes_shared_frontend_bugs.txt) are the
+# opposite: real, confirmed, but still UNFIXED bugs, kept here as
+# minimal repros for whoever picks them up, deliberately NOT wired
+# into `test:V:` -- doing so would need asserting today's actually-
+# wrong behavior as "passing", which isn't a useful regression gate
+# and would just need inverting (and deleting) the moment either bug
+# is actually fixed. See each file's own comment for exactly how to
+# verify by hand in the meantime.
 # arm64_uvlong_shift32.c *was* in that category too, but both bugs it
 # isolates are now fixed (see its own comment and
 # docs/claude_notes/notes_arch_arm64.txt) -- wired into test:V: below,
-# even though the benchmarks that motivated finding it (sha3.c,
-# siphash24.c) are still blocked by a separate, distinct, unfixed bug.
+# even though one of the two benchmarks that motivated finding it
+# (siphash24.c; sha3.c is now fixed and wired up, via the
+# hex_const_no_suffix_truncated.c workaround above) is still blocked
+# by a separate, distinct, unfixed bug.
 
 # mips_aut3_align: no runtime crash to check (see the comment in the
 # .c file for why) -- instead greps vc -A's own alignment trace and

@@ -17,7 +17,7 @@
 #include <string.h>
 #include <math.h>
 
-/* DBL_EPSILON: decimal literal, not the original C99 hex-float
+/* claude: DBL_EPSILON: decimal literal, not the original C99 hex-float
  * constant (0x1p-52, i.e. 2^-52) -- this project's own goken
  * toolchain doesn't support that syntax at all (see
  * tests/c/regressions/hexfloat_literal.c for an isolated repro, and

@@ -50,7 +50,7 @@ enum wordcode_instruct {
 #define Push7(x,y,z,t,u,v,w) \
   sp-=7, sp[6]=x, sp[5]=y, sp[4]=z, sp[3]=t, sp[2]=u, sp[1]=v, sp[0]=w
 
-/* stack[]/sp: `long long`, not `long`. The original used plain `long`
+/* claude: stack[]/sp: `long long`, not `long`. The original used plain `long`
  * throughout, which is fine on a real 64-bit host (gcc/clang: `long`
  * is genuinely 8 bytes there) but not on goken's own toolchain, where
  * `long` stays 4 bytes even on 64-bit arches (see

@@ -36,7 +36,7 @@ typedef unsigned char	u8;
 typedef unsigned short	u16;	
 typedef unsigned int	u32;
 
-/* Original used `#if defined(__ppc__) || defined(__PPC__)` /
+/* claude: Original used `#if defined(__ppc__) || defined(__PPC__)` /
  * `#elif defined(__i386__) || defined(__x86_64__) || ...` for
  * endianness detection. Rewritten (still compiled by both gcc/clang,
  * for the existing comparison this file is also built for, and by

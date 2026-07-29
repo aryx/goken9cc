@@ -215,6 +215,58 @@ frontends remain otherwise unmerged; see todo.org's "migrate 7c/vc/ic
 off src/cmd/cc" entry for the real fix, unifying the frontends so this
 class of bug stops recurring).
 
+Unsuffixed hex constant >32 bits: silently truncated, not promoted to vlong (universal, unfixed)
+---------------------------------------------------------------------------------------------------------
+
+claude: found via differential tracing (see docs/claude_notes/
+notes_debug_techniques.txt) while unblocking benchs/compcert/sha3.c: a
+`const uint64[24]` table of round constants written as plain hex
+literals with no `U`/`L`/`ULL` suffix (e.g. `0x800000000000808a`,
+copied verbatim from the reference Keccak implementation) built
+"clean" by default but every entry with a bit set above bit 31 was
+silently zeroed in its high 32 bits.
+
+Root cause is in the lexer's numeric-constant classifier (the `ncu:`
+label's suffix-handling block, ending at `nret:` where the parsed
+value gets narrowed via `convvtox()`): for a literal with *no* length
+suffix, the type-selection logic only ever tries TINT then (if
+unsigned, or TINT doesn't fit) TUINT -- there is no further fallback to
+TVLONG/TUVLONG when the value doesn't fit *either* 32-bit type. Real
+C89 (let alone C99) says an unsuffixed hex/octal constant should be
+promoted through int, unsigned int, long, unsigned long, and (C99+)
+long long, unsigned long long -- stopping at the first type the value
+actually fits, never silently truncating. gcc/clang follow this
+(hence the existing gcc/clang comparison in benchs/compcert/mkfile
+was never affected). This project's `long` is deliberately kept the
+same 4-byte width as `int` on every arch (see notes_libc_selfhost.txt),
+so the "long" tier is a no-op here regardless -- but the missing
+TVLONG/TUVLONG fallback means literals needing more than 32 bits have
+*no* correct tier to land in at all, and get silently kept as a
+truncated TINT/TUINT instead. A `-w`-only "truncated constant"
+warning does fire (see the offending `convvtox(vv, t) != vv` check),
+but is silent by default -- this looks like clean, working code
+without `-w`.
+
+Confirmed present, identically, in **all three** frontend forks in
+this tree: src/cmd/cc/lex.c (used by 7c/vc/ic), compilers/cck/lex.c
+(6c), and compilers/cc2/lex.c (8c, via compilers/5c's `../cc2/%.c`
+pattern rule -- see compilers/5c/mkfile). Same missing tier, same
+`ncu:`/`nret:` shape, in each. **Status: confirmed present, unfixed,
+in all three lexers.** Not fixed here -- worked around at the source
+level instead (sha3.c's table given explicit `ULL` suffixes, a
+complete no-op for gcc/clang, which already inferred that type) since
+the lexer fix touches literal-type inference for every single integer
+constant compiled by this toolchain, project-wide, a much larger blast
+radius than this session's other, narrowly-scoped fixes -- deserves
+its own dedicated pass (fix once, ideally in whichever frontend ends
+up canonical per todo.org's "migrate 7c/vc/ic off src/cmd/cc" item,
+rather than three times independently) rather than a quick patch here.
+tests/c/regressions/ (still) has no minimal repro for this specific
+one -- add `arm64_lexer_unsuffixed_hex.c`-shaped coverage before
+attempting the real fix, following this file's own "verify with -w,
+diff a `-S`/DATA dump against the correct high-32-bits value" recipe
+in the meantime.
+
 What's deliberately NOT on this list
 ------------------------------------------
 

@@ -335,12 +335,22 @@ global `const uint64[]` array initializers, and register-count
 (variable-amount, not compile-time-constant) shifts up to 63 -- all
 independently correct after the two fixes above.
 
-sha3.c and siphash24.c are **not** unblocked by this alone, despite
-being the motivating case: both still fail every single test vector
-after both fixes land. At least one more, distinct bug remains
-somewhere in what these two programs do that the ad hoc repros above
-don't yet cover -- not isolated within this pass's budget. See
-benchs/compcert/mkfile's own "still blocked" note.
+sha3.c and siphash24.c are **not** unblocked by these two fixes alone,
+despite being the motivating case: both still failed every single test
+vector with just these two landed. sha3.c turned out to have a third,
+unrelated bug (a project-wide lexer gap, not arm64-specific -- see
+notes_shared_frontend_bugs.txt's "unsuffixed hex constant" entry) and
+is now fixed and wired up in benchs/compcert/mkfile via a source-level
+workaround. siphash24.c remains open: differential tracing (see
+notes_debug_techniques.txt) localized its remaining bug to the
+SIPROUND macro's chained add/rotate/xor sequence specifically under
+real register pressure (four live 64-bit accumulators) -- ad hoc
+repros of the same primitives individually (basic 64-bit shift/rotate/
+add/xor with large constants, ROTL-by-32 as its own idiom, global
+`const uint64[]` array initializers, register-count shifts up to 63)
+all came back correct, so it's not any one of those alone. Narrowed
+but not root-caused past that. See benchs/compcert/mkfile's own "still
+blocked" note.
 
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------

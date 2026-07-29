@@ -1,0 +1,149 @@
+Debugging techniques for goken miscompilation bugs
+=====================================================
+
+claude: General-purpose debugging *methodology* for tracking down
+goken compiler/assembler/linker bugs -- as opposed to
+notes_test_infra.txt (how the test suite itself is organized and run)
+or notes_shared_frontend_bugs.txt (a status table of specific bugs).
+This is "how I found bug X", written so the next session doesn't have
+to rediscover these from scratch. Grown out of the arm64 uvlong
+constant-truncation and sha3.c lexer-truncation investigations (see
+notes_arch_arm64.txt and git history); update this file when a new
+technique earns its place, not with narrative of any specific bug hunt.
+
+Differential tracing against a reference compiler (the single most useful technique)
+------------------------------------------------------------------------------------------
+
+When a program builds and links cleanly but computes the wrong answer
+(the hardest class of bug -- no diagnostic points at anything), the
+fastest way to localize it is NOT to stare at codegen. Instead:
+
+1. Take the exact same source file goken is miscompiling.
+2. Add plain `printf()` trace statements at natural checkpoints (loop
+   iterations, after each major computation step) -- printing enough
+   intermediate state to reconstruct where things went right vs wrong.
+   Many benchmark files already have a `#ifdef DEBUG` block ready-made
+   for this (see benchs/compcert/siphash24.c) -- check before adding
+   your own.
+3. Compile the *instrumented* copy with a real, trusted compiler
+   (clang or gcc, whichever is on the host) AND with goken's own
+   toolchain, using the exact same source.
+4. Run both, diff the trace output line by line. The first line that
+   differs tells you exactly which step/iteration/variable is wrong --
+   turning "the whole program is wrong" into "this one expression, in
+   this one iteration, computes 0x...wrong instead of 0x...right".
+
+This is dramatically faster than reading -S assembly cold, because you
+don't need to already suspect what's broken -- the diff finds it for
+you. Once you have a suspect line, THEN read the assembly for just
+that line/expression.
+
+Concretely (see git history around the sha3.c/siphash24.c
+investigation for the full worked example): a Keccak permutation
+function was instrumented to print the full 25-word state after every
+round; clang's and goken's traces matched for rounds 0-1 and diverged
+at round 2 in exactly one word, by exactly one bit -- immediately
+pointing at that round's specific round-constant (a value with bit 63
+set) rather than requiring any theory about *why* first.
+
+Progressive source minimization once you have a live repro
+------------------------------------------------------------------
+
+Once differential tracing (or any other method) gives you a *reliably
+reproducing* buggy program (even a whole real-world file), shrink it
+mechanically rather than guessing:
+
+1. Delete unrelated code paths a chunk at a time (unused functions,
+   unused struct fields, whole macro-expanded steps) and rebuild+rerun
+   after each deletion.
+2. Keep deleting as long as the bug still reproduces; back out the last
+   deletion the moment it stops.
+3. Prefer deleting *whole semantic units* (a macro invocation, a case
+   arm, a function) over line-by-line edits -- faster convergence, and
+   each intermediate state is still meaningful C.
+
+This reliably turns a multi-hundred-line real program into a
+20-50-line minimal repro suitable for tests/c/regressions/, without
+needing to understand the bug's mechanism first. It's how a full
+Keccak permutation (~100 lines including three macro-heavy transform
+steps) reduced to a ~15-line loop doing nothing but
+`st0 ^= const_array[round]` for the sha3.c literal-truncation bug --
+Theta, RhoPi, and Chi were all provably irrelevant once each was
+deleted in turn and the bug persisted.
+
+7c/7l-specific debug flags for bisecting *which pass* is at fault
+-------------------------------------------------------------------------
+
+Once you know a program's output is wrong (not just "it looks
+different in assembly"), these flags narrow down which compiler PASS
+introduced the corruption, before you read any code:
+
+- `7c -N file.c -S`: disables regopt() entirely (no register
+  allocation/optimization pass at all). If the bug disappears, it's
+  somewhere in regopt()/reg.c or peep.c, not in the initial
+  expression-to-Prog codegen (cgen.c/txt.c).
+- `7c -R file.c -S`: runs regopt() but skips peep() specifically (see
+  compilers/7c/reg.c's `if(!debug['R'] || debug['P']) peep();`). If `-R`
+  still shows the bug but `-N` doesn't, the bug is in regopt() itself
+  (register allocation/coloring/spill-reload synthesis), not the
+  peephole optimizer -- a real example: the mkvar() constant-width bug
+  in notes_arch_arm64.txt was isolated exactly this way.
+- `7c -g file.c -c`: prints every Prog as it's generated (gins()'s own
+  `if(debug['g']) print("%P\n", p);`), i.e. the RAW codegen before any
+  optimization pass touches it. Compare this against the same `-g`
+  trace from a different backend (e.g. 6c) building the identical
+  source, to see whether both backends reach the same intermediate
+  representation or diverge immediately -- if they diverge at the
+  `-g` level already, the bug is in codegen (cgen.c/txt.c), not
+  optimization; if `-g` traces match but final output doesn't, the bug
+  is downstream (reg.c/peep.c or the linker).
+- `-w`: enables warnings that are silently suppressed by default.
+  Don't skip this when a program "compiles clean but computes wrong" --
+  it can point straight at the bug. The sha3.c literal-truncation bug
+  produced a "truncated constant" warning on the exact lines at fault,
+  entirely invisible without `-w`.
+- `7l -a`: prints the linker's disassembly listing (address, raw
+  encoded bytes, and the Plan 9 assembly mnemonic) for everything it
+  processed, interleaved with any diagnostics -- read the raw
+  bytes column, not just the mnemonic: an instruction that failed to
+  encode (oplook() found no matching optab entry) shows as all-zero
+  bytes with a normal-looking mnemonic printed alongside, which is easy
+  to misread as "this instruction looks fine" if you don't check the
+  hex.
+
+macOS/Darwin-specific execution debugging
+--------------------------------------------
+
+See notes_exec_macho.txt's own "Producing macOS arm64 executables"
+section for the primary techniques already documented there (codesign
+--verify, log stream for syspolicyd/AMFI verdicts, and an lldb batch-
+script pattern for tracing every call to a specific function via an
+auto-continuing breakpoint) -- not duplicated here. One addition from
+this pass: `file <binary>` (not just `ls`) is the fast way to tell
+"does this Mach-O actually exist and parse as one" apart from "the
+shell just hasn't caught up yet" -- a plain `ls -la` can show a
+file that a syscall-level race (quarantine removal, or simply writing
+to the wrong cwd -- see the note below) has already made disappear by
+the time the *next* command runs; `file` forces an actual open().
+
+Two non-lldb, non-otool gotchas on this host that both produce the
+*identical* symptom -- a build reports success (`exit=0`) but the
+output file "doesn't exist" moments later -- and are worth telling
+apart before suspecting the toolchain:
+
+- The agent shell's cwd can silently reset to a *different* configured
+  working directory (not just back to the primary repo root) after a
+  `cd` into a scratch/temp directory several tool-calls earlier. Check
+  with a plain `pwd` first; this is the more common self-inflicted
+  cause.
+- Separately, this host runs endpoint security software (observed:
+  CrowdStrike Falcon) that can quarantine/remove a freshly-built,
+  ad-hoc-signed executable within a very short window after creation
+  -- sometimes right after `codesign`, sometimes even before it. Not a
+  code bug: confirmed by watching a file exist under `ls -la` and then
+  fail to `open()` (via `file <binary>`) moments later in the *same*
+  shell invocation, with no error from the linker or codesign. No
+  reliable workaround found beyond retrying (usually works within a
+  few attempts) or building under a name/path not previously
+  quarantined this session; do not attempt to disable or bypass the
+  security tool itself.

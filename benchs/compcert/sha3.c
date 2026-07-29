@@ -12,16 +12,28 @@ typedef unsigned char uint8;
 
 #define ROTL64(x, y) (((x) << (y)) | ((x) >> (64 - (y))))
 
-const uint64 keccakf_rndc[24] = 
+/* claude: ULL suffix: without it, an unsuffixed hex literal that doesn't fit
+ * `int` or `unsigned int` is silently truncated to 32 bits by this
+ * compiler's lexer (a `-w`-only warning, "truncated constant", not an
+ * error -- see tests/c/regressions/hex_const_no_suffix_truncated.c).
+ * Real C99/gcc/clang instead auto-promote such a literal to the narrowest
+ * type it actually fits (here `unsigned long long`), so this table
+ * silently built with every high-32-bit-set entry zeroed on goken
+ * while still "compiling clean" by default. ULL is a complete no-op
+ * for gcc/clang (same value, same effective type either way -- they
+ * already promote it that way themselves), so this doesn't affect the
+ * existing gcc/clang comparison this file is also built for.
+ */
+const uint64 keccakf_rndc[24] =
 {
-    0x0000000000000001, 0x0000000000008082, 0x800000000000808a,
-    0x8000000080008000, 0x000000000000808b, 0x0000000080000001,
-    0x8000000080008081, 0x8000000000008009, 0x000000000000008a,
-    0x0000000000000088, 0x0000000080008009, 0x000000008000000a,
-    0x000000008000808b, 0x800000000000008b, 0x8000000000008089,
-    0x8000000000008003, 0x8000000000008002, 0x8000000000000080, 
-    0x000000000000800a, 0x800000008000000a, 0x8000000080008081,
-    0x8000000000008080, 0x0000000080000001, 0x8000000080008008
+    0x0000000000000001ULL, 0x0000000000008082ULL, 0x800000000000808aULL,
+    0x8000000080008000ULL, 0x000000000000808bULL, 0x0000000080000001ULL,
+    0x8000000080008081ULL, 0x8000000000008009ULL, 0x000000000000008aULL,
+    0x0000000000000088ULL, 0x0000000080008009ULL, 0x000000008000000aULL,
+    0x000000008000808bULL, 0x800000000000008bULL, 0x8000000000008089ULL,
+    0x8000000000008003ULL, 0x8000000000008002ULL, 0x8000000000000080ULL,
+    0x000000000000800aULL, 0x800000008000000aULL, 0x8000000080008081ULL,
+    0x8000000000008080ULL, 0x0000000080000001ULL, 0x8000000080008008ULL
 };
 
 const int keccakf_rotc[24] = 
