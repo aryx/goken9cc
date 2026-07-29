@@ -1217,7 +1217,19 @@ warn(Node *n, char *fmt, ...)
 	char buf[STRINGSZ];
 	va_list arg;
 
-	if(debug['w']) {
+	/* claude: was `if(debug['w'])` (warnings opt-in, off by default).
+	 * Flipped: warnings are real diagnostics (a silently-dropped high
+	 * bit in a constant is a genuine miscompilation footgun -- see
+	 * docs/claude_notes/notes_shared_frontend_bugs.txt's "unsuffixed
+	 * hex constant" entry, found via exactly this class of warning
+	 * being invisible by default), so they should behave like any
+	 * modern tool's WARN level: visible unless explicitly silenced.
+	 * `-q` (unused by any debug[] flag in this frontend before now)
+	 * suppresses them; `-w` no longer does anything here (kept
+	 * available, unused, rather than repurposed, since no build
+	 * script in this tree passed it either way).
+	 */
+	if(!debug['q']) {
 		Bprint(&diagbuf, "warning: ");
 		va_start(arg, fmt);
 		vseprint(buf, buf+sizeof(buf), fmt, arg);

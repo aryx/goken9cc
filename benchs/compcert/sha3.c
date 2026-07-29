@@ -14,15 +14,14 @@ typedef unsigned char uint8;
 
 /* claude: ULL suffix: without it, an unsuffixed hex literal that doesn't fit
  * `int` or `unsigned int` is silently truncated to 32 bits by this
- * compiler's lexer (a `-w`-only warning, "truncated constant", not an
- * error -- see tests/c/regressions/hex_const_no_suffix_truncated.c).
+ * compiler's lexer, which warns ("truncated constant") but doesn't
+ * error -- see tests/c/regressions/hex_const_no_suffix_truncated.c.
  * Real C99/gcc/clang instead auto-promote such a literal to the narrowest
- * type it actually fits (here `unsigned long long`), so this table
- * silently built with every high-32-bit-set entry zeroed on goken
- * while still "compiling clean" by default. ULL is a complete no-op
- * for gcc/clang (same value, same effective type either way -- they
- * already promote it that way themselves), so this doesn't affect the
- * existing gcc/clang comparison this file is also built for.
+ * type it actually fits (here `unsigned long long`), so this table built
+ * with every high-32-bit-set entry zeroed on goken. ULL is a complete
+ * no-op for gcc/clang (same value, same effective type either way --
+ * they already promote it that way themselves), so this doesn't affect
+ * the existing gcc/clang comparison this file is also built for.
  */
 const uint64 keccakf_rndc[24] =
 {

@@ -94,7 +94,20 @@
 # 5l (-lXXX, and a direct .a path alongside -l, matching principia's
 # own kernel mkfile style) both now work and compute the right runtime
 # division/modulo results, not just "it linked".
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check
+#
+# warn_default_visible: not diff-derived -- found this file's own
+# `truncated constant` diagnostic (hex_const_no_suffix_truncated.c,
+# above) invisible without an explicit `-w`, which is how that real
+# bug went unnoticed in benchs/compcert/sha3.c. warn() in all three
+# frontends this tree builds against (src/cmd/cc/sub.c, compilers/cck/
+# sub.c, compilers/cc/sub.c -- covering 5c/6c/7c/8c/vc/ic between them)
+# now prints by default, suppressed with a new `-q` flag instead. Reuses
+# hex_const_no_suffix_truncated.c as input (any warn()-reachable
+# diagnostic would do; this one's already here and known to fire) and
+# checks both directions on 7c and 6c (one representative per frontend
+# fork that changed): the warning appears with no flags, and `-q`
+# silences it.
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -223,6 +236,41 @@ arm64_uvlong_shift32.check:V: arm64_uvlong_shift32.c arm64_regressions_start.s
 		echo 'FAILED: arm64_uvlong_shift32.exe (got '$st')'
 		exit failed
 	}
+
+warn_default_visible.check:V: hex_const_no_suffix_truncated.c
+	7c -Darm64 -c hex_const_no_suffix_truncated.c >/tmp/warn_default.$pid.out >[2=1]
+	n=`{grep -c 'truncated constant' /tmp/warn_default.$pid.out}
+	if (~ $n 1)
+		echo 'ok: 7c shows truncated-constant warning by default'
+	if not {
+		echo 'FAILED: 7c did not warn by default (got '$n' matches)'
+		exit failed
+	}
+	7c -q -Darm64 -c hex_const_no_suffix_truncated.c >/tmp/warn_q.$pid.out >[2=1]
+	n=`{grep -c 'truncated constant' /tmp/warn_q.$pid.out}
+	if (~ $n 0)
+		echo 'ok: 7c -q suppresses the warning'
+	if not {
+		echo 'FAILED: 7c -q did not suppress the warning (got '$n' matches)'
+		exit failed
+	}
+	6c -Damd64 -c hex_const_no_suffix_truncated.c >/tmp/warn_default6.$pid.out >[2=1]
+	n=`{grep -c 'truncated constant' /tmp/warn_default6.$pid.out}
+	if (~ $n 1)
+		echo 'ok: 6c shows truncated-constant warning by default'
+	if not {
+		echo 'FAILED: 6c did not warn by default (got '$n' matches)'
+		exit failed
+	}
+	6c -q -Damd64 -c hex_const_no_suffix_truncated.c >/tmp/warn_q6.$pid.out >[2=1]
+	n=`{grep -c 'truncated constant' /tmp/warn_q6.$pid.out}
+	if (~ $n 0)
+		echo 'ok: 6c -q suppresses the warning'
+	if not {
+		echo 'FAILED: 6c -q did not suppress the warning (got '$n' matches)'
+		exit failed
+	}
+	rm -f /tmp/warn_default.$pid.out /tmp/warn_q.$pid.out /tmp/warn_default6.$pid.out /tmp/warn_q6.$pid.out
 
 clean:V:
 	rm -f *.v *.j *.i *.o *.6 *.8 *.5 *.a o.out *.exe

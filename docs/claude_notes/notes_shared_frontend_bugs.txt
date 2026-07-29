@@ -215,16 +215,17 @@ frontends remain otherwise unmerged; see todo.org's "migrate 7c/vc/ic
 off src/cmd/cc" entry for the real fix, unifying the frontends so this
 class of bug stops recurring).
 
-Unsuffixed hex constant >32 bits: silently truncated, not promoted to vlong (universal, unfixed)
----------------------------------------------------------------------------------------------------------
+Unsuffixed hex constant >32 bits: truncated, not promoted to vlong (universal; now warns by default, still unfixed)
+------------------------------------------------------------------------------------------------------------------------------
 
 claude: found via differential tracing (see docs/claude_notes/
 notes_debug_techniques.txt) while unblocking benchs/compcert/sha3.c: a
 `const uint64[24]` table of round constants written as plain hex
 literals with no `U`/`L`/`ULL` suffix (e.g. `0x800000000000808a`,
 copied verbatim from the reference Keccak implementation) built
-"clean" by default but every entry with a bit set above bit 31 was
-silently zeroed in its high 32 bits.
+without complaint (by default, before the warn() fix below) but every
+entry with a bit set above bit 31 was silently zeroed in its high 32
+bits.
 
 Root cause is in the lexer's numeric-constant classifier (the `ncu:`
 label's suffix-handling block, ending at `nret:` where the parsed
@@ -242,30 +243,40 @@ same 4-byte width as `int` on every arch (see notes_libc_selfhost.txt),
 so the "long" tier is a no-op here regardless -- but the missing
 TVLONG/TUVLONG fallback means literals needing more than 32 bits have
 *no* correct tier to land in at all, and get silently kept as a
-truncated TINT/TUINT instead. A `-w`-only "truncated constant"
-warning does fire (see the offending `convvtox(vv, t) != vv` check),
-but is silent by default -- this looks like clean, working code
-without `-w`.
+truncated TINT/TUINT instead.
 
 Confirmed present, identically, in **all three** frontend forks in
 this tree: src/cmd/cc/lex.c (used by 7c/vc/ic), compilers/cck/lex.c
-(6c), and compilers/cc2/lex.c (8c, via compilers/5c's `../cc2/%.c`
-pattern rule -- see compilers/5c/mkfile). Same missing tier, same
-`ncu:`/`nret:` shape, in each. **Status: confirmed present, unfixed,
-in all three lexers.** Not fixed here -- worked around at the source
-level instead (sha3.c's table given explicit `ULL` suffixes, a
-complete no-op for gcc/clang, which already inferred that type) since
-the lexer fix touches literal-type inference for every single integer
-constant compiled by this toolchain, project-wide, a much larger blast
-radius than this session's other, narrowly-scoped fixes -- deserves
-its own dedicated pass (fix once, ideally in whichever frontend ends
-up canonical per todo.org's "migrate 7c/vc/ic off src/cmd/cc" item,
-rather than three times independently) rather than a quick patch here.
-tests/c/regressions/ (still) has no minimal repro for this specific
-one -- add `arm64_lexer_unsuffixed_hex.c`-shaped coverage before
-attempting the real fix, following this file's own "verify with -w,
-diff a `-S`/DATA dump against the correct high-32-bits value" recipe
-in the meantime.
+(6c), and compilers/cc/lex.c (5c/8c, via compilers/5c's `../cc2/%.c`
+pattern rule pointing at compilers/cc2 for most files but `LIB=../cc/
+cc.a$O` for the frontend itself -- see compilers/5c/mkfile and
+compilers/8c/mkfile). Same missing tier, same `ncu:`/`nret:` shape, in
+each. **Status: the truncation itself is confirmed present, unfixed,
+in all three lexers** -- not fixed here, worked around at the source
+level instead for sha3.c specifically (its table given explicit `ULL`
+suffixes, a complete no-op for gcc/clang, which already inferred that
+type) since the real fix touches literal-type inference for every
+single integer constant compiled by this toolchain, project-wide, a
+much larger blast radius than this session's other, narrowly-scoped
+fixes -- deserves its own dedicated pass (fix once, ideally in
+whichever frontend ends up canonical per todo.org's "migrate 7c/vc/ic
+off src/cmd/cc" item, rather than three times independently).
+
+**What *is* fixed, in all three**: the "truncated constant" diagnostic
+used to be invisible by default (gated behind `warn()`, itself gated
+behind `-w`, off unless explicitly requested), which is how this went
+unnoticed in sha3.c in the first place. `warn()` in all three frontends
+(src/cmd/cc/sub.c, compilers/cck/sub.c, compilers/cc/sub.c) now prints
+by default, suppressed with a new `-q` flag instead (previously-unused
+in all three; compilers/cck's separate `-W`, "promote warnings to hard
+errors", is untouched). This doesn't fix the truncation, only its
+visibility -- but that alone is enough to catch the next instance of
+this bug (or any other `warn()`-reported issue) without needing to
+already suspect something specific and pass `-w`. See tests/c/
+regressions/hex_const_no_suffix_truncated.c for the still-open
+truncation bug's own repro, and warn_default_visible.check in
+tests/c/regressions/mkfile for a regression test confirming the
+warning now shows without `-w` and is suppressed by `-q`.
 
 What's deliberately NOT on this list
 ------------------------------------------
