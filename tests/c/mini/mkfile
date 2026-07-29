@@ -43,7 +43,7 @@ helloc_macos_arm64.exe: helloc.c
    7a -Darm64 -c start_arm64.s
    7a -Darm64 -c xwrite_macos_arm64.s
    7a -Darm64 -c xexit_macos_arm64.s
-   arg rc libmini.a start_arm64.7 xwrite_macos_arm64.7 xexit_macos_arm64.7
+   iar rc libmini.a start_arm64.7 xwrite_macos_arm64.7 xexit_macos_arm64.7
    7l -H6 -L. -o $target -E _start helloc.7
    if(~ `{uname} Darwin) codesign -s - -f $target
    if not true
