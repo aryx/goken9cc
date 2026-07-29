@@ -275,6 +275,13 @@ clean:V:
 # the $TOP/scripts/macos-codesign call below) before it will run.
 # test_goken_macos_arm64 exercises this directly, no qemu.
 TOP=../..
+# Only for the cputype/objtype/ostype defaults (so plain 'mk goken' works
+# without an explicit 'cputype='<arch>) -- deliberately not
+# $TOP/mkfiles/$objtype/mkfile, which also (re)defines $CFLAGS/$CC/$LD and
+# would clobber the gcc/clang variables this file already set above (see
+# comment below on the %.goken recipe for why the arch->tool-letter table
+# is spelled out here instead of pulled in from there too).
+<$TOP/mkconfig
 GOKENPROGS=fib integr lists fftw fannkuch nsieve nsievebits perlin spectral nbody fft sha1 qsort chomp almabench fftsp bisect aes vmach sha3 siphash24 mandelbrot
 GOKENBINS=${GOKENPROGS:%=%.goken}
 GOKENCFLAGS=-I$TOP/include -I$TOP/include/ALL -I$TOP/include/APE -I$TOP/include/arch/$cputype -I.
