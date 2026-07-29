@@ -235,25 +235,31 @@ clean:V:
 #   root-caused -- no longer assumed related to mandelbrot's two bugs
 #   above now that those are both confirmed fixed and unrelated in
 #   mechanism (a preprocessor substitution bug and a %c/UTF-8-decoding
-#   bug, neither of which involves pointers). Confirmed: the tree
-#   itself is built correctly (ItemCheck(stretchTree) prints the exact
-#   right checksum); DeleteTree(stretchTree)'s later traversal then
-#   dereferences a corrupted pointer, several recursive calls in, not
-#   on its first call. Narrowed to a real, tree-size-dependent
-#   interaction with a *preceding* print() call that has exactly one
-#   integer format verb (removing that print() call, or shrinking the
-#   verb count to zero, or shrinking the tree, each independently make
-#   it disappear) -- but the exact mechanism inside dofmt()/vfprint()
-#   wasn't pinned down before the host's endpoint security software
-#   started quarantining every freshly-built binary faster than the
-#   documented "retry a few times" workaround could keep up with (see
-#   notes_debug_techniques.txt), cutting the investigation short. Full
-#   writeup of everything ruled in/out so far -- including a *separate*,
-#   unrelated bug found along the way (reading argv[1] crashes
-#   immediately on darwin/arm64, not exercised by this benchmark's own
-#   no-args invocation) -- in todo.org's "7c (compiler)" section, not a
-#   notes_*.txt file (per docs/claude_notes/README's own convention:
-#   those are for done, verified work, and this isn't done yet).
+#   bug, neither of which involves pointers). Precisely characterized,
+#   100% deterministic (not a probabilistic memory-corruption symptom):
+#   ItemCheck(), recursively traversing a perfect binary tree of depth
+#   D (2^(D+1)-1 nodes), makes exactly that many correct calls and then
+#   exactly ONE extra spurious call with tree==NULL immediately after --
+#   verified identical in shape at D=8,10,12,14,16,17,18. Triggered
+#   specifically by main() containing a pow() call *anywhere* in its
+#   body (even in a loop never reached before the crash) -- removing
+#   just that one pow()-using line, everything else identical, makes
+#   the exact same tree/traversal run to completion with zero extra
+#   calls. Confirmed NOT address-magnitude-dependent (artificially
+#   padding the heap to the same address range without pow() present
+#   never reproduces it) and NOT a bug in any of NewTreeNode/ItemCheck/
+#   BottomUpTree/DeleteTree/main()'s own compiled code (all four
+#   functions, plus main()'s shared prefix and its prologue/epilogue,
+#   are byte-identical between the crashing and non-crashing builds,
+#   modulo relocation) -- so the trigger is a link-time/layout side
+#   effect of pow()'s mere presence, not anything pow() itself computes
+#   at runtime. Root cause still open. Full writeup of everything ruled
+#   in/out, plus a *separate*, unrelated bug found along the way
+#   (reading argv[1] crashes immediately on darwin/arm64, not exercised
+#   by this benchmark's own no-args invocation), in todo.org's "7c
+#   (compiler)" section, not a notes_*.txt file (per docs/claude_notes/
+#   README's own convention: those are for done, verified work, and
+#   this isn't done yet).
 # - knucleotide.c: needs a real FILE*/fopen/fgets/fclose/realloc/
 #   strdup -- a much bigger step than every other program here, none
 #   of which touch real file I/O.

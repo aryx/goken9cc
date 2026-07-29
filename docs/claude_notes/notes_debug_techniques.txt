@@ -71,6 +71,26 @@ steps) reduced to a ~15-line loop doing nothing but
 Theta, RhoPi, and Chi were all provably irrelevant once each was
 deleted in turn and the bug persisted.
 
+When deleting-away stalls, try reconstructing-forward instead: if a
+"minimized" repro (built the normal way, by copying the real function
+bodies verbatim and stripping everything else) mysteriously stops
+reproducing the bug, don't assume you deleted the wrong thing -- it's
+possible the *thing you stripped away* is the actual trigger, even if
+it looks like unrelated, never-executed code. Add pieces of the
+original file back one at a time (a whole loop, a whole later
+statement) rather than continuing to guess what a truly-minimal repro
+should contain. This is how benchs/compcert/binarytrees.c's bug was
+actually found: a hand-written minimal repro (BottomUpTree/ItemCheck/
+DeleteTree, copied verbatim, called from a small main()) did not
+reproduce the crash at all, even at the real program's exact tree
+depth -- only restoring the *entire* original main() body, including a
+`pow()` call inside a loop that never executes before the crash point,
+brought the bug back. The trigger turned out to be the mere presence
+of that pow() call in the compiled function, not anything reachable at
+runtime -- something no amount of deleting-away from the full program
+would have surfaced as cleanly, since removing pow() looks like "just
+removing dead code relative to the crash" until you test it.
+
 7c/7l-specific debug flags for bisecting *which pass* is at fault
 -------------------------------------------------------------------------
 
@@ -116,6 +136,40 @@ introduced the corruption, before you read any code:
   bytes with a normal-looking mnemonic printed alongside, which is easy
   to misread as "this instruction looks fine" if you don't check the
   hex.
+
+Instrumenting a recursive function with a counter + guard + exit(), when lldb won't cooperate
+----------------------------------------------------------------------------------------------------
+
+When a deep recursive traversal (hundreds of thousands of calls) hits
+undefined behavior somewhere inside itself, and lldb's breakpoints
+aren't reliably stopping execution on this project's own binaries (see
+this file's own "macOS/Darwin-specific execution debugging" section,
+and the underlying issue is broader than just quarantine -- address-
+based breakpoints have been observed to silently not fire at all, even
+for addresses causally before a later crash), don't fight the
+debugger: add the check *in the C source itself* and call exit() with
+a distinct, greppable code the moment it fires. Concretely, for "a
+recursive function sometimes gets called with a bad argument
+somewhere in a quarter-million-call traversal": add a global counter,
+increment it once per successful call, and guard the function's own
+first dereference with something like
+`if((unsigned long)ptr < 0x1000){ printf("BAD: ptr=%p at call #%d\n",
+ptr, counter); exit(77); }`. This turns "a nondescript SIGSEGV
+somewhere deep in a huge recursion, with lldb's own backtrace showing
+only one broken frame" (this project's minimal -H6 Mach-O output does
+not appear to carry whatever unwind info lldb needs for `bt` to walk
+more than one frame -- observed repeatedly, not yet root-caused
+separately) into an exact, reproducible, greppable data point: which
+call number failed, and what bad value it saw. This is what actually
+cracked benchs/compcert/binarytrees.c's bug (see todo.org's "7c
+(compiler)" section) after lldb's own breakpoints/watchpoints
+repeatedly failed to stop where expected -- the counter+guard
+approach revealed the failure was happening at *exactly* the total
+node count of a perfect binary tree (2^(depth+1)-1), every single
+time, regardless of the tree's actual memory address -- a level of
+precision no amount of "set a breakpoint and see what happens" got to
+in the same amount of time, because it doesn't depend on the debugger
+actually stopping where asked.
 
 Renaming a suspect identifier to correlate corruption with its name
 ----------------------------------------------------------------------------

@@ -195,77 +195,146 @@ that the narrower fix doesn't cover). Remaining, not done:
 
 *** 7c (compiler)
 
-**** binarytrees.c: pointer corruption after a variadic print() call, tree-size-dependent
+**** binarytrees.c: ItemCheck() makes exactly one extra call with tree==NULL, iff main() also uses pow()
 claude:
-Found while trying to unblock benchs/compcert/binarytrees.c (see
-docs/claude_notes/notes_debug_techniques.txt for the "renaming an
-identifier"/"reading -S output"/"snprint() instead of write()"
-techniques already documented from this session, none of which
-fully cracked this one -- this entry exists instead of a notes_*.txt
-writeup precisely because the investigation is NOT done). Real,
-reproducible SIGSEGV (EXC_BAD_ACCESS, address in the 0x1-0x4 range --
-looks like a small leftover integer misread as a pointer, not a wild
-address) on darwin/arm64, isolated to DeleteTree()'s traversal
-dereferencing a corrupted `tree` pointer, several calls into its own
-recursion -- NOT the first call. Confirmed NOT a tree-construction bug:
-ItemCheck(stretchTree), which recursively visits the exact same nodes
-DeleteTree() will, runs immediately beforehand and prints the
-byte-for-byte correct checksum -- so the tree is provably intact right
-up until something *between* that ItemCheck() call and the DeleteTree()
-call corrupts it.
+Found while trying to unblock benchs/compcert/binarytrees.c. Second
+pass at this bug (see git history for the first pass's now-superseded
+theory, which blamed print()'s own formatting path directly -- still
+true that a print() call is *involved*, but the actual trigger and
+symptom are both much more specific than that pass had pinned down).
+Real, 100%-deterministic SIGSEGV on darwin/arm64 -- not a probabilistic
+memory-corruption symptom the way the "small leftover pointer value"
+framing from the first pass suggested.
 
-Narrowed via progressive isolation (real binarytrees.c, unmodified
-argc/atol structure preserved throughout -- see below for a *separate*,
-unrelated bug that structure exposed):
-- Deleting the `printf("stretch tree...", stretchDepth,
-  ItemCheck(stretchTree))` call entirely (replacing it with a
-  standalone `ItemCheck(stretchTree)` whose result is merely used, not
-  printed) makes DeleteTree(stretchTree) survive completely, at the
-  exact same tree depth that crashes with the printf present.
-- A print() call with a *literal-only* format string (no `%` verbs at
-  all) between ItemCheck() and DeleteTree() does NOT corrupt anything.
-- A print() call with exactly one integer format verb (tried both %li
-  and %d, same result either way) DOES reproduce the corruption --
-  but only once the tree is large enough (matching the real
-  minDepth=4/N=16/stretchDepth=17 shape; the identical one-verb print()
-  call at shallow depths, e.g. stretchDepth ~4-10, does not corrupt
-  anything). Depth-vs-N bisection to find the *exact* threshold, and
-  which resource (heap[] bump-allocator offset? absolute pointer
-  magnitude? stack depth from the deeper BottomUpTree/ItemCheck
-  recursion?) actually gates it, was not completed -- environment
-  interference (see below) cut the session short.
-- A raw write() syscall (bypassing print()/vfprint()/dofmt() entirely)
-  between the same two calls does NOT corrupt anything -- rules out the
-  syscall wrapper itself as the culprit; the bug is somewhere in the
-  formatting path specifically (dofmt()/__ifmt()/vfprint()'s own
-  256-byte stack buffer are the remaining suspects, not yet examined
-  for e.g. an overflow past the declared size).
-- Checked main()'s own disassembly (7l -a plus lldb, real numeric SP
-  offsets, not the assembler's symbolic name+offset(FP)/(SP) labels
-  which can be misleading -- see notes_debug_techniques.txt): the
-  vararg's own stack write (`str w9, [sp, #0x10]`) and stretchTree's
-  own storage slot (`[sp, #0x50]`) do NOT overlap at the byte level in
-  main()'s frame, ruling out the simplest "caller's own outgoing
-  vararg write clobbers its own local variable's slot" theory. The
-  corruption has to be happening somewhere inside the
-  print()/vfprint()/dofmt() call chain itself, or via some subtler
-  stack-layout interaction not yet identified.
-- lldb address-based breakpoints (`breakpoint set -a <addr>`) were
-  unreliable on this project's own -H6 Mach-O output throughout this
-  investigation -- confirmed "set" with a real resolved address, but
-  did not actually stop execution at that address, even for addresses
-  causally before the crash. Watchpoints set post-crash are therefore
-  unusable too (wrong frame). Not yet root-caused whether this is a
-  general property of this project's minimal Mach-O output (missing
-  some load command lldb depends on for breakpoint infrastructure) or
-  something else; worth checking against a real, gcc/clang-produced
-  Mach-O on the same host before assuming it's lldb-side.
-- Session ended with the host's endpoint security software (see
-  notes_debug_techniques.txt's existing writeup on this) quarantining
-  every freshly-built ad-hoc-signed binary, in every directory tried,
-  well past the "usually clears within a few attempts" window that
-  writeup describes -- blocking further empirical bisection entirely.
-  Retry this investigation once that clears.
+Precise, reproducible finding (minimal repro: BottomUpTree/NewTreeNode/
+ItemCheck/DeleteTree copied verbatim from binarytrees.c into a
+standalone main(), see scratchpad -- not yet promoted to a committed
+tests/c/regressions file, that's the natural next step): instrument
+ItemCheck() with a global call counter and a guard
+(`if((unsigned long)tree < 0x1000) { report and exit; }`) before
+dereferencing. For a perfect binary tree of depth D (built by
+BottomUpTree(0,D), exactly 2^(D+1)-1 nodes), a call to
+`ItemCheck(root)` should make exactly 2^(D+1)-1 total recursive calls,
+one per node, and never see tree==NULL (every real node's `left` is
+either a valid pointer or NULL, and NULL is only ever *checked*, never
+recursed into -- see ItemCheck's own `if(tree->left==NULL) return
+tree->item;` base case). Observed instead: **exactly** 2^(D+1)-1
+*successful* calls happen (a fully correct traversal of the entire
+real tree), immediately followed by **exactly one** extra, spurious
+call with tree==NULL -- verified identically at D=8,10,12,14,16,17,18
+(counts 511/2047/8191/32767/131071/262143/524287, i.e. 2^(D+1)-1 in
+every case, no exceptions). This is not "a pointer got corrupted
+somewhere in a quarter-million-node tree" -- it's "the recursion
+that should stop after the last leaf takes one more step it
+shouldn't."
+
+The trigger, isolated by minimization, is unrelated to the print()
+call's own arguments or format verbs (the first pass's theory) and
+instead is: **main() calls pow() *anywhere*, even in code never
+reached before the crash**. Concretely: take the real binarytrees.c
+structure verbatim (all four functions, main()'s full body including
+the depth-loop that calls pow() to compute `iterations`), and the bug
+reproduces on the very first `ItemCheck(stretchTree)` call, which
+happens before that loop ever executes. Delete just the
+`iterations = pow(2, maxDepth-depth+minDepth);` line (replace with a
+constant) and the *identical* program, *identical* tree, *identical*
+ItemCheck()/DeleteTree() traversal, runs to completion with zero extra
+calls, exit 0. Re-add the pow() call (even wrapped in a
+provably-never-taken `if` branch elsewhere in main(), confirmed via
+7l -a to actually still emit real FMOVD/BL-pow/FCVTZSDW instructions,
+not dead-code-eliminated) and it's back to instrument-and-crash. So
+the causal factor is "does main()'s compiled body contain
+floating-point codegen", not "is pow() actually called at runtime" or
+"is print() given a particular argument."
+
+Ruled out via direct verification, not assumption:
+- NOT address-magnitude-dependent: a separate minimal repro
+  (BottomUpTree/ItemCheck/DeleteTree with *no* pow() anywhere, heap[]
+  offset controlled directly by pre-`malloc()`ing and discarding N MB
+  before building the tree) never reproduces the bug for any tested
+  offset 0-128MB, at tree depths up to 17 -- despite this covering,
+  and exceeding, the actual address range (~16-84MB) where the pow()
+  variant's stretchTree lands across several runs. The pow()-present
+  variant's own stretchTree address is *not* stable run-to-run (real
+  ASLR is evidently applied to this BSS heap[] array despite the
+  binary's own code segment loading at a fixed, non-PIE address) --
+  but the bug fires at the exact same call-count boundary on every
+  run regardless of the specific address, which is itself evidence
+  this is a logic bug, not a data/memory-corruption one.
+- NOT a bug in ItemCheck()'s, DeleteTree()'s, NewTreeNode()'s, or
+  BottomUpTree()'s own compiled code: `7l -a` disassembly of all four
+  functions is byte-identical (down to the opcode, modulo relocation-
+  driven immediate/branch-target differences that shift with overall
+  binary size) between the pow()-free (survives) and pow()-present
+  (crashes) builds. Same for main()'s own instructions up through and
+  including the `BL ItemCheck` call site itself. Whatever differs is
+  either something at that exact call site not visible in a plain
+  diff (e.g. a register/stack-slot decision that happens to encode
+  identically here but behaves differently, unlikely but not yet
+  disproven) or, more likely given the FP-codegen correlation, a
+  callee-saved-register save/restore bug specific to when main()'s own
+  prologue/epilogue needs to preserve floating-point (D8-D15,
+  AAPCS64 callee-saved) registers alongside integer ones -- not yet
+  confirmed by reading main()'s actual prologue/epilogue for a missing
+  or miscomputed FP register spill, which is the natural next step.
+- NOT reproducible via a global-counter artifact: the same "exactly
+  one extra call, argument exactly 0" result held when spot-checked
+  independently (see the instrumentation itself, which reports the
+  *argument value* the guard rejected, not just an internal count).
+- lldb address-based breakpoints (`breakpoint set -a <addr>`) remain
+  unreliable on this project's own -H6 Mach-O output -- confirmed
+  "set" with a real resolved address but did not actually stop
+  execution there, even for addresses causally before the crash;
+  print()-based instrumentation (add a guard + report + exit, per
+  above) was what actually cracked this, not lldb. Worth checking
+  whether this is a property of this project's minimal Mach-O load
+  commands or an lldb-specific issue before relying on lldb here
+  again.
+- The host's endpoint security software quarantining freshly-built
+  ad-hoc-signed binaries (see notes_debug_techniques.txt) resurfaced
+  mid-session, this time correlated with *specific directories*
+  accumulating many rebuilds rather than a global block -- switching
+  to a directory with an established history of successful builds
+  this session (rather than a brand new one) reliably unblocked it.
+  Worth trying before concluding the host is fully wedged.
+
+Checked, and ruled out, one specific next step already: main()'s own
+prologue (`MOV R30,-112(R31)!`, nothing else) and epilogue (`MOV
+$0,R0; MOV (R31)112!,R30; RET`, nothing else) are identical in shape
+to the pow()-free build and never save/restore any register beyond
+LR/R30 -- so this is NOT main() itself failing to preserve a
+callee-saved FP register (D8-D15) around its own body; the FP values
+main() computes for `iterations` use F0-F4, which are caller-saved
+under AAPCS64 and need no such preservation by main() itself. If a
+callee-saved-register-accounting bug is still the right family (this
+file's other REGMIN/REGMAX and register-mask entries are the closest
+precedent for "register bookkeeping goes wrong under specific
+register-class-mixing conditions"), it would have to be inside pow()
+itself (a large function, easily worth checking whether *it*
+correctly restores every callee-saved register, D8-D15 and R19-R28
+alike, given how much internal scratch state its polynomial
+computation needs) -- but pow() is never actually *called* before the
+crash point (it lives in a loop body that hasn't executed yet), so any
+bug in pow() itself can only matter here via some link-time/layout
+side effect of pow()'s mere presence (code size, symbol/constant-pool
+placement) rather than its execution. That side-effect is the
+remaining open question: two functions' worth of machine code
+(main()'s shared prefix, and all of NewTreeNode/ItemCheck/
+BottomUpTree/DeleteTree) were confirmed byte-identical between the
+crashing and non-crashing builds, which makes it hard to see how
+runtime *behavior* can differ at all -- unless it's a data dependency
+on an address that shifts between builds (heap[]'s own BSS address is
+confirmed to shift substantially, though direct testing of that one
+address via artificial padding did not reproduce the bug on its own;
+some other address -- a constant pool, a string literal, `itcheck_n`
+itself -- shifts too and hasn't been individually tested the same
+way). Whoever picks this up next should either: (a) systematically
+test each shifting address in isolation the way heap[] was tested, or
+(b) get a working interactive debugger on this project's own -H6
+Mach-O output (lldb's unreliability here was the main blocker to going
+faster) and single-step through the actual `BL ItemCheck` call site
+and its return path with real hardware watchpoints on the relevant
+stack slots.
 
 Separate, unrelated bug hit while trying to control tree depth via a
 real command-line argument (`./binarytrees.goken 16`) instead of
@@ -274,12 +343,13 @@ reading `argv[1][0]` in a goken-built program crashes immediately
 (SIGSEGV) as soon as *any* real command-line argument is passed --
 confirmed with a 5-line isolated repro (print argc, which is correct,
 then dereference argv[1] directly, which crashes) having nothing to do
-with atol()/printf()/binarytrees.c at all. Not investigated further
-this pass; likely in the arm64 rt0.s/_main argv-setup path. The actual
-benchs/compcert test suite invocation never passes command-line args
-(matches how Results/binarytrees itself was generated), so this isn't
-blocking that specific benchmark, but it's a real, separate bug in its
-own right and worth its own regression test once picked up.
+with atol()/printf()/binarytrees.c/pow() at all. Not investigated
+further this pass; likely in the arm64 rt0.s/_main argv-setup path.
+The actual benchs/compcert test suite invocation never passes
+command-line args (matches how Results/binarytrees itself was
+generated), so this isn't blocking that specific benchmark, but it's a
+real, separate bug in its own right and worth its own regression test
+once picked up.
 
 **** fix regalloc type-mismatch in compound multiply/divide/mod assign
 claude:
