@@ -5,8 +5,9 @@
 
 LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
           hello_linux_arm.exe hello_linux_arm64.exe \
-          hello_linux_mips.exe hello_linux_riscv.exe hello_linux_riscv64.exe \
-                 hello_linux_386_.exe hello_linux_arm_.exe hello_linux_amd64_.exe
+          hello_linux_riscv.exe hello_linux_riscv64.exe \
+          hello_linux_mips.exe \
+          hello_linux_386_.exe hello_linux_arm_.exe hello_linux_amd64_.exe
 MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe \
           hello_macos_libc_amd64.exe
 WINDOWSBINS=hello_windows_386.exe hello_windows_amd64.exe
@@ -102,21 +103,12 @@ clean:V:
 hello_linux_386.exe: hello_linux_386.s
    8a -c $prereq
    8l -H7 -o $target -E _start hello_linux_386.8
-hello_linux_386_.exe: hello_linux_386_.s
-   8ag -c $prereq
-   8lg -H7 -o $target -E _start hello_linux_386_.8
 hello_linux_amd64.exe: hello_linux_amd64.s
    6a -c $prereq
    6l -H7 -o $target -E _start hello_linux_amd64.6
-hello_linux_amd64_.exe: hello_linux_amd64_.s
-   6ag -c $prereq
-   6lg -H7 -o $target -E _start hello_linux_amd64_.6
 hello_linux_arm.exe: hello_linux_arm.s
    5a -c $prereq
    5l -H7 -o $target -E _start hello_linux_arm.5
-hello_linux_arm_.exe: hello_linux_arm_.s
-   5ag -c $prereq
-   5lg -H7 -o $target -E _start hello_linux_arm_.5
 hello_linux_arm64.exe: hello_linux_arm64.s
    7a -c $prereq
    7l -H7 -o $target -E _start hello_linux_arm64.7
@@ -130,6 +122,18 @@ hello_linux_mips.exe: hello_linux_mips.s
    va -c $prereq
    vl -o $target -E _start hello_linux_mips.v
 			
+
+# go-era toolchain testing
+
+hello_linux_386_.exe: hello_linux_386_.s
+   8ag -c $prereq
+   8lg -H7 -o $target -E _start hello_linux_386_.8
+hello_linux_arm_.exe: hello_linux_arm_.s
+   5ag -c $prereq
+   5lg -H7 -o $target -E _start hello_linux_arm_.5
+hello_linux_amd64_.exe: hello_linux_amd64_.s
+   6ag -c $prereq
+   6lg -H7 -o $target -E _start hello_linux_amd64_.6
 
 # macOS
 # -H6 selects the apple MACH (Mach-O) header. 6l (linkers/lk/macho.c)
@@ -166,11 +170,11 @@ hello_macos_libc_amd64.exe: hello_macos_libc_amd64.s
 # Plan9
 # -H 2 this time and -E _main
 hello_plan9_386.exe: hello_plan9_386.s
-   8ag -c $prereq
-   8lg -o $target -H 2 -E _main hello_plan9_386.8
+   8a -c $prereq
+   8l -o $target -H 2 -E _main hello_plan9_386.8
 hello_plan9_arm.exe: hello_plan9_arm.s
-   5ag -c $prereq
-   5lg -o $target -H 2 -E _main hello_plan9_arm.5
+   5a -c $prereq
+   5l -o $target -H 2 -E _main hello_plan9_arm.5
 # actually no need -X; va/vc/vl are new and were not "go-ized"
 # actually -X would print the assembly on stdout in vl ...
 hello_plan9_mips.exe: hello_plan9_mips.s

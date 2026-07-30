@@ -1,4 +1,4 @@
-all:V: float_arm_.exe float_arm.exe
+all:V: float_arm.exe float_arm_.exe 
 
 %.exe: %.s
    5a -c $prereq
@@ -10,4 +10,3 @@ all:V: float_arm_.exe float_arm.exe
 
 clean:V:
 	rm -f *.exe *.[5678vi] *.a
-

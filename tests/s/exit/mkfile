@@ -8,9 +8,9 @@
 #history: split out of tests/s/mini (which now stays focused on hello-world), see
 # that mkfile for the toolchain-flag rationale (-H7 etc.).
 
-EXITLINUXBINS=exit_linux_arm.exe \
-              exit_linux_arm64.exe \
-              exit_linux_mips.exe exit_linux_riscv.exe exit_linux_riscv64.exe
+EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe \
+              exit_linux_mips.exe \
+              exit_linux_riscv.exe exit_linux_riscv64.exe
 
 all:V: $EXITLINUXBINS
 
@@ -53,7 +53,3 @@ exit_linux_riscv.exe: exit_linux_riscv.s
 exit_linux_riscv64.exe: exit_linux_riscv64.s
    ja -c $prereq
    jl -o $target -E _start exit_linux_riscv64.j
-
-%.exe: %.s
-   5ag -c $prereq
-   5lg -o $target -E _start $stem.5
