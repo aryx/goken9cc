@@ -268,6 +268,18 @@ sysread(vlong offset)
 				break;
 		}
 	}
+	// claude: a real Plan9 kernel treats a PREAD offset of ~0 (-1) as
+	// "current file position" (see principia-softwarica's own
+	// kernel/files/sysfile.c syspread(): `if(v == ~0ULL) return
+	// read(arg, nil);`), and this emulator stands in for that kernel
+	// -- but POSIX's own pread(2) has no such convention, a negative
+	// offset there is just EINVAL. Forward to the host's plain read(2)
+	// in that case instead. Same fix as machines/5i/syscall_posix.c's
+	// sysread() (see that file's comment); never exercised on MIPS
+	// before now since io.c was blocked on the earlier %d-format bug
+	// (see docs/claude_notes/notes_abi_plan9.txt).
+	else if(offset == -1)
+		n = read(fd, buf, size);
 	else
 		n = pread(fd, buf, size, offset);
 
@@ -292,14 +304,11 @@ sys_read(void)
 void
 syspread(void)
 {
-	union {
-		vlong v;
-		ulong u[2];
-	} o;
-
-	o.u[0] = getmem_w(reg.r[REGSP]+16);
-	o.u[1] = getmem_w(reg.r[REGSP]+20);
-	sysread(o.v);
+	// claude: getmem_v(), not a hand-rolled `union { vlong v; ulong
+	// u[2]; }` -- see mem.c's getmem_v() comment for why that union
+	// silently dropped half the offset on this host (ulong is 64
+	// bits here, not the 32 this trick assumed).
+	sysread(getmem_v(reg.r[REGSP]+16));
 }
 
 void
@@ -308,24 +317,20 @@ sysseek(void)
 	int fd;
 	ulong mode;
 	ulong retp;
-	union {
-		vlong v;
-		ulong u[2];
-	} o;
+	vlong v;
 
 	retp = getmem_w(reg.r[REGSP]+4);
 	fd = getmem_w(reg.r[REGSP]+8);
-	o.u[0] = getmem_w(reg.r[REGSP]+12);
-	o.u[1] = getmem_w(reg.r[REGSP]+16);
+	v = getmem_v(reg.r[REGSP]+12);
 	mode = getmem_w(reg.r[REGSP]+20);
 	if(sysdbg)
-		itrace("seek(%d, %lld, %d)", fd, o.v, mode);
+		itrace("seek(%d, %lld, %d)", fd, v, mode);
 
-	o.v = seek(fd, o.v, mode);
-	if(o.v < 0)
-		errstr(errbuf, sizeof errbuf);	
+	v = seek(fd, v, mode);
+	if(v < 0)
+		errstr(errbuf, sizeof errbuf);
 
-	memio((char*)o.u, retp, sizeof(vlong), MemWrite);
+	putmem_v(retp, v);
 }
 
 void
@@ -505,7 +510,13 @@ syswrite(vlong offset)
 	// ordering (a positioned write on a regular file racing against
 	// bioout's own sequential writes to the same fd). Use a plain
 	// sequential write for the standard streams instead.
-	if(fd == 0 || fd == 1 || fd == 2)
+	//
+	// claude: also offset==-1 -- same "current position" real-kernel
+	// convention as sysread() above (principia's syspwrite() has the
+	// identical `if(v == ~0ULL) return write(arg, nil);`), needed for
+	// PWRITE on any *other* fd too, or a real pwrite(2) rejects it
+	// with EINVAL.
+	if(fd == 0 || fd == 1 || fd == 2 || offset == -1)
 		n = write(fd, buf, size);
 	else
 		n = pwrite(fd, buf, size, offset);
@@ -527,14 +538,9 @@ sys_write(void)
 void
 syspwrite(void)
 {
-	union {
-		vlong v;
-		ulong u[2];
-	} o;
-
-	o.u[0] = getmem_w(reg.r[REGSP]+16);
-	o.u[1] = getmem_w(reg.r[REGSP]+20);
-	syswrite(o.v);
+	// claude: getmem_v(), not the union trick -- see syspread()'s
+	// identical comment.
+	syswrite(getmem_v(reg.r[REGSP]+16));
 }
 
 void
@@ -732,9 +738,20 @@ Ssyscall(ulong inst)
 
 	USED(inst);
 	call = reg.r[REGRET];
-	if(call < 0 || call > PWRITE || systab[call] == nil) {
+	// claude: call >= nelem(systab), not call > PWRITE -- PWRITE(11)
+	// was the highest syscall implemented when this bound was written,
+	// but SEEK(12) (io.c's seek(fd,0,0)) and everything after it in
+	// sys.h is in systab[] too now; the stale bound rejected a real,
+	// implemented SEEK as "bad" (see machines/5i/syscall_posix.c's
+	// Ssyscall(), which already uses nelem() here). Also added the
+	// missing `return` -- falling through to `(*systab[call])()` after
+	// flagging a call as bad dereferenced a nil function pointer
+	// instead of actually stopping.
+	if(call < 0 || call >= nelem(systab) || systab[call] == nil) {
 		Bprint(bioout, "Bad system call\n");
 		dumpreg();
+		Bflush(bioout);
+		return;
 	}
 	if(trace)
 		itrace("sysc\t%s", sysctab[call]);

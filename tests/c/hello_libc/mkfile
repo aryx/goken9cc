@@ -39,6 +39,33 @@ test:V:
 		$TOP/scripts/qemu-runner $arch ./hello.exe | cmp /dev/stdin expected.txt
 		$TOP/scripts/qemu-runner $arch ./io.exe | cmp /dev/stdin io_expected.txt
 	}
+	mk test_plan9
+
+# claude: Plan9 (GOOS=plan9), run under machines/5i and machines/vi
+# instead of qemu -- see lib_core/libc/mkfile's own GOOS story and
+# docs/claude_notes/notes_abi_plan9.txt for how this GOOS came up. Only
+# arm/mips: those are the only two archs with a working Plan9 emulator
+# in this tree (see tests/s/mini/mkfile's own PLAN9BINS/
+# hello_plan9_386.exe comment -- 8l can produce a -H2 386 binary but
+# there's no emulator to run it on here). Same rebuild-libc.a-fresh
+# dance as the ARCHS loop above, but with 'GOOS=plan9' added, and
+# 5c/5l/vc/vl invoked directly (not via $CC/$LD/$LDFLAGS, which are
+# this mkfile's own $objtype's tools -- wrong arch/GOOS here) the same
+# way tests/s/mini/mkfile already does for its own hand-written Plan9
+# .s tests. A separate target (called from test:V: above, but also
+# runnable on its own) so the Plan9 side can be iterated on without
+# waiting for the full 7-arch qemu ARCHS loop.
+test_plan9:V:
+	mk clean
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm' 'cputype=arm' 'GOOS=plan9' install }
+	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe
+	printf ':c\n$q\n' | 5i ./hello_plan9_arm.exe | sed -n 2p | cmp /dev/stdin expected.txt
+	printf ':c\n$q\n' | 5i ./io_plan9_arm.exe | sed -n 2,3p | cmp /dev/stdin io_expected.txt
+	mk clean
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=mips' 'cputype=mips' 'GOOS=plan9' install }
+	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe
+	printf ':c\n$q\n' | vi ./hello_plan9_mips.exe | sed -n 2p | cmp /dev/stdin expected.txt
+	printf ':c\n$q\n' | vi ./io_plan9_mips.exe | sed -n 2,3p | cmp /dev/stdin io_expected.txt
 
 # -H7 (ELF) is explicit, not left to 6l/7l/8l's own default: those
 # three (unlike vl/il/jl, which always default to ELF regardless of
@@ -63,6 +90,28 @@ hello.exe: hello.c
 io.exe: io.c
 	$CC $CFLAGS -D$objtype -c io.c
 	$LD $LDFLAGS -H7 -o $target -E _main io.$O -lc
+
+# claude: Plan9 (GOOS=plan9)/arm+mips, run under 5i/vi -- see the
+# test:V: rule's own comment above for why 5c/5l/vc/vl are invoked
+# directly here instead of via $CC/$LD (this mkfile's own $objtype's
+# tools, wrong arch/GOOS) -H 2 is not optional the same way -H7 isn't
+# for hello.exe/io.exe above (vl in particular always defaults to ELF,
+# not Plan9, regardless of host -- see that comment).
+hello_plan9_arm.exe: hello.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o hello_plan9_arm.5 -c hello.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main hello_plan9_arm.5 -lc
+
+io_plan9_arm.exe: io.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o io_plan9_arm.5 -c io.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main io_plan9_arm.5 -lc
+
+hello_plan9_mips.exe: hello.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o hello_plan9_mips.v -c hello.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main hello_plan9_mips.v -lc
+
+io_plan9_mips.exe: io.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o io_plan9_mips.v -c io.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main io_plan9_mips.v -lc
 
 # macOS-native (no qemu -- Mach-O only runs on real macOS, see
 # tests/s/mini/mkfile's test_macos_arm64 for the same pattern): first

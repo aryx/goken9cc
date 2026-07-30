@@ -75,6 +75,23 @@ getmem_w(ulong addr)
 	return va[0]<<24 | va[1]<<16 | va[2]<<8 | va[3];
 }
 
+// claude: added to replace syscall.c's own hand-rolled
+// `union { vlong v; ulong u[2]; }` reconstruction (syspread/sysseek/
+// syspwrite) -- that trick assumed `ulong` is 32 bits (true on the
+// original 32-bit Plan9 hosts this code was written for) but ulong is
+// 64 bits on this host, so `ulong u[2]` is 16 bytes, not 8: u[0]
+// aliased the *entire* vlong and u[1] fell outside it, silently
+// discarding half the offset. mips is big-endian (see port/vlrt.c's
+// own "big-endian mips stores the high word first" comment), so the
+// high word is at addr, the low word at addr+4 -- the mirror image of
+// 5i/mem.c's own getmem_v(), which is little-endian arm's low-word-
+// first layout.
+uvlong
+getmem_v(ulong addr)
+{
+	return ((uvlong)getmem_w(addr) << 32) | getmem_w(addr+4);
+}
+
 ushort
 getmem_h(ulong addr)
 {
@@ -126,6 +143,23 @@ putmem_w(ulong addr, ulong data)
 	if(membpt)
 		brkchk(addr, Write);
 }
+
+// claude: mirrors 5i/mem.c's own putmem_v() (its "two stages, to catch
+// brkchk" comment applies equally here), but high word first at addr,
+// low word second at addr+4 -- see getmem_v()'s comment above on why
+// (mips is big-endian). Replaces sysseek()'s own hand-rolled
+// `memio((char*)o.u, retp, sizeof(vlong), MemWrite)`, which copied the
+// *host's* raw little-endian byte layout of a vlong straight into
+// target memory -- silently byte-swapping the result on this
+// little-endian x86_64 host, a bug distinct from (but alongside) the
+// union-sizing bug getmem_v() fixes on the read side.
+void
+putmem_v(ulong addr, uvlong data)
+{
+	putmem_w(addr, data>>32);
+	putmem_w(addr+4, data);
+}
+
 void
 putmem_b(ulong addr, uchar data)
 {

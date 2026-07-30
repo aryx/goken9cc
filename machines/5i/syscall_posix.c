@@ -265,6 +265,15 @@ sysread(vlong offset)
                 break;
         }
     }
+    // claude: a real Plan9 kernel treats a PREAD offset of ~0 (-1) as
+    // "current file position" (see principia-softwarica's own
+    // kernel/files/sysfile.c syspread(): `if(v == ~0ULL) return
+    // read(arg, nil);`), and this emulator stands in for that kernel
+    // -- but POSIX's own pread(2) has no such convention, a negative
+    // offset there is just EINVAL. Forward to the host's plain read(2)
+    // in that case instead.
+    else if(offset == -1)
+        n = read(fd, buf, size);
     else
         n = pread(fd, buf, size, offset);
 
@@ -406,7 +415,13 @@ syswrite(vlong offset)
     // ordering (a positioned write on a regular file racing against
     // bout's own sequential writes to the same fd). Use a plain
     // sequential write for the standard streams instead.
-    if(fd == 0 || fd == 1 || fd == 2)
+    //
+    // claude: also offset==-1 -- same "current position" real-kernel
+    // convention as sysread() above (principia's syspwrite() has the
+    // identical `if(v == ~0ULL) return write(arg, nil);`), needed for
+    // PWRITE on any *other* fd too, or a real pwrite(2) rejects it
+    // with EINVAL.
+    if(fd == 0 || fd == 1 || fd == 2 || offset == -1)
         n = write(fd, buf, size);
     else
         n = pwrite(fd, buf, size, offset);
