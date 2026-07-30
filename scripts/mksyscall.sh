@@ -9,6 +9,18 @@
 # usage: mksyscall.sh some.decl > zsyscall_xxx.c
 # usage: mksyscall.sh some.decl vlong > zsyscall_xxx.c
 #
+# SYS_NAME may optionally be followed by ":trampoline" (e.g.
+# "SYS_lseek:_syscall6v") to call a different trampoline function than
+# the default _syscall6 -- used by lseek's decl entries to call
+# _syscall6v (same trap sequence as _syscall6, a separate symbol per
+# svc_$cputype.s, but declared `vlong`-returning) instead of _syscall6
+# (kept plain `long`-returning everywhere, deliberately: the kernel's
+# raw 64-bit result gets discarded past 32 bits for every OTHER syscall
+# here too, but write/read/close/open's counts and fds are always small
+# in practice, so widening the *common* trampoline for the one syscall
+# that actually needs the extra 32 bits -- lseek's off_t -- wasn't
+# judged worth the risk to the simple, well-exercised default path).
+#
 # optional 2nd arg (default "long"): the type each argument is cast to
 # before being passed into _syscall6. Every arch but one is fine with
 # the default -- `long` is always wide enough to carry that arch's own
@@ -59,6 +71,15 @@ awk -v syscallarg="$syscallarg" '
 	gsub(/^[ \t]+|[ \t]+$/, "", rettype)
 	gsub(/^[ \t]+|[ \t]+$/, "", sysname)
 
+	# optional ":trampoline" suffix on SYS_NAME (see the header comment
+	# above) -- defaults to _syscall6
+	trampoline = "_syscall6"
+	ci = index(sysname, ":")
+	if (ci > 0) {
+		trampoline = substr(sysname, ci + 1)
+		sysname = substr(sysname, 1, ci - 1)
+	}
+
 	n = split(params, plist, ",")
 	argstr = ""
 	callargs = ""
@@ -93,9 +114,9 @@ awk -v syscallarg="$syscallarg" '
 	print rettype " " name "(" argstr ")"
 	print "{"
 	if (rettype == "void")
-		print "\t_syscall6(" sysname callargs ");"
+		print "\t" trampoline "(" sysname callargs ");"
 	else
-		print "\treturn (" rettype ")_syscall6(" sysname callargs ");"
+		print "\treturn (" rettype ")" trampoline "(" sysname callargs ");"
 	print "}"
 	print ""
 }

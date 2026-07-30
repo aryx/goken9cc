@@ -18,3 +18,9 @@
 #include "numbers_arm64.h"
 
 extern long _syscall6(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);
+
+/* claude: vlong-returning twin of _syscall6 above -- see
+ * lib_core/libc/syscall/os/linux/syscall_linux_amd64.h's identical
+ * comment.
+ */
+extern vlong _syscall6v(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);

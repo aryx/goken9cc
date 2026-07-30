@@ -16,6 +16,13 @@
 
 extern long _syscall6(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);
 
+/* claude: vlong-returning twin of _syscall6 above -- see
+ * syscall_linux_amd64.h's identical comment. svc_riscv64.s's own
+ * _syscall6v additionally uses a full 64-bit MOV (not MOVW) for the
+ * return-value copy, unlike _syscall6's MOVW.
+ */
+extern vlong _syscall6v(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);
+
 /* See syscall_linux_arm64.h's identical comment: this arch's "generic"
  * Linux ABI has no legacy 3-arg open(), only openat() -- _sysopen()
  * bridges the gap with AT_FDCWD so os/linux/open.c can call the same

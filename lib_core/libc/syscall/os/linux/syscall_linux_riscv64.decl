@@ -14,7 +14,9 @@
 //sys write(int fd, void *buf, long n) long = SYS_write
 //sys read(int fd, void *buf, long n) long = SYS_read
 //sys close(int fd) int = SYS_close
-//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// vlong rettype via _syscall6v, not the default _syscall6 -- see
+// syscall_linux_amd64.decl's identical comment on lseek.
+//sys lseek(int fd, vlong offset, int whence) vlong = SYS_lseek:_syscall6v
 // no legacy SYS_open on this arch -- see syscall_linux_arm64.decl's
 // identical comment; syscall_linux_riscv64.h adds the _sysopen() shim.
 //sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat

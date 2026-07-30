@@ -34,3 +34,24 @@ TEXT _syscall6+0(SB), $0
 	ECALL
 	MOVW	R10, R8          // return value: a0 -> R8
 	RET
+
+// claude: _syscall6v -- same trap sequence as _syscall6 above, a
+// separate symbol so its C prototype (syscall_linux_riscv64.h) can
+// declare a `vlong` return instead of `long`, for the one caller
+// (lseek) that actually needs the kernel's full 64-bit result. The one
+// real difference from _syscall6: the return-value copy uses MOV (full
+// 64-bit a0 -> R8), not MOVW (32-bit, would drop the upper half a
+// `vlong`-returning caller expects to find in R8). See
+// scripts/mksyscall.sh's header comment for why this is a second
+// trampoline rather than widening _syscall6 itself.
+TEXT _syscall6v+0(SB), $0
+	MOVW	R8, R17          // a7 = syscall number (num arrives in R8)
+	MOV	a1+8(FP), R10    // a0
+	MOV	a2+16(FP), R11   // a1
+	MOV	a3+24(FP), R12   // a2
+	MOV	a4+32(FP), R13   // a3
+	MOV	a5+40(FP), R14   // a4
+	MOV	a6+48(FP), R15   // a5
+	ECALL
+	MOV	R10, R8          // full 64-bit return value: a0 -> R8
+	RET

@@ -25,3 +25,20 @@ TEXT _syscall6+0(SB), $0
 	MOV	a6+48(FP), R5
 	SVC	$0
 	RETURN
+
+// claude: _syscall6v -- byte-identical to _syscall6 above, a separate
+// symbol purely so its C prototype (syscall_linux_arm64.h) can declare
+// a `vlong` return instead of `long`, for the one caller (lseek) that
+// actually needs the kernel's full 64-bit result. See
+// scripts/mksyscall.sh's header comment for why this is a second
+// trampoline rather than widening _syscall6 itself.
+TEXT _syscall6v+0(SB), $0
+	MOV	R0, R8
+	MOV	a1+8(FP), R0
+	MOV	a2+16(FP), R1
+	MOV	a3+24(FP), R2
+	MOV	a4+32(FP), R3
+	MOV	a5+40(FP), R4
+	MOV	a6+48(FP), R5
+	SVC	$0
+	RETURN

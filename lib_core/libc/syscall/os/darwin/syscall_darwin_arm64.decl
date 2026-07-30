@@ -14,9 +14,9 @@
 //sys write(int fd, void *buf, long n) long = SYS_write
 //sys read(int fd, void *buf, long n) long = SYS_read
 //sys close(int fd) int = SYS_close
-// see lseek's return-value-truncation caveat in syscall_linux_amd64.decl
-// (identical limitation: _syscall6 only ever returns 4-byte `long`)
-//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// vlong rettype via _syscall6v, not the default _syscall6 -- see
+// syscall_linux_amd64.decl's identical comment on lseek.
+//sys lseek(int fd, vlong offset, int whence) vlong = SYS_lseek:_syscall6v
 // _sysopen, not open: see syscall_darwin_amd64.decl's identical comment.
 //sys _sysopen(void *path, int flags, int mode) long = SYS_open
 //sys exit(int code) void = SYS_exit

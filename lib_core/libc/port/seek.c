@@ -18,15 +18,39 @@
  * translation (os/$GOOS/open.c), which needs real per-OS flag-bit
  * knowledge and so lives under os/ instead.
  *
- * The cast up to vlong recovers no precision lost inside lseek() itself:
- * the raw syscall wrapper (lib_core/libc/syscall/os/$OS/zsyscall_$OS_
- * $cputype.c) returns this project's 4-byte `long` even on 64-bit archs
- * (see that file's own comment on _syscall6's return type), so a seek
- * position past 4GiB already truncated before it got here. Same
- * accepted, already-documented limitation as write()'s return value --
- * not fixed in this pass.
+ * lseek()'s own return type differs by arch: on the archs with a real
+ * 64-bit register to return a `vlong` off_t in (amd64/arm64/riscv64 --
+ * riscv64 only on Linux, amd64/arm64 on both Linux and Darwin), its
+ * raw syscall wrapper (lib_core/libc/syscall/os/$OS/) routes through
+ * _syscall6v and genuinely returns `vlong`; every other (32-bit) arch
+ * still returns plain `long` via the default _syscall6 (see
+ * scripts/mksyscall.sh's own comment on the two trampolines, and
+ * syscall_linux_amd64.h's _syscall6v comment for why a second
+ * trampoline was added instead of widening _syscall6 itself). This
+ * file is compiled once, unconditionally, for every arch (port/), so
+ * the #if below has to match lseek()'s own real prototype exactly --
+ * an extern declaration claiming the wrong return width here would be
+ * silently wrong on whichever side is actually correct.
  */
+/* claude: nested #ifdef, not `#if defined(X) || defined(Y)` -- 7c/vc/ic's
+ * preprocessor doesn't understand `#if` with an expression at all
+ * ("unknown #: if"), only plain #ifdef/#ifndef/#else/#endif (see every
+ * other #ifdef in lib_core/libc, e.g. os/linux/open.c's `#ifdef mips`,
+ * none of which use `#if`).
+ */
+#ifdef amd64
+extern vlong lseek(int fd, vlong offset, int whence);
+#else
+#ifdef arm64
+extern vlong lseek(int fd, vlong offset, int whence);
+#else
+#ifdef riscv64
+extern vlong lseek(int fd, vlong offset, int whence);
+#else
 extern long lseek(int fd, vlong offset, int whence);
+#endif
+#endif
+#endif
 
 vlong
 seek(fdt fd, vlong offset, int whence)

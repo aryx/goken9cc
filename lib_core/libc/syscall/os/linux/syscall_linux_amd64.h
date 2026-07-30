@@ -16,3 +16,12 @@
 #include "numbers_amd64.h"
 
 extern long _syscall6(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);
+
+/* claude: vlong-returning twin of _syscall6 above (same trampoline,
+ * separate symbol -- see svc_amd64.s's own _syscall6v comment), used
+ * only by lseek's decl entry (syscall_linux_amd64.decl) so its off_t
+ * result isn't truncated to 32 bits the way every other syscall
+ * wrapper here still is (write/read counts, fds -- never large enough
+ * in practice for that truncation to matter).
+ */
+extern vlong _syscall6v(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);

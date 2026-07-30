@@ -20,6 +20,11 @@
 
 extern long _syscall6(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);
 
+/* claude: vlong-returning twin of _syscall6 above -- see
+ * syscall_linux_amd64.h's identical comment.
+ */
+extern vlong _syscall6v(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);
+
 /* This arch's "generic" Linux ABI dropped the legacy 3-arg open()
  * syscall (see numbers_arm64.h) -- openat() is all that's left, so
  * _sysopen() (the raw-POSIX-open name every arch's os/linux/open.c

@@ -775,3 +775,48 @@ tests/s/mini/hello_plan9_{arm,mips}.s, hand-written asm with no libc
 involved), verified under the 5i/vi emulators; open/read/seek/close on
 that ABI are completely unexercised. See notes_abi_plan9.txt for what's
 proven vs merely numbered in sys.h.
+
+lseek's return width: a second trampoline, not a widened _syscall6
+------------------------------------------------------------------------
+
+Follow-up fix, same session as the file-syscall work above: lseek's
+return value (a real 64-bit off_t) was truncated to 32 bits by
+_syscall6's own `long` return type, on every arch -- flagged as a known,
+accepted limitation when the file syscalls first landed. First attempt
+widened _syscall6 itself to `vlong` everywhere (touching all 9 (OS,
+arch) headers); reverted per explicit user pushback ("vlong is tricky,
+long had some simplicity to it" -- tests/c/vlong's own history bears
+this out) in favor of a second, separate trampoline (_syscall6v) used
+only by lseek, leaving _syscall6 itself (used by write/read/close/
+_sysopen/openat -- the common path) completely untouched.
+
+_syscall6v is a byte-identical duplicate of _syscall6's body under a
+new TEXT label per svc_$cputype.s (same register loads, same trap --
+the raw hardware register already holds the kernel's full 64-bit
+result regardless of what C prototype reads it, so no new logic is
+needed, just a second symbol name for the caller to bind a wider
+prototype to). Only added for the archs with a real 64-bit register to
+return a `vlong` in a single piece: linux/{amd64,arm64,riscv64} and
+darwin/{amd64,arm64} -- deliberately NOT 386/arm/mips/riscv(32), where
+this compiler's `vlong` return convention would need a register PAIR
+(e.g. AX:DX-style) that the hand-written trampoline doesn't populate,
+and where the real 32-bit lseek syscall only returns a 32-bit off_t
+anyway (nothing to gain). scripts/mksyscall.sh gained an optional
+":trampoline" suffix on a decl line's SYS_NAME field (e.g.
+"SYS_lseek:_syscall6v") to select this per-syscall, defaulting to
+_syscall6 for every existing entry (fully backward compatible -- no
+other .decl line needed to change). port/seek.c's own `extern lseek()`
+declaration now has to match lseek's real per-arch return type exactly
+(`vlong` on the 5 widened archs, `long` elsewhere) -- via nested
+#ifdef/#else/#endif, not `#if defined(X) || defined(Y)`: 7c/vc/ic's
+preprocessor doesn't understand `#if` with an expression at all
+("unknown #: if"), only plain #ifdef, caught by a real build failure
+across all 7 Linux arches before landing this.
+
+Verified via a fresh `mk -a` install of all 7 Linux arches' libc.a plus
+a full tests/c/hello_libc `mk test` run (all 7 pass, io.exe's seek()
+call exercises the new _syscall6v path on arm64/amd64/riscv64) and
+tests/c/regressions' `mk test` (no regressions). Darwin's own
+_syscall6v (amd64/arm64) is written the same way but, like the rest of
+this file's darwin work, unverified by execution -- no macOS host this
+session.
