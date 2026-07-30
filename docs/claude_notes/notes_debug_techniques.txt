@@ -275,6 +275,235 @@ fix as always: re-verify the actual behavior (here, `7c -O0 -S` vs `7c
 via $PATH, not a directory-relative o.out) the thing you're trusting
 will actually use.
 
+Unbuffered write() markers vs print() when a crash might prevent a flush -- and when it doesn't matter
+------------------------------------------------------------------------------------------------------------
+
+When instrumenting a program that might SIGSEGV partway through, and
+using print()/printf() trace statements to bisect where, first check
+whether this libc's own print() path buffers across separate calls at
+all -- don't assume a stdio-style FILE* buffer that a crash could
+prevent from ever flushing. It doesn't, here: vfprint() (fmt/vfprint.c)
+allocates a *fresh, local* 256-byte Fmt buffer on every single
+print()/printf() call and explicitly calls __fmtFdFlush() before
+returning, so each call's output reaches the fd before the *next*
+statement even runs -- there is no cross-call buffering to lose on a
+later crash. First-hand confusion this session: an early debug pass
+assumed print() output could be silently lost and switched to raw
+write(1, "marker\n", n) calls instead "to be safe" -- genuinely
+harmless, but based on a wrong premise (verified afterward by reading
+vfprint.c directly), and the real reason that first pass showed zero
+output turned out to be an unrelated string-replace typo (whitespace
+mismatch silently leaving the intended edit unapplied). Worth knowing
+the flush behavior for real before reaching for write() out of
+caution: raw write() IS still preferable in one case though --
+formatting a *suspect* value through print()'s own machinery (the
+thing you're trying to test) to report on that same machinery is
+circular if the format call itself is a suspect. Manually converting a
+long to decimal digits and write()-ing the raw bytes (see below)
+sidesteps that.
+
+Manually formatting a value with write() to get a trusted read on it, independent of a suspect formatting call
+-------------------------------------------------------------------------------------------------------------------
+
+When the very thing under suspicion is a print()/printf() call itself
+(as opposed to the value being printed), inserting *another*
+print()-based trace statement to inspect that value doesn't actually
+rule anything out -- if print()'s handling of a particular vararg type
+or combination is what's broken, a second print() call might exercise
+the exact same broken path and give a misleading (or also-crashing)
+answer. Write a tiny throwaway helper that converts an integer to
+decimal digits by hand (repeated `%10`/`/10`, no library call) and
+write()s the raw bytes directly -- this is untestable-wrong in a much
+smaller amount of code than the real formatter, so a value it reports
+can be trusted while bisecting whether the *real* formatting call is
+the actual point of failure. Concretely, this is what separated
+"write_frequencies()'s hash-table size/total values are wrong" (would
+have pointed at the hash-table code) from "the values are exactly
+right (size=4, total=50000, matching the expected A/T/C/G split) and
+the crash is specifically in the subsequent printf(\"%.3f\", ...) call"
+(points at formatting/varargs instead) while investigating
+benchs/compcert/knucleotide.c's SIGSEGV -- both a %s+%.3f combined call
+and, further narrowed, a *bare* printf(\"%f\", floatexpr) with no other
+verbs at all, crash at that exact point in the real program, even
+though hand-verified via this technique to be receiving perfectly
+sane arguments.
+
+strace as a coarse but fast way to see how far a program actually got before a silent-looking crash
+-------------------------------------------------------------------------------------------------------
+
+Before reaching for gdb (which may not even load this project's own
+linker output at all -- see below) or adding print()-based
+instrumentation, run the failing binary under `strace -f` once. It
+costs nothing extra to try and immediately answers "did the crash
+happen in this syscall-heavy phase, or after it": for
+benchs/compcert/knucleotide.c's crash, a full strace showed thousands
+of successful one-byte read() calls (this project's own fgets() reads
+one byte at a time, no internal buffering -- see lib_core/libc/APE/
+stdio.c) ending in a clean `read() = 0` (real EOF) followed immediately
+by the SIGSEGV -- ruling out "crashed mid-file-read" in one command,
+before writing a single line of debug instrumentation, and correctly
+redirecting suspicion toward the *processing* that happens after the
+whole file is read rather than the file-reading path itself.
+
+gdb refusing to load this project's own linker output at all
+-------------------------------------------------------------------
+
+`gdb --args ./some.goken` can fail immediately with "not in executable
+format: file format not recognized" -- even though `file` correctly
+identifies the same binary as a normal ELF executable for the target
+arch, and even with an absolute path (ruling out a cwd-relative-path
+theory). Not yet root-caused (plausibly some section BFD expects and
+this project's own Xl doesn't emit, given goken's linkers have
+repeatedly needed exactly-conformant-enough-for-the-kernel-loader
+output rather than fully standard output elsewhere in this tree's
+history) -- but the practical consequence is: don't spend time trying
+flags/paths to coax gdb into loading a goken-linked binary on this
+host. Fall back to strace (syscall-level visibility) and manual
+print()/write() instrumentation instead; both worked fine on the exact
+binaries gdb refused here.
+
+Bottom-up reconstruction with the *real* growth history/scale, not just the real code shape, when a "faithful-looking" minimal repro doesn't reproduce
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Extends this file's existing "reconstructing-forward" section
+(binarytrees.c's pow() story) with a sharper version of the same
+lesson, from the knucleotide.c investigation. A hand-written repro that
+faithfully reproduces the real code *shape* (same struct layout, same
+malloc/calloc/strdup calls, same sort-then-printf loop, even called
+from a separate function to match real stack depth) can still fail to
+reproduce a bug if it doesn't also reproduce the real *quantities* --
+how many bytes were allocated, how many times, in what order, before
+the crashing call. A structurally-faithful repro using 4 hand-built
+hash-table nodes and no file I/O did NOT crash; only re-introducing the
+real ~100KB input file (driving the real ~50000-byte buffer growth via
+realloc(), and the real, much-larger intermediate hash table churn from
+generate_frequencies() actually processing that much data) brought the
+crash back, even though the *values* reaching the final printf() were
+verified identical either way (via the manual-write() technique above).
+
+This scale theory turned out to be a red herring, caught by the next
+technique below: the real trigger had nothing to do with volume at all.
+Worth keeping this section anyway as a caution -- a same-shape-smaller-
+scale repro failing to reproduce a bug is genuinely ambiguous evidence
+("scale matters" and "some unrelated thing I stripped out in the
+process matters" look identical from here), so don't stop at the first
+theory that fits; keep testing until you've actually isolated the
+single changed variable, not just the first one that correlates.
+
+Narrowing down which of several candidate symbols an unexplained crash needs by testing each in isolation, then re-testing the same repro on a different backend
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+What actually resolved the "scale" red herring above: the real, growth-
+matching repro (buffer sizes and final content identical to the real
+run, but built via simulated realloc() growth, no real file I/O) still
+did NOT crash on its own -- until a single, provably-dead call
+(`if(neverrun){ fopen("x","r"); }`, `neverrun` a global int initialized
+to 0, so the branch is never taken at runtime) was added anywhere in
+the same function. That immediately reproduced the crash. This is the
+same "mere presence, not execution" shape as binarytrees.c's pow() bug
+(see this file's "reconstructing-forward" section and todo.org) --
+recognizing the shape from a previously-documented bug is what turned
+"scale must matter" into "test presence-without-execution instead,
+exactly like last time".
+
+Once presence-without-execution was confirmed as the trigger, two
+further isolation steps are what actually made this a reportable
+finding rather than a vague "something about stdio.c":
+
+1. Test each candidate symbol individually, not just the group. The
+   real code linked in three new functions together (fopen/fgets/
+   fclose, lib_core/libc/APE/stdio.c). Rather than assume all three (or
+   "something about that file") are responsible, build one repro per
+   function, each with only that one dead call added to the same known-
+   safe baseline. All three reproduced independently here, which is
+   itself useful information (rules out "it's specifically fgets's own
+   internal loop", say) -- but the general point is: when N things
+   changed together, don't report "one of these N is the trigger",
+   spend the N extra small builds to say which one(s) actually are.
+2. Test whether a *different function's own callees* also trigger it.
+   fopen()/fgets()/fclose() each internally call a lower-level function
+   (open()/read()/close() respectively) that was already known-safe
+   elsewhere in the codebase (hello_libc, io.c). Testing those directly
+   -- same dead-code-presence pattern, calling open()/read()/close()/
+   seek() individually instead of the fopen/fgets/fclose wrappers --
+   did NOT reproduce the crash. This is what separated "any I/O-
+   adjacent symbol's presence triggers this" (would implicate something
+   shared, like the syscall trampoline machinery) from "specifically
+   these three wrapper functions do" (implicates something about their
+   own compiled bodies or their specific position in the link) --
+   a real, load-bearing distinction that a single all-three-together
+   test could never have surfaced.
+3. Re-run the *identical* repro (same .c file, unchanged) through a
+   different backend before concluding anything about the bug's scope.
+   The exact same dead-fopen()-call repro was built with both 7c/7l
+   (arm64) and 6c/6l (amd64); only the arm64 build crashed, amd64 ran
+   clean -- and the real, complete, unmodified knucleotide.c
+   subsequently confirmed the same split (crashes on arm64, matches
+   Results/knucleotide byte-for-byte on amd64). Without this step the
+   finding would have been mis-filed as "a bug in APE/stdio.c" (an
+   ordinary C source file, portable by construction) instead of what it
+   actually is: a second, independent instance of a 7c/7l-specific
+   link-time/layout bug -- the same family as binarytrees.c's pow()
+   bug, and worth cross-referencing there (todo.org) rather than
+   writing up as a new unrelated bug, once the shape matched.
+
+Correction to the above, and isolating a crash trigger to a *structural* fact about the build (object-file boundaries) rather than to specific symbols
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+The three-part isolation above was real progress but its conclusion
+("specifically fopen/fgets/fclose, not their callees") was still
+wrong -- a good reminder that ruling out several specific theories
+doesn't mean the *next* theory you land on is correct, only that it's
+survived more tests than the others so far. Two results that didn't
+fit finally forced a rethink: (1) the crash reproduced identically at
+`-O0` (regopt() entirely disabled) through `-O3`, with byte-identical
+machine code at the crash-adjacent call site across all four --
+ruling out the optimizer despite register allocation *looking*
+different between crashing and non-crashing builds (that register
+shift, chased at length via reg.c's `regalloc()`/`lasti` round-robin
+counter, turned out to be a correlated symptom of unrelated code being
+compiled earlier in the same function, not the cause -- see git
+history for that dead end if picking this up again); (2) the crash
+reproduced with a plain `print("%d\n", i)` (an int, no float
+computation anywhere in the call), which the original "specifically
+fopen/fgets/fclose" framing had no room for.
+
+What actually found the real trigger: instead of continuing to vary
+*which function* was dead-called, vary the *build structure* while
+holding the dead-called function's own logic fixed. Concretely: take a
+function that calls a real external symbol (open() or strdup(), both
+already known individually safe when dead-called *from the same file
+as main*), and test all three placements of it: (a) inlined directly
+into main(), (b) a separate function within the same .c/.7 file as
+main(), (c) a separate function in its *own* .c file, compiled to its
+own .7, linked alongside main's .7. (a) and (b) never crashed, for
+either open() or strdup(). (c) crashed for *both* open() and strdup()
+-- immediately reframing the bug from "these specific symbols" to
+"calling any external function from a non-entry object file, even
+dead code, corrupts something elsewhere when >=2 object files are
+linked together" (confirmed further: a trivial no-external-call
+function placed the same way, option (c), does NOT crash -- the
+external call inside the separate object file is the load-bearing
+part, not merely "a second .o exists"). This is why fopen/fgets/fclose
+(lib_core/libc/APE/stdio.c, a separately-compiled object file whose
+functions each call another external symbol) tripped it while calling
+open()/read()/close() *directly from main's own file* never did --
+they're not different in what they call, they're different in *how
+many object-file boundaries* separate the call site from main().
+
+The general lesson: when a crash's trigger looks like it depends on
+*which* function/symbol is involved, and the individual-symbol tests
+keep producing a confusing pattern (some wrappers trigger it, their
+own callees don't, an unrelated function called the "same way"
+doesn't), consider that the real independent variable might not be
+symbol identity at all -- it might be a structural property of the
+build (object-file count, which file a call originates from, link
+order) that happens to correlate with which symbols you tried. Test
+that directly by holding the *content* of a dead call fixed and only
+varying *where it's compiled* (same file vs. separate file vs. inlined)
+before spending more effort on a growing, still-unexplained list of
+"this symbol does, this symbol doesn't."
+
 macOS/Darwin-specific execution debugging
 --------------------------------------------
 

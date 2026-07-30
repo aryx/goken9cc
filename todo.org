@@ -336,6 +336,94 @@ faster) and single-step through the actual `BL ItemCheck` call site
 and its return path with real hardware watchpoints on the relevant
 stack slots.
 
+claude:
+Second confirmed instance of this same bug class, found independently
+while trying to unblock benchs/compcert/knucleotide.c (linux/arm64
+this time via qemu-user, not darwin/arm64 -- so this is not a
+darwin-specific or Mach-O-specific phenomenon, it reproduces under 7c/
+7l regardless of target OS). knucleotide.c's crash (SIGSEGV inside
+write_frequencies()'s `printf("%s %.3f\n", ...)` call) traces back to
+the same "mere presence, not execution" shape as pow() above, but a
+first pass at characterizing it (blaming fopen()/fgets()/fclose()
+specifically, or float-register allocation) was WRONG -- see below for
+the real, much more general trigger, found by continuing to isolate
+after that first pass didn't hold up under -O0 testing.
+
+Real trigger, fully isolated via a 3-file minimal repro (not yet
+promoted to tests/s/regressions/, see todo below): compile two
+separate .c files with 7c, link both together with 7l. File A (main)
+has a dead, provably-never-taken call (`if(neverrun){ helper(); }`,
+`neverrun` a global int initialized to 0) to a function `helper()`
+defined in File B. If `helper()`'s own body makes an external call to
+*any* function living in a third place (libc.a -- confirmed with both
+open() and strdup(), unrelated functions in unrelated libc.a members),
+something elsewhere in the final binary gets corrupted -- concretely,
+main()'s own later `print("%d\n", i)` call (integer, not float --
+floats are NOT required to trigger this, that was the misleading part
+of the first pass) segfaults. If `helper()` is a trivial function with
+no external call (`return x+1;`), no crash. If the exact same
+dead-code-calls-helper() structure is kept but `helper()` lives in the
+*same* object file as main() instead of a separate one (whether as a
+separate function or inlined), no crash, even though it still makes
+the same external call to open()/strdup()/whatever. So the trigger is
+specifically: >=2 separate 7c-compiled object files linked together,
+where a non-entry object file itself contains a call to an external
+symbol -- not which symbols are involved, not floats, not registers,
+not fopen/fgets/fclose specifically (those were just the first,
+misleading way this was noticed, because lib_core/libc/APE/stdio.c
+happens to be exactly this shape: a separately-compiled object file
+whose fopen()/fgets()/fclose() each call another external function,
+open()/read()/close(), that lives in yet another libc.a member).
+Confirmed independent of regopt()/peephole/-O level entirely: crashes
+identically at -O0 through -O3 (byte-identical machine code for the
+crash-adjacent block was verified across all four) -- ruling out the
+optimizer as the culprit and pointing squarely at either cgen.c's base
+codegen or (more likely, given the trigger is about *linking multiple
+object files*, not anything in one function's own compiled shape)
+something in 7l's handling of BL-relocations/symbol layout when
+resolving an external call that originates from a non-entry object
+file. NOT yet root-caused at the instruction level: manually decoding
+the raw machine code around the actual crash site (main()'s own
+print() call) shows byte-correct, self-consistent instructions with no
+visible corruption -- so whatever's wrong is either in exactly which
+address something resolves to (a wrong but validly-encoded relocation
+target) or in something not visible in that local disassembly at all.
+Confirmed 7c/7l-specific (arm64), not a general goken-toolchain issue:
+the byte-identical 3-file repro does NOT crash when built with 6c/6l
+(amd64) instead of 7c/7l -- real knucleotide.c itself also builds,
+runs, and matches Results/knucleotide exactly on amd64. 386 was also
+tried but hits a separate, pre-existing, already-documented bug first
+(dofmt.c hangs formatting %g of a small-magnitude double on 8c/5c, see
+benchs/compcert/test_goken_archs.sh's own TIMEOUT comment) before this
+one could be observed there. Not yet tested on arm/mips/riscv/riscv64.
+
+Given this is a general multi-object-file linking bug (not anything
+specific to knucleotide.c, fopen, or floats), it's potentially much
+higher-impact than just this one benchmark -- worth escalating past
+"whoever picks up the pow() investigation" framing. Concrete next
+steps for whoever picks this up:
+1. Promote the 3-file repro (main.c with `if(neverrun){ helper(); }`,
+   helper.c calling any external libc.a function, e.g. open()) to
+   tests/s/regressions/ or tests/c/regressions/ -- it's small, fast,
+   and 100% deterministic, unlike pow()'s own not-yet-minimal repro.
+2. Get `7l -a`'s disassembly of BOTH the 2-object (crashing) and
+   1-object (safe) builds and diff them fully (not just the print()
+   call site, which was checked and found byte-identical in isolation
+   -- the corruption must be visible somewhere else in the diff, e.g.
+   a different symbol's address, a relocation table entry, or
+   something in how 7l lays out multiple TEXT sections).
+3. Check whether this is really about the *number* of object files
+   (does a 4-file chain behave differently from 3?) or specifically
+   about "an external call originating outside the entry object" --
+   the 3-file repro conflates these, not yet disambiguated.
+See docs/claude_notes/notes_debug_techniques.txt's newest section
+("isolating a crash trigger to which of several *structural* facts
+about a program is responsible, by holding the code content fixed and
+varying only object-file boundaries") for the technique that got this
+finding, and for why the earlier fopen/fgets/fclose-specific and
+float-register theories are corrected here, not just superseded
+silently.
+
 Separate, unrelated bug hit while trying to control tree depth via a
 real command-line argument (`./binarytrees.goken 16`) instead of
 editing source constants, worth its own follow-up: on darwin/arm64,
