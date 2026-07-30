@@ -320,6 +320,22 @@ test_goken:V: goken
 			echo $p': FAILED ('$cputype')'
 	}
 
+# Same as test_goken above, but across every cputype goken's %.goken rule
+# switches on, one qemu-user emulator per arch (see scripts/qemu-runner's
+# own arch table), reporting a prog x arch matrix instead of a flat
+# passed/FAILED list -- the build-vs-run-vs-output-mismatch bookkeeping
+# needed for that table is easier in bash, so (like bench.sh) it lives in
+# its own script; see test_goken_archs.sh's header for the PASS/COMPFAIL/
+# RUNFAIL/MISMATCH cell meanings and why 'mk -a -k' is required for the
+# per-arch build step. Needs lib_core/libc's libc.a already built+
+# installed for every arch below first (see the 'goken' comment above for
+# the one-arch version of that same command); this target does not do
+# that rebuild itself, same "prerequisite, not automated" treatment as
+# plain goken/test_goken above.
+GOKENARCHS=386 amd64 arm arm64 mips riscv riscv64
+test_goken_archs:V:
+	bash test_goken_archs.sh $GOKENARCHS -- $GOKENPROGS
+
 # macOS-native (no qemu): 'goken' below already produces and
 # ad-hoc-signs a real -H6 Mach-O on a Darwin host by default (7l falls
 # back to the host's own compiled-in GOOS when no -H flag is given --

@@ -52,6 +52,10 @@ main(int ac, char **av)
 	if (n >= 2)
 		test(n - 2);
 	exit(0);
+	return 0; /* claude: exit() never returns; 6c/8c/5c (unlike 7c/vc/ic/jc)
+	           * treat falling off main() with no return as a hard compile
+	           * error, not just a warning -- see docs/claude_notes/
+	           * notes_libc_selfhost.txt's near-identical fmt/fltfmt.c note */
 }
 /****
  build & benchmark results

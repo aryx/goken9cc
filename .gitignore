@@ -29,6 +29,7 @@ y.output
 *.exe
 *.uexe
 *.wasm
+*.goken
 
 # tex object files
 *.aux
