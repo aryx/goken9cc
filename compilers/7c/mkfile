@@ -20,16 +20,20 @@ OFILES=\
 	pswt.$O\
 	$TOP/linkers/7l/enam.$O\
 
-HFILES=	gc.h $TOP/include/obj/7.out.h $TOP/src/cmd/cc/cc.h
+HFILES=	gc.h $TOP/include/obj/7.out.h $TOP/compilers/cck/cc.h
 
-LIB=$TOP/src/cmd/cc/cc.a
+LIB=$TOP/compilers/cck/cc.a
 
 <$TOP/mkfiles/mkone
 
+$LIB:
+	cd ../cck
+	mk all
+
 # have to use p% to restrict to pgen/pswt and not enam
 # otherwise with just %.$O we get rule ambiguity
-p%.$O: $TOP/src/cmd/cc/p%.c
-	$CC $CFLAGS $TOP/src/cmd/cc/p$stem.c
+p%.$O: $TOP/compilers/cck/p%.c
+	$CC $CFLAGS $TOP/compilers/cck/p$stem.c
 
 #$ROOT/$OBJDIR/lib/libcc.a:
 #	cd ../cc

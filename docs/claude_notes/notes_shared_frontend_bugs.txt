@@ -181,16 +181,18 @@ com64.c: 64-bit-vlong ?: as a call argument (src/cmd/cc vs compilers/cc)
 ------------------------------------------------------------------------------
 
 A different axis from every entry above: not one compiler-per-backend
-copy diverging, but two entire *parallel frontend lineages* --
+copy diverging, but multiple *parallel frontend lineages* --
 compilers/cc/ (newer, actively maintained; 5c and 8c build against it,
-via compilers/5c/mkfile's `LIB=../cc/cc.a$O`) and src/cmd/cc/ (the
-older Go-era copy; 7c, vc, and ic all build against
-`$TOP/src/cmd/cc/cc.a` instead -- see each backend's mkfile). Both
-contain their own independent copy of com64.c, the "emulate 64-bit
-vlong via a pair of 32-bit words" pass used only by targets without
-native 64-bit ops (guarded by `machcap()`, which bails out immediately
-on 64-bit-native arches -- so arm64/amd64 never exercise this code at
-all, regardless of which frontend they're built against).
+via compilers/5c/mkfile's `LIB=../cc/cc.a$O`), compilers/cck/ (the
+kencc lineage; 6c, 5ck, 8ck, and now 7c too -- see "7c migrated off
+src/cmd/cc" below), and src/cmd/cc/ (the older Go-era copy; vc and ic
+still build against `$TOP/src/cmd/cc/cc.a` -- see each backend's
+mkfile). All three contain their own independent copy of com64.c, the
+"emulate 64-bit vlong via a pair of 32-bit words" pass used only by
+targets without native 64-bit ops (guarded by `machcap()`, which bails
+out immediately on 64-bit-native arches -- so arm64/amd64 never
+exercise this code at all, regardless of which frontend they're built
+against).
 
 compilers/cc/com64.c already has `case OCOND:` in its `if(rv)` switch
 and `case OLIST: case OCOMMA:` in its final `if(typev[n->type->etype])`
@@ -209,11 +211,42 @@ notes_libc_selfhost.txt for the fuller story. Not checked against
 9front/kencc-riscv for a "which lineage got this fix first" history;
 found via direct probing (vc -S on the failing file), not diffing.
 
-**Status: fixed in src/cmd/cc/com64.c** (so 7c/vc/ic are now current
-with compilers/cc/com64.c for this one bug specifically -- the two
-frontends remain otherwise unmerged; see todo.org's "migrate 7c/vc/ic
-off src/cmd/cc" entry for the real fix, unifying the frontends so this
-class of bug stops recurring).
+**Status: fixed in src/cmd/cc/com64.c** (so vc/ic, still on that
+lineage, are current with compilers/cc/com64.c for this one bug
+specifically -- the frontends remain otherwise unmerged; see todo.org's
+"migrate 7c/vc/ic off src/cmd/cc" entry for the real fix, unifying the
+frontends so this class of bug stops recurring). compilers/cck/com64.c
+already had this fix independently (verified when 7c moved onto it).
+
+7c migrated off src/cmd/cc onto compilers/cck (not compilers/cc)
+------------------------------------------------------------------------------
+
+7c now builds against compilers/cck/cc.a instead of src/cmd/cc/cc.a
+(compilers/7c/mkfile's HFILES/LIB, plus compilers/7c/gc.h's #include).
+This was a staging step, not the final state todo.org's migration entry
+calls for -- compilers/cck/ is supposed to be exclusive to the
+kencc-lineage "*ck" compilers (5ck/8ck), with everything else on
+compilers/cc/. It was chosen anyway because compilers/cck/cc.h is far
+closer to what src/cmd/cc/cc.h (and 7c's own gc.h) already assumed --
+same EXTERN-macro-in-gc.h convention, same field names (Node.garb, not
+nodegarb) -- than compilers/cc/cc.h is, which renamed/retyped several
+struct fields and moved global storage into a dedicated globals2.c.
+Landing on compilers/cc/ directly would require redoing that same
+gc.h/globals2.c rewrite 5c/8c already went through, just for 7c. The
+few incidental fixups needed to build against compilers/cck/ instead:
+outstring/gextern/exreg/ncast's int32 params/return changed to long
+(compilers/cck/cc.h declares them as long), `xround` renamed to `round`
+(compilers/cck/dcl.c's name for the same helper), and 7c/txt.c's
+`p->reg = textflag` reverted to `p->reg = (profileflg ? 0 : NOPROF)` --
+`textflag`/`#pragma textflag` is a dead Go-runtime-era feature only
+src/cmd/cc/dpchk.c ever implemented (no live C source in this tree uses
+the pragma), and 5c/6c/8c had already dropped it. Verified via a clean
+`mk objtype=boot-gcc` build plus tests/c/{mini,mini2,vlong,float} and
+tests/c/regressions all passing -- run natively on this host (aarch64
+Linux), not just under qemu-aarch64, since 7c's own output could be
+executed directly. vc and ic remain on src/cmd/cc/ for now; unifying
+compilers/cck/ itself into compilers/cc/ (which 6c/5ck/8ck would also
+need) is a separate, larger project, not attempted here.
 
 Unsuffixed hex constant >32 bits: truncated, not promoted to vlong (universal; now warns by default, still unfixed)
 ------------------------------------------------------------------------------------------------------------------------------

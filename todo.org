@@ -800,13 +800,35 @@ pass length each time, safer
 
 *** TODO migrate 7c/vc/ic off the Go-era src/cmd/cc frontend onto compilers/cc/
     5c/8c already build against compilers/cc/cc.a (the newer, actively
-    maintained frontend); 7c/vc/ic still build against src/cmd/cc/cc.a,
+    maintained frontend); vc/ic still build against src/cmd/cc/cc.a,
     a separate, older copy that has independently drifted (see the
     com64.c OCOND/OLIST fix in
     docs/claude_notes/notes_shared_frontend_bugs.txt, found while
     building lib_core/libc for mips -- already fixed in compilers/cc/
     but not in src/cmd/cc/, since they're not the same file).
     Unifying onto one frontend removes this whole class of bug.
+
+    7c done, staged via compilers/cck/ rather than jumping straight to
+    compilers/cc/: compilers/cc/cc.h has diverged far more from
+    src/cmd/cc/cc.h than compilers/cck/cc.h has (1776-line vs 655-line
+    diff at the time this was checked) -- compilers/cc/ renamed/retyped
+    struct fields (Node.garb -> nodegarb, uchar -> char/bool, EXTERN-
+    macro globals moved to a dedicated globals2.c) while compilers/cck/
+    kept the same EXTERN-macro-in-gc.h convention and field names
+    src/cmd/cc/ and 7c's own gc.h already used. Migrating 7c straight
+    to compilers/cc/ would require the same kind of gc.h/globals2.c
+    rewrite 5c/8c already went through; migrating to compilers/cck/
+    first was ~4 lines of type fixes (int32->long on outstring/
+    gextern/exreg/ncast, xround->round rename, and dropping the dead
+    #pragma-textflag global that only src/cmd/cc/ ever populated --
+    5c/6c/8c had already dropped it). Verified: builds clean, and
+    tests/c/{mini,mini2,vlong,float} + tests/c/regressions all pass
+    running natively on this host (aarch64 Linux), not just under
+    qemu-aarch64. vc/ic remain on src/cmd/cc/ for now. The eventual
+    compilers/cck/ -> compilers/cc/ unification (needed to fully match
+    the stated end policy: only kencc-lineage "*ck" compilers should
+    live on compilers/cck/) is its own separate, larger project, not
+    done here.
 
 ** assemblers: 5a/6a/7a/8a/va/ia/ea
 
