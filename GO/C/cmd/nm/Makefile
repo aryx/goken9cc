@@ -13,6 +13,6 @@ OFILES=\
 	nm.$O\
 
 LIB=\
-	../../../lib/libmach.a\
+	../../../../lib/libmach.a\
 
 include ../../Make.ccmd

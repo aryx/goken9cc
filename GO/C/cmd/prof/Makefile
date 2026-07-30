@@ -14,7 +14,7 @@ OFILES=\
 	main.$O\
 
 LIB=\
-	../../../lib/libmach.a\
+	../../../../lib/libmach.a\
 
 NOINSTALL=1
 include ../../Make.ccmd
