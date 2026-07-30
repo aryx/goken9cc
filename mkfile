@@ -34,9 +34,6 @@ test:
 	# progs currently wired up to goken's own Xc/Xa/Xl pipeline (see
 	# benchs/compcert/mkfile's GOKENPROGS) -- defaults to $cputype from
 	# mkconfig, override with 'cputype='<arch> like any other target here.
-	# each 'cd' here is @{}-scoped: mk runs a target's whole recipe as
-	# one rc script, so an unscoped 'cd' on one line would otherwise
-	# leak into the next line's starting directory.
 	# SKIPQEMU=1: skip qemu-runner when $cputype matches this host's own
 	# arch (see benchs/compcert/mkfile's test_goken for why) -- only in
 	# this top-level context, not test_goken's own default behavior.
@@ -50,10 +47,10 @@ test_macos:V:
 		@{ cd tests; mk test_macos_arm64 }
 	if not
 		@{ cd tests; mk test_macos_amd64 }
+#`
 
 test_macos_arm64:V:
 	cd tests; mk test_macos_arm64
-
 test_macos_amd64:V:
 	cd tests; mk test_macos_amd64
 
