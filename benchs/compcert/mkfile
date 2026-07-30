@@ -333,7 +333,24 @@ goken:V: $GOKENBINS
 # anyone deliberately wanting the qemu path even same-arch, are
 # unaffected). Only maps the uname(1) spellings that actually show up
 # as goken hosts today; anything else keeps using qemu-runner.
+#
+# 'mk clean' first is not optional: %.goken's mtime-based dependency
+# (`%.goken: %.c`) can't distinguish one cputype's build from another's
+# -- the filename is the same regardless of target arch. Running this
+# target for mips then later for arm64, without cleaning in between,
+# leaves the mips-compiled foo.goken sitting there looking "up to date"
+# to mk (its mtime is newer than foo.c's, which is all mk checks), so
+# the arm64 run silently skips recompiling it and tries to run the
+# mips binary as-is -- which binfmt_misc/qemu-user happily does (it
+# only looks at the ELF header, not what the caller expected), so this
+# doesn't even fail loudly: it just runs the wrong architecture under
+# emulation and compares its output against arm64's expected results.
+# Found via exactly this sequence after migrating vc/ic (see git log)
+# and manually running `mk 'cputype=mips' test_goken` in this same
+# directory afterward -- the *next* top-level `mk test` picked up the
+# leftover mips .goken binaries.
 test_goken:V:
+	mk clean
 	@{ cd $TOP/lib_core/libc; mk 'objtype='$cputype 'cputype='$cputype install }
 	mk 'cputype='$cputype goken
 	usenative=()

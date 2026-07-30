@@ -14,3 +14,11 @@
 # would catch.
 *.exe
 *.uexe
+# same reasoning as *.exe above: benchs/compcert/mkfile's %.goken
+# binaries are just as vulnerable to this stale-artifact/mtime trap --
+# worse, actually, since %.goken's mtime check can't tell one cputype's
+# build apart from another's (same filename regardless of target arch),
+# so a leftover mips-targeted foo.goken silently "looks done" to a
+# later arm64 build too, not just skipping a recipe but running the
+# wrong architecture's binary under qemu/binfmt without any indication.
+*.goken
