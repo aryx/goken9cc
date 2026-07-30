@@ -12,4 +12,15 @@
 // silently truncated before ever reaching _syscall6.
 
 //sys write(int fd, void *buf, long n) long = SYS_write
+//sys read(int fd, void *buf, long n) long = SYS_read
+//sys close(int fd) int = SYS_close
+// see lseek's return-value-truncation caveat in syscall_linux_amd64.decl
+// (identical limitation: _syscall6 only ever returns 4-byte `long`)
+//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// _sysopen, not open: raw 3-arg POSIX shape, distinct from Plan9's 2-arg
+// open(char*,int) (include/os/file.h) that os/darwin/open.c builds on
+// top of this -- see syscall_linux_amd64.decl's identical comment.
+// Unlike the Linux "generic ABI" archs, darwin's BSD table keeps a real
+// 3-arg open() (SYS_open), so this needs no openat()/AT_FDCWD detour.
+//sys _sysopen(void *path, int flags, int mode) long = SYS_open
 //sys exit(int code) void = SYS_exit

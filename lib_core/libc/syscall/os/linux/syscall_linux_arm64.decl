@@ -12,4 +12,14 @@
 // silently truncated before ever reaching _syscall6.
 
 //sys write(int fd, void *buf, long n) long = SYS_write
+//sys read(int fd, void *buf, long n) long = SYS_read
+//sys close(int fd) int = SYS_close
+//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// no legacy SYS_open on this arch (see numbers_arm64.h) -- openat() is
+// generated here from SYS_openat, and syscall_linux_arm64.h hand-adds a
+// tiny _sysopen(path,flags,mode) shim on top calling openat(AT_FDCWD,...),
+// so os/linux/open.c's Plan9-flag-translation glue can call the same
+// _sysopen() name uniformly on every Linux arch regardless of which raw
+// syscall backs it.
+//sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
 //sys exit(int code) void = SYS_exit

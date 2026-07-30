@@ -6,4 +6,10 @@
 // adding a syscall here is the only step needed -- no new assembly.
 
 //sys write(int fd, void *buf, long n) long = SYS_write
+//sys read(int fd, void *buf, long n) long = SYS_read
+//sys close(int fd) int = SYS_close
+//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// no legacy SYS_open on this arch -- see syscall_linux_arm64.decl's
+// identical comment; syscall_linux_riscv.h adds the _sysopen() shim.
+//sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
 //sys exit(int code) void = SYS_exit

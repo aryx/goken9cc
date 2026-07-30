@@ -10,4 +10,7 @@
 
 #define SYS_read	4003
 #define SYS_write	4004
+#define SYS_open	4005
+#define SYS_close	4006
+#define SYS_lseek	4019
 #define SYS_exit	4001

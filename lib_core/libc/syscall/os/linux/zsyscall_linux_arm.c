@@ -9,6 +9,26 @@ long write(int fd, void* buf, long n)
 	return (long)_syscall6(SYS_write, (long)fd, (long)buf, (long)n, 0, 0, 0);
 }
 
+long read(int fd, void* buf, long n)
+{
+	return (long)_syscall6(SYS_read, (long)fd, (long)buf, (long)n, 0, 0, 0);
+}
+
+int close(int fd)
+{
+	return (int)_syscall6(SYS_close, (long)fd, 0, 0, 0, 0, 0);
+}
+
+long lseek(int fd, vlong offset, int whence)
+{
+	return (long)_syscall6(SYS_lseek, (long)fd, (long)offset, (long)whence, 0, 0, 0);
+}
+
+long _sysopen(void* path, int flags, int mode)
+{
+	return (long)_syscall6(SYS_open, (long)path, (long)flags, (long)mode, 0, 0, 0);
+}
+
 void exit(int code)
 {
 	_syscall6(SYS_exit, (long)code, 0, 0, 0, 0, 0);

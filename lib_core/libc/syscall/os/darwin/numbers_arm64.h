@@ -12,5 +12,13 @@
  * in x16, no prefix.
  */
 
+/* open/close/lseek added alongside exit/write -- same arch-independent
+ * BSD table as numbers_amd64.h (see that file's comment for the
+ * lseek=199-not-19 story, XNU-specific and not an amd64-only quirk).
+ */
 #define SYS_exit	1
+#define SYS_read	3
 #define SYS_write	4
+#define SYS_open	5
+#define SYS_close	6
+#define SYS_lseek	199

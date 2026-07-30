@@ -127,10 +127,21 @@ PORTOFILES=\
 	port/asin.$O\
 	port/rand.$O\
 	port/qsort.$O\
+	port/seek.$O\
 
 SYSCALLOFILES=\
 	syscall/os/$GOOS/svc_$cputype.$O\
 	syscall/os/$GOOS/zsyscall_${GOOS}_$cputype.$O\
+
+# the "os/$GOOS/" API-shape glue (Plan9's open()/include/os/file.h
+# vs the raw POSIX-shaped _sysopen() syscall/ provides) -- kept as its
+# own OFILES group, separate from SYSCALLOFILES above, matching the
+# directory split lib_core/libc/os/ itself makes (see that dir's own
+# arch/, os/ split mirroring syscall/'s). Arch-independent (unlike
+# SYSCALLOFILES, which is per-cputype): open.c calls the same _sysopen()
+# name regardless of which raw syscall backs it on a given arch.
+OSFILES=\
+	os/$GOOS/open.$O\
 
 # $ARCHEXTRAOFILES: for arch-specific runtime support beyond rt0.s that
 # only some arches need (e.g. arm has no hardware integer divide, so
@@ -159,7 +170,7 @@ ARCHOFILES=\
 	$RT0OFILE\
 	$ARCHEXTRAOFILES\
 
-OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $SYSCALLOFILES $ARCHOFILES
+OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
 
 HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 

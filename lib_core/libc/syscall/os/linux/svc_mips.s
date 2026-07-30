@@ -29,4 +29,16 @@ TEXT _syscall6+0(SB), $0
 	MOVW	a3+12(FP), R6
 	MOVW	a4+16(FP), R7
 	SYSCALL
+	// Real Linux/mips o32 syscall convention returns the result in
+	// $v0 (R2), same register the syscall number went in on -- but
+	// this compiler's own calling convention returns a function's
+	// `long` result via R1 (confirmed empirically: without this move,
+	// open()/read() came back holding the raw syscall *number*
+	// (SYS_open/SYS_read) unchanged, i.e. RET was returning R1's
+	// stale value from the MOVW above, never touched again after
+	// function entry -- write()/exit() never surfaced this since
+	// nothing ever inspected their return value). Move the kernel's
+	// real result from R2 into R1 before RET so callers actually see
+	// it.
+	MOVW	R2, R1
 	RET

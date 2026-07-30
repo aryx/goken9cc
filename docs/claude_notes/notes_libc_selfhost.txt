@@ -608,3 +608,130 @@ unrelated nor a real 6l bug: it was this same session's -H7-not-
 optional finding (point 1 in the darwin/amd64 section above) --
 todo.org's corresponding entry has been removed now that the actual
 cause is understood and fixed.
+
+File syscalls (open/read/close/lseek), and the syscall/ vs os/ split
+------------------------------------------------------------------------
+
+Added July 2026, extending the write/exit-only libc above to real file
+I/O: open/read/close/seek, matching the Plan9-flavored API
+include/os/file.h already declared (fdt open(char*,int) with
+OREAD/OWRITE/ORDWR/OEXEC/OTRUNC/OCEXEC/ORCLOSE/OEXCL bits -- NOT POSIX's
+open(2) shape) but that nothing had implemented yet.
+
+This is also where lib_core/libc/os/ (previously an empty, uncommitted
+scaffold dir) got its first real content, and its own purpose nailed
+down precisely, per explicit user direction: syscall/ stays a *pure*
+raw-syscall adapter, one thin wrapper per (OS, arch) with no API-shape
+opinions; os/$GOOS/ is where a *different* API shape gets bridged on
+top of it. Concretely:
+
+- syscall/os/$GOOS/ (both linux and darwin) now also generates read(),
+  close(), and a raw 3-arg-POSIX-shaped open() -- but named _sysopen(),
+  not open(): Plan9's open() is 2-arg with a completely different flag
+  encoding (OREAD=0/OWRITE=1/ORDWR=2/OEXEC=3 base mode, OTRUNC=16/
+  OCEXEC=32/ORCLOSE=64/OEXCL=0x1000 extra bits), so the raw wrapper
+  needed a different name to avoid an incompatible-signature symbol
+  clash with the real, public open(). lseek() is generated too
+  (Plan9 calls it seek(), see port/seek.c below). Linux's arm64/riscv/
+  riscv64 have no legacy 3-arg open() syscall at all (removed from the
+  "generic" ABI, openat()-only) -- their .decl generates openat() from
+  SYS_openat instead, and syscall_linux_{arm64,riscv,riscv64}.h
+  hand-adds a one-line _sysopen(path,flags,mode){return
+  openat(AT_FDCWD,...);} shim so os/linux/open.c can call the same
+  _sysopen() name uniformly regardless of which raw syscall backs it on
+  a given arch -- keeping the os/linux/ glue arch-independent.
+
+- os/$GOOS/open.c (linux and darwin, separately -- their O_TRUNC/
+  O_EXCL/O_CLOEXEC numeric values genuinely differ) translates Plan9's
+  mode bits into that OS's real O_* flags and calls _sysopen(). This is
+  the directory the user asked to keep separate from syscall/
+  specifically for this reason -- it was originally sketched as
+  os/os/$GOOS/ (mirroring os/arch/$cputype/, itself mirroring
+  syscall/'s own arch/os split) but flattened to os/$GOOS/ per follow-up
+  feedback, since nothing lives under os/arch/ yet and the extra
+  nesting bought nothing.
+
+- port/seek.c is a third case: Plan9's seek(fdt,vlong,int) vs lseek()'s
+  name is a *pure* rename with no OS-specific behavior (SEEK__START/
+  CUR/END already equal POSIX's SEEK_SET/CUR/END numerically
+  everywhere), so it's genuinely portable and lives in port/, not
+  os/$GOOS/.
+
+- read()/close() needed no glue at all -- their Plan9 and POSIX shapes
+  are already identical (like write() already was), so syscall/'s
+  generated wrappers serve directly as the public symbols.
+
+Darwin's XNU carry-flag error convention (syscall/os/darwin/
+svc_{amd64,arm64}.s) was also fixed in this pass: previously documented
+as a known gap ("worth fixing before adding a syscall a caller actually
+needs to detect failure from" -- exactly what open()/read() are).
+JCC/NEGQ (amd64) and BCC/NEG (arm64) now negate the return value on
+carry-set, matching Linux's already-negative-on-error convention
+uniformly. This one stayed in syscall/, not os/darwin/, despite also
+being about API-shape: the carry flag itself doesn't survive as
+C-visible state past the trap instruction, so *something* has to decide
+the return convention right there in the raw trampoline -- there's no
+way to defer it to a higher glue layer. Unverified on real hardware
+(no macOS available this session, same caveat as the rest of darwin/amd64's
+history above) -- verify before trusting it.
+
+A real, non-obvious bug found and fixed along the way: linux/mips's
+svc_mips.s left the syscall's actual result in R2 ($v0, where the
+Linux/mips o32 kernel ABI legitimately puts it) but this compiler's own
+calling convention returns a function's `long` result via R1 -- and
+R1, loaded with the syscall *number* at function entry, was never
+touched again before RET. write()/exit() never surfaced this (nothing
+ever inspected their return value), but open()'s fd and read()'s byte
+count came back as literally the raw SYS_open/SYS_read constants
+instead of real values -- caught by a debug build printing them
+directly (4005/4003, the exact syscall numbers), not by static reading.
+Symptom before the fix, for what it's worth: io.exe's write(1, buf, n)
+with n==garbage-large dumped stack memory (visibly including envp
+strings) well past the 256-byte buf, which is what first pointed at "n
+is wrong", not "read failed". Fixed with one `MOVW R2, R1` before RET;
+verified via a real qemu-mips run of tests/c/hello_libc/io.c
+(open+read+seek+write+close against a real fixture file) after the fix,
+not just recompiling.
+
+Verification: `lib_core/libc && mk -a objtype=$arch cputype=$arch
+install` then `tests/c/hello_libc && mk objtype=$arch cputype=$arch
+test_one` (now builds+runs both hello.exe and the new io.exe) via real
+qemu-user, for arm64/arm/mips/riscv/riscv64 -- all five pass, including
+mips only after the svc_mips.s fix above. amd64 and 386 could NOT be
+verified this session: both fail to build lib_core/libc entirely, at
+math/lrand.c ("bad mul alg" from 6c/8c) -- confirmed via `git stash` to
+be a PRE-EXISTING failure on master, unrelated to this session's changes
+(neither arch's libc.a had ever been successfully built/installed
+before this session; ROOT/arch/{amd64,386}/bin was already empty).
+Their file-syscall code (numbers, .decl, zsyscall_*.c) was written
+following the exact same pattern already proven on the other five
+Linux arches plus reference values cross-checked against
+GO/pkg/syscall's 2010-era zsysnum_linux_{386,amd64,arm}.go, so it's
+credible, but genuinely unverified by execution -- fix the lrand
+compiler bug (out of scope here, a compilers/6c and compilers/8c
+codegen issue, not a syscall issue) before trusting amd64/386 fully.
+
+Darwin (amd64/arm64) and a best-effort, unwired Windows/amd64 draft
+(kernel32 CreateFileA/ReadFile/WriteFile/CloseHandle/SetFilePointerEx
+via os/windows/winio_amd64.s + os/windows/open.c, no GOOS=windows
+rt0/_main exists in this tree yet) were written the same way -- no
+macOS or Windows host available this session, so both are compile-
+untested. Windows is explicitly a bigger gap than darwin: unlike
+Linux/Darwin, there's no raw-syscall-number convention Windows
+applications are meant to use directly, so it has no syscall/os/
+windows/ layer at all -- kernel32 IS the ABI, called straight from
+os/windows/'s glue.
+
+Plan9 (GOOS=plan9) and principia: NOT started. This would be a third,
+structurally different bring-up (no INT/SYSCALL-style raw trap --
+number in a register, args written to the stack, single trap
+instruction per docs/claude_notes/notes_abi_plan9.txt) rather than an
+incremental extension of this file's pattern. lib_core/libc/9syscall/
+sys.h already exists and is *already* principia's own numbering (its
+own header comment: "coupling: principia, must be kept in sync") --
+Plan9 4th edition's numbering is not a separate target here. Only
+PWRITE and EXITS have ever been exercised end to end (by
+tests/s/mini/hello_plan9_{arm,mips}.s, hand-written asm with no libc
+involved), verified under the 5i/vi emulators; open/read/seek/close on
+that ABI are completely unexercised. See notes_abi_plan9.txt for what's
+proven vs merely numbered in sys.h.

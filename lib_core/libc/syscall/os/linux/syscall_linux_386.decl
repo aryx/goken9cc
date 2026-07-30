@@ -6,4 +6,12 @@
 // adding a syscall here is the only step needed -- no new assembly.
 
 //sys write(int fd, void *buf, long n) long = SYS_write
+//sys read(int fd, void *buf, long n) long = SYS_read
+//sys close(int fd) int = SYS_close
+//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// _sysopen, not open: see syscall_linux_amd64.decl's identical comment --
+// this is the raw 3-arg POSIX shape, distinct from Plan9's 2-arg
+// open(char*,int) (include/os/file.h), which os/linux/open.c builds
+// on top of this.
+//sys _sysopen(void *path, int flags, int mode) long = SYS_open
 //sys exit(int code) void = SYS_exit

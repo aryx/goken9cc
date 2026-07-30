@@ -19,3 +19,24 @@
 #include "numbers_arm64.h"
 
 extern long _syscall6(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);
+
+/* This arch's "generic" Linux ABI dropped the legacy 3-arg open()
+ * syscall (see numbers_arm64.h) -- openat() is all that's left, so
+ * _sysopen() (the raw-POSIX-open name every arch's os/linux/open.c
+ * calls, see syscall_linux_amd64.decl's comment on that name) is a
+ * hand-written one-line bridge here instead of decl-generated. Not
+ * `static inline`: this project's Xc compilers don't reliably support
+ * that combination (see other lib_core/libc headers, none of which use
+ * it), and this is only ever included by the one zsyscall_linux_arm64.c
+ * translation unit anyway. AT_FDCWD (-100) is the same on every Linux
+ * arch (asm-generic/fcntl.h) and used to mean "path is relative to the
+ * process's own cwd" -- i.e. classic open()'s exact behavior.
+ */
+#define AT_FDCWD (-100)
+
+extern long openat(int dirfd, void *path, int flags, int mode);
+
+long _sysopen(void *path, int flags, int mode)
+{
+	return openat(AT_FDCWD, path, flags, mode);
+}

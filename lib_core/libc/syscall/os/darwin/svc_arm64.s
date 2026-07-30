@@ -17,13 +17,15 @@
 // full FP-vs-register reasoning, which is an AAPCS64 calling-convention
 // fact and so applies identically regardless of OS) -- is unchanged.
 //
-// Not handled here: XNU's error convention (carry flag set + errno in
-// x0) differs from Linux's (negative errno packed into the return
-// value). Same limitation already exists for linux/arm64's svc_arm64.s
-// -- neither wrapper checks for syscall failure, which is fine for
-// write/exit in a minimal libc with no error-handling callers yet, but
-// worth fixing before adding a syscall a caller actually needs to
-// detect failure from.
+// XNU's error convention (carry flag set on return, R0 holds the
+// positive errno) differs from Linux's (negative errno already packed
+// into the return value, no flag to check) -- see svc_amd64.s's
+// identical BCC/NEG normalization and its comment on why this belongs
+// in the raw trampoline rather than os/darwin/'s glue: it's the
+// minimum fix needed to make _syscall6's return value mean anything at
+// all on error. Not yet exercised against a real XNU failure -- this
+// host has no macOS available; verify on real hardware before trusting
+// it fully (see docs/claude_notes/notes_libc_selfhost.txt).
 TEXT _syscall6+0(SB), $0
 	MOV	R0, R16
 	MOV	a1+8(FP), R0
@@ -33,4 +35,7 @@ TEXT _syscall6+0(SB), $0
 	MOV	a5+40(FP), R4
 	MOV	a6+48(FP), R5
 	SVC	$0x80
+	BCC	ok
+	NEG	R0, R0
+ok:
 	RETURN

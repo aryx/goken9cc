@@ -12,4 +12,20 @@
 // silently truncated before ever reaching _syscall6.
 
 //sys write(int fd, void *buf, long n) long = SYS_write
+//sys read(int fd, void *buf, long n) long = SYS_read
+//sys close(int fd) int = SYS_close
+// lseek's return value is really a 64-bit off_t, but _syscall6 itself only
+// ever returns `long` (4 bytes, this project's universal SZ_LONG -- see
+// notes_libc_selfhost.txt's "pointer-truncation bug" section) even on
+// archs that upgraded their *argument* casts to vlong, so a seek past 4GiB
+// silently truncates here. Not fixed in this pass -- same accepted, already-
+// documented limitation as write()'s return value.
+//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// _sysopen, not open: named apart from Plan9's own 2-arg open(char*,int)
+// (see include/os/file.h) since this is the raw 3-arg POSIX shape
+// (path,flags,mode) the kernel actually expects -- os/linux/open.c
+// translates Plan9's OREAD/OWRITE/OTRUNC/... bits into O_* flags and calls
+// this. Public symbol name deliberately not "open" to avoid clashing with
+// that translating wrapper.
+//sys _sysopen(void *path, int flags, int mode) long = SYS_open
 //sys exit(int code) void = SYS_exit
