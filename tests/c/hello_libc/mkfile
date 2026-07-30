@@ -19,6 +19,27 @@ test_one:V:
 	$TOP/scripts/qemu-runner $cputype ./hello.exe | cmp /dev/stdin expected.txt
 	$TOP/scripts/qemu-runner $cputype ./io.exe | cmp /dev/stdin io_expected.txt
 
+# unlike tests/c/mini2's own ARCHS loop (a self-contained per-test stub,
+# no external library), each arch here also needs lib_core/libc's real
+# libc.a freshly rebuilt+installed first -- same 'rm -f libc.a; mk -a
+# ... install' dance test_macos_arm64/test_macos_amd64 below already do,
+# for the same reason (see lib_core/libc/mkfile's mksyslib comment on
+# why a stale/mixed-arch libc.a corrupts otherwise, and this mkfile's
+# own header comment above). Driven from the top-level `mk test` via
+# tests/c/mkfile's DIRS and mkfiles/mkdirs' generic recursion -- no
+# per-arch objtype/cputype needs to be passed in from outside, unlike
+# test_one, which expects the caller to have already picked one.
+ARCHS=386 amd64 arm arm64 mips riscv riscv64
+test:V:
+	for (arch in $ARCHS) {
+		echo $arch
+		mk clean
+		@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype='$arch 'cputype='$arch install }
+		mk 'objtype='$arch 'cputype='$arch all
+		$TOP/scripts/qemu-runner $arch ./hello.exe | cmp /dev/stdin expected.txt
+		$TOP/scripts/qemu-runner $arch ./io.exe | cmp /dev/stdin io_expected.txt
+	}
+
 # -H7 (ELF) is explicit, not left to 6l/7l/8l's own default: those
 # three (unlike vl/il/jl, which always default to ELF regardless of
 # host) fall back to *the host's own compiled-in GOOS* when no -H is
@@ -128,5 +149,3 @@ hello_macos_amd64.exe: hello.c
 	$CC $CFLAGS -z -Damd64 -c hello.c
 	$LD $LDFLAGS -s -H6 -o $target -E _main hello.6 -lc
 	$TOP/scripts/macos-codesign $target
-
-test:V: test_one

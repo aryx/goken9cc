@@ -1,6 +1,6 @@
 TOP=../..
 
 # misc/? rune/?
-DIRS=mini mini2 vlong float variants regressions
+DIRS=mini mini2 vlong float variants regressions hello_libc
 
 <$TOP/mkfiles/mkdirs
