@@ -46,12 +46,32 @@ main(int argc, char *argv[])
 	INITDAT = -1;
 	INITRND = -1;
 	INITENTRY = 0;
+	optlevel = 3;
 
 	ARGBEGIN {
 	default:
 		c = ARGC();
 		if(c >= 0 && c < sizeof(debug))
 			debug[c]++;
+		break;
+	case 'O':
+		/* claude: -O already meant a bare verbose-trace boolean
+		 * (span.c's oplook/regoff prints) before this -- keep that
+		 * for plain -O, and only treat it as the new gcc-style
+		 * numeric level when a digit is actually attached, e.g.
+		 * -O0/-O3, peeking _args (include/flag/cli.h's ARGBEGIN/
+		 * ARGF() internal state) rather than blindly calling ARGF(),
+		 * which would otherwise swallow the next filename argument
+		 * as if it were the level for plain -O. */
+		if(_args[0] >= '0' && _args[0] <= '9') {
+			a = ARGF();
+			optlevel = atoi(a);
+			if(optlevel < 0)
+				optlevel = 0;
+			if(optlevel > 3)
+				optlevel = 3;
+		} else
+			debug['O']++;
 		break;
 	case 'o':
 		outfile = ARGF();

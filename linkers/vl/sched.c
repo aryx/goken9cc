@@ -46,7 +46,12 @@ sched(Prog *p0, Prog *pe)
 
     //pad: I added that to disable sched() to more easily compare with
     // ovl (which did not port sched())
-    if(debug['X'])
+    // claude: was gated on debug['X'] (Xix-compliant mode); now on
+    // optlevel via the new -O0 (see l.h/obj.c and
+    // docs/claude_notes/notes_frontend_optlevels.txt) instead, so this
+    // has the same "give me the least-optimized, most-comparable-to-
+    // ovl output" effect as before but through the standard flag.
+    if(optlevel < 1)
         return;
 
 	/*

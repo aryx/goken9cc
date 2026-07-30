@@ -22,8 +22,6 @@ gtext(Sym *s, int32 stkoff)
 void
 noretval(int n)
 {
-  if(!debug['X']) {
-
 	if(n & 1) {
 		gins(ANOP, Z, Z);
 		p->to.type = D_REG;
@@ -34,7 +32,6 @@ noretval(int n)
 		p->to.type = D_FREG;
 		p->to.reg = FREGRET;
 	}
-  }
 }
 
 /*

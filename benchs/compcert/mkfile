@@ -1,16 +1,22 @@
 # Micro-benchmarks originally from the CompCert project (see pad.txt),
-# used here to compare gcc/clang -O0 vs -O3 (and, later, goken's own
-# Xc/Xa/Xl pipeline once it can build this corpus too -- see TODO below).
-# gcc -O0 is the fixed baseline every variant is compared against, in
-# bench and (eventually) across compilers -- see bench.sh.
+# used here to compare gcc/clang -O0 vs -O3, and (see the 'goken'/
+# 'goken_bench' targets and GOKENPROGS further down) goken's own Xc/Xa/
+# Xl pipeline at -O0/-O3 too, for whichever subset of this corpus it can
+# already build. gcc -O0 is the fixed baseline every variant is compared
+# against, in bench and across compilers -- see bench.sh.
 #
 # Modeled after ./Makefile (the original CompCert GNU Makefile for this
 # corpus) but using mk/rc instead of make/bash, and gcc/clang instead of
 # ccomp.
 #
-#   mk          # just compile everything (gcc/clang, -O0 and -O3)
-#   mk test     # compile + check stdout of every program against Results/
-#   mk bench    # compile + timing summary, all variants vs gcc -O0
+#   mk              # just compile everything (gcc/clang, -O0 and -O3)
+#   mk test         # compile + check stdout of every program against Results/
+#   mk goken_bench  # compile GOKENPROGS with goken itself, at -O0 and -O3
+#                   #  (needs lib_core/libc built+installed for $cputype
+#                   #  first -- see the 'goken' target's own comment)
+#   mk bench        # compile + timing summary, all variants vs gcc -O0
+#                   #  (run 'mk goken_bench' first to include goken's own
+#                   #  columns -- bench.sh degrades to "n/a" without it)
 #   mk clean
 
 GCC=gcc
@@ -74,13 +80,13 @@ test:V: all
 # (best-of-N, speedup ratios) is easier in bash than rc, so that part
 # alone lives in bench.sh; see its header for why it uses bash's `time`
 # builtin instead of an external command, and VARIANTS for the compiler
-# list (extend it there, not here, once goken joins the comparison).
+# list (extend it there, not here, for any future compiler/level).
 bench:V: all
 	bash bench.sh $PROGS
 
 clean:V:
 	rm -f $GCCO0BINS $GCCO3BINS $CLANGO0BINS $CLANGO3BINS
-	rm -f *.[5678vij] $GOKENBINS
+	rm -f *.[5678vij] $GOKENBINS $GOKENO0BINS $GOKENO3BINS
 
 # goken's own toolchain (Xc/Xa/Xl), one program + one arch via
 # 'mk 'cputype='<arch> goken' (defaults to $cputype from mkconfig, e.g.
@@ -310,6 +316,76 @@ goken:V: $GOKENBINS
 	}
 	$gc $GOKENCFLAGS -D$cputype -c $stem.c
 	$gl -L$TOP/ROOT/arch/$cputype/lib -o $target -E _main $stem.$go -lc
+	$TOP/scripts/macos-codesign $target
+
+# goken-O0/goken-O3: same as %.goken above (see its own comment for the
+# libc.a prerequisite and the arch->tool-letter table), but passing -O0/
+# -O3 (docs/claude_notes/notes_frontend_optlevels.txt) to $gc, so
+# bench.sh's VARIANTS can compare goken against gcc/clang at both ends
+# of the optimization range the same way it already does for them.
+# Deliberately two new pattern rules rather than folding -O into %.goken
+# itself: test_goken/test_goken_archs (below) only care about *one*
+# variant's correctness, at whatever level plain %.goken happens to
+# build at (today, that's the same as -O3, optlevel's own default --
+# see cc.h -- but those targets don't need to know or care), and
+# shouldn't have to build two extra binaries per prog just for that.
+# -o $stem-O0.$go / $stem-O3.$go (rather than plain %.goken's $stem.$go)
+# gives each variant its own intermediate object filename: %.goken,
+# %.goken-O0 and %.goken-O3 all compile the same $stem.c, and mk's own
+# parallelism (this project's build commonly runs with $NPROC jobs, see
+# env.sh) could otherwise interleave two of these three recipes for the
+# same prog, each overwriting the other's same-named $stem.$go mid-link.
+GOKENO0BINS=${GOKENPROGS:%=%.goken-O0}
+GOKENO3BINS=${GOKENPROGS:%=%.goken-O3}
+
+goken_bench:V: $GOKENO0BINS $GOKENO3BINS
+
+%.goken-O0: %.c
+	switch($cputype){
+	case arm64
+		gc=7c; gl=(7l); go=7
+	case amd64
+		gc=6c; gl=(6l); go=6
+	case 386
+		gc=8c; gl=(8l); go=8
+	case arm
+		gc=5c; gl=(5l -H7); go=5
+	case mips
+		gc=vc; gl=(vl); go=v
+	case riscv
+		gc=ic; gl=(il); go=i
+	case riscv64
+		gc=jc; gl=(jl); go=j
+	case *
+		echo 'goken: unsupported cputype: '$cputype >[1=2]
+		exit 1
+	}
+	$gc -O0 $GOKENCFLAGS -D$cputype -c -o $stem-O0.$go $stem.c
+	$gl -L$TOP/ROOT/arch/$cputype/lib -o $target -E _main $stem-O0.$go -lc
+	$TOP/scripts/macos-codesign $target
+
+%.goken-O3: %.c
+	switch($cputype){
+	case arm64
+		gc=7c; gl=(7l); go=7
+	case amd64
+		gc=6c; gl=(6l); go=6
+	case 386
+		gc=8c; gl=(8l); go=8
+	case arm
+		gc=5c; gl=(5l -H7); go=5
+	case mips
+		gc=vc; gl=(vl); go=v
+	case riscv
+		gc=ic; gl=(il); go=i
+	case riscv64
+		gc=jc; gl=(jl); go=j
+	case *
+		echo 'goken: unsupported cputype: '$cputype >[1=2]
+		exit 1
+	}
+	$gc -O3 $GOKENCFLAGS -D$cputype -c -o $stem-O3.$go $stem.c
+	$gl -L$TOP/ROOT/arch/$cputype/lib -o $target -E _main $stem-O3.$go -lc
 	$TOP/scripts/macos-codesign $target
 
 # Self-sufficient (rebuilds lib_core/libc for $cputype first, so this

@@ -825,6 +825,14 @@ extern	long	autoffset;
 extern	int	blockno;
 extern	Decl*	dclstack;
 extern	char	debug[256];
+/* claude: gcc/clang-style optimization level, set by -O (see lex.c);
+ * 0 disables regopt() entirely (cc2/pgen.c), >=2 also enables the
+ * peephole pass inside it (5c/8c's own reg.c). Defaults to 3 (full
+ * optimization, i.e. today's pre-existing no-flags-given behavior).
+ * -N is a legacy alias for -O0, folded into this after arg parsing
+ * (see lex.c). Mirrors compilers/cck/cc.h's optlevel -- see
+ * docs/claude_notes/notes_frontend_optlevels.txt. */
+extern	int	optlevel;
 extern	Hist*	ehist;
 extern	bool	firstbit;
 extern	Sym*	firstarg;

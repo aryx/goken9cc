@@ -7,4 +7,7 @@ at http://shootout.alioth.debian.org/
 
 
 Those files are useful to compare the speed of goken vs gcc (or clang) and
-also to evaluate the usefulness of certain goken optimizations (-X vs nothing).
+also to evaluate the usefulness of certain goken optimizations (-O0 vs -O3;
+claude: this used to say "-X vs nothing" -- -X was repurposed since for an
+unrelated, narrower mips-lineage-comparison mechanism, then removed once -O0
+covered this exact use case, see docs/claude_notes/notes_frontend_optlevels.txt).

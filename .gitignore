@@ -30,6 +30,8 @@ y.output
 *.uexe
 *.wasm
 *.goken
+*.goken-O0
+*.goken-O3
 
 # tex object files
 *.aux

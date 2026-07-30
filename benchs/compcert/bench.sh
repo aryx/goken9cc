@@ -25,20 +25,22 @@ reps=${REPS:-1}
 # computed against -- add new compilers/opt-levels (clang) here, not by
 # changing what the baseline is.
 #
-# "goken" is %.goken from mkfile's own goken:/%.goken: rules -- only
-# built for whichever $cputype was last built (see mkfile's own
-# comment: 'mk cputype=<arch> goken', no per-arch suffix, since only
-# one arch's worth of goken binaries exists on disk at a time). Not
-# every $prog this script can be called with has a goken variant built
-# (see mkfile's GOKENPROGS -- 'mk bench' doesn't depend on 'goken', so
-# running it without a prior 'mk goken' leaves every .goken binary
-# missing) -- time_one below reports the sentinel "n/a" for a
-# prog.goken that doesn't exist, and the speedup/geomean loop skips
-# that cell instead of feeding it to awk as a number. 7c/6c/etc apply
-# no optimization at all (no -O flag concept the way gcc/clang have
-# one), so treat this column as "unoptimized, self-hosted toolchain"
-# rather than expecting it to land near either -O0 or -O3.
-VARIANTS=(gcc-O0 gcc-O3 clang-O0 clang-O3 goken)
+# "goken-O0"/"goken-O3" are %.goken-O0/%.goken-O3 from mkfile's own
+# goken_bench:/%.goken-O0:/%.goken-O3: rules -- like gcc/clang, goken's
+# own compilers (docs/claude_notes/notes_frontend_optlevels.txt) have a
+# real -O0..-O3, so these two columns are directly comparable to gcc/
+# clang's, not a separate "unoptimized toolchain" special case anymore.
+# Only built for whichever $cputype was last built (see mkfile's own
+# 'goken' comment: 'mk cputype=<arch> goken_bench', no per-arch suffix,
+# since only one arch's worth of goken binaries exists on disk at a
+# time). Not every $prog this script can be called with has a goken
+# variant built (see mkfile's GOKENPROGS -- 'mk bench' doesn't depend on
+# 'goken_bench', so running it without a prior 'mk goken_bench' leaves
+# every .goken-O0/.goken-O3 binary missing) -- time_one below reports
+# the sentinel "n/a" for a prog.goken-O0/prog.goken-O3 that doesn't
+# exist, and the speedup/geomean loop skips that cell instead of
+# feeding it to awk as a number.
+VARIANTS=(gcc-O0 gcc-O3 clang-O0 clang-O3 goken-O0 goken-O3)
 BASELINE=${VARIANTS[0]}
 
 time_one() {

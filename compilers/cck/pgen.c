@@ -79,7 +79,15 @@ codgen(Node *n, Node *nn)
 	noretval(3);
 	gbranch(ORETURN);
 
-	if(!debug['N'] || debug['R'] || debug['P'])
+	/* claude: gated on optlevel (see cc.h) rather than plain debug['N'],
+	 * so -O0/-O1/-O2/-O3 (lex.c) control it; -N still works, folded
+	 * into optlevel right after arg parsing. ec (thechar=='e', wasm) is
+	 * excluded: unlike every other backend, its regopt() is not an
+	 * optional optimization but the mandatory flat-branch-list ->
+	 * nested block/loop/br structuring pass (see ec/reg.c's own
+	 * top-of-file comment) -- skipping it would produce invalid wasm,
+	 * not just slower wasm. */
+	if(thechar == 'e' || optlevel >= 1 || debug['R'] || debug['P'])
 		regopt(sp);
 	
 	if(thechar=='6' || thechar=='7' || thechar=='9' || hasdoubled)	/* [sic] */

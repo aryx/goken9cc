@@ -390,7 +390,7 @@ loop2:
 	 * pass 7
 	 * peep-hole on basic block
 	 */
-	if((!debug['R'] || debug['P']) && !debug['X'])
+	if((optlevel >= 2 && !debug['R']) || debug['P'])	/* claude: -O (see cc.h/lex.c) */
 		peep();
 
 	/*

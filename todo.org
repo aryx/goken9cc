@@ -868,6 +868,13 @@ pass length each time, safer
     compilers should live on compilers/cck/) is its own separate,
     larger project, not done here.
 
+*** LATER? find a genuine third optimization lever so -O2 != -O3
+    Today -O2 and -O3 are aliases (both mean "regalloc + peephole") --
+    there's only ever been two toggleable passes in this compiler.
+    Either find/add a real one (see notes_frontend_optlevels.txt) or
+    decide they should just permanently stay aliases, gcc/clang-flag-
+    compatible-shape but not distinct behavior, and remove this TODO.
+
 ** assemblers: 5a/6a/7a/8a/va/ia/ea
 
 ** linkers: 5l/6l/7l/8l/vl/il/el

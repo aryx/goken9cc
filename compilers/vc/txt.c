@@ -190,7 +190,7 @@ garg1(Node *n, Node *tn1, Node *tn2, int f, Node **fnxp)
 			sugen(n, tn2, n->type->width);
 		return;
 	}
-	if(REGARG && curarg == 0 && typechlp[n->type->etype] && !debug['X']) {
+	if(REGARG && curarg == 0 && typechlp[n->type->etype]) {
 		regaalloc1(tn1, n);
 		if(n->complex >= FNX) {
 			cgen(*fnxp, tn1);
@@ -290,8 +290,6 @@ regalloc(Node *n, Node *tn, Node *o)
 			if(i > 0 && i < NREG)
 				goto out;
 		}
-       if(!debug['X']) {
-
 		j = lasti + REGRET+1;
 		for(i=REGRET+1; i<NREG; i++) {
 			if(j >= NREG)
@@ -302,14 +300,6 @@ regalloc(Node *n, Node *tn, Node *o)
 			}
 			j++;
 		}
-       } else {
-        // pad's XiX compliant simpler code
-		for(i=0; i<NREG; i++) {
-			if(reg[i] == 0) { // && resvreg[i] == 0) {
-				goto out;
-			}
-		}
-       }
 		diag(tn, "out of fixed registers");
 		goto err;
 

@@ -436,6 +436,13 @@ EXTERN	long	autoffset;
 EXTERN	int	blockno;
 EXTERN	Decl*	dclstack;
 EXTERN	char	debug[256];
+/* claude: gcc/clang-style optimization level, set by -O (see lex.c);
+ * 0 disables regopt() entirely (cck/pgen.c), >=2 also enables the
+ * peephole pass inside it (each backend's own reg.c). Defaults to 3
+ * (full optimization, i.e. today's pre-existing no-flags-given
+ * behavior) so that omitting -O is unchanged. -N is a legacy alias
+ * for -O0, folded into this after arg parsing (see lex.c). */
+EXTERN	int	optlevel;
 /*
  * pie: set by the -z flag, this asks 6c to emit position-independent
  * code (PIC) -- code whose own symbol references work no matter where

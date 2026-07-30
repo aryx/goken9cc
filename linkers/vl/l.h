@@ -207,6 +207,14 @@ EXTERN	Prog*	curtext;
 EXTERN	Prog*	datap;
 EXTERN	int32	datsize;
 EXTERN	char	debug[128];
+/* claude: gcc/clang-style optimization level, set by -O0../-O3 (see
+ * obj.c's ARGBEGIN -- disambiguated from the pre-existing bare -O
+ * verbose-trace boolean by peeking whether a digit follows). 0
+ * disables sched() (span.c's instruction scheduling / delay-slot
+ * filling); defaults to 3 so plain vl is unchanged. Replaces the old
+ * debug['X'] (Xix-compliant, disable-for-ovl-comparison) mechanism --
+ * see docs/claude_notes/notes_frontend_optlevels.txt. */
+EXTERN	int	optlevel;
 EXTERN	Prog*	etextp;
 EXTERN	Prog*	firstp;
 EXTERN	char	fnuxi4[4];	/* for 3l [sic] */

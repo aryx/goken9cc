@@ -1,0 +1,185 @@
+gcc/clang-style -O0..-O3 for the C compilers (and vl's -O0)
+================================================================
+
+Motivation: benchs/compcert/ compares gcc -O0/-O3 vs clang -O0/-O3
+(bench.sh's VARIANTS), and wants to add goken's own compilers to that
+comparison. Before this, the only way to disable optimization in the
+compilers was -N (call it "no optimization"), a real, long-standing
+kencc flag -- but not the gcc/clang-shaped -O0/-O3 a benchmark harness
+expects to pass, and there was no lever at all between "off" and "on".
+Separately, vc/vl (the mips compiler+linker) had a debug['X'] mechanism
+("Xix compliant") for a completely different purpose -- disabling
+specific optimizations to diff output byte-for-byte against `ovc`/`ovl`,
+an external, older reference mips toolchain, during the original mips
+port. Once -O0 existed as the standard, general "disable my
+optimizations" flag, -X became redundant with it and was removed (see
+"vc/vl's old -X" section below) -- except cc/cck's own, unrelated
+debug['X'] ("abort on error", compilers/{cc,cck}/sub.c's diag()/
+fatal()), which is the traditional Plan9 meaning and was deliberately
+left alone.
+
+Scope: done for both compiler frontends now -- compilers/cck/ (6c/7c/
+vc/ic/ec/5ck/8ck) and compilers/cc/ (5c/8c, via compilers/cc2/pgen.c).
+Also done for linkers/vl (see "vl's -O0" section). Not done for the
+other linkers (5l/6l/7l/8l/il/5lk/8lk) -- nothing currently needs it
+there; 5l and vl are the only two with a pre-existing debug['O'] at
+all (see below), the rest have no -O of any kind yet.
+
+What actually varies underneath a compiler's -O
+--------------------------------------------------
+
+Each of these compilers has exactly two generically-togglable
+code-quality passes, both inside regopt() (cck/pgen.c and cc2/pgen.c
+each call it once per function):
+  - register allocation (reg.c passes 1-6): promotes hot pseudo-locals
+    into real machine registers instead of stack slots.
+  - peephole (reg.c's own peep() call, pass 7): local instruction-level
+    cleanup (e.g. ADDL $1,X -> INCL X, fusing redundant moves).
+There is no third lever (no inlining, no CSE, no loop transforms) --
+so -O2 and -O3 are, today, identical (both run regalloc + peephole).
+-O1 exists as "regalloc but no peephole", something no build script
+uses yet but a real, distinct point on the curve. Confirmed by hand
+(compilers/{6c,8c}/o.out -O0/-O1/-O2/-O3 -S on a small loop): -O0 keeps
+every local in a stack slot, -O1 promotes to registers but leaves
+redundant moves and ADDL-by-1 instead of INCL, -O2/-O3 clean those up
+and are byte-identical to each other.
+
+Implementation (compilers)
+------------------------------
+
+New `optlevel` global -- `EXTERN int optlevel` in cck/cc.h, `extern int
+optlevel` in cc/cc.h + its actual storage in cc/globals.c (matching how
+cc/'s debug[] itself is split between the two files, unlike cck/'s
+single EXTERN-macro-in-header convention). Defaulted to 3 in each
+lex.c's main(), before ARGBEGIN (so omitting -O is unchanged from
+before this feature existed), and set by a new `-O n` case in each
+lex.c's ARGBEGIN (clamped to [0,3]). -N is kept working, folded into
+optlevel right after ARGEND (`if(debug['N']) optlevel = 0;`) in both
+frontends -- so -N is now a legacy alias for -O0, not a second
+independent mechanism.
+
+Two call sites changed per frontend, both gated by optlevel instead of
+debug['N']/debug['R']:
+  - cck/pgen.c's and cc2/pgen.c's `regopt(sp)` call: runs when optlevel
+    >= 1 (was `!debug['N']`), OR'd with the pre-existing debug['R']/
+    debug['P'] force-override (manual debugging escape hatch,
+    unchanged).
+  - each backend's own reg.c `peep()` call: runs when optlevel >= 2
+    (was unconditional whenever regopt() ran), ANDed with the
+    pre-existing "not a bare -R trace-inspection run" condition, OR'd
+    with the pre-existing debug['P'] force-override. Touched in
+    5c/5ck/6c/7c/8c/8ck/ic/vc's reg.c.
+
+Why debug['R']/debug['P']'s *print* statements were left alone: they're
+verbose tracing (register-alloc/peephole dumps), gated on the same
+debug[] cells but orthogonal to whether the passes themselves run.
+Reusing -R/-P directly as the -O1/-O2 mechanism (instead of a fresh
+optlevel variable) was considered and rejected: passing bare -R would
+spam every compile with those trace prints, unacceptable for a flag
+meant to be used in an automated benchmark loop.
+
+Syncweb note: cck/{cc.h,pgen.c} and cc/lex.c/cc2/pgen.c have syncweb
+chunk markers (/*s:*//*x:*//*e:*/) around some of the touched regions
+(cck/pgen.c does not have any at all; cc/lex.c and cc2/pgen.c do). Per
+this project's rule, the markers themselves were never touched -- new
+code was only ever inserted *between* an existing pair (which is a
+normal, expected syncweb edit; only moving/renaming/deleting the anchor
+comments themselves is forbidden), or, for genuinely new globals not
+part of the original book at all (globals.c's `optlevel`), left
+deliberately unmarked rather than inventing a fake matching chunk pair.
+
+The one correctness trap: ec (wasm)
+-------------------------------------
+
+ec's regopt() (compilers/ec/reg.c) is not an optional optimization --
+it's the mandatory pass that turns the flat, PC-addressed branch list
+every other backend treats as an optimizer input into properly nested
+wasm block/loop/br/br_if (see that file's own top-of-file comment).
+Skipping it produces invalid wasm, not just slower wasm. Since
+cck/pgen.c's regopt(sp) call site is shared by ec too, the optlevel
+gate there is `thechar == 'e' || optlevel >= 1 || ...` -- ec always
+calls regopt() regardless of -O level. (This same trap already existed
+latently via plain -N before this change; -O0 just makes it much more
+likely someone actually hits it, hence calling it out here rather than
+letting it bit-rot as a footgun for whoever wires ec into a future
+benchmark loop.) ec's own reg.c has no peep()-style second gate to
+worry about -- it doesn't match the `!debug['R'] || debug['P']` pattern
+grepped for above at all. compilers/cc/ + cc2/pgen.c have no wasm-
+shaped consumer at all (only 5c/8c use cc2/pgen.c), so this exception
+doesn't exist on that side.
+
+vc/vl's old -X, replaced
+----------------------------
+
+vc had debug['X'] guards in reg.c (skip peephole), cgen.c/txt.c (skip
+the REGARG first-argument-in-register calling-convention optimization),
+and sgen.c (skip a return-value register-marker emission every other
+backend does unconditionally) -- all removed, so vc's behavior no
+longer depends on debug['X'] at all (only the shared cck/sub.c
+abort-on-error meaning of -X still applies to vc, same as every other
+cck backend). vc/txt.c's regalloc() also had a second, simpler
+register-picking loop under `else { // pad's XiX compliant simpler
+code }` -- deleted along with the debug['X'] check that selected it;
+the remaining code is the same round-robin-from-lasti allocator every
+other backend already used unconditionally.
+
+vl (the mips linker) had its own, separate debug['X'] in sched.c,
+disabling instruction scheduling (delay-slot filling) for the same
+ovl-comparison reason. Rather than just deleting it, vl got its own
+-O0 (see "vl's -O0" below), and sched.c's early-return is now `if
+(optlevel < 1) return;` instead of `if(debug['X'])`.
+
+Neither -X removal changes vc's or vl's normal (no-flag) behavior at
+all -- both `debug['X']` checks were only ever true when a user passed
+-X, which nothing in this repo's own tests/scripts did.
+
+vl's -O0
+-----------
+
+linkers/vl already had a bare, pre-existing `-O` (span.c's
+regoff()/oplook() verbose trace prints, same convention as 5l's own
+debug['O']) -- a plain boolean, no attached value, unlike the
+compilers' new numeric `-O n`. To add a gcc-style `-O0` without
+breaking that existing flag, obj.c's new `case 'O':` peeks whether a
+digit immediately follows in the *current* arg cluster (`_args[0]`, the
+raw internal state exposed by include/flag/cli.h's ARGBEGIN/ARGF()
+macros) before deciding: `-O0`..`-O3` sets the new `optlevel` (l.h,
+defaults to 3), while bare `-O` (no digit attached) falls back to the
+old `debug['O']++` trace-boolean behavior unchanged. This peek-before-
+ARGF() trick matters because ARGF() alone would happily swallow the
+*next* argv (e.g. a filename) as if it were the level for plain `-O`,
+silently breaking the old usage. vl has no pre-existing -N, so there's
+no legacy alias to fold in on that side (unlike the compilers' -N).
+optlevel only gates sched.c's early-return so far -- vl has no
+peephole-style second lever the way the compilers do.
+
+Verified: compilers/{cc,cck,5c,6c,7c,8c,5ck,8ck,ic,vc,ec}/ and
+linkers/vl/ all rebuild clean under `mk objtype=boot-gcc` with no new
+warnings; tests/c and tests/s full suites pass unchanged, both before
+and after the vc/vl -X removal and the compilers/cc/ port. -O0/-O1/
+-O2/-O3/-N/-R/-P manually spot checked via `{6c,8c}/o.out -O<n> -S` on
+a small loop (see above); vl's -O/-O0/-O3 disambiguation spot checked
+via `vl/o.out -O` / `-O0` / `-O3` (all still reach the usual "no object
+files" usage error, i.e. none of them get mis-parsed as consuming a
+filename argument).
+
+benchs/compcert wiring
+--------------------------
+
+goken -O0/-O3 are now two of bench.sh's VARIANTS, alongside gcc/clang's
+-O0/-O3. mkfile gained %.goken-O0/%.goken-O3 pattern rules (mirroring
+%.gcc-O0/%.gcc-O3) plus a goken_bench:V: target building both for every
+GOKENPROGS entry -- distinct intermediate object names
+($stem-O0.$go/$stem-O3.$go, via -o, rather than reusing plain %.goken's
+$stem.$go) so mk's own parallelism (this project commonly builds with
+$NPROC jobs) can't interleave two variants' compiles of the same
+$stem.c. Plain %.goken/goken:V: (used by test_goken/test_goken_archs
+for correctness checking, not timing) deliberately untouched. Verified
+end-to-end on arm64 (native): `mk cputype=arm64 goken_bench` then `mk
+bench` produced a working 6-column table, goken-O0/goken-O3 both
+showing real numbers, "n/a" correctly for the two GOKENPROGS-missing
+progs (binarytrees/knucleotide), tests/c still passing after.
+
+Still open (see todo.org, not repeated here): find a genuine third
+lever to make -O2 != -O3 (or accept they stay aliases and document
+that permanently instead of as a TODO).
