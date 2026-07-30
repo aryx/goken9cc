@@ -312,9 +312,61 @@ goken:V: $GOKENBINS
 	$gl -L$TOP/ROOT/arch/$cputype/lib -o $target -E _main $stem.$go -lc
 	$TOP/scripts/macos-codesign $target
 
-test_goken:V: goken
+# Self-sufficient (rebuilds lib_core/libc for $cputype first, so this
+# also works as the entry point called from the top-level `mk test` --
+# see root mkfile's own `test:` target), unlike goken/%.goken above,
+# which just document the libc.a prerequisite instead of building it.
+# 'mk install' is cheap to call unconditionally: mk only rebuilds
+# objects that actually changed.
+#
+# SKIPQEMU (unset by default, so plain 'mk test_goken' always exercises
+# the real qemu-user path, same as before): when set to 1 AND $cputype
+# matches the host's own uname(1) arch, runs the .goken binaries
+# directly instead of through qemu-runner. qemu-user emulating the
+# *same* arch as the host (e.g. qemu-aarch64 on an aarch64 host) is
+# real emulation overhead with no correctness benefit -- some of these
+# progs (nbody, aes, spectral) are CPU-heavy enough that this is a very
+# real slowdown, not just theoretical, found running this on an aarch64
+# host once this became part of the top-level `mk test` (see root
+# mkfile's own `test:` target, which passes SKIPQEMU=1 -- deliberately
+# only in that context, so this target's own default behavior, and
+# anyone deliberately wanting the qemu path even same-arch, are
+# unaffected). Only maps the uname(1) spellings that actually show up
+# as goken hosts today; anything else keeps using qemu-runner.
+test_goken:V:
+	@{ cd $TOP/lib_core/libc; mk 'objtype='$cputype 'cputype='$cputype install }
+	mk 'cputype='$cputype goken
+	usenative=()
+	if(~ $SKIPQEMU 1) {
+		hostuname=`{uname -m}
+		switch($hostuname){
+		case x86_64
+			hostcputype=amd64
+		case aarch64
+			hostcputype=arm64
+		case i386 i686
+			hostcputype=386
+		case armv6l armv7l armv8l
+			hostcputype=arm
+		case riscv64
+			hostcputype=riscv64
+		case mips mips64
+			hostcputype=mips
+		case *
+			hostcputype=unknown
+		}
+		if(~ $cputype $hostcputype)
+			usenative=1
+	}
 	for(p in $GOKENPROGS){
-		if($TOP/scripts/qemu-runner $cputype ./$p.goken | cmp -s /dev/stdin Results/$p)
+		if(~ $usenative 1)
+			ok=`{./$p.goken | cmp -s /dev/stdin Results/$p; echo $status}
+		if not
+			ok=`{$TOP/scripts/qemu-runner $cputype ./$p.goken | cmp -s /dev/stdin Results/$p; echo $status}
+		# $status after a pipe is rc's multi-stage "N|M" form, not a
+		# single exit code -- match the trailing '|0' (cmp, the last
+		# stage) rather than comparing $ok to a plain 0.
+		if(~ $ok *'|0')
 			echo $p': passed ('$cputype')'
 		if not
 			echo $p': FAILED ('$cputype')'

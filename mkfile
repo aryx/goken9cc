@@ -29,7 +29,18 @@ DIRS=\
 <$TOP/mkfiles/mkdirs
 
 test:
-	cd tests; mk test
+	@{cd tests; mk test}
+	# correctness only (not bench.sh's timing), and only the CompCert
+	# progs currently wired up to goken's own Xc/Xa/Xl pipeline (see
+	# benchs/compcert/mkfile's GOKENPROGS) -- defaults to $cputype from
+	# mkconfig, override with 'cputype='<arch> like any other target here.
+	# each 'cd' here is @{}-scoped: mk runs a target's whole recipe as
+	# one rc script, so an unscoped 'cd' on one line would otherwise
+	# leak into the next line's starting directory.
+	# SKIPQEMU=1: skip qemu-runner when $cputype matches this host's own
+	# arch (see benchs/compcert/mkfile's test_goken for why) -- only in
+	# this top-level context, not test_goken's own default behavior.
+	@{cd benchs/compcert; mk 'SKIPQEMU=1' test_goken}
 
 # macOS-native regression tests (no qemu). 'test_macos' auto-detects the
 # host: Apple Silicon (arm64) runs the arm64 tests, Intel (x86_64) runs the
