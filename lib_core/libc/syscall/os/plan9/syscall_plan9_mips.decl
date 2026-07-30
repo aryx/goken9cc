@@ -1,0 +1,4 @@
+// Declarative syscall spec for plan9/mips -- see syscall_plan9_arm.decl's
+// identical comment: deliberately empty, exists only so
+// lib_core/libc/mkfile's generic generation rule has something to
+// point at.

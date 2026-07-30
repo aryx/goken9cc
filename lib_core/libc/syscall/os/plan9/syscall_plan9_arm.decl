@@ -1,0 +1,15 @@
+// Declarative syscall spec for plan9/arm -- deliberately EMPTY of
+// //sys lines. Unlike Linux/Darwin, Plan9's own syscall ABI needs no
+// shared _syscall6-style trampoline at all (see svc_arm.s's own header
+// comment): every syscall here is either a hand-written raw stub
+// directly under its real public name (open/close/pread/pwrite/seek/
+// exits, in svc_arm.s) or a tiny C wrapper on top of one of those
+// (read/write/exit, in syscall_plan9_arm.h below) -- there's nothing
+// left for mksyscall.sh to generate. This file exists only so
+// lib_core/libc/mkfile's existing, GOOS-generic generation rule
+// (`syscall/os/$GOOS/zsyscall_${GOOS}_$cputype.c: syscall/os/$GOOS/
+// syscall_${GOOS}_$cputype.decl`) has something to point at without
+// needing a plan9-specific carve-out -- scripts/mksyscall.sh handles
+// an empty decl input fine, producing a valid (just-the-includes) C
+// file, which syscall_plan9_arm.h's own hand-written function bodies
+// then get appended to via its #include.

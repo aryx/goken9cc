@@ -46,7 +46,14 @@ LIBNAME=libc.a
 # for flags at the first such non-flag argument, silently misreading
 # -o/$target/$stem.c after it as more input files instead. CFLAGS
 # doesn't have this problem: it's always a real, non-empty value.
-CFLAGS=$CFLAGS -D$cputype
+# claude: -D$GOOS added alongside -D$cputype, same rationale and same
+# "safe even where unused" property -- needed by port/seek.c's own
+# #ifdef plan9 (Plan9's real seek(2) syscall is already named/shaped
+# exactly like the public seek() -- see syscall/os/plan9/svc_$cputype.s
+# -- so port/seek.c's lseek()-renaming shim would either fail to
+# resolve `lseek` there at all, or silently conflict with the real
+# one, if linked in unconditionally).
+CFLAGS=$CFLAGS -D$cputype -D$GOOS
 
 # fmt/*.c: the same Plan9 fmt implementation BOOT/lib9/ already builds
 # with gcc (byte-identical files), now compiled with goken's own 7c.

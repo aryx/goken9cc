@@ -11,14 +11,27 @@
 #include <libc.h>
 
 /* Plan9's include/os/file.h calls this seek(), not lseek() -- purely a
- * naming difference, not a behavioral one: SEEK__START/SEEK__CUR/
- * SEEK__END (0/1/2) already match POSIX's SEEK_SET/SEEK_CUR/SEEK_END
- * numerically on every OS this project targets, so this is a genuinely
- * portable, OS/arch-independent renaming shim -- unlike open()'s
- * translation (os/$GOOS/open.c), which needs real per-OS flag-bit
- * knowledge and so lives under os/ instead.
+ * naming difference on every OTHER OS, not a behavioral one:
+ * SEEK__START/SEEK__CUR/SEEK__END (0/1/2) already match POSIX's
+ * SEEK_SET/SEEK_CUR/SEEK_END numerically everywhere, so this is a
+ * genuinely portable, OS/arch-independent renaming shim there --
+ * unlike open()'s translation (os/$GOOS/open.c), which needs real
+ * per-OS flag-bit knowledge and so lives under os/ instead.
  *
- * lseek()'s own return type differs by arch: on the archs with a real
+ * Plan9 itself is the one exception: its own real seek(2) syscall is
+ * already named/shaped exactly like the public seek() (see
+ * syscall/os/plan9/svc_$cputype.s), so this whole file is `#ifndef
+ * plan9`-guarded out for that GOOS -- linking this shim in
+ * unconditionally would either fail to resolve `lseek` (which plan9
+ * has no such symbol for at all) or silently conflict with the real
+ * one. This file is compiled once, for every (GOOS, arch) combination
+ * (port/), which is also why the rest of it -- the return-width #ifdef
+ * below -- has to match lseek()'s own real prototype exactly on every
+ * OTHER os/arch it as compiled for.
+ */
+#ifndef plan9
+
+/* lseek()'s own return type differs by arch: on the archs with a real
  * 64-bit register to return a `vlong` off_t in (amd64/arm64/riscv64 --
  * riscv64 only on Linux, amd64/arm64 on both Linux and Darwin), its
  * raw syscall wrapper (lib_core/libc/syscall/os/$OS/) routes through
@@ -26,13 +39,9 @@
  * still returns plain `long` via the default _syscall6 (see
  * scripts/mksyscall.sh's own comment on the two trampolines, and
  * syscall_linux_amd64.h's _syscall6v comment for why a second
- * trampoline was added instead of widening _syscall6 itself). This
- * file is compiled once, unconditionally, for every arch (port/), so
- * the #if below has to match lseek()'s own real prototype exactly --
- * an extern declaration claiming the wrong return width here would be
- * silently wrong on whichever side is actually correct.
- */
-/* claude: nested #ifdef, not `#if defined(X) || defined(Y)` -- 7c/vc/ic's
+ * trampoline was added instead of widening _syscall6 itself).
+ *
+ * claude: nested #ifdef, not `#if defined(X) || defined(Y)` -- 7c/vc/ic's
  * preprocessor doesn't understand `#if` with an expression at all
  * ("unknown #: if"), only plain #ifdef/#ifndef/#else/#endif (see every
  * other #ifdef in lib_core/libc, e.g. os/linux/open.c's `#ifdef mips`,
@@ -57,3 +66,5 @@ seek(fdt fd, vlong offset, int whence)
 {
 	return (vlong)lseek(fd, offset, whence);
 }
+
+#endif /* !plan9 */

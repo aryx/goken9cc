@@ -135,3 +135,99 @@ sysctab[] but no confirmed-working emulation path in 5i or vi. Treat
 any of those the way a freshly-added Optab row on a real arch would be
 treated before its first test (see docs/claude_notes/notes_wasm.txt's
 own framing of this): plausible, not proven.
+
+lib_core/libc gets real Plan9 file syscalls (open/close/pread/pwrite/
+seek/exits), and a genuine 5i decoder bug found along the way
+------------------------------------------------------------------------
+
+Added July 2026, extending lib_core/libc's write/exit-only Linux+Darwin
+support (docs/claude_notes/notes_libc_selfhost.txt) to a third GOOS,
+for arm and mips. sys.h moved from machines/5i/sys.h to
+lib_core/libc/syscall/os/plan9/sys.h (matching the syscall/os/$OS/
+layout linux/darwin already use, not its own syncweb chunk name's
+"9syscall/" path, which is left alone per this project's own "never
+edit s:/e: markers" rule -- that mismatch is expected, not a bug);
+machines/5i/syscall_posix.c and machines/vi/syscall.c's own #includes
+were updated to the new path, both rebuilt+reverified via `mk
+objtype=boot-gcc install`.
+
+Structurally different from Linux/Darwin: Plan9's own syscall ABI
+(number in a register, args already sitting on the stack exactly where
+this compiler's own calling convention puts a function's own
+parameters -- see syscall/os/plan9/svc_arm.s's header comment) needs no
+shared _syscall6-style trampoline at all. open/close/pread/pwrite/exits
+are hand-written one-per-syscall raw stubs directly under their real
+public names (adapted from ~/principia-softwarica/lib_core/libc/
+9syscall/mkfile's real, working per-syscall generator -- this project
+is meant to interoperate with principia, not vanilla Plan9 4th edition,
+per explicit user direction); read/write/exit are thin C wrappers
+(pread/pwrite with a -1 "current offset" sentinel, adapted from
+principia's own lib_core/libc/9sys/{read,write}.c) living in a
+companion header (syscall_plan9_$cputype.h) included by an otherwise-
+empty decl-generated zsyscall_plan9_$cputype.c, reusing the existing
+generation machinery without needing a plan9-specific carve-out in
+lib_core/libc/mkfile. seek's own raw stub is the one genuinely tricky
+one: a vlong return doesn't fit one register, so the compiler passes a
+hidden result-pointer as the function's own first argument (same
+register-spill dance as every other stub), and the raw syscall itself
+returns a small 0-or-(-1) status -- principia's own generator writes
+the result back on the *opposite* condition from what its own kernel
+source (sysseek() in kernel/files/sysfile.c, `return 0` on success,
+-1 uniformly via Plan9's general error-note convention) implies;
+concluded to be principia's own latent, apparently-never-exercised bug
+and NOT copied -- this version writes back whenever the raw result is
+NOT -1, matching the kernel source's plain reading. port/seek.c's
+portable lseek()-renaming shim is `#ifndef plan9`-guarded out (new
+`-D$GOOS` CFLAGS, alongside the existing `-D$cputype`) since Plan9's
+own seek(2) is already named/shaped exactly like the public seek() --
+linking the shim in too would fail to resolve `lseek` (plan9 has no
+such symbol) or silently conflict with the real one.
+
+A genuine, previously-undiscovered bug in 5i itself, found while
+verifying the above: machines/5i/run.c's Ib()/Ibl() (the B/BL
+instruction decoders) mask the 24-bit branch offset but never
+sign-extend it, so any *backward* branch -- including the utterly
+mundane "loop: B loop" every arch/$cputype/rt0.s here falls back to
+after main() returns -- computed a huge *positive* offset instead of a
+small negative one, sending the emulated PC to a wild address far past
+the program's own text segment and crashing 5i itself (SIGSEGV in
+ifetch(), confirmed via gdb) rather than the emulated program. Never
+caught before because every prior hand-written Plan9 test's own
+trailing "loop:" sits after an EXITS syscall that never actually
+returns (a real Plan9 process just terminates there), so a real
+backward branch was never actually executed until a genuine
+libc-linked program's rt0.s hit it -- isolated with a two-line, single-
+file repro (`loop: B loop` with nothing else) before touching any of
+the new syscall code, confirming it was a pre-existing decoder gap, not
+something the new file-syscall work introduced. Fixed with the
+standard mask-then-sign-extend idiom in both functions; rebuilding 5i
+and rerunning the same repro now loops harmlessly (as the code says to)
+instead of crashing.
+
+Verification and what's still broken
+------------------------------------------
+
+Confirmed via real `5i`/`vi` execution (not just compile-and-link):
+lib_core/libc builds cleanly for `objtype=arm cputype=arm GOOS=plan9`
+and `objtype=mips cputype=mips GOOS=plan9`. A minimal libc-linked
+program (empty main(), relying on rt0.s -> exit(0) -> exits(0)) runs to
+completion under 5i with no crash. A print() call with NO format
+specifiers also prints correctly. But: a print() call WITH a format
+specifier (e.g. "%d") fails on both arches once GOOS=plan9 -- on arm it
+silently skips substitution (prints the literal "%d" instead of the
+value, then still reaches exits() normally); on mips it hangs
+indefinitely partway through the same call (confirmed via a real
+timeout, not just "seemed slow"). Root cause NOT found this session --
+ruled out so far: fmt/*.c's own #ifdef plan9 (there is none), and the
+arm va_arg/va_start macros themselves (include/arch/arm/u.h's `&start`-
+based approach, unmodified by this work and already proven correct on
+linux/arm). Prime remaining suspects, untried: something in the
+write()/pwrite() path corrupting fmtfd.c's internal buffering state
+across the first vs second print() call specifically (the "plain
+string, then one with %d" repro shows the FIRST call, no format
+specifiers, succeeding, and the second, which does, failing) -- or a
+stack-layout assumption elsewhere in the varargs chain that happens to
+only bite once a real format-consuming va_arg() is hit. Not yet wired
+into tests/c/hello_libc's mkfile or the mk test infra pending this fix
+-- hello.c/io.c both use %d-style print() calls, so neither can pass as
+a real regression gate yet.

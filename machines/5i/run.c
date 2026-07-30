@@ -1191,6 +1191,19 @@ Ib(instruction inst)
     long v;
 
     v = inst & 0xffffff; // 24 bits
+    /* claude: sign-extend the 24-bit offset -- a backward or
+     * self-referential branch (e.g. "loop: B loop", offset -2 words)
+     * encodes with bit 23 set; left unextended, v was read as a huge
+     * *positive* 24-bit value instead, sending PC to a wild address
+     * far past the program's own text segment. Found via a real
+     * SIGSEGV in ifetch() (5i itself, not the emulated program)
+     * tracing a plain "B loop" -- every previous hand-written Plan9
+     * test's own trailing "loop:" fallback happened to be dead code
+     * (reached only after an EXITS syscall that never actually
+     * returns), so this path was never exercised until a real,
+     * libc-linked program's rt0.s hit it. */
+    if(v & 0x800000)
+        v |= ~(long)0xffffff;
     v = reg.r[REGPC] + (v << 2) + 8;
     /*s: [[Ib()]] trace */
     if(trace)
@@ -1208,6 +1221,10 @@ Ibl(instruction inst)
     Symbol s;
 
     v = inst & 0xffffff;
+    /* claude: sign-extend -- see Ib()'s identical comment (same 24-bit
+     * offset field, same bug, BL just additionally sets REGLINK). */
+    if(v & 0x800000)
+        v |= ~(long)0xffffff;
     v = reg.r[REGPC] + (v << 2) + 8;
     /*s: [[Ibl()]] trace */
     if(trace)

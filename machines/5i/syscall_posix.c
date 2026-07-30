@@ -11,8 +11,15 @@
 char 	errbuf[ERRMAX];
 ulong	nofunc;
 
-//#include "../../lib_core/libc/9syscall/sys.h"
-#include "sys.h"
+// claude: sys.h moved here (lib_core/libc/syscall/os/plan9/, matching
+// the syscall/os/$OS/ layout linux/darwin already use) while wiring up
+// real Plan9 file syscalls in lib_core/libc -- this used to be
+// machines/5i/sys.h. Its own syncweb chunk marker still says
+// "lib_core/libc/9syscall/sys.h" (an earlier, different intended path)
+// -- left as-is per this project's own "never modify s:/e: markers"
+// rule, so the path in that comment and the file's real location no
+// longer match; that's expected, not a bug.
+#include "../../lib_core/libc/syscall/os/plan9/sys.h"
 
 char*	sysctab[] =
 {
