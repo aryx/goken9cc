@@ -186,13 +186,21 @@ compilers/cc/ (newer, actively maintained; 5c and 8c build against it,
 via compilers/5c/mkfile's `LIB=../cc/cc.a$O`), compilers/cck/ (the
 kencc lineage; 6c, 5ck, 8ck, and now 7c, vc and ic too -- see "7c, vc
 and ic migrated off src/cmd/cc" below), and src/cmd/cc/ (the older
-Go-era copy, now with zero remaining consumers among 5c/6c/7c/8c/vc/ic
--- still built by root mkfile's DIRS, though, see todo.org). All three
-contain their own independent copy of com64.c, the "emulate 64-bit
-vlong via a pair of 32-bit words" pass used only by targets without
-native 64-bit ops (guarded by `machcap()`, which bails out immediately
-on 64-bit-native arches -- so arm64/amd64 never exercise this code at
-all, regardless of which frontend they're built against).
+Go-era copy). Among compilers/{5c,6c,7c,8c,vc,ic,5ck,8ck}, src/cmd/cc/
+now has zero consumers left -- but it's still the correct, intended
+frontend for the actual go-era "*g" toolchains (src/cmd/{5c,6c,8c}/
+mkfile, TARG=5cg/6cg/8cg, via `LIB=../cc/cc.a` relative to their own
+directory), which this project's stated policy always meant to keep
+there. Root mkfile's DIRS building it is correct as-is, not a stale
+leftover (an earlier version of this note claimed otherwise, from
+grepping mkfiles for the literal string "src/cmd/cc" -- which misses
+this exact relative-path reference). All three of compilers/cc/,
+compilers/cck/ and src/cmd/cc/ contain their own independent copy of
+com64.c, the "emulate 64-bit vlong via a pair of 32-bit words" pass
+used only by targets without native 64-bit ops (guarded by
+`machcap()`, which bails out immediately on 64-bit-native arches -- so
+arm64/amd64 never exercise this code at all, regardless of which
+frontend they're built against).
 
 compilers/cc/com64.c already has `case OCOND:` in its `if(rv)` switch
 and `case OLIST: case OCOMMA:` in its final `if(typev[n->type->etype])`

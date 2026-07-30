@@ -849,14 +849,19 @@ pass length each time, safer
     timeout/run-failure/mismatch issues across non-primary archs,
     unrelated to this migration, so it isn't a useful signal yet).
 
-    Follow-up, not done here: src/cmd/cc/ now has zero remaining
-    consumers among 5c/6c/7c/8c/vc/ic (confirmed by grepping every
-    mkfile for "src/cmd/cc" -- only root mkfile's own DIRS list and a
-    few historical comments in tests/c/regressions/mkfile and
-    benchs/compcert/mkfile still mention it), but root mkfile's DIRS
-    still builds it. Worth deciding whether to drop it from DIRS now
-    that nothing depends on it, or keep it around a while longer as a
-    reference/rollback point during the transition.
+    Correction to an earlier version of this note: src/cmd/cc/ is NOT
+    orphaned. Among compilers/{5c,6c,7c,8c,vc,ic,ck}, none reference it
+    anymore -- but src/cmd/{5c,6c,8c}/mkfile (TARG=5cg/6cg/8cg, the
+    actual go-era "ending in g" toolchains this whole policy carves an
+    exception for) still do, via `LIB=../cc/cc.a` -- a relative path
+    that resolves to src/cmd/cc/cc.a, and doesn't literally contain the
+    string "src/cmd/cc", which is why an earlier pass here (grepping
+    mkfiles for that literal string) missed it and wrongly concluded
+    src/cmd/cc/ had zero consumers left. It has exactly the consumers
+    it's supposed to have per this project's own policy: go-era "*g"
+    on src/cmd/cc/, kencc-era "*ck" on compilers/cck/, everything else
+    on compilers/cc/. No follow-up needed here -- root mkfile's DIRS
+    building src/cmd/cc/ is correct as-is, not a stale leftover.
 
     The eventual compilers/cck/ -> compilers/cc/ unification (needed
     to fully match the stated end policy: only kencc-lineage "*ck"
