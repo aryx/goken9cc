@@ -1,0 +1,44 @@
+TOP=../../../..
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=6lg
+LDLIBS=-lbio -l9 -lm
+CFLAGS_EXTRA=-I../ld
+
+# pe.$O added for Windows amd64 (-H 10) PE32+ output, like 8l.
+#old: we used to use ../ld/elf.$O and so on but the problem is that
+# other linkers like 5l are also using elf.c but with a different l.h
+# that should result in a different .o, so simpler to use symlinks
+# to generate in each linker a different independent .o
+OFILES=\
+	asm.$O\
+	data.$O\
+	dwarf.$O\
+	elf.$O\
+	enam.$O\
+	go.$O\
+	lib.$O\
+	list.$O\
+	macho.$O\
+	obj.$O\
+	optab.$O\
+	pass.$O\
+	pe.$O\
+	prof.$O\
+	span.$O\
+	symtab.$O\
+
+HFILES=\
+	l.h\
+	../6l/6.out.h\
+	../ld/lib.h\
+	../ld/elf.h\
+	../ld/macho.h\
+	../ld/pe.h\
+	../ld/dwarf.h\
+
+<$TOP/mkfiles/mkone
+
+CLEANFILES=enam.c
+enam.c: 6.out.h
+	sh mkenam

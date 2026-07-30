@@ -1,0 +1,36 @@
+TOP=../../../..
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=8cg
+LDLIBS=-lbio -l9 -lm
+
+HFILES=\
+	gc.h\
+	../8l/8.out.h\
+	../cc/cc.h\
+
+OFILES=\
+	cgen.$O\
+	cgen64.$O\
+	div.$O\
+	list.$O\
+	machcap.$O\
+	mul.$O\
+	peep.$O\
+	reg.$O\
+	sgen.$O\
+	swt.$O\
+	txt.$O\
+        \
+	pgen.$O\
+	pswt.$O\
+	../8l/enam.$O\
+
+LIB=\
+	../cc/cc.a\
+
+<$TOP/mkfiles/mkone
+
+# see 7c/mkfile for more info
+p%.$O: ../cc/p%.c
+	$CC $CFLAGS ../cc/p$stem.c

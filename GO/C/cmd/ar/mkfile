@@ -1,0 +1,11 @@
+TOP=../../../..
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=arg
+# need -lmach too here
+LDLIBS=-lmach_ -lbio -l9 -lm
+
+OFILES=\
+	ar.$O\
+
+<$TOP/mkfiles/mkone

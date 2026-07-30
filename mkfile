@@ -22,12 +22,12 @@ DIRS= BOOT/lib9 \
   assemblers/5ak linkers/5lk compilers/5ck    \
   assemblers/8ak linkers/8lk compilers/8ck \
   \
-  src/libmach src/cmd/nm src/cmd/ar \
-  src/cmd/cc \
-  src/cmd/5l src/cmd/5a src/cmd/5c \
-  src/cmd/8l src/cmd/8a src/cmd/8c \
-  src/cmd/6l src/cmd/6a src/cmd/6c \
-  src/cmd/prof src/cmd/cov \
+  GO/C/libmach GO/C/cmd/nm GO/C/cmd/ar \
+  GO/C/cmd/cc \
+  GO/C/cmd/5l GO/C/cmd/5a GO/C/cmd/5c \
+  GO/C/cmd/8l GO/C/cmd/8a GO/C/cmd/8c \
+  GO/C/cmd/6l GO/C/cmd/6a GO/C/cmd/6c \
+  GO/C/cmd/prof GO/C/cmd/cov \
 
 <$TOP/mkfiles/mkdirs
 
