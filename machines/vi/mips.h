@@ -92,7 +92,21 @@ struct Registers
 	// getmem_w() in mem.c for where the sign-extension itself happens)
 	u32int	ir;
 	Inst	*ip;
-	long	r[32];
+	// claude: int32, not long -- same "code assumed a 32-bit host"
+	// bug as reg.ir above, but hitting signed comparisons instead of
+	// instruction dispatch: a MIPS register is 32 bits, and loads
+	// like Ilw() assign a u32int (getmem_w()'s return type) into this
+	// field, which zero-extends into a 64-bit `long` instead of
+	// sign-extending -- so a loaded word like 0xfffffffe (meant to be
+	// -2) read back as a huge *positive* 64-bit value, making Sslt()'s
+	// plain `<` comparison (and any other signed op relying on this
+	// field's own sign) wrong. Ssltu()'s existing explicit
+	// `(unsigned)reg.r[rs]` cast for the *unsigned* comparison is the
+	// tell that this field was always meant to be exactly 32 bits
+	// wide, signed by default, with unsigned ops opting in via a cast
+	// -- not a 64-bit field holding an unspecified mix of sign- and
+	// zero-extended values.
+	int32	r[32];
 	ulong	mhi;
 	ulong	mlo;
 

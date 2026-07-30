@@ -212,7 +212,14 @@ struct Inst
 /*s: struct [[Registers]] */
 struct Registers
 {
-    long	r[16];
+    // claude: u32int, not long -- an ARM register is always 32 bits;
+    // storing it in a 64-bit `long` on this 64-bit host let several
+    // ALU helpers (run.c's shift()/dpex()/Idp0..3) compute a 32-bit
+    // result (a rotate, an ASR) using shifts that only stay within 32
+    // bits if the type itself is 32 bits, corrupting the top 32 bits
+    // otherwise -- see run.c's Idp3() comment for the concrete crash
+    // this caused (a plain `SUB $8,R13,R13` corrupting R13).
+    u32int	r[16];
     /*s: [[Registers]] other fields */
     uintptr		ar;    // reg.r[REGPC]
 
@@ -230,8 +237,8 @@ struct Registers
     // enum<compare_op>
     int	compare_op;
     /*x: [[Registers]] other fields */
-    long	cc1;
-    long	cc2;
+    u32int	cc1;
+    u32int	cc2;
     /*e: [[Registers]] other fields */
 };
 /*e: struct [[Registers]] */

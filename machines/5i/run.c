@@ -188,19 +188,30 @@ runcmp(void)
     case 0x1:	/* ne */	return (reg.cc1 != reg.cc2);
     case 0x2:	/* hs */	return ((ulong)reg.cc1 >= (ulong)reg.cc2);
     case 0x3:	/* lo */	return ((ulong)reg.cc1 < (ulong)reg.cc2);
-    case 0x4:	/* mi */	return (reg.cc1 - reg.cc2 < 0);
-    case 0x5:	/* pl */	return (reg.cc1 - reg.cc2 >= 0);
+    // claude: (reg.cc1 - reg.cc2) < 0 relied on cc1/cc2 being signed
+    // `long`s holding a sign-extended 32-bit value; now that they're
+    // u32int (unsigned, matching a real 32-bit ARM register -- see
+    // arm.h's Registers comment), that subtraction wraps instead of
+    // going negative, so N (the sign bit of the 32-bit result) has to
+    // be tested directly instead of trusting C's `< 0`.
+    case 0x4:	/* mi */	return ((reg.cc1 - reg.cc2) >> 31) & 1;
+    case 0x5:	/* pl */	return !(((reg.cc1 - reg.cc2) >> 31) & 1);
     case 0x8:	/* hi */	return ((ulong)reg.cc1 > (ulong)reg.cc2);
     case 0x9:	/* ls */	return ((ulong)reg.cc1 <= (ulong)reg.cc2);
-    case 0xa:	/* ge */	return (reg.cc1 >= reg.cc2);
-    case 0xb:	/* lt */	return (reg.cc1 < reg.cc2);
-    case 0xc:	/* gt */	return (reg.cc1 > reg.cc2);
-    case 0xd:	/* le */	return (reg.cc1 <= reg.cc2);
+    // claude: ge/lt/gt/le are ARM's *signed* comparisons (as opposed
+    // to hs/lo/hi/ls just above, already explicitly cast to ulong for
+    // the unsigned ones) -- need an explicit (int32) cast now that
+    // cc1/cc2 are unsigned, or these would silently become unsigned
+    // comparisons too.
+    case 0xa:	/* ge */	return ((int32)reg.cc1 >= (int32)reg.cc2);
+    case 0xb:	/* lt */	return ((int32)reg.cc1 < (int32)reg.cc2);
+    case 0xc:	/* gt */	return ((int32)reg.cc1 > (int32)reg.cc2);
+    case 0xd:	/* le */	return ((int32)reg.cc1 <= (int32)reg.cc2);
 
     case 0xe:	/* al */	return true;
     case 0xf:	/* nv */	return false;
     default:
-        Bprint(bout, "unimplemented condition prefix %x (%ld %ld)\n",
+        Bprint(bout, "unimplemented condition prefix %x (%d %d)\n",
             reg.instr_cond, reg.cc1, reg.cc2);
         undef(reg.instr);
         return false;
@@ -212,7 +223,7 @@ runcmp(void)
 bool
 runteq(void)
 {
-    long res = reg.cc1 ^ reg.cc2;
+    u32int res = reg.cc1 ^ reg.cc2;
 
     switch(reg.instr_cond) {
     case 0x0:	/* eq */	return res == 0;
@@ -222,7 +233,7 @@ runteq(void)
     case 0xe:	/* al */	return true;
     case 0xf:	/* nv */	return false;
     default:
-        Bprint(bout, "unimplemented condition prefix %x (%ld %ld)\n",
+        Bprint(bout, "unimplemented condition prefix %x (%d %d)\n",
             reg.instr_cond, reg.cc1, reg.cc2);
         undef(reg.instr);
         return false;
@@ -234,7 +245,7 @@ runteq(void)
 bool
 runtst(void)
 {
-    long res = reg.cc1 & reg.cc2;
+    u32int res = reg.cc1 & reg.cc2;
 
     switch(reg.instr_cond) {
     case 0x0:	/* eq */	return res == 0;
@@ -244,7 +255,7 @@ runtst(void)
     case 0xe:	/* al */	return true;
     case 0xf:	/* nv */	return false;
     default:
-        Bprint(bout, "unimplemented condition prefix %x (%ld %ld)\n",
+        Bprint(bout, "unimplemented condition prefix %x (%d %d)\n",
             reg.instr_cond, reg.cc1, reg.cc2);
         undef(reg.instr);
         return false;
@@ -312,7 +323,10 @@ run(void)
 void
 undef(instruction inst)
 {
-    Bprint(bout, "undefined instruction trap pc #%lux inst %.8lux op %d\n",
+    // claude: %ux not %lux -- reg.r[REGPC] and inst (instruction, an
+    // ARM opcode word) are both u32int now, not the wider long/ulong
+    // %lux expects.
+    Bprint(bout, "undefined instruction trap pc #%ux inst %.8ux op %d\n",
         reg.r[REGPC], inst, reg.instr_opcode);
     longjmp(errjmp, 0);
 }
@@ -419,8 +433,8 @@ arm_class(instruction w)
 /*e: function [[arm_class]] */
 
 /*s: function [[shift]] */
-long
-shift(long v, int st, int sc, bool isreg)
+u32int
+shift(u32int v, int st, int sc, bool isreg)
 {
     /*s: [[shift()]] if sc is 0 */
     if(sc == 0) {
@@ -440,7 +454,7 @@ shift(long v, int st, int sc, bool isreg)
             }
             else {
                 reg.cout = v & 1;
-                v = ((ulong)v >> 1) | (reg.cbit << 31);
+                v = (v >> 1) | (reg.cbit << 31);
             }
         }
     }
@@ -453,7 +467,7 @@ shift(long v, int st, int sc, bool isreg)
             break;
         case 1:	/* logical right */
             reg.cout = (v >> (sc - 1)) & 1;
-            v = (ulong)v >> sc;
+            v = v >> sc;
             break;
         case 2:	/* arith right */
             if(sc >= 32) {
@@ -465,14 +479,18 @@ shift(long v, int st, int sc, bool isreg)
             }
             else {
                 reg.cout = (v >> (sc - 1)) & 1;
-                v = (long)v >> sc;
+                // claude: (int32) not (long) -- v is u32int now, so a
+                // plain (long) cast would zero-extend instead of
+                // sign-extending a negative (bit31-set) value before
+                // the arithmetic shift; (int32) reinterprets the same
+                // bit pattern as signed first, which >> then correctly
+                // replicates.
+                v = (int32)v >> sc;
             }
             break;
         case 3:	/* rotate right */
             reg.cout = (v >> (sc - 1)) & 1;
-            v = (v << (32-sc)) 
-                 | 
-                ((ulong)v >> sc);
+            v = (v << (32-sc)) | (v >> sc);
             break;
         }
     }
@@ -482,7 +500,7 @@ shift(long v, int st, int sc, bool isreg)
 
 /*s: function [[dpex]] */
 void
-dpex(instruction inst, long o1, long o2, int rd)
+dpex(instruction inst, u32int o1, u32int o2, int rd)
 {
     bool cbit = false;
 
@@ -512,7 +530,8 @@ dpex(instruction inst, long o1, long o2, int rd)
             Symbol s;
 
             findsym(o1 + o2, CTEXT, &s);
-            Bprint(bout, "%8lux return to %lux %s r0=%lux\n",
+            // claude: %ux not %lux -- reg.r[]/o1/o2 are u32int now.
+            Bprint(bout, "%8ux return to %ux %s r0=%ux\n",
                         reg.r[REGPC], o1 + o2, s.name, reg.r[REGRET]);
         }
         /*e: [[dpex()]] if calltree, when add operation */
@@ -607,7 +626,7 @@ void
 Idp0(instruction inst)
 {
     int rn, rd, rm;
-    long o1, o2;
+    u32int o1, o2;
 
     rn = (inst>>16) & 0xf;
     rd = (inst>>12) & 0xf;
@@ -648,7 +667,7 @@ void
 Idp1(instruction inst)
 {
     int rn, rd, rm, st, sc;
-    long o1, o2;
+    u32int o1, o2;
 
     rn = (inst>>16) & 0xf;
     rd = (inst>>12) & 0xf;
@@ -691,7 +710,7 @@ void
 Idp2(instruction inst)
 {
     int rn, rd, rm, rs, st;
-    long o1, o2, o3;
+    u32int o1, o2, o3;
 
     rn = (inst>>16) & 0xf;
     rd = (inst>>12) & 0xf;
@@ -739,7 +758,7 @@ void
 Idp3(instruction inst)
 {
     int rn, rd, sc;
-    long o1, o2;
+    u32int o1, o2;
 
     rn = (inst>>16) & 0xf;
     rd = (inst>>12) & 0xf;
@@ -751,7 +770,17 @@ Idp3(instruction inst)
 
     o2 = inst & 0xff;
     sc = (inst>>7) & 0x1e;
-    o2 = (o2 >> sc) | (o2 << (32 - sc)); // rotate
+    // claude: o2 is u32int (a real 32-bit type) now, not the wider
+    // `long` this host's shifts used to run on -- so "o2 << (32-sc)"
+    // for sc==0 would shift by the type's own full width, which is
+    // undefined behavior in C, not just "wrong but consistent" the way
+    // it was when the type was wider than 32 bits. sc==0 (no rotation)
+    // needs its own guard, same as shift()'s identical sc==0 special
+    // case just above dpex() -- without it, any OSUB/OADD/OMOV/...
+    // R,R,#imm instruction with sc==0 (e.g. a plain `SUB $8,R13,R13`
+    // stack adjustment) corrupted its result.
+    if(sc != 0)
+        o2 = (o2 >> sc) | (o2 << (32 - sc)); // rotate
 
     dpex(inst, o1, o2, rd);
 
@@ -810,9 +839,14 @@ Imull(instruction inst)
         undef(inst);
 
     if(inst & (1<<22)){ // mull
-        v = (vlong)reg.r[rm] * (vlong)reg.r[rs];
+        // claude: (vlong)(int32)reg.r[rm], not (vlong)reg.r[rm] --
+        // reg.r[] is u32int (unsigned) now, so a plain (vlong) cast
+        // zero-extends; MULL's operands are signed, so a negative
+        // (bit31-set) register needs the (int32) reinterpret first to
+        // sign-extend correctly into the 64-bit product.
+        v = (vlong)(int32)reg.r[rm] * (vlong)(int32)reg.r[rs];
         if(inst & (1 << 21)) // mull and accumulate
-            v += reg.r[rn];
+            v += (int32)reg.r[rn];
     }else{ // mullu
         v = XCAST(reg.r[rm]) * XCAST(reg.r[rs]);
         if(inst & (1 << 21)) // mullu and accumulate
@@ -1176,7 +1210,9 @@ Ilsm(instruction inst)
 
     /*s: [[Ilsm()]] trace */
     if(trace) {
-        itrace("%s.%c%c\tR%d=%lux%s, <%lux>",
+        // claude: %ux not %lux -- reg.r[rn] is u32int and reglist is
+        // a plain int, neither the wider long/ulong %lux expects.
+        itrace("%s.%c%c\tR%d=%ux%s, <%ux>",
             (lbit ? "LDM" : "STM"), (ubit ? 'I' : 'D'), (prebit ? 'B' : 'A'),
             rn, reg.r[rn], (wbit ? "!" : ""), reglist);
     }
@@ -1233,7 +1269,8 @@ Ibl(instruction inst)
     /*s: [[Ibl()]] if calltree */
     if(calltree) {
         findsym(v, CTEXT, &s);
-        Bprint(bout, "%8lux %s(", reg.r[REGPC], s.name);
+        // claude: %ux not %lux -- reg.r[REGPC] is u32int now.
+        Bprint(bout, "%8ux %s(", reg.r[REGPC], s.name);
         printparams(&s, reg.r[REGSP]);
         Bprint(bout, "from ");
         printsource(reg.r[REGPC]);
