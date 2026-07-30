@@ -124,18 +124,6 @@ syminit(fdt fd, Fhdr *fp)
 			return -1;
 		size += i+svalsz+sizeof(p->type);
 
-		if(svalsz == 8){
-			if(Bread(&b, &vl, 8) != 8)
-				return symerrmsg(8, "symbol");
-			p->gotype = beswav(vl);
-		}
-		else{
-			if(Bread(&b, &l, 4) != 4)
-				return symerrmsg(4, "symbol");
-			p->gotype = (u32int)beswal(l);
-		}
-		size += svalsz;
-
 		/* count global & auto vars, text symbols, and file names */
 		switch (p->type) {
 		case 'l':
