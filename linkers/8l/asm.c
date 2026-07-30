@@ -183,6 +183,12 @@ asmb(void)
     case H_EXE:
         seek(cout, HEADR+rnd(textsize, INITRND), 0);
         break;
+    case H_PE:
+        // claude: PE requires vaddr modulo page == file offset modulo
+        // page, same reasoning as the H_ELF case above and 6l's own
+        // HEADTYPE==10 case in asm.c
+        seek(cout, rnd(HEADR+textsize, INITRND), 0);
+        break;
     /*e: [[asmb()]] switch HEADTYPE (to position after text) cases(x86) */
     default:
         diag("unknown header type %d", HEADTYPE);
@@ -241,6 +247,11 @@ asmb(void)
             break;
         case H_COM:
         case H_EXE:
+            debug['s'] = 1;
+            break;
+        case H_PE:
+            // claude: no symbol table for PE yet (lk/pe.c has no .symdat
+            // writer), matching 6l's HEADTYPE==10 case
             debug['s'] = 1;
             break;
         /*e: [[asmb()]] switch HEADTYPE (for symbol table generation) cases(x86) */
@@ -416,6 +427,9 @@ asmb(void)
         break;
     case H_ELF:
         elf32(I386, ELFDATA2LSB, 0, nil);
+        break;
+    case H_PE:
+        asmbpe();
         break;
     /*e: [[asmb()]] switch HEADTYPE (for header generation) cases(x86) */
     }

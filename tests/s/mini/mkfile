@@ -183,12 +183,13 @@ hello_plan9_mips.exe: hello_plan9_mips.s
 # yet. Run under wine on Linux hosts; the `test` target above does this
 # for both automatically as part of `mk test`.
 #
-# 386 uses 8lg (goken/src-cmd lineage): the principia 8l in linkers/8l/
-# does not have -H 10 wired. amd64 uses 6l -H 10 (linkers/lk/pe.c),
-# which emits a PE32+ (64-bit) optional header.
+# 386 uses 8a/8l: linkers/8l now has -H 10 wired (same shared
+# linkers/lk/pe.c as 6l below), emitting the PE32 (32-bit) optional
+# header. amd64 uses 6l -H 10, which emits a PE32+ (64-bit) optional
+# header.
 hello_windows_386.exe: hello_windows_386.s
-   8ag $prereq
-   8lg -s -H 10 -o $target -E _start hello_windows_386.8
+   8a $prereq
+   8l -s -H 10 -o $target -E _start hello_windows_386.8
 hello_windows_amd64.exe: hello_windows_amd64.s
    6a -c $prereq
    6l -s -H 10 -o $target -E _start hello_windows_amd64.6

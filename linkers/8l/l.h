@@ -6,6 +6,7 @@
 #include	<obj/common.out.h>
 #include	<obj/8.out.h>
 #include	"elf_.h"
+#include	"../lk/pe.h"
 
 /*s: macro [[DBG]] */
 #define DBG if(debug['v']) mylog
@@ -203,6 +204,11 @@ enum section
 
     SIMPORT,
     SEXPORT,
+
+    // claude: a symbol whose value is already a final absolute address, not
+    // an offset from INITDAT like plain SDATA/SBSS -- used for the PE
+    // __imp_* import-table symbols lk/pe.c defines (see vaddr() in span.c)
+    SFIXED,
 };
 /*e: enum [[sxxx]](x86) */
 /*s: enum [[yxxx]](x86) */
@@ -332,6 +338,8 @@ enum headtype {
     // claude: kept as 7 (not 5) to match 5l/7l/8lk's numbering, since
     // scripts/tests uniformly pass -H7 for ELF across all archs
     H_ELF = 7,
+    // claude: matches 6l's HEADTYPE==10 for PE (Windows), see linkers/lk/pe.c
+    H_PE = 10,
 };
 /*e: enum [[headtype]](x86) */
 
@@ -404,6 +412,10 @@ extern	long	symsize;
 extern	Prog*	textp;
 extern	long	textsize;
 extern	long	thunk;
+// claude: needed so shared ../lk/pe.c (peinit()/asmbpe()) can switch on
+// architecture; elf.c avoids this by taking the ELF machine type as a
+// parameter instead, but pe.c (also used as-is by 6l) reads thechar directly
+extern	char	thechar;
 extern	Prog	zprg;
 extern	int	dtype;
 

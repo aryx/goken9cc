@@ -327,6 +327,16 @@ main(int argc, char *argv[])
         if(INITRND == -1)
             INITRND = 4096;
         break;
+    case H_PE:	/* PE (Windows) executable, matching 6l's HEADTYPE==10 */
+        peinit();
+        HEADR = PERESERVE;
+        if(INITTEXT == -1)
+            INITTEXT = PEBASE+0x1000;
+        if(INITDAT == -1)
+            INITDAT = 0;
+        if(INITRND == -1)
+            INITRND = 4096;
+        break;
     /*e: [[main()]] switch HEADTYPE cases(x86) */
     default:
         diag("unknown -H option");
@@ -493,6 +503,20 @@ main(int argc, char *argv[])
             doprof2();
     /*e: [[main()]] call doprofxxx() if profiling */
     span();
+    if(HEADTYPE == H_PE) {
+        /* claude: dopepe()/peimports() lays out the .idata section (needs
+         * the real textsize/datsize/bsssize from the span() above) and
+         * defines the __imp_<name> import symbols. This ?l has no separate
+         * relocation pass -- asmand()/vaddr() resolve symbol addresses
+         * directly during instruction encoding -- so code already spanned
+         * above still has the placeholder (zero) address for any __imp_*
+         * reference; re-running span() re-encodes those now that the real
+         * addresses are known. Instruction sizes are unchanged (disp32 is
+         * always 4 bytes), so this converges immediately. Matches 6l's
+         * obj.c HEADTYPE==10 handling. */
+        dopepe();
+        span();
+    }
     doinit();
 
     // write to cout, finally

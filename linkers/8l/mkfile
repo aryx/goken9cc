@@ -15,8 +15,9 @@ OFILES=globals.$O\
 	enam.$O\
 	compat.$O\
 	elf.$O\
+	pe.$O\
 
-HFILES= l.h elf_.h $TOP/include/obj/8.out.h
+HFILES= l.h elf_.h ../lk/pe.h $TOP/include/obj/8.out.h
 
 
 CFLAGS=$CFLAGS -I.
@@ -29,3 +30,6 @@ CFLAGS=$CFLAGS -I.
 
 enam.$O:	$TOP/compilers/8c/enam.c
 	$CC $CFLAGS $TOP/compilers/8c/enam.c
+
+pe.$O:	../lk/pe.c
+	$CC $CFLAGS ../lk/pe.c
