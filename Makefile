@@ -49,12 +49,12 @@ build-alpine:
 ###############################################################################
 
 gotest:
-	cd src; ./run.bash
+	cd GO; ./run.bash
 
 #TODO: hello_web.exe but more complicated to test and hello_draw.exe too
 #TODO: we should use cmp.out to ensure the output is correct
 hellogotest:
-	cd tests; make; ./hello_go.exe; ./hello_unicode.exe; ./hello_goroutine.exe
+	cd tests/go/hello; make; ./hello_go.exe; ./hello_unicode.exe; ./hello_goroutine.exe
 
 ###############################################################################
 # Pad's targets
