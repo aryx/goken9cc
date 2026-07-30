@@ -696,20 +696,60 @@ not just recompiling.
 Verification: `lib_core/libc && mk -a objtype=$arch cputype=$arch
 install` then `tests/c/hello_libc && mk objtype=$arch cputype=$arch
 test_one` (now builds+runs both hello.exe and the new io.exe) via real
-qemu-user, for arm64/arm/mips/riscv/riscv64 -- all five pass, including
-mips only after the svc_mips.s fix above. amd64 and 386 could NOT be
-verified this session: both fail to build lib_core/libc entirely, at
-math/lrand.c ("bad mul alg" from 6c/8c) -- confirmed via `git stash` to
-be a PRE-EXISTING failure on master, unrelated to this session's changes
-(neither arch's libc.a had ever been successfully built/installed
-before this session; ROOT/arch/{amd64,386}/bin was already empty).
-Their file-syscall code (numbers, .decl, zsyscall_*.c) was written
-following the exact same pattern already proven on the other five
-Linux arches plus reference values cross-checked against
-GO/pkg/syscall's 2010-era zsysnum_linux_{386,amd64,arm}.go, so it's
-credible, but genuinely unverified by execution -- fix the lrand
-compiler bug (out of scope here, a compilers/6c and compilers/8c
-codegen issue, not a syscall issue) before trusting amd64/386 fully.
+qemu-user, for all seven Linux arches (arm64/amd64/386/arm/mips/riscv/
+riscv64) -- all pass, including mips only after the svc_mips.s fix
+above and amd64/386 only after the boot-gcc CFLAGS_ARCH fix below.
+
+amd64/386's "bad mul alg" host-toolchain bug, and its real fix
+------------------------------------------------------------------------
+
+amd64/386 initially failed to build lib_core/libc entirely, at
+math/lrand.c's `x = A*lo - R*hi;` ("bad mul alg" from 6c/8c) -- and
+`git stash`-ing just compilers/{6c,8c}/mul.c confirmed the failure
+predates this session (neither arch's libc.a had ever been built
+before). The bug itself is real but NOT in mul.c's algorithm: its
+Mparam.alg/Malg.vals fields are plain `char`, and mulgen1()'s "no cheap
+multiply found, fall back to a real MUL" sentinel (`mp->alg = -1`)
+relies on that staying negative -- true when `char` defaults to signed
+(x86), false when it defaults to unsigned (arm64/AAPCS, this project's
+own boot-gcc host), where -1 reads back as 255 and falls into an
+unhandled switch default instead of the intended silent fallback.
+compilers/8ck/mul.c already carried a comment about exactly this
+("the use of -1 below requires -fsigned-char on arm64..."), and
+BOOT/mkfiles/hostflags/{arm64,riscv,riscv64}/mkfile already set
+`CFLAGS_ARCH=-fsigned-char` for exactly this reason -- but
+mkfiles/boot-gcc/mkfile's own `<$TOP/mkfiles/hostflags/$cputype/mkfile`
+include was missing a `BOOT/` path segment (mkfiles/hostflags/ has never
+existed, only BOOT/mkfiles/hostflags/ does), so mk silently skipped it
+("warning: skipping missing include file") and $CFLAGS_ARCH never
+reached gcc at all -- meaning 6c/8c/8ck (built BY this boot-gcc step)
+were *always* compiled with unsigned char on an arm64 host, this
+bug included. A first attempt at fixing this by adding `signed char` to
+the three affected mul.c fields directly (in all of 6c/8c/8ck) was
+tried and confirmed working, then reverted in favor of the smaller,
+already-intended fix once this was found -- editing mul.c wasn't
+necessary and would have been redundant with -fsigned-char.
+
+The fix has a second half beyond the path prefix: `mk objtype=boot-gcc
+install` alone still didn't pick up CFLAGS_ARCH, because mk variables
+come from the command line, not the shell environment -- env.sh's own
+`export cputype=...` doesn't make mk see `$cputype` as a defined
+variable inside `<$TOP/BOOT/mkfiles/hostflags/$cputype/mkfile`; that
+needs `cputype=arm64` passed explicitly on the `mk` command line too
+(`mk -a 'objtype=boot-gcc' 'cputype=arm64' install`), the same
+"mk variables aren't environment variables" lesson this file's own
+`GOOS`/cast-type discussion already covers elsewhere. Verified via a new
+tests/c/regressions/mulconst_unsigned_char_host.c (built on 6c/8c/8ck,
+run under qemu, checks the actual `A*lo - R*hi` arithmetic result) --
+confirmed it fails without the fix (temporarily reverted just
+compilers/*/mul.c and rebuilt) and passes with it, wired into that
+directory's `test:V:` alongside the pre-existing, related mulzero.check.
+After fixing, a full `mk -a objtype=boot-gcc all` plus reinstalling
+6c/8c/8ck were needed to actually flow the flag into every already-built
+boot-gcc binary, not just lib_core/libc's own compiles -- `all` alone
+does NOT install (mkfiles/mkone's own `all:V: $O.out` vs `install:V:
+$BIN/$TARG`), so each of 6c/8c/8ck still needed an explicit `mk install`
+afterward for ROOT/arch/boot-gcc/bin/ to actually pick up the new build.
 
 Darwin (amd64/arm64) and a best-effort, unwired Windows/amd64 draft
 (kernel32 CreateFileA/ReadFile/WriteFile/CloseHandle/SetFilePointerEx

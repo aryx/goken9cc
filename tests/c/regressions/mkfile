@@ -149,7 +149,7 @@
 # 8c didn't hit this because compilers/8c/'s own `mk -a install`
 # rebuilds compilers/cc/cc.ao (mac.o included) as part of the same
 # invocation. See docs/claude_notes/notes_shared_frontend_bugs.txt.
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check
+test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check mulconst_unsigned_char_host.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -228,6 +228,45 @@ mulzero.check:V: mulzero.c mulzero_start_amd64.s mulzero_start_386.s
 		echo 'ok: mulzero_8ck_386.exe (8ck) exit 0'
 	if not {
 		echo 'FAILED: mulzero_8ck_386.exe (8ck) (got '$st')'
+		exit failed
+	}
+
+# mulconst_unsigned_char_host: a HOST-side bug (not target-specific like
+# every other check in this file) -- only reproduces when 6c/8c/8ck are
+# themselves *built* on an unsigned-char-by-default host (arm64), so
+# this check is really re-verifying BOOT/mkfiles/hostflags/$cputype/
+# mkfile's CFLAGS_ARCH=-fsigned-char (and mkfiles/boot-gcc/mkfile's own
+# include of it) stays correctly wired, not something 6c/8c/8ck's own
+# target-arch codegen could ever regress on its own. See the .c file's
+# own comment for the full story.
+mulconst_unsigned_char_host.check:V: mulconst_unsigned_char_host.c mulzero_start_amd64.s mulzero_start_386.s
+	6c -c mulconst_unsigned_char_host.c
+	6a -c mulzero_start_amd64.s
+	6l -o mulconst_unsigned_char_host_amd64.exe -E _main mulconst_unsigned_char_host.6 mulzero_start_amd64.6
+	8a -c mulzero_start_386.s
+	8c -c mulconst_unsigned_char_host.c
+	8l -o mulconst_unsigned_char_host_8c_386.exe -E _main mulconst_unsigned_char_host.8 mulzero_start_386.8
+	8ck -c mulconst_unsigned_char_host.c
+	8l -o mulconst_unsigned_char_host_8ck_386.exe -E _main mulconst_unsigned_char_host.8 mulzero_start_386.8
+	st=`{ ../../../scripts/qemu-runner amd64 ./mulconst_unsigned_char_host_amd64.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: mulconst_unsigned_char_host_amd64.exe (6c) exit 0'
+	if not {
+		echo 'FAILED: mulconst_unsigned_char_host_amd64.exe (6c) (got '$st')'
+		exit failed
+	}
+	st=`{ ../../../scripts/qemu-runner 386 ./mulconst_unsigned_char_host_8c_386.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: mulconst_unsigned_char_host_8c_386.exe (8c) exit 0'
+	if not {
+		echo 'FAILED: mulconst_unsigned_char_host_8c_386.exe (8c) (got '$st')'
+		exit failed
+	}
+	st=`{ ../../../scripts/qemu-runner 386 ./mulconst_unsigned_char_host_8ck_386.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: mulconst_unsigned_char_host_8ck_386.exe (8ck) exit 0'
+	if not {
+		echo 'FAILED: mulconst_unsigned_char_host_8ck_386.exe (8ck) (got '$st')'
 		exit failed
 	}
 

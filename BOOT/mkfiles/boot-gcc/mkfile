@@ -1,5 +1,5 @@
 <$TOP/mkfiles/mkfile.proto
-<$TOP/mkfiles/hostflags/$cputype/mkfile
+<$TOP/BOOT/mkfiles/hostflags/$cputype/mkfile
 
 # the host bootstrap compiler: builds goken's own C sources (compilers/,
 # assemblers/, linkers/, lib_core/, ...) using gcc, so that the goken
@@ -7,8 +7,24 @@
 #
 # the --std=gnu89 is needed because recent gcc have too many warnings
 # by default that prevent compiling goken, and -Wno-cpp is to avoid
-# certain errors; $CFLAGS_ARCH (from mkfiles/hostflags/$cputype/mkfile)
+# certain errors; $CFLAGS_ARCH (from BOOT/mkfiles/hostflags/$cputype/mkfile)
 # adds any flags needed for this specific host CPU.
+#
+# claude: this include was missing its "BOOT/" prefix -- mkfiles/hostflags/
+# (without BOOT/) has never existed, only BOOT/mkfiles/hostflags/ does, so
+# mk silently skipped it ("warning: skipping missing include file") and
+# $CFLAGS_ARCH was always empty here. Concretely this meant
+# BOOT/mkfiles/hostflags/arm64/mkfile's `CFLAGS_ARCH=-fsigned-char` (needed
+# because plain `char` defaults to unsigned on arm64, unlike x86 -- see
+# that file's own comment and compilers/8ck/mul.c's pre-existing note on
+# the same issue) never actually reached gcc, so 6c/8c/8ck -- themselves
+# built BY this boot-gcc step -- inherited an unsigned `char`, silently
+# breaking their own mul.c (constant-multiply strength reduction, "bad
+# mul alg" on lib_core/libc/math/lrand.c's `A*lo - R*hi`, see
+# docs/claude_notes/notes_libc_selfhost.txt) whenever built on an arm64
+# host. Found while chasing exactly that failure; fixed here at the root
+# (the missing path prefix) rather than by touching mul.c itself, since
+# -fsigned-char was already the codebase's own recorded intended fix.
 #
 # once the cross-tools can compile lib_core/libc themselves, a later
 # 'mk objtype=$cputype' build (see mkfiles/$cputype/mkfile) can use them
