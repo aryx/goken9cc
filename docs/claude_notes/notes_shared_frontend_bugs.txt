@@ -184,15 +184,15 @@ A different axis from every entry above: not one compiler-per-backend
 copy diverging, but multiple *parallel frontend lineages* --
 compilers/cc/ (newer, actively maintained; 5c and 8c build against it,
 via compilers/5c/mkfile's `LIB=../cc/cc.a$O`), compilers/cck/ (the
-kencc lineage; 6c, 5ck, 8ck, and now 7c and vc too -- see "7c and vc
-migrated off src/cmd/cc" below), and src/cmd/cc/ (the older Go-era
-copy; ic still builds against `$TOP/src/cmd/cc/cc.a` -- see its
-mkfile). All three contain their own independent copy of com64.c, the
-"emulate 64-bit vlong via a pair of 32-bit words" pass used only by
-targets without native 64-bit ops (guarded by `machcap()`, which bails
-out immediately on 64-bit-native arches -- so arm64/amd64 never
-exercise this code at all, regardless of which frontend they're built
-against).
+kencc lineage; 6c, 5ck, 8ck, and now 7c, vc and ic too -- see "7c, vc
+and ic migrated off src/cmd/cc" below), and src/cmd/cc/ (the older
+Go-era copy, now with zero remaining consumers among 5c/6c/7c/8c/vc/ic
+-- still built by root mkfile's DIRS, though, see todo.org). All three
+contain their own independent copy of com64.c, the "emulate 64-bit
+vlong via a pair of 32-bit words" pass used only by targets without
+native 64-bit ops (guarded by `machcap()`, which bails out immediately
+on 64-bit-native arches -- so arm64/amd64 never exercise this code at
+all, regardless of which frontend they're built against).
 
 compilers/cc/com64.c already has `case OCOND:` in its `if(rv)` switch
 and `case OLIST: case OCOMMA:` in its final `if(typev[n->type->etype])`
@@ -211,18 +211,16 @@ notes_libc_selfhost.txt for the fuller story. Not checked against
 9front/kencc-riscv for a "which lineage got this fix first" history;
 found via direct probing (vc -S on the failing file), not diffing.
 
-**Status: fixed in src/cmd/cc/com64.c** (so ic, still on that lineage,
-is current with compilers/cc/com64.c for this one bug specifically --
-the frontends remain otherwise unmerged; see todo.org's "migrate
-7c/vc/ic off src/cmd/cc" entry for the real fix, unifying the
-frontends so this class of bug stops recurring). compilers/cck/com64.c
-already had this fix independently (verified when 7c and vc moved
-onto it).
+**Status: fixed in src/cmd/cc/com64.c** while it still had a
+consumer -- kept for the historical record now that 7c/vc/ic have all
+moved off that lineage; compilers/cck/com64.c already had this fix
+independently (verified when all three moved onto it), so no residual
+gap remains anywhere in the currently-built frontends.
 
-7c and vc migrated off src/cmd/cc onto compilers/cck (not compilers/cc)
+7c, vc and ic migrated off src/cmd/cc onto compilers/cck (not compilers/cc)
 ------------------------------------------------------------------------------
 
-7c and vc now build against compilers/cck/cc.a instead of
+7c, vc and ic now all build against compilers/cck/cc.a instead of
 src/cmd/cc/cc.a (each backend's mkfile HFILES/LIB, plus gc.h's
 #include). This was a staging step, not the final state todo.org's
 migration entry calls for -- compilers/cck/ is supposed to be
@@ -236,24 +234,51 @@ moved global storage into a dedicated globals2.c. Landing on
 compilers/cc/ directly would require redoing that same gc.h/globals2.c
 rewrite 5c/8c already went through, per backend. The few incidental
 fixups needed to build against compilers/cck/ instead, identical in
-shape for both 7c and vc: outstring/gextern/exreg/ncast's int32
+shape for all three: outstring/gextern/exreg/ncast's int32
 params/return changed to long (compilers/cck/cc.h declares them as
 long), `xround` renamed to `round` (compilers/cck/dcl.c's name for the
 same helper), and `p->reg = textflag` reverted to
 `p->reg = (profileflg ? 0 : NOPROF)` -- `textflag`/`#pragma textflag`
 is a dead Go-runtime-era feature only src/cmd/cc/dpchk.c ever
 implemented (no live C source in this tree uses the pragma), and
-5c/6c/8c had already dropped it; both 7c/txt.c and vc/txt.c even had
-the same "was p->reg = (profileflg ? 0 : NOPROF)" comment already
-pointing at the fix (spelled "//goken:" in 7c, "//kengo:" in vc).
-Verified for both via a clean `mk objtype=boot-gcc` build plus
+5c/6c/8c had already dropped it; 7c/txt.c and vc/txt.c even had the
+same "was p->reg = (profileflg ? 0 : NOPROF)" comment already pointing
+at the fix (spelled "//goken:" in 7c, "//kengo:" in vc; ic/txt.c had
+the same "//goken:" comment too).
+
+ic needed one more fix beyond the shared four above, specific to its
+ic/jc riscv32/riscv64 dual-width-binary trick: compilers/cck/lex.c's
+main() never had the `if(*p == 'j') thechar = 'j';` argv[0]-basename
+check (ported verbatim from src/cmd/cc/lex.c, which already had it,
+alongside assemblers/ia/lex.c and linkers/il/obj.c's matching ja/jl
+convention). Without it, invoking the shared binary as `jc` never
+actually set thechar to 'j' before ginit() ran, so `jc -c foo.c`
+silently produced `foo.i` (the ic/riscv32 object suffix) instead of
+`foo.j` -- found via tests/c/mini2's riscv64 build (the only one of
+tests/c/{mini,mini2,vlong} with riscv64 .s stubs at all; mini/vlong's
+missing riscv64 coverage is a separate, pre-existing gap, not part of
+this fix). Confirmed safe to add unconditionally to the shared
+lex.c: 5ck/6c/8ck's own ginit() functions each set thechar
+unconditionally to their fixed arch letter, so this pre-check is a
+no-op for them, exactly as the ported comment (originally in
+src/cmd/cc/lex.c) already documented. Also needed: ic/txt.c's own
+riscv64-dual-width table copy, `memmove(ncast, ncast64,
+NTYPE*sizeof(int32))`, updated to `sizeof(long)` once ncast/ncast64
+themselves became `long` -- otherwise the memmove would have copied
+only half the table's bytes into the now-wider array, silently
+corrupting every entry from the midpoint on for `jc` specifically.
+
+Verified for all three via a clean `mk objtype=boot-gcc` build plus
 tests/c/{mini,mini2,vlong,float(7c only)} and tests/c/regressions all
-passing, plus every currently-wired-up benchs/compcert CompCert
-program -- 7c natively on an aarch64 host, vc under qemu-mips (mips
-isn't a host arch this project runs on). ic remains on src/cmd/cc/ for
-now; unifying compilers/cck/ itself into compilers/cc/ (which
-6c/5ck/8ck would also need) is a separate, larger project, not
-attempted here.
+passing: 7c natively on an aarch64 host, vc under qemu-mips, ic under
+qemu-riscv32 and qemu-riscv64 (jc) -- this host is aarch64, not
+mips/riscv. Plus, for 7c and vc, every currently-wired-up
+benchs/compcert CompCert program (not run for ic/mips's
+benchs/compcert specifically: that suite has known
+timeout/run-failure/mismatch issues across non-primary archs,
+unrelated to this migration). Unifying compilers/cck/ itself into
+compilers/cc/ (which 6c/5ck/8ck would also need) is a separate, larger
+project, not attempted here.
 
 Unsuffixed hex constant >32 bits: truncated, not promoted to vlong (universal; now warns by default, still unfixed)
 ------------------------------------------------------------------------------------------------------------------------------

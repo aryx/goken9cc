@@ -1,10 +1,10 @@
 #include "gc.h"
 
-static int32 ncast64[];
+static long ncast64[];
 
 // ic/jc (32- and 64-bit riscv) dual-width selection: this used to be a
 // dedicated ic main() (below, now removed) that checked argv[0] and called
-// a separate ccmain() -- that split no longer exists, src/cmd/cc/lex.c's
+// a separate ccmain() -- that split no longer exists, compilers/cck/lex.c's
 // shared main() now does everything main() used to do for every backend.
 // The argv[0]-basename check now lives there instead, before it calls
 // ginit() below, and ginit() picks up thechar from that.
@@ -16,13 +16,13 @@ ginit(void)
 	Type *t;
 
 	// thechar is pre-set to 'j' (or left as its zero value) by
-	// src/cmd/cc/lex.c's main(), before it calls us, based on argv[0]'s
+	// compilers/cck/lex.c's main(), before it calls us, based on argv[0]'s
 	// basename -- the same ja/jl convention assemblers/ia and linkers/il
 	// use. Anything else defaults to 'i' (riscv32).
 	if(thechar == 'j'){
 		thestring = "riscv64";
 		ewidth[TIND] = 8;
-		// src/cmd/cc/lex.c's cinit() (called by main() right before us)
+		// compilers/cck/lex.c's cinit() (called by main() right before us)
 		// already built the canonical types[TIND] = typ(TIND, types[TVOID])
 		// via typ(), which bakes in width = ewidth[TIND] *at that time* --
 		// i.e. gc.h's compile-time SZ_IND (4, the rv32 default) rather
@@ -133,7 +133,7 @@ ginit(void)
 	if(thechar == 'i'){
 		com64init();
 	}else{
-		memmove(ncast, ncast64, NTYPE*sizeof(int32));
+		memmove(ncast, ncast64, NTYPE*sizeof(long));
 	}
 
 	for(i=0; i<nelem(reg); i++) {
@@ -1347,8 +1347,7 @@ gpseudo(int a, Sym *s, Node *n)
 	p->from.type = D_OREG;
 	p->from.sym = s;
 	if(a == ATEXT)
-		//goken: p->reg = (profileflg ? 0 : NOPROF);
-        p->reg = textflag;
+		p->reg = (profileflg ? 0 : NOPROF);
 	p->from.name = D_EXTERN;
 	if(s->class == CSTATIC)
 		p->from.name = D_STATIC;
@@ -1380,7 +1379,7 @@ sval(int32 v)
 	return 0;
 }
 
-int32
+long
 exreg(Type *t)
 {
 	int32 o;
@@ -1426,7 +1425,7 @@ schar	ewidth[NTYPE] =
 	SZ_INT,		/* [TENUM] */
 };
 
-int32	ncast[NTYPE] =
+long	ncast[NTYPE] =
 {
 	0,				/* [TXXX] */
 	BCHAR|BUCHAR,			/* [TCHAR] */
@@ -1450,7 +1449,7 @@ int32	ncast[NTYPE] =
 	0,				/* [TENUM] */
 };
 
-static int32 ncast64[NTYPE] =
+static long ncast64[NTYPE] =
 {
 	0,				/* [TXXX] */
 	BCHAR|BUCHAR,			/* [TCHAR] */

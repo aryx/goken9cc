@@ -1,4 +1,4 @@
-#include	"../../src/cmd/cc/cc.h"
+#include	"../cck/cc.h"
 #include	<obj/i.out.h>
 
 /*
@@ -270,11 +270,11 @@ void	swit2(C1*, int, int32, Node*, Node*);
 void	casf(void);
 void	bitload(Node*, Node*, Node*, Node*, Node*);
 void	bitstore(Node*, Node*, Node*, Node*, Node*);
-int32	outstring(char*, int32);
+long	outstring(char*, long);
 int	mulcon(Node*, Node*);
 Multab*	mulcon0(int32);
 void	nullwarn(Node*, Node*);
-void	gextern(Sym*, Node*, int32, int32);
+void	gextern(Sym*, Node*, long, long);
 void	outcode(void);
 void	ieeedtod(Ieee*, double);
 

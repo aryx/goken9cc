@@ -19,18 +19,22 @@ OFILES=\
 	pswt.$O\
 	$TOP/linkers/il/enam.$O\
 
-HFILES=	gc.h $TOP/include/obj/i.out.h $TOP/src/cmd/cc/cc.h
+HFILES=	gc.h $TOP/include/obj/i.out.h $TOP/compilers/cck/cc.h
 
-LIB=$TOP/src/cmd/cc/cc.a
+LIB=$TOP/compilers/cck/cc.a
 
 <$TOP/mkfiles/mkone
 
+$LIB:
+	cd ../cck
+	mk all
+
 # see 7c/mkfile for more info
-p%.$O: $TOP/src/cmd/cc/p%.c
-	$CC $CFLAGS $TOP/src/cmd/cc/p$stem.c
+p%.$O: $TOP/compilers/cck/p%.c
+	$CC $CFLAGS $TOP/compilers/cck/p$stem.c
 
 # jc is the same binary as ic, just installed under a second name: ic's
-# main() is the shared src/cmd/cc/lex.c one (used by 7c/vc/ic), which now
+# main() is the shared compilers/cck/lex.c one (used by 7c/vc/ic), which now
 # has an argv[0]-basename check for 'j' before it calls ginit() (mirroring
 # the ja/jl convention in assemblers/ia/mkfile, linkers/il/mkfile); ic's
 # own ginit() (txt.c) picks up thechar='j' from that to select ewidth[TIND]

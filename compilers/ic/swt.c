@@ -122,8 +122,8 @@ bitstore(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 	regfree(n3);
 }
 
-int32
-outstring(char *s, int32 n)
+long
+outstring(char *s, long n)
 {
 	int32 r;
 
@@ -256,7 +256,7 @@ sextern(Sym *s, Node *a, int32 o, int32 w)
 }
 
 void
-gextern(Sym *s, Node *a, int32 o, int32 w)
+gextern(Sym *s, Node *a, long o, long w)
 {
 
 	if(a->op == OCONST && typev[a->type->etype]) {
@@ -605,7 +605,7 @@ align(int32 i, Type *t, int op)
 		o = align(o, t, Ael2);
 		break;
 	}
-	o = xround(o + linksave, w) - linksave;
+	o = round(o + linksave, w) - linksave;
 	if(debug['A'])
 		print("align %s %ld %T = %ld\n", bnames[op], i, t, o);
 	return o;
@@ -614,7 +614,7 @@ align(int32 i, Type *t, int op)
 int32
 maxround(int32 max, int32 v)
 {
-	v = xround(v, ewidth[TIND]);
+	v = round(v, ewidth[TIND]);
 	if(v > max)
 		return v;
 	return max;
