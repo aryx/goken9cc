@@ -22,6 +22,26 @@
 
 #define printf print
 
+/* Real file reading: FILE is a deliberately incomplete/opaque struct
+ * (no real definition anywhere -- `FILE*` is just open()'s own fdt
+ * return value reinterpreted as a pointer, see lib_core/libc/APE/
+ * stdio.c, which redeclares this same opaque `struct FILE` tag
+ * locally rather than sharing this typedef -- include/ and
+ * lib_core/libc/port/ both stay Plan9-native/APE-free, this UNIX-
+ * compat stuff belongs only in the two APE/ directories).
+ * fopen() only supports read mode (ignores `mode` entirely) and
+ * fgets() reads one byte at a time (no internal buffering) -- both
+ * real, narrower-than-standard limitations (see stdio.c's own
+ * comment), not silent bugs; needed once a program actually reads its
+ * own input file (benchs/compcert/knucleotide.c, the first consumer)
+ * rather than just writing to fd 1/2 like every program wired up
+ * before it.
+ */
+typedef struct FILE FILE;
+extern FILE *fopen(char *path, char *mode);
+extern int fclose(FILE *f);
+extern char *fgets(char *buf, int size, FILE *f);
+
 /* stdout: not a real FILE* (this libc has none) -- just a placeholder
  * token so `putc(c, stdout)` parses; putc() below ignores it entirely
  * and always writes to fd 1, which is the only stream any benchmark
@@ -56,6 +76,18 @@
 #define stderr 2
 #define fprintf(stream, msg) print(msg)
 #define fputs(msg, stream) print(msg)
+
+/* perror: real POSIX perror(msg) prints "msg: <strerror(errno)>\n" to
+ * stderr; this just prints msg, dropping the errno/strerror() part.
+ * Narrower than standard, same spirit as fprintf/fputs above -- and
+ * verified dead code for its one real consumer so far
+ * (benchs/compcert/knucleotide.c's two malloc-failure paths): this
+ * project's own malloc() (lib_core/libc/port/minimal_malloc.c)
+ * abort()s directly on failure rather than ever returning nil, so the
+ * `if (malloc(...) == 0)` branches calling this are unreachable in
+ * practice, not just untested.
+ */
+#define perror(msg) print(msg)
 
 /* stddef.h's NULL: u.h already defines `nil` as ((void*)0); NULL is
  * just the standard C name for the same thing. */

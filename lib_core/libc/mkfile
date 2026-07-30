@@ -135,6 +135,16 @@ PORTOFILES=\
 	port/rand.$O\
 	port/qsort.$O\
 	port/seek.$O\
+	port/strdup.$O\
+	port/getcallerpc.$O\
+
+# UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
+# Plan9-native equivalent at all, unlike strdup/seek/etc above, which
+# stay in PORTOFILES) -- mirrors include/APE/'s own split of "ugly,
+# must-be-UNIX-compatible" headers away from the rest of include/,
+# kept out of port/ the same way for the same reason.
+APEOFILES=\
+	APE/stdio.$O\
 
 SYSCALLOFILES=\
 	syscall/os/$GOOS/svc_$cputype.$O\
@@ -177,7 +187,7 @@ ARCHOFILES=\
 	$RT0OFILE\
 	$ARCHEXTRAOFILES\
 
-OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
+OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
 
 HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 

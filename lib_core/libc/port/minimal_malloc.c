@@ -77,3 +77,66 @@ free(void *p)
 {
 	USED(p);
 }
+
+/* claude: same "temporary, not the real thing" spirit as malloc/calloc
+ * above -- this bump allocator never tracks each allocation's real
+ * size, so a real realloc() (which must copy only min(oldsize,
+ * newsize) bytes) isn't possible; this always copies `n` (the *new*
+ * size) bytes from the old block instead. Reading `n` bytes from a
+ * smaller old allocation reads past whatever that specific block
+ * "owned" -- harmless in practice for any p that's still comfortably
+ * inside heap[] (true for every allocation this bump allocator has
+ * ever handed out, short of one sitting within `n` bytes of
+ * heap+HEAPSIZE, which nothing here does), but NOT a guaranteed-safe
+ * operation the way malloc/free/calloc above are. The grown tail's
+ * *contents* are unspecified either way (not zeroed), same as real
+ * POSIX realloc()'s own contract. Fine for
+ * benchs/compcert/knucleotide.c (the first, and so far only, caller):
+ * it always overwrites the grown tail itself before reading it.
+ */
+void*
+realloc(void *p, ulong n)
+{
+	void *q;
+
+	if(p == nil)
+		return malloc(n);
+	q = malloc(n);
+	memcpy(q, p, n);
+	return q;
+}
+
+/* claude: no-op debug-tag bookkeeping (include/core/mem.h's own
+ * declarations, previously unimplemented -- callable but never called
+ * before port/strdup.c, adapted from ~/principia-softwarica/lib_core/
+ * libc/port/strdup.c, started calling setmalloctag()). A real
+ * allocator would use these to record "who allocated this block" (the
+ * caller's PC, from getcallerpc()) for leak-tracking/debugging; this
+ * bump allocator tracks nothing about individual allocations at all
+ * (not even their size, see realloc() above), so there's nowhere to
+ * actually store a tag -- these are safe no-ops, not a real
+ * implementation deferred for later the way getcallerpc() itself is
+ * (lib_core/libc/arch/{386,amd64,arm}/getcallerpc.s, port/
+ * getcallerpc.c): nothing here would change even once malloc() tracks
+ * per-block metadata, unless that metadata includes tags too.
+ */
+void
+setmalloctag(void *v, ulong pc)
+{
+	USED(v);
+	USED(pc);
+}
+
+ulong
+getmalloctag(void *v)
+{
+	USED(v);
+	return 0;
+}
+
+ulong
+getrealloctag(void *v)
+{
+	USED(v);
+	return 0;
+}

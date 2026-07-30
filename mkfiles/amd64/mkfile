@@ -9,3 +9,6 @@ AS=6a
 AR=iar
 
 CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/amd64
+
+# see mkfiles/386/mkfile's identical ARCHEXTRAOFILES comment.
+ARCHEXTRAOFILES=arch/amd64/getcallerpc.$O

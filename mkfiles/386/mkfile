@@ -8,4 +8,20 @@ LD=8l
 AS=8a
 AR=iar
 
-CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/386
+# -Dcputype386 (word-shaped, not lib_core/libc/mkfile's usual bare
+# -D$cputype): "386" alone is a valid #define name (Xc's cpp accepts
+# `-D386`) but NOT a valid #ifdef *operand* -- purely numeric tokens
+# fail there ("syntax in #if(n)def"), confirmed empirically (this
+# compiler has no other arch whose $cputype is a bare number, so
+# nothing else in this tree has ever hit it). port/getcallerpc.c's own
+# #ifdef needs to tell this arch apart from the others, hence this
+# word-shaped alias, set here (arch-specific) rather than in
+# lib_core/libc/mkfile (which would have to special-case 386 in a
+# supposedly-generic, every-arch code path).
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/386 -Dcputype386
+
+# lib_core/libc/port/getcallerpc.c's own #ifdef guards out its portable
+# fallback for this arch, expecting a real implementation instead --
+# see lib_core/libc/arch/386/getcallerpc.s and lib_core/libc/mkfile's
+# own ARCHEXTRAOFILES comment for why this is set here, not there.
+ARCHEXTRAOFILES=arch/386/getcallerpc.$O
