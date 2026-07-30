@@ -41,6 +41,9 @@ test:V: all
 clean:V:
 	rm -f *.[5678ivj] *.exe
 
+exit_linux_arm.exe: exit_linux_arm.s
+   5a -c $prereq
+   5l -H7 -o $target -E _start exit_linux_arm.5
 exit_linux_arm64.exe: exit_linux_arm64.s
    7a -c $prereq
    7l -o $target -H7 -E _start exit_linux_arm64.7
