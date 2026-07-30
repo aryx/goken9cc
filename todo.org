@@ -800,7 +800,7 @@ pass length each time, safer
 
 *** TODO migrate 7c/vc/ic off the Go-era src/cmd/cc frontend onto compilers/cc/
     5c/8c already build against compilers/cc/cc.a (the newer, actively
-    maintained frontend); vc/ic still build against src/cmd/cc/cc.a,
+    maintained frontend); ic still builds against src/cmd/cc/cc.a,
     a separate, older copy that has independently drifted (see the
     com64.c OCOND/OLIST fix in
     docs/claude_notes/notes_shared_frontend_bugs.txt, found while
@@ -808,27 +808,33 @@ pass length each time, safer
     but not in src/cmd/cc/, since they're not the same file).
     Unifying onto one frontend removes this whole class of bug.
 
-    7c done, staged via compilers/cck/ rather than jumping straight to
-    compilers/cc/: compilers/cc/cc.h has diverged far more from
-    src/cmd/cc/cc.h than compilers/cck/cc.h has (1776-line vs 655-line
-    diff at the time this was checked) -- compilers/cc/ renamed/retyped
-    struct fields (Node.garb -> nodegarb, uchar -> char/bool, EXTERN-
-    macro globals moved to a dedicated globals2.c) while compilers/cck/
-    kept the same EXTERN-macro-in-gc.h convention and field names
-    src/cmd/cc/ and 7c's own gc.h already used. Migrating 7c straight
-    to compilers/cc/ would require the same kind of gc.h/globals2.c
-    rewrite 5c/8c already went through; migrating to compilers/cck/
-    first was ~4 lines of type fixes (int32->long on outstring/
-    gextern/exreg/ncast, xround->round rename, and dropping the dead
-    #pragma-textflag global that only src/cmd/cc/ ever populated --
-    5c/6c/8c had already dropped it). Verified: builds clean, and
-    tests/c/{mini,mini2,vlong,float} + tests/c/regressions all pass
-    running natively on this host (aarch64 Linux), not just under
-    qemu-aarch64. vc/ic remain on src/cmd/cc/ for now. The eventual
-    compilers/cck/ -> compilers/cc/ unification (needed to fully match
-    the stated end policy: only kencc-lineage "*ck" compilers should
-    live on compilers/cck/) is its own separate, larger project, not
-    done here.
+    7c and vc done, staged via compilers/cck/ rather than jumping
+    straight to compilers/cc/: compilers/cc/cc.h has diverged far more
+    from src/cmd/cc/cc.h than compilers/cck/cc.h has (1776-line vs
+    655-line diff at the time this was checked) -- compilers/cc/
+    renamed/retyped struct fields (Node.garb -> nodegarb, uchar ->
+    char/bool, EXTERN-macro globals moved to a dedicated globals2.c)
+    while compilers/cck/ kept the same EXTERN-macro-in-gc.h convention
+    and field names src/cmd/cc/ and 7c/vc's own gc.h already used.
+    Migrating straight to compilers/cc/ would require the same kind of
+    gc.h/globals2.c rewrite 5c/8c already went through; migrating to
+    compilers/cck/ first was ~4 lines of type fixes per backend
+    (int32->long on outstring/gextern/exreg/ncast, xround->round
+    rename, and dropping the dead #pragma-textflag global that only
+    src/cmd/cc/ ever populated -- 5c/6c/8c had already dropped it).
+    vc's own version of this was byte-for-byte the same shape as 7c's
+    (down to the same "//kengo: was before: p->reg = (profileflg ? 0 :
+    NOPROF)" comment already pointing at the fix), confirming this is
+    a mechanical, per-backend-repeatable migration, not something that
+    needs re-deriving from scratch each time. Verified for both: builds
+    clean, and tests/c/{mini,mini2,vlong,float(7c only)} +
+    tests/c/regressions pass -- 7c natively on this host (aarch64
+    Linux), vc under qemu-mips (this host isn't mips) -- plus all
+    currently-wired-up benchs/compcert CompCert progs for each arch.
+    ic remains on src/cmd/cc/ for now. The eventual compilers/cck/ ->
+    compilers/cc/ unification (needed to fully match the stated end
+    policy: only kencc-lineage "*ck" compilers should live on
+    compilers/cck/) is its own separate, larger project, not done here.
 
 ** assemblers: 5a/6a/7a/8a/va/ia/ea
 
