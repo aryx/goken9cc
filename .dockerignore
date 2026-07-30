@@ -1,19 +1,24 @@
+# claude: every exclude pattern below is written '**/xxx' on purpose.
+# Unlike .gitignore, a bare 'xxx.o' pattern here only matches at the
+# build context root -- it will NOT reach nested paths like
+# tests/s/mini/hello_arm.exe, which is where these files actually
+# live. Dropping the '**/' silently turns these excludes into no-ops.
 /Dockerfile
 .git
 
 # partial copy of .gitignore
-*.o
-*.a
-*.[5678iv]
-*.ao
+**/*.o
+**/*.a
+**/*.[5678iv]
+**/*.ao
 # pad's test files -- without these, a leftover local build of e.g.
 # tests/s/mini/hello_macos_arm64.exe gets copied into the build
 # context via COPY, and mk sees the target already up to date and
 # skips its recipe -- silently masking recipe bugs (like a broken
 # `if` as a recipe's last line) that a genuinely clean CI checkout
 # would catch.
-*.exe
-*.uexe
+**/*.exe
+**/*.uexe
 # same reasoning as *.exe above: benchs/compcert/mkfile's %.goken
 # binaries are just as vulnerable to this stale-artifact/mtime trap --
 # worse, actually, since %.goken's mtime check can't tell one cputype's
@@ -21,4 +26,12 @@
 # so a leftover mips-targeted foo.goken silently "looks done" to a
 # later arm64 build too, not just skipping a recipe but running the
 # wrong architecture's binary under qemu/binfmt without any indication.
-*.goken
+**/*.goken
+
+# claude: golden/reference binaries checked into git for byte-for-byte
+# `cmp` comparisons (variants tests) and GO's elf testdata -- must
+# survive the blanket excludes above now that they actually apply
+# recursively.
+!tests/s/variants/expected/**
+!tests/c/variants/expected/**
+!GO/pkg/debug/elf/testdata/**
