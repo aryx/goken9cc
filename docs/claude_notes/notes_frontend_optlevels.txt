@@ -180,6 +180,35 @@ bench` produced a working 6-column table, goken-O0/goken-O3 both
 showing real numbers, "n/a" correctly for the two GOKENPROGS-missing
 progs (binarytrees/knucleotide), tests/c still passing after.
 
+Trap hit while verifying this, worth remembering: the mkfile's %.goken*
+recipes invoke the compiler by bare name ($gc, e.g. `7c`), resolved via
+$PATH to the *installed* toolchain at ROOT/arch/$objtype/bin/ -- NOT
+the freshly built compilers/*/o.out sitting in each compiler's own
+source directory. `mk objtype=boot-gcc` (builds only) leaves the
+installed binaries stale; the first goken_bench/bench run after adding
+-O0/-O3 used exactly that stale, pre-patch 7c/6c/etc., which don't
+recognize -O0/-O3 as a flag with a value at all -- ARGBEGIN's
+character-at-a-time loop (include/flag/cli.h) just splits "-O0" into
+two harmless, undefined single-char debug flags (-O, -0) on those old
+binaries, so both "variants" silently compiled identically. Symptom
+was misleadingly plausible-looking output (a full 6-column table, no
+error, goken-O0 and goken-O3 just suspiciously close to each other on
+every row) rather than an outright failure -- easy to mistake for "the
+optimizations just don't matter much for this workload" instead of
+"the binary being timed doesn't have the change at all". Confirmed via
+`7c -O0 -S` vs `7c -O3 -S` on fib.c: zero diff with the stale $PATH
+binary, real diff (register alloc + peephole differences, matching the
+"What actually varies" section above) once `mk objtype=boot-gcc
+install` was run for 5c/6c/7c/8c/vc/ic/5ck/8ck/ec (compilers) and vl
+(linker). Re-ran goken_bench + bench after reinstalling; corrected
+numbers (arm64, native) show a real, believable split: goken-O0
+geomean 0.92x vs the gcc-O0 baseline, goken-O3 geomean 1.44x (e.g.
+fftw 7.121s -> 2.483s, sha3 8.339s -> 4.576s, vmach 11.259s -> 4.317s,
+siphash24 6.044s -> 2.119s, all O0 -> O3). Lesson: after any change to
+compiler/linker source, `mk install` (not just `mk`) before trusting a
+benchmark or any test that shells out to the tool by bare name via
+$PATH rather than an explicit path to the just-built binary.
+
 Still open (see todo.org, not repeated here): find a genuine third
 lever to make -O2 != -O3 (or accept they stay aliases and document
 that permanently instead of as a TODO).

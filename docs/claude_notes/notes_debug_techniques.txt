@@ -258,6 +258,23 @@ rebuilt explicitly first -- a difference invisible from either build's
 "success" output alone, only visible by re-checking the actual
 resulting assembly.
 
+A third variant, found wiring up benchs/compcert's goken-O0/goken-O3
+(docs/claude_notes/notes_frontend_optlevels.txt): running `mk
+objtype=boot-gcc` inside a compiler's own directory only produces a
+local o.out there -- it does NOT copy anything to $PATH's
+ROOT/arch/$objtype/bin/, which is what any script invoking the tool by
+bare name (`7c`, not `./o.out` or an explicit path) actually runs. `mk
+install` (not just `mk`) is required for that. This one is sneakier
+than the other two because it doesn't even fail quietly -- it produces
+a complete, plausible-looking result (bench.sh's full table, no error)
+that just happens to be wrong, since the stale pre-patch binary's
+ARGBEGIN loop silently absorbed the new `-O0`/`-O3` flag as two
+meaningless single-char debug flags instead of erroring on it. Same
+fix as always: re-verify the actual behavior (here, `7c -O0 -S` vs `7c
+-O3 -S` on a real .c file) using the exact invocation path (bare name
+via $PATH, not a directory-relative o.out) the thing you're trusting
+will actually use.
+
 macOS/Darwin-specific execution debugging
 --------------------------------------------
 
