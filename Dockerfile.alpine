@@ -14,6 +14,6 @@ ENV PATH="$PATH:/src/bin"
 #TODO: can't run hello (or use all.bash above)
 # "No such file or directory"
 #TODO: RUN make hellogotest
-WORKDIR /src/tests
+WORKDIR /src/tests/go/hello
 RUN make
 #TODO: RUN ./hello_go
