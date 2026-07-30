@@ -164,6 +164,42 @@ docs/claude_notes/notes_abi_plan9.txt for the rest of that same
 bring-up session's bugs (the ones in 5i/vi's own instruction decode and
 syscall handling, not in libmach).
 
+sym.c's phantom "gotype" field: a go-era wire-format detail ported in by accident
+--------------------------------------------------------------------------------------
+
+Another instance of the same "ported wholesale from src/libmach,
+carried something it shouldn't have" pattern as executable.c above,
+found 2026-07-30 when tests/5i/smoke.sh started failing right after
+tests/s/mini/mkfile switched hello_plan9_arm.exe from the go-era
+5ag/5lg toolchain to the native 5a/5l one: "can't read 4 bytes of
+symbol table", then garbage disassembly/symbol resolution.
+
+lib_toolchain/libmach/sym.c's syminit() read a trailing 4-byte (or
+8-byte, on the llp64/-H_MAGIC path) "gotype" field after every decoded
+symbol-table record. That field is a Go-toolchain-only addition --
+Go's runtime needs a pointer to each symbol's reflection type info, so
+GO/cmd/*g/ writes it and GO/C/cmd/*l/symtab.c emits it into the symbol
+table -- with no equivalent in a real Plan 9 symbol table. Confirmed
+three ways: a genuine (non-Go) Inferno libmach/sym.c has no such read
+at all; this project's own native putsymb() in linkers/5l/debugging.c
+and linkers/7l/asm.c (and the kencc-lineage linkers/8lk/span.c) never
+write such a field; and grepping the whole tree for `gotype` shows it
+read only by GO/C/libmach/sym.c (the go-era fork lib_toolchain/libmach
+was ported from) and written only by Go-toolchain code -- never read
+back by acid/5i/vi/iar anywhere.
+
+So binaries linked by the go-era 5lg/6lg/etc. happened to carry that
+extra field, which is why acid/5i/vi worked against them and the
+mismatch stayed invisible -- until a target got linked by a *native*
+linker (5l), whose symbol table has no such field, and syminit() walked
+misaligned through the rest of the table from that symbol on. Fixed by
+deleting the gotype read entirely (lib_toolchain/libmach's Sym.gotype
+field itself is left in place but now always garbage/unset -- harmless,
+since nothing reads it). Same underlying lesson as the mmips
+shadow-definition bug above: a go-era-only wire-format detail can hide
+in code copied from src/libmach and only surface once something stops
+feeding it go-era-produced input.
+
 Still not ported
 ---------------------
 
