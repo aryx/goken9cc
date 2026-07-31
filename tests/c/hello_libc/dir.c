@@ -65,7 +65,52 @@ main(void)
 	}
 	print("removed\n");
 
-	/* 4: chdir to the parent, then open a path that can only resolve
+	/* 4: the DMDIR path. Plan9 has no mkdir() in its API at all -- a
+	 * directory is made by create() with DMDIR set in perm, and comes
+	 * back already open, like any other create(). Proving it made a
+	 * real directory (rather than a plain file of that name, which is
+	 * exactly what a create() ignoring DMDIR would produce) needs
+	 * something only a directory can do: hold a file. So create one
+	 * inside it by path.
+	 */
+	fd = create("dir_tmp_d", OREAD, DMDIR|0777);
+	if (fd < 0) {
+		print("create DMDIR failed\n");
+		exit(1);
+	}
+	close(fd);
+	fd = create("dir_tmp_d/inner.txt", OWRITE, 0666);
+	if (fd < 0) {
+		print("create inside new directory failed\n");
+		exit(1);
+	}
+	write(fd, "inner\n", 6);
+	close(fd);
+
+	/* remove() on a NON-empty directory must fail -- which also
+	 * double-checks that inner.txt really landed inside dir_tmp_d
+	 * rather than somewhere else.
+	 */
+	if (remove("dir_tmp_d") >= 0) {
+		print("removed a non-empty directory\n");
+		exit(1);
+	}
+	/* now tear it down for real, exercising remove()'s two different
+	 * paths in order: unlink for the file, then rmdir for the
+	 * directory (see port/remove.c -- POSIX needs two syscalls where
+	 * Plan9 has one).
+	 */
+	if (remove("dir_tmp_d/inner.txt") < 0) {
+		print("remove inner file failed\n");
+		exit(1);
+	}
+	if (remove("dir_tmp_d") < 0) {
+		print("remove directory failed\n");
+		exit(1);
+	}
+	print("dir ok\n");
+
+	/* 5: chdir to the parent, then open a path that can only resolve
 	 * from there. io_input.txt is io.c's fixture and lives in THIS
 	 * directory, so "hello_libc/io_input.txt" is findable only once
 	 * the cwd has actually moved up a level -- a chdir() that returned

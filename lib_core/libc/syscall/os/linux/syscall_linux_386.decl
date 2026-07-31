@@ -14,13 +14,25 @@
 // open(char*,int) (include/os/file.h), which os/linux/open.c builds
 // on top of this.
 //sys _sysopen(void *path, int flags, int mode) long = SYS_open
-// remove/chdir: Plan9's own names (include/os/dir.h) for what POSIX
-// calls unlink(2)/chdir(2). Same argument shape, same semantics, same
-// 0/-1 result -- so unlike open(), these two need no os/$GOOS/ API-shape
-// translation layer at all and are generated straight into their public
-// symbol names here. Plan9's create() is the opposite case: it needs
-// real translation but no syscall number, and is built on _sysopen()
-// above by os/linux/open.c.
-//sys remove(char *path) int = SYS_unlink
+// chdir is Plan9's own name (include/os/dir.h) for POSIX chdir(2):
+// same shape, same semantics, same 0/-1 result, so it needs no
+// os/$GOOS/ API-shape translation layer at all and is generated
+// straight into its public symbol name.
+//
+// The three above it are _sys-prefixed raw shapes rather than public
+// names, because the two Plan9 calls they serve do NOT line up 1:1
+// with a POSIX syscall:
+//  - Plan9's remove() deletes a file OR a directory, while POSIX
+//    unlink(2) refuses directories -- that is what rmdir(2) is for. So
+//    the public remove() is port/remove.c, a try-unlink-then-rmdir
+//    bridge over _sysunlink()/_sysrmdir().
+//  - Plan9's create() takes a perm word whose DMDIR bit means "make a
+//    directory", so os/linux/open.c dispatches to either
+//    _sysopen(O_CREAT|O_TRUNC) or _sysmkdir() on that bit. Note there
+//    is still no SYS_create: only the DMDIR half needs a syscall of
+//    its own.
+//sys _sysunlink(char *path) int = SYS_unlink
+//sys _sysrmdir(char *path) int = SYS_rmdir
+//sys _sysmkdir(char *path, int mode) int = SYS_mkdir
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

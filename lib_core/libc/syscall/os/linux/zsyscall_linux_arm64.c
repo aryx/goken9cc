@@ -34,6 +34,11 @@ int unlinkat(int dirfd, char* path, int flags)
 	return (int)_syscall6(SYS_unlinkat, (vlong)dirfd, (vlong)path, (vlong)flags, 0, 0, 0);
 }
 
+int mkdirat(int dirfd, char* path, int mode)
+{
+	return (int)_syscall6(SYS_mkdirat, (vlong)dirfd, (vlong)path, (vlong)mode, 0, 0, 0);
+}
+
 int chdir(char* path)
 {
 	return (int)_syscall6(SYS_chdir, (vlong)path, 0, 0, 0, 0, 0);

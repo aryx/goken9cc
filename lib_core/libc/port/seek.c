@@ -18,28 +18,19 @@
  * unlike open()'s translation (os/$GOOS/open.c), which needs real
  * per-OS flag-bit knowledge and so lives under os/ instead.
  *
- * Plan9 itself is the one exception: its own real seek(2) syscall is
- * already named/shaped exactly like the public seek() (see
- * syscall/os/plan9/svc_$cputype.s), so this whole file is `#ifndef
- * plan9`-guarded out for that GOOS -- linking this shim in
- * unconditionally would either fail to resolve `lseek` (which plan9
- * has no such symbol for at all) or silently conflict with the real
- * one. Windows is the same situation for a different reason: it has no
- * raw-syscall layer at all (see os/windows/open.c's own header
- * comment), so os/windows/open.c defines a real seek() itself directly
- * on top of winio_amd64.s's _winseek -- linking this shim in too would
- * fail to resolve `lseek` (windows has no such symbol either) the same
- * way the plan9 case would. This file is compiled once, for every
- * (GOOS, arch) combination (port/), which is also why the rest of it --
- * the return-width #ifdef below -- has to match lseek()'s own real
- * prototype exactly on every OTHER os/arch it as compiled for.
- *
- * claude: nested #ifndef, not `#ifndef plan9 && !windows` -- same
- * reason as the amd64/arm64/riscv64 nesting below: 7c/vc/ic's
- * preprocessor has no `#if` expression support at all.
+ * plan9 and windows are excluded from this file's compilation
+ * entirely, rather than #ifdef'd out inside it: plan9's own real
+ * seek(2) syscall is already named/shaped exactly like the public
+ * seek() (syscall/os/plan9/svc_$cputype.s defines the symbol
+ * directly), and windows has no raw-syscall layer at all, so
+ * os/windows/open.c defines seek() itself on top of winio_amd64.s's
+ * _winseek. On both, linking this shim in would either fail to resolve
+ * `lseek` (neither has such a symbol) or collide with the real seek().
+ * That selection lives in lib_core/libc/mkfile's PORTPOSIXOFILES --
+ * see its comment. This file used to carry a `#ifndef plan9 / #ifndef
+ * windows` pair for the same purpose; it was moved out to keep port/
+ * free of GOOS branching.
  */
-#ifndef plan9
-#ifndef windows
 
 /* lseek()'s own return type differs by arch: on the archs with a real
  * 64-bit register to return a `vlong` off_t in (amd64/arm64/riscv64 --
@@ -76,6 +67,3 @@ seek(fdt fd, vlong offset, int whence)
 {
 	return (vlong)lseek(fd, offset, whence);
 }
-
-#endif /* !windows */
-#endif /* !plan9 */

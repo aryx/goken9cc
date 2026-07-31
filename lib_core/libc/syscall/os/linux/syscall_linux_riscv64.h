@@ -37,12 +37,26 @@ long _sysopen(void *path, int flags, int mode)
 	return openat(AT_FDCWD, path, flags, mode);
 }
 
-/* claude: same story for remove() over unlinkat() -- see
- * syscall_linux_arm64.h's fuller comment.
+/* claude: same story for the unlink/rmdir/mkdir family over the *at()
+ * forms -- see syscall_linux_arm64.h's fuller comment, including why
+ * _sysrmdir() is free here (AT_REMOVEDIR, not a second syscall).
  */
-extern int unlinkat(int dirfd, char *path, int flags);
+#define AT_REMOVEDIR 0x200
 
-int remove(char *path)
+extern int unlinkat(int dirfd, char *path, int flags);
+extern int mkdirat(int dirfd, char *path, int mode);
+
+int _sysunlink(char *path)
 {
 	return unlinkat(AT_FDCWD, path, 0);
+}
+
+int _sysrmdir(char *path)
+{
+	return unlinkat(AT_FDCWD, path, AT_REMOVEDIR);
+}
+
+int _sysmkdir(char *path, int mode)
+{
+	return mkdirat(AT_FDCWD, path, mode);
 }

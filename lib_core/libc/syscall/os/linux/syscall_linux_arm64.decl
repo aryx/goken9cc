@@ -27,12 +27,16 @@
 // chdir: Plan9's chdir() (include/os/dir.h) is shaped exactly like
 // POSIX chdir(2), so it needs no os/$GOOS/ translation glue and is
 // generated straight into its public symbol name -- see
-// syscall_linux_386.decl's fuller comment. remove() would be the same
-// story via SYS_unlink, except this ABI has no legacy unlink() (see
-// numbers_arm64.h), only unlinkat() -- so, exactly as with
-// _sysopen()/openat() above, the raw *at() form is generated here and
-// syscall_linux_arm64.h hand-adds the one-line remove() shim on top
-// calling unlinkat(AT_FDCWD, path, 0).
+// syscall_linux_386.decl's fuller comment on that, and on why the
+// unlink/rmdir/mkdir family is _sys-prefixed instead.
+//
+// This ABI has no legacy unlink() or mkdir() at all (numbers_arm64.h),
+// only the *at() forms -- exactly as it has no open(), only openat().
+// So the raw *at() calls are generated here and syscall_linux_arm64.h
+// hand-adds the _sysunlink()/_sysrmdir()/_sysmkdir() shims over them,
+// the same way it already does _sysopen() over openat(). _sysrmdir()
+// is free here: it is unlinkat() with AT_REMOVEDIR, no second number.
 //sys unlinkat(int dirfd, char *path, int flags) int = SYS_unlinkat
+//sys mkdirat(int dirfd, char *path, int mode) int = SYS_mkdirat
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

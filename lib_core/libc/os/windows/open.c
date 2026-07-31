@@ -45,8 +45,11 @@
 
 extern void	*_winopen(char *path, uvlong access);
 extern void	*_wincreate(char *path, uvlong access);
+extern void	*_winopendir(char *path);
 extern long	_windelete(char *path);
 extern long	_winchdir(char *path);
+extern long	_winmkdir(char *path);
+extern long	_winrmdir(char *path);
 extern long	_winread(void *handle, void *buf, long n);
 extern long	_winwrite(void *handle, void *buf, long n);
 extern long	_winclose(void *handle);
@@ -103,30 +106,49 @@ open(char *path, int mode)
  * call as open() with a different dwCreationDisposition (CREATE_ALWAYS
  * instead of OPEN_EXISTING) -- see winio_amd64.s's _wincreate.
  *
- * Two gaps, both wider than the Unix side's: `perm` is ignored entirely
- * (Win32 ACLs aren't Unix mode bits, and CreateFileA has no parameter
- * that would carry rwxrwxrwx), and DMDIR is rejected the same way
- * os/linux/open.c rejects it, though here the missing piece is
- * CreateDirectoryA rather than a syscall number. Unverified on a real
- * Windows host.
+ * DMDIR goes to CreateDirectoryA and then reopens, matching what
+ * os/linux/open.c's create() does with mkdir(2) -- including its
+ * refusal of any mode but OREAD for a directory. The reopen needs
+ * _winopendir rather than plain _wincreate: CreateFileA will not return
+ * a handle to a directory without FILE_FLAG_BACKUP_SEMANTICS (see
+ * winio_amd64.s).
+ *
+ * One gap wider than the Unix side's: `perm` is ignored entirely, for
+ * files and directories alike -- Win32 ACLs aren't Unix mode bits, and
+ * neither CreateFileA nor CreateDirectoryA has a parameter that would
+ * carry rwxrwxrwx. Unverified on a real Windows host.
  */
 int
 create(char *path, int mode, ulong perm)
 {
-	if (perm & DMDIR)
-		return -1;
+	if (perm & DMDIR) {
+		if ((mode & ~OCEXEC) != OREAD)
+			return -1;
+		if (!_winmkdir(path))
+			return -1;
+		return (int)(vlong)_winopendir(path);
+	}
 	return (int)(vlong)_wincreate(path, winaccess(mode));
 }
 
-/* claude: remove()/chdir(). Both Win32 calls return a BOOL (nonzero on
- * success), not POSIX's 0/-1, so unlike every other GOOS in this tree
- * -- where these two are the raw syscall, needing no glue at all --
- * they need the result inverted here. Unverified on a real Windows host.
+/* claude: remove()/chdir(). Two differences from every other GOOS here.
+ * First, these Win32 calls return a BOOL (nonzero on success), not
+ * POSIX's 0/-1, so the result has to be inverted. Second, remove()
+ * needs the same file-or-directory bridge port/remove.c provides on the
+ * POSIX GOOSes: Win32 splits removal into DeleteFileA and
+ * RemoveDirectoryA exactly as POSIX splits unlink and rmdir, while
+ * Plan9's remove() covers both. That bridge can't just be port/remove.c
+ * itself, since it is written against _sysunlink()/_sysrmdir() -- raw
+ * syscall wrappers windows has no equivalent of at all (see this file's
+ * header comment on why there is no syscall/os/windows/).
+ * Unverified on a real Windows host.
  */
 int
 remove(char *path)
 {
-	return _windelete(path) ? 0 : -1;
+	if (_windelete(path))
+		return 0;
+	return _winrmdir(path) ? 0 : -1;
 }
 
 int

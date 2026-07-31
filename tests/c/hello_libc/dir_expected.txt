@@ -1,3 +1,4 @@
 created
 removed
+dir ok
 chdir ok

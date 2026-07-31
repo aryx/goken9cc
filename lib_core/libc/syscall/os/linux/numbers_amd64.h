@@ -24,3 +24,9 @@
  */
 #define SYS_chdir	80
 #define SYS_unlink	87
+/* claude: mkdir/rmdir, again NOT 386's 39/40 -- "83 common mkdir",
+ * "84 common rmdir" in syscall_64.tbl. See numbers_386.h's comment for
+ * what needs them.
+ */
+#define SYS_mkdir	83
+#define SYS_rmdir	84

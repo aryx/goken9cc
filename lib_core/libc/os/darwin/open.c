@@ -42,6 +42,7 @@
 #define O_CLOEXEC	0x1000000
 
 extern long _sysopen(void *path, int flags, int mode);
+extern int _sysmkdir(char *path, int mode);
 
 /* claude: shared by open() and create() -- see os/linux/open.c's
  * identical comment for why this got split out.
@@ -83,16 +84,23 @@ open(char *path, int mode)
 }
 
 /* claude: see os/linux/open.c's create() for the full story (Plan9's
- * create() is open()-with-O_CREAT plus an unconditional truncate, and
- * DMDIR is rejected rather than silently making a plain file). Only the
- * O_* constants differ between the two files. Untested on real macOS,
- * like the rest of this file.
+ * create() is open()-with-O_CREAT plus an unconditional truncate, with
+ * DMDIR dispatching to mkdir(2) instead). Only the O_* constants
+ * differ between the two files -- the mkdir path is identical, since
+ * SYS_mkdir is a plain 2-arg mkdir on Darwin exactly as on the
+ * legacy-numbered Linux archs. Untested on real macOS, like the rest
+ * of this file.
  */
 int
 create(char *path, int mode, ulong perm)
 {
-	if (perm & DMDIR)
-		return -1;
+	if (perm & DMDIR) {
+		if ((mode & ~OCEXEC) != OREAD)
+			return -1;
+		if (_sysmkdir(path, (int)(perm & 0777)) < 0)
+			return -1;
+		return (int)_sysopen(path, openflags(mode), 0);
+	}
 	return (int)_sysopen(path, openflags(mode)|O_CREAT|O_TRUNC,
 		(int)(perm & 0777));
 }

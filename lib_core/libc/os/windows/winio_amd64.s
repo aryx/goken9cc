@@ -22,6 +22,12 @@
 #define FILE_SHARE_READ		1
 #define FILE_SHARE_WRITE	2
 #define FILE_ATTRIBUTE_NORMAL	0x80
+// claude: CreateFileA refuses to open a DIRECTORY unless this flag is
+// set -- there is no dwDesiredAccess that makes a plain open work.
+// Needed because Plan9's create() must hand back the new directory
+// already open (see open.c's create()); _winopendir below is the only
+// caller.
+#define FILE_FLAG_BACKUP_SEMANTICS	0x02000000
 
 // h = _winopen(path, access)
 //   CreateFileA(path, access, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
@@ -106,6 +112,63 @@ TEXT _winchdir+0(SB), $0
 	ANDQ	$-16, SP
 	SUBQ	$32, SP
 	MOVQ	__imp_SetCurrentDirectoryA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET
+
+// h = _winopendir(path) -- CreateFileA(path, GENERIC_READ, share, NULL,
+//   OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL)
+// _winopen with the one flag that lets CreateFileA return a handle to a
+// directory. Plan9's create() returns the new object already open, so
+// its DMDIR path needs this after _winmkdir. Access is fixed at
+// GENERIC_READ, not a parameter: create() only accepts OREAD for a
+// directory anyway (os/linux/open.c's create() explains why).
+// Unverified on a real Windows host, see _wincreate.
+TEXT _winopendir+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	path+0(FP), CX
+
+	ANDQ	$-16, SP
+	SUBQ	$64, SP
+
+	MOVQ	$GENERIC_READ, DX
+	MOVQ	$(FILE_SHARE_READ|FILE_SHARE_WRITE), R8
+	MOVQ	$0, R9
+	MOVQ	$OPEN_EXISTING, 32(SP)
+	MOVQ	$FILE_FLAG_BACKUP_SEMANTICS, 40(SP)
+	MOVQ	$0, 48(SP)
+	MOVQ	__imp_CreateFileA(SB), AX
+	CALL	AX
+
+	MOVQ	DI, SP
+	RET
+
+// ok = _winmkdir(path) -- CreateDirectoryA(path, NULL), backing
+// create()'s DMDIR bit. BOOL result; open.c does the 0/-1 translation.
+// Note Win32 has no mode/perm argument at all (ACLs, not Unix bits), so
+// Plan9's perm word is dropped here -- see open.c's create().
+// Unverified on a real Windows host, see _wincreate.
+TEXT _winmkdir+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	path+0(FP), CX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	$0, DX			// lpSecurityAttributes = NULL
+	MOVQ	__imp_CreateDirectoryA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET
+
+// ok = _winrmdir(path) -- RemoveDirectoryA(path). Win32 splits file and
+// directory removal exactly as POSIX splits unlink/rmdir, so remove()
+// needs the same two-step bridge here that port/remove.c does on the
+// POSIX GOOSes. Unverified on a real Windows host, see _wincreate.
+TEXT _winrmdir+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	path+0(FP), CX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_RemoveDirectoryA(SB), AX
 	CALL	AX
 	MOVQ	DI, SP
 	RET

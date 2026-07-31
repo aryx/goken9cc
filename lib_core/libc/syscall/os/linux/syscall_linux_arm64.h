@@ -46,19 +46,34 @@ long _sysopen(void *path, int flags, int mode)
 	return openat(AT_FDCWD, path, flags, mode);
 }
 
-/* claude: same story one level down -- this ABI dropped legacy unlink()
- * along with open() (see numbers_arm64.h), so Plan9's remove()
- * (include/os/dir.h), which every other arch here generates directly
- * from SYS_unlink, is a hand-written bridge over unlinkat() instead.
- * Unlike _sysopen() above, the public name is the real one (remove, not
- * a _sys-prefixed raw shape): remove(2) and unlink(2) are the same
- * call under two names, so there's nothing left for an os/$GOOS/ layer
- * to translate. flags=0 means "plain unlink"; AT_REMOVEDIR (0x200) is
- * the bit that would make it an rmdir instead, deliberately not passed.
+/* claude: same story one level down -- this ABI dropped legacy
+ * unlink() and mkdir() along with open() (see numbers_arm64.h), so the
+ * three raw primitives port/remove.c and os/linux/open.c build Plan9's
+ * remove() and create() out of are hand-written bridges over the *at()
+ * forms here, exactly as _sysopen() is over openat() above.
+ *
+ * AT_REMOVEDIR is why _sysrmdir() needs no syscall number of its own on
+ * these archs: rmdir(2) is just unlinkat() with this flag set, so the
+ * two differ only in that bit. On the legacy-numbered archs they are
+ * genuinely separate syscalls (SYS_unlink/SYS_rmdir) and their .decl
+ * generates both directly.
  */
-extern int unlinkat(int dirfd, char *path, int flags);
+#define AT_REMOVEDIR 0x200
 
-int remove(char *path)
+extern int unlinkat(int dirfd, char *path, int flags);
+extern int mkdirat(int dirfd, char *path, int mode);
+
+int _sysunlink(char *path)
 {
 	return unlinkat(AT_FDCWD, path, 0);
+}
+
+int _sysrmdir(char *path)
+{
+	return unlinkat(AT_FDCWD, path, AT_REMOVEDIR);
+}
+
+int _sysmkdir(char *path, int mode)
+{
+	return mkdirat(AT_FDCWD, path, mode);
 }

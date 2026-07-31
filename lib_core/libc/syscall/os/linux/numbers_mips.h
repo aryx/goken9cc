@@ -21,3 +21,9 @@
  */
 #define SYS_unlink	4010
 #define SYS_chdir	4012
+/* claude: mkdir/rmdir -- the same legacy 39/40 as 386/arm plus this
+ * table's 4000 offset ("39 o32 mkdir", "40 o32 rmdir" upstream).
+ * See numbers_386.h's comment for what needs them.
+ */
+#define SYS_mkdir	4039
+#define SYS_rmdir	4040

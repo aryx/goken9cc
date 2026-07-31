@@ -90,6 +90,22 @@ Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X
 - `RCMAIN` — rc init file path
 - `YACCPAR` — yacc template file path
 
+## Coding Conventions
+
+- **Avoid `#ifdef`.** Follow the Plan 9 authors' habit of selecting
+  *files* in the build system rather than branching inside the source.
+  This is what the per-OS/per-arch directory splits already exist for:
+  `lib_core/libc/{port,os/$GOOS,arch/$cputype}/`,
+  `syscall/os/$GOOS/`, `mkfiles/$objtype/`. In particular
+  `lib_core/libc/port/` must hold only clean portable code — if a
+  `port/` file would need a `#ifdef plan9`/`#ifdef windows`, exclude it
+  from that GOOS's build instead (see `lib_core/libc/mkfile`'s
+  `PORTPOSIXOFILES`, which does this with an mk backquote on `$GOOS`).
+- Note the goken compilers' preprocessor has **no `#if` expression
+  support at all** (`#if defined(X) || defined(Y)` fails with
+  "unknown #: if") — only plain `#ifdef`/`#ifndef`/`#else`/`#endif`,
+  which have to be nested. Another reason to prefer file selection.
+
 ## Syncweb Markers
 
 **DO NOT modify** `/*s: ... */`, `/*e: ... */`, or `/*x: ... */` comments in source files.

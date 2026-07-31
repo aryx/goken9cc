@@ -19,6 +19,13 @@
  * riscv and riscv64 all generate from, which is why their three
  * numbers_*.h files agree here too.
  */
+/* claude: mkdirat, for Plan9 create()'s DMDIR bit. There is
+ * deliberately no rmdir here: this ABI expresses it as
+ * unlinkat(..., AT_REMOVEDIR) using the number already below, so
+ * remove()'s directory case costs no new syscall on these archs at all
+ * -- see syscall_linux_arm64.h's _sysrmdir(). "34 common mkdirat".
+ */
+#define SYS_mkdirat	34
 #define SYS_unlinkat	35
 #define SYS_chdir	49
 #define SYS_openat	56

@@ -12,11 +12,13 @@ TOP=../../..
 # link/run step differ (see lib_core/libc/mkfile's own GOOS story).
 
 all:V: hello.exe io.exe dir.exe
-# claude: dir_tmp.txt is created by dir.c and removed by it again, so
-# it's only ever left behind if that test died in between -- cleaned up
-# here rather than left to confuse the next run.
+# claude: dir_tmp.txt and the dir_tmp_d/ directory are created by dir.c
+# and removed by it again, so they are only ever left behind if that
+# test died in between -- cleaned up here rather than left to confuse
+# the next run.
 clean:V:
 	rm -f *.[5678ijv] *.exe hello_macos_arm64.exe hello_macos_amd64.exe io_macos_arm64.exe io_macos_amd64.exe dir_macos_arm64.exe dir_macos_amd64.exe dir_tmp.txt
+	rm -rf dir_tmp_d
 test_one:V:
 	mk 'objtype='$cputype all
 	$TOP/scripts/qemu-runner $cputype ./hello.exe | cmp /dev/stdin expected.txt
@@ -66,13 +68,13 @@ test_plan9:V:
 	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe
 	printf ':c\n$q\n' | 5i ./hello_plan9_arm.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | 5i ./io_plan9_arm.exe | sed -n 2,3p | cmp /dev/stdin io_expected.txt
-	printf ':c\n$q\n' | 5i ./dir_plan9_arm.exe | sed -n 2,4p | cmp /dev/stdin dir_expected.txt
+	printf ':c\n$q\n' | 5i ./dir_plan9_arm.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=mips' 'cputype=mips' 'GOOS=plan9' install }
 	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe
 	printf ':c\n$q\n' | vi ./hello_plan9_mips.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | vi ./io_plan9_mips.exe | sed -n 2,3p | cmp /dev/stdin io_expected.txt
-	printf ':c\n$q\n' | vi ./dir_plan9_mips.exe | sed -n 2,4p | cmp /dev/stdin dir_expected.txt
+	printf ':c\n$q\n' | vi ./dir_plan9_mips.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
 
 # -H7 (ELF) is explicit, not left to 6l/7l/8l's own default: those
 # three (unlike vl/il/jl, which always default to ELF regardless of

@@ -29,9 +29,19 @@ long _sysopen(void* path, int flags, int mode)
 	return (long)_syscall6(SYS_open, (vlong)path, (vlong)flags, (vlong)mode, 0, 0, 0);
 }
 
-int remove(char* path)
+int _sysunlink(char* path)
 {
 	return (int)_syscall6(SYS_unlink, (vlong)path, 0, 0, 0, 0, 0);
+}
+
+int _sysrmdir(char* path)
+{
+	return (int)_syscall6(SYS_rmdir, (vlong)path, 0, 0, 0, 0, 0);
+}
+
+int _sysmkdir(char* path, int mode)
+{
+	return (int)_syscall6(SYS_mkdir, (vlong)path, (vlong)mode, 0, 0, 0, 0);
 }
 
 int chdir(char* path)

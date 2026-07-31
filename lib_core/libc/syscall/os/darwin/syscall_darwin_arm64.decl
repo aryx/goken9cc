@@ -20,7 +20,9 @@
 // _sysopen, not open: see syscall_darwin_amd64.decl's identical comment.
 //sys _sysopen(void *path, int flags, int mode) long = SYS_open
 // see syscall_darwin_amd64.decl's identical comment -- same BSD table,
-// same "no translation glue needed" reasoning.
-//sys remove(char *path) int = SYS_unlink
+// same raw-shape-plus-bridge split.
+//sys _sysunlink(char *path) int = SYS_unlink
+//sys _sysrmdir(char *path) int = SYS_rmdir
+//sys _sysmkdir(char *path, int mode) int = SYS_mkdir
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

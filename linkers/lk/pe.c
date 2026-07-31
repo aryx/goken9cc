@@ -77,6 +77,12 @@ static struct importfunc {
 	// rather than being discovered from the object files.
 	{ "DeleteFileA", 0 },
 	{ "SetCurrentDirectoryA", 0 },
+	// claude: and these two for create()'s DMDIR bit and remove()'s
+	// directory case -- Win32 splits file and directory removal
+	// (DeleteFileA/RemoveDirectoryA) exactly the way POSIX splits
+	// unlink/rmdir, while Plan9's remove() covers both.
+	{ "CreateDirectoryA", 0 },
+	{ "RemoveDirectoryA", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

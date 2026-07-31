@@ -10,6 +10,8 @@
 // claude: see numbers_arm64.h's identical comment -- no legacy unlink()
 // in this ABI, so remove() is a shim over unlinkat() in
 // syscall_linux_riscv64.h.
+// claude: mkdirat -- see numbers_arm64.h; rmdir is unlinkat+AT_REMOVEDIR.
+#define SYS_mkdirat	34
 #define SYS_unlinkat	35
 #define SYS_chdir	49
 #define SYS_openat	56

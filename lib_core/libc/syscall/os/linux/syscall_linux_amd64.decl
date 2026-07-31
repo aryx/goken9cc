@@ -26,9 +26,11 @@
 // this. Public symbol name deliberately not "open" to avoid clashing with
 // that translating wrapper.
 //sys _sysopen(void *path, int flags, int mode) long = SYS_open
-// see syscall_linux_386.decl's identical comment: Plan9's remove()/
-// chdir() are shaped exactly like POSIX unlink(2)/chdir(2), so no
-// os/$GOOS/ translation glue is needed for either.
-//sys remove(char *path) int = SYS_unlink
+// see syscall_linux_386.decl's identical comment: chdir needs no glue,
+// while _sysunlink/_sysrmdir/_sysmkdir are raw shapes that port/remove.c
+// and os/$GOOS/open.c bridge into Plan9's remove() and create().
+//sys _sysunlink(char *path) int = SYS_unlink
+//sys _sysrmdir(char *path) int = SYS_rmdir
+//sys _sysmkdir(char *path, int mode) int = SYS_mkdir
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

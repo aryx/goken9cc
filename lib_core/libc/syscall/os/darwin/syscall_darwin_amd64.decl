@@ -23,12 +23,13 @@
 // Unlike the Linux "generic ABI" archs, darwin's BSD table keeps a real
 // 3-arg open() (SYS_open), so this needs no openat()/AT_FDCWD detour.
 //sys _sysopen(void *path, int flags, int mode) long = SYS_open
-// see syscall_linux_386.decl's identical comment: Plan9's remove()/
-// chdir() are shaped exactly like POSIX unlink(2)/chdir(2), so no
-// os/$GOOS/ translation glue is needed for either. (create() does need
-// glue, and gets it in os/darwin/open.c -- Darwin's O_CREAT bit is
-// 0x200, not Linux's 0x40, which is exactly the kind of difference that
-// keeps that translation per-OS.)
-//sys remove(char *path) int = SYS_unlink
+// see syscall_linux_386.decl's identical comment: chdir needs no glue,
+// while _sysunlink/_sysrmdir/_sysmkdir are raw shapes that port/remove.c
+// and os/darwin/open.c bridge into Plan9's remove() and create().
+// Darwin's O_CREAT bit is 0x200, not Linux's 0x40, which is exactly the
+// kind of difference that keeps create()'s translation per-OS.
+//sys _sysunlink(char *path) int = SYS_unlink
+//sys _sysrmdir(char *path) int = SYS_rmdir
+//sys _sysmkdir(char *path, int mode) int = SYS_mkdir
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

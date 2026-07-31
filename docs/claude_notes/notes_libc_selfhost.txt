@@ -892,13 +892,9 @@ os/$GOOS/open.c grew a static openflags() helper rather than a second
 copy of the switch -- that per-OS table (Linux O_CREAT=0x40, mips
 0x100, Darwin 0x200) being the whole reason the file is per-GOOS.
 
-DMDIR is the one deliberate gap: in Plan9, create() with DMDIR set in
-perm makes a *directory*, which needs mkdir(2)/mkdirat(2) -- a number
-this tree does not carry yet. Rather than silently creating a plain
-file of that name, create() returns -1 when it sees DMDIR, on every
-GOOS. BOOT/lib9/open.c's p9create() has the matching `if(perm&DMDIR)`
-branch already written against the host libc, and is the model to
-follow when mkdir gets wired up.
+DMDIR was initially left as a documented gap (create() returned -1
+rather than silently making a plain file) and was filled in immediately
+after, by adding mkdir/mkdirat -- see the next section.
 
 GOOS=plan9 is the sharpest illustration of the layering: all three are
 plain raw kernel stubs in syscall/os/plan9/svc_{arm,mips}.s (CREATE=13,
@@ -917,6 +913,75 @@ libc.h's "directory" section -- empty until now -- includes the
 header. Note most of what it declares still has no implementation
 behind it; those need the stat(2) family first (plan_syscalls.txt's
 Tier 3).
+
+DMDIR: mkdir/mkdirat, and why remove() needed rmdir too
+------------------------------------------------------------------------
+
+Filling the DMDIR gap turned out to touch both ends of the API, not
+just create(), because Plan9 collapses two POSIX distinctions that
+POSIX keeps apart:
+
+  Plan9                          POSIX
+  create(p, mode, perm)          open(p, O_CREAT|O_TRUNC, perm)
+  create(p, OREAD, DMDIR|perm)   mkdir(p, perm), then open(p)
+  remove(p)  [file]              unlink(p)
+  remove(p)  [empty directory]   rmdir(p)
+
+So supporting DMDIR in create() without also teaching remove() about
+rmdir would have produced directories nothing in this libc could
+delete. Both halves landed together.
+
+Numbers: mkdir is 39 on 386/arm, 4039 on mips o32, 83 on amd64, 136 on
+Darwin; rmdir is 40/4040/84/137 respectively. The generic-ABI archs
+(arm64/riscv/riscv64) need mkdirat=34 -- and get rmdir for FREE, since
+this ABI expresses it as unlinkat(AT_FDCWD, path, AT_REMOVEDIR=0x200),
+the same number unlink already uses. That is the whole reason
+_sysunlink/_sysrmdir are separate names: on the legacy archs they are
+two syscalls, on the generic ones they are one syscall and a flag.
+
+create()'s directory path mirrors BOOT/lib9/open.c's p9create(),
+including its refusal of any mode but OREAD for a directory create
+(there is nothing to write to a directory through an fd, and Plan9
+rejects it too) -- OCEXEC is allowed on top, since it says nothing
+about access. After mkdir succeeds it reopens the path, because Plan9's
+create() is defined to hand back the new object already open. On
+windows that reopen needs FILE_FLAG_BACKUP_SEMANTICS: CreateFileA
+refuses to return a handle to a directory otherwise, at any
+dwDesiredAccess.
+
+Keeping port/ free of #ifdef
+------------------------------------------------------------------------
+
+remove()'s POSIX bridge (try unlink, fall back to rmdir) is portable
+given those two primitives -- no per-OS constants, no per-arch widths.
+It was first written into port/remove.c behind a `#ifndef plan9 /
+#ifndef windows` pair copied from port/seek.c, since neither GOOS wants
+it: plan9's kernel provides remove(2) with exactly the Plan9 semantics
+already (directories included -- it never had the unlink/rmdir split),
+and windows has no raw-syscall layer, so os/windows/open.c defines
+remove() itself over DeleteFileA/RemoveDirectoryA.
+
+Per user direction, that was reworked: port/ should hold only clean
+portable code, with the GOOS selection done around it rather than
+branched inside it -- the Plan9 habit of choosing FILES in the build
+instead of #ifdef'ing within them, which is exactly what this tree's
+os/$GOOS/ and arch/$cputype/ directories already exist for. Both files
+lost their GOOS guards, and lib_core/libc/mkfile grew:
+
+  PORTPOSIXOFILES=`{if(~ $GOOS plan9 windows) echo -n; \
+                    if not echo port/seek.$O port/remove.$O}
+
+mk evaluates that backquote when the mkfile is read, by which point a
+command-line 'GOOS=plan9' has already overridden the mkfile's own
+default -- so callers need no override of their own, unlike
+SYSCALLOFILES=/OSEXTRAFILES=, which the windows build still passes
+explicitly. Verified with `mk -n` per GOOS: linux/darwin select both
+files, plan9/windows select neither.
+
+port/seek.c still carries #ifdefs, but only arch ones (lseek's return
+type is vlong on amd64/arm64/riscv64 and long elsewhere), which are a
+different problem -- they would need per-arch files, not per-GOOS ones,
+to remove. Worth revisiting if that file grows.
 
 The mips o32 error convention: a real bug the new test found
 ------------------------------------------------------------------------
@@ -951,7 +1016,13 @@ for the ABI fact itself.
 Verified: full `mk test` in tests/c/hello_libc -- all 7 Linux arches
 under qemu (386/amd64/arm/arm64/mips/riscv/riscv64) plus GOOS=plan9
 arm and mips under 5i/vi, hello.exe + io.exe + the new dir.exe each.
-mips passes only with the R7 fix. darwin (create/remove/chdir in
+mips passes only with the R7 fix. dir.c proves each call did something
+rather than merely returning success: the created file is reopened and
+read back, the removed one is reopened and required to FAIL, the
+created DIRECTORY is proven to be one by putting a file inside it by
+path (and by remove() then refusing to delete it while non-empty), and
+chdir("..") is followed by opening a path that only resolves from the
+parent. darwin (create/remove/chdir in
 os/darwin/open.c and both .decl files) and windows are written but
 unverified by execution -- no macOS or Windows host this session, same
 standing caveat as the rest of those two targets in this file.
@@ -962,7 +1033,12 @@ hardcoded list of kernel32 imports (importfuncs[]). Because this ?l
 has no separate relocation pass, __imp_<name> must already exist when
 instructions are encoded, so an import that is not in that list simply
 fails to resolve -- it is not discovered from the object files.
-DeleteFileA and SetCurrentDirectoryA were added there; CreateFileA was
-already present and covers create() too, which differs from open()
-only in dwCreationDisposition (CREATE_ALWAYS vs OPEN_EXISTING). Note
-pe.c is shared by 6l and 8l, so both must be rebuilt after editing it.
+Four were added there: DeleteFileA and SetCurrentDirectoryA for
+remove()/chdir(), then CreateDirectoryA and RemoveDirectoryA for
+create()'s DMDIR bit and remove()'s directory case. CreateFileA was
+already present and covers both create() (which differs from open()
+only in dwCreationDisposition, CREATE_ALWAYS vs OPEN_EXISTING) and the
+directory reopen (which differs only in
+FILE_FLAG_BACKUP_SEMANTICS). Note pe.c is shared by 6l and 8l, so both
+must be rebuilt after editing it -- and tests/s/variants' golden
+pe_amd64.exe has to be regenerated, since .idata grows with the list.

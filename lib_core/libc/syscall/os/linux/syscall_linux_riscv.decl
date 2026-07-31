@@ -13,10 +13,11 @@
 // identical comment; syscall_linux_riscv.h adds the _sysopen() shim.
 //sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
 // see syscall_linux_arm64.decl's identical comment -- same "generic"
-// ABI, so remove() is a shim over unlinkat() in syscall_linux_riscv.h,
-// while chdir needs nothing. Both are "common" in scripts/syscall.tbl,
-// i.e. genuinely shared with rv64, unlike lseek above (see
-// numbers_riscv.h and todo.org).
+// ABI, so _sysunlink/_sysrmdir/_sysmkdir are shims over these two in
+// syscall_linux_riscv.h, while chdir needs nothing. All three numbers
+// are "common" in scripts/syscall.tbl, i.e. genuinely shared with rv64,
+// unlike lseek above (see numbers_riscv.h and todo.org).
 //sys unlinkat(int dirfd, char *path, int flags) int = SYS_unlinkat
+//sys mkdirat(int dirfd, char *path, int mode) int = SYS_mkdirat
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

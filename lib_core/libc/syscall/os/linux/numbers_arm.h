@@ -20,3 +20,8 @@
  */
 #define SYS_unlink	10
 #define SYS_chdir	12
+/* claude: mkdir/rmdir -- see numbers_386.h's comment; arch/arm/tools/
+ * syscall.tbl agrees with the i386 legacy numbering here too.
+ */
+#define SYS_mkdir	39
+#define SYS_rmdir	40

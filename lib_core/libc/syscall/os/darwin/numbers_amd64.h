@@ -37,3 +37,11 @@
  */
 #define SYS_unlink	10
 #define SYS_chdir	12
+/* claude: mkdir/rmdir, for create()'s DMDIR bit and remove()'s
+ * directory case. Unlike unlink/chdir above these are NOT the classic
+ * low numbers -- confirmed against
+ * GO/pkg/syscall/zsysnum_darwin_amd64.go (SYS_MKDIR = 136,
+ * SYS_RMDIR = 137). Still the arch-independent BSD table.
+ */
+#define SYS_mkdir	136
+#define SYS_rmdir	137

@@ -28,3 +28,6 @@
  */
 #define SYS_unlink	10
 #define SYS_chdir	12
+/* claude: mkdir/rmdir -- see numbers_amd64.h's comment. */
+#define SYS_mkdir	136
+#define SYS_rmdir	137

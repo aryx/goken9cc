@@ -43,6 +43,7 @@
 #endif
 
 extern long _sysopen(void *path, int flags, int mode);
+extern int _sysmkdir(char *path, int mode);
 
 /* claude: the Plan9-mode-bits -> O_* translation, split out of open()
  * when create() arrived rather than copied into it: both Plan9 calls
@@ -102,20 +103,33 @@ open(char *path, int mode)
  *
  * `perm` is Plan9's permission word: the low 9 bits are rwxrwxrwx,
  * laid out exactly like POSIX's, so they pass straight through. The
- * high DM* bits (include/os/dir.h) have no open(2) equivalent and are
- * masked off -- except DMDIR, which in Plan9 means "make a directory
- * instead of a file". That needs mkdir(2)/mkdirat(2), a syscall number
- * this tree doesn't carry yet, so it's rejected outright rather than
- * silently creating a plain file of that name. BOOT/lib9/open.c's
- * p9create() (the gcc-built reference implementation) is the model
- * here, including its own `if(perm&DMDIR)` branch -- that's where to
- * look when wiring mkdir up.
+ * high DM* bits (include/os/dir.h) are masked off -- except DMDIR,
+ * which in Plan9 means "make a directory instead of a file". POSIX has
+ * no way to express that through open(2) at any flag combination, so
+ * that case dispatches to mkdir(2) (mkdirat(2) on the archs with no
+ * bare mkdir -- see syscall_linux_arm64.h's _sysmkdir) and then opens
+ * the result, since Plan9's create() is defined to return the new
+ * object already open.
+ *
+ * BOOT/lib9/open.c's p9create() (the gcc-built reference this tree is
+ * meant to stop depending on) is the model, including its refusal of
+ * any mode but OREAD for a directory create: there is nothing to write
+ * to a directory through an fd, and Plan9 itself rejects it. OCEXEC is
+ * allowed through on top of OREAD since it says nothing about access.
  */
 int
 create(char *path, int mode, ulong perm)
 {
-	if (perm & DMDIR)
-		return -1;
+	if (perm & DMDIR) {
+		if ((mode & ~OCEXEC) != OREAD)
+			return -1;
+		if (_sysmkdir(path, (int)(perm & 0777)) < 0)
+			return -1;
+		/* no O_CREAT/O_TRUNC here: the directory now exists, and
+		 * truncating one is meaningless.
+		 */
+		return (int)_sysopen(path, openflags(mode), 0);
+	}
 	return (int)_sysopen(path, openflags(mode)|O_CREAT|O_TRUNC,
 		(int)(perm & 0777));
 }

@@ -16,6 +16,8 @@
 // really llseek on this 32-bit arch, see todo.org's own entry), both of
 // these are marked "common" in scripts/syscall.tbl, so rv32 and rv64
 // genuinely do share them.
+// claude: mkdirat -- see numbers_arm64.h; rmdir is unlinkat+AT_REMOVEDIR.
+#define SYS_mkdirat	34
 #define SYS_unlinkat	35
 #define SYS_chdir	49
 #define SYS_openat	56

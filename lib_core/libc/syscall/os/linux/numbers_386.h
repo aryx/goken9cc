@@ -23,3 +23,10 @@
  */
 #define SYS_unlink	10
 #define SYS_chdir	12
+/* claude: mkdir/rmdir, for Plan9 create()'s DMDIR bit and remove()'s
+ * ability to delete a directory (which POSIX unlink(2) refuses --
+ * see port/remove.c). Same syscall_32.tbl rows: "39 i386 mkdir",
+ * "40 i386 rmdir". arm and mips share these two as well.
+ */
+#define SYS_mkdir	39
+#define SYS_rmdir	40
