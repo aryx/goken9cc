@@ -973,6 +973,48 @@ pass length each time, safer
 
 *** libsyscall
 
+**** bug, riscv32-only: number 62 is llseek there, not lseek
+claude:
+lib_core/libc/syscall/os/linux/numbers_riscv.h is a verbatim copy of
+numbers_riscv64.h. That is fine for read/write/openat/close/exit,
+which the kernel's scripts/syscall.tbl lists as `common` (same number
+on both widths), but NOT for lseek:
+
+  62  32  llseek   sys_llseek
+  62  64  lseek    sys_lseek
+
+llseek's signature is llseek(fd, offset_high, offset_low, loff_t
+*result, whence) -- five args, returning 0 and writing the resulting
+offset *through a pointer*, rather than returning it. But
+zsyscall_linux_riscv.c generates the rv64 shape:
+
+  long lseek(int fd, vlong offset, int whence)
+  { return (long)_syscall6(SYS_lseek, (long)fd, (long)offset,
+                           (long)whence, 0, 0, 0); }
+
+which lands as llseek(fd, offset_lo32, whence, NULL, 0): the arguments
+do not line up at all, and result is NULL.
+
+Why the 7-arch qemu loop does not catch it: tests/c/hello_libc/io.c
+does call seek, but only ever seek(fd, 0, 0). That degenerates to
+llseek(fd, 0, 0, NULL, 0) -- whence=0 (SEEK_SET), offset =
+(0<<32)|0 = 0 -- so the kernel performs the correct seek-to-zero and
+only *then* fails copying the result to the NULL pointer, returning
+-EFAULT. io.c ignores seek's return value and checks only the re-read
+bytes, so it passes. Any *nonzero* seek on riscv32 would go to the
+wrong offset.
+
+Confirmed real by reading the kernel table against the generated C,
+not yet independently reproduced with a live test: needs a
+seek(fd, N, 0) for nonzero N under qemu-riscv32 (io.c would be the
+natural place to add it, which also fixes the coverage hole that hid
+this). Same 32-vs-64 split will hit ftruncate (46 is ftruncate64 on
+rv32) and fcntl (25 is fcntl64) if those are ever added -- and
+gettimeofday/clock_gettime/nanosleep/wait4/fstat/newfstatat/mmap,
+which are all 64-only. See docs/claude_notes/plan_syscalls.txt for
+the full per-OS/arch number tables and the argument for generating
+numbers_*.h from the kernel tables instead of hand-copying.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

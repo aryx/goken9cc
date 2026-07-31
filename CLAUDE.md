@@ -140,6 +140,18 @@ each with its own filename prefix:
 - `notes_wasm.txt` — the ea/ec/el design (wasm is architecture and
   executable format in one, hence no separate `notes_exec_wasm.txt`).
 
+A second, rarer prefix records *forward-looking* work, as an explicit
+exception to the "done, verified work" rule below:
+- `plan_*.txt` — the analysis behind a not-yet-started body of work:
+  the ordering, the alternatives weighed, and any reference tables
+  transcribed from primary sources, so a future session doesn't
+  re-derive them. Currently just `plan_syscalls.txt` (which syscalls
+  `lib_core/libc/syscall/` should grow next, with per-OS/arch number
+  tables). Still not a TODO list — `todo.org` stays the authority on
+  priorities; a `plan_` file only orders work within its own area, and
+  should say where its numbers/claims came from. When the work lands,
+  fold the outcome into the matching `notes_*` file.
+
 Conventions:
 - Keep content in the file whose axis it actually belongs to (format
   vs. arch vs. host-OS vs. syscall-ABI vs. cross-cutting bug pattern

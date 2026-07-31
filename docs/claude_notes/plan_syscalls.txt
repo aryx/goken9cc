@@ -1,0 +1,279 @@
+Plan: what lib_core/libc/syscall/ should grow next, and with which numbers
+==========================================================================================================
+
+Unlike every other file in docs/claude_notes/ (which record done,
+verified work -- see CLAUDE.md), this one is deliberately forward
+looking: it is the analysis behind *which* syscalls lib_core/libc/
+should add after the initial read/write/open/close/lseek/exit set, in
+what order, and with which numbers on each of the 11 OS/arch
+combinations this tree targets. It exists so the next session doesn't
+have to re-derive the ordering or re-transcribe the number tables.
+
+Hence the plan_ prefix rather than notes_. Two things in here are NOT
+plans but findings, and are called out as such: a latent riscv32
+lseek bug (see "Found along the way"), and the Darwin arm64-vs-amd64
+stat divergence. Both were discovered while assembling the tables.
+todo.org remains the authority for project-wide priorities; this file
+only orders the syscall work itself.
+
+Provenance of every number below
+------------------------------------------------------------------------
+
+Numbers were taken from primary sources, not from memory, because the
+five different numbering conventions in play here (classic UNIX,
+Linux/amd64, Linux/mips-o32, asm-generic, Plan9) agree just often
+enough to make a guessed number look plausible and still be wrong:
+
+- Linux 386, amd64, arm(EABI), mips(o32): the kernel's own tables,
+  arch/{x86/entry,arm/tools,mips/kernel}/syscalls/syscall_*.tbl.
+- Linux arm64, riscv, riscv64: scripts/syscall.tbl plus
+  include/uapi/asm-generic/unistd.h (for the __NR3264_* aliases), and
+  cross-checked against this host's /usr/include/asm-generic/unistd.h
+  (the dev box is aarch64, so those resolve natively).
+- Darwin amd64/arm64: GO/pkg/syscall/zsysnum_darwin_amd64.go in this
+  tree -- the same 2010-era Go snapshot syscall/os/darwin/ already
+  patterns itself on. Note this predates arm64 macOS entirely; the
+  BSD table is arch-independent so the numbers carry over, but see
+  the stat caveat below, and treat anything NOT in that file
+  (__getcwd=296 in particular) as unverified.
+- Plan9: lib_core/libc/syscall/os/plan9/sys.h, in-tree and
+  authoritative (kept in sync with principia).
+
+Where a number below is not from one of those, it says so.
+
+State as of this writing
+------------------------------------------------------------------------
+
+Six calls, everywhere:
+
+  Linux (386 amd64 arm arm64 mips riscv riscv64)
+  Darwin (amd64 arm64)          read write _sysopen close lseek exit
+  Plan9 (arm mips)              open close pread pwrite seek exits
+                                (raw stubs) + read/write/exit (C wrappers)
+
+Everything else declared in include/os/*.h -- brk/sbrk, create,
+remove, dup, stat/fstat, access, getwd, pipe, exec, fork/rfork,
+await/wait, getpid, time, sleep -- has no implementation in the
+self-hosted libc. They resolve today only in the gcc-built BOOT/lib9,
+which is exactly the layer self-hosting is meant to stop depending on.
+
+On "the missing low numbers"
+------------------------------------------------------------------------
+
+Worth writing down because the answer differs per table, and the
+question ("we handle 2,3,4,6 -- what about 1?") is ambiguous by table:
+
+- Classic UNIX table (Linux/386, Linux/arm, and Darwin all share it):
+  we have 1=exit, 3=read, 4=write, 5=open, 6=close, 19=lseek. The one
+  missing low number is 2=fork. Next cluster: 7=wait4, 8=creat,
+  10=unlink, 12=chdir, 20=getpid.
+- Plan9 sys.h: we have 3=EXITS, 6=OPEN, 7=CLOSE, 10=PREAD, 11=PWRITE,
+  12=SEEK. Missing low: 1=RFORK, 2=EXEC, 4=AWAIT, 5=BRK, 8=DUP,
+  9=FD2PATH, then 13=CREATE, 14=REMOVE, 15=CHDIR, 16=STAT, 17=FSTAT.
+  So "number 1" only has a meaningful answer in this table: RFORK.
+- asm-generic (arm64, riscv, riscv64) has no low numbers at all --
+  the table starts at openat=56. Do not reason about "the next
+  number" on these arches; there is no classic ordering to extend.
+
+Tier 1: sbrk/brk -- the only item actually blocking something
+------------------------------------------------------------------------
+
+port/minimal_malloc.c says it in its own header comment: it is a 64MB
+`static char heap[]` bump allocator with a no-op free(), and the plan
+is to replace it with principia's pool.c. pool.c cannot be ported
+until libc can grow the heap, so this is the true critical path, not
+merely the most-used call. 19 files in the toolchain already reference
+brk/sbrk.
+
+The wrinkle: there is no usable brk on macOS. SYS_break=17 is
+vestigial and fails on modern macOS. So this one call needs two
+backends.
+
+  arch                        number
+  Linux 386 / arm             brk = 45
+  Linux amd64                 brk = 12
+  Linux arm64/riscv/riscv64   brk = 214
+  Linux mips (o32)            brk = 4045
+  Darwin amd64 / arm64        mmap = 197, munmap = 73  (no brk!)
+  Plan9 arm / mips            BRK = 5
+
+Recommendation: make sbrk() the portable primitive rather than
+exposing brk in the Plan9 API shape everywhere -- brk-backed on
+Linux/Plan9, mmap(MAP_ANON)-backed on Darwin. mmap is 6-arg, which the
+existing _syscall6 trampoline already handles with no new assembly on
+any arch.
+
+Two mmap traps if the Darwin path is later mirrored on Linux:
+- Linux 386/arm must use mmap2 (192 on both), not mmap (90): the
+  latter is old_mmap and takes a *struct pointer*, not 6 registers.
+  mmap2's offset is in pages, not bytes.
+- On 32-bit asm-generic (riscv32) the number 222 is mmap2, not mmap
+  -- same number, page-granular offset. See the riscv32 section.
+
+Tier 2: the near-free file calls (create, remove, access, dup, chdir)
+------------------------------------------------------------------------
+
+Highest value per line in the whole list: create is used in 29
+toolchain files, remove in 28, dup in 9, access in 6. And on Unix
+create needs no new syscall number at all -- it is
+_sysopen(path, O_WRONLY|O_CREAT|O_TRUNC, perm), pure flag translation
+in a new os/$GOOS/create.c exactly parallel to the existing
+os/linux/open.c. Same trick retires several rows below.
+
+               386/arm       amd64      arm64/riscv*   mips(o32)   Darwin      Plan9
+  create       (reuse open)  (reuse)    (reuse openat) (reuse)     (reuse)     CREATE = 13
+  remove       unlink   10   unlink 87  unlinkat  35   4010        unlink 10   REMOVE = 14
+  dup          dup2     63   dup2   33  dup3      24   4063        dup2   90   DUP    = 8
+  access       access   33   access 21  faccessat 48   4033        access 33   (open/STAT)
+  chdir        chdir    12   chdir  80  chdir     49   4012        chdir  12   CHDIR  = 15
+
+Plan9's dup(int,int) is already dup2-shaped, which is why the Unix
+column is dup2/dup3 and not bare dup. arm64/riscv have no dup2 and no
+unlink at all -- dup3(old,new,0) and unlinkat(AT_FDCWD,path,0) are the
+substitutes, same as openat already stands in for open there.
+
+Tier 3: the stat family (the expensive one)
+------------------------------------------------------------------------
+
+fstat is what fopen/stdio, libbio sizing, ar, and mk's dependency
+timestamps all ultimately want. The syscall is the easy half: Plan9's
+stat returns a 9P stat buffer that dirstat() unpacks into a Dir, while
+Unix returns struct stat. That translation is already written and
+working in BOOT/lib9/_p9dir.c plus dirstat.c/dirfstat.c -- porting
+those is most of the work, and the trampoline entry is trivial.
+
+               386/arm         amd64      arm64/riscv64   mips(o32)      Plan9
+  stat         stat64    195   stat    4  newfstatat  79  4213 stat64    STAT  = 16
+  fstat        fstat64   197   fstat   5  fstat       80  4215 fstat64   FSTAT = 17
+
+  Darwin arm64:  stat = 188, fstat = 189
+  Darwin amd64:  stat64 = 338, fstat64 = 339
+
+Three traps in that table, all of which fail silently rather than
+loudly:
+
+- 32-bit Linux must use the *64 variants (195/197, 4213/4215), never
+  106/108. Otherwise off_t/ino_t truncate -- the same class of bug as
+  the lseek/vlong one already fixed in 8bbdbab5a.
+- Darwin arm64 and amd64 genuinely differ here, for the first time
+  between those two files. arm64 macOS postdates the stat64
+  unification, so stat=188 already carries the 64-bit struct; x86_64
+  macOS must call stat64=338. Do not copy numbers_darwin_arm64.h's
+  stat rows into the amd64 file.
+- riscv32 has no fstat and no newfstatat at all: 79/80 are 64-only in
+  scripts/syscall.tbl. It must use statx (291, common to both). See
+  below.
+
+Tier 4: process control -- the actual self-hosting milestone
+------------------------------------------------------------------------
+
+This is what pcc (the compiler driver) and mk need to spawn
+subprocesses, i.e. the point where the toolchain can drive itself.
+Reference implementations again already exist in BOOT/lib9/:
+exec.c, execl.c, fork.c, rfork.c, await.c.
+
+               386/arm       amd64   arm64/riscv*  mips(o32)  Darwin      Plan9
+  fork         fork     2    57      clone   220   4002       fork    2   RFORK = 1
+  exec         execve  11    59      execve  221   4011       execve 59   EXEC  = 2
+  wait         wait4  114    61      wait4   260   4114       wait4   7   AWAIT = 4
+  pipe         pipe    42    22      pipe2    59   4042       pipe   42   PIPE  = 27
+  getpid       getpid  20    39      getpid  172   4020       getpid 20   (/dev/pid)
+  kill         kill    37    62      kill    129   4037       kill   37   (/proc/n/note)
+
+Gotchas:
+- arm64/riscv have no fork and no pipe. clone(SIGCHLD,0,0,0,0) and
+  pipe2(fds,0) are the substitutes.
+- mips's pipe (4042) is sysm_pipe, a MIPS-specific quirk: it returns
+  the two fds in v0/v1 rather than through a pointer, which the
+  generic _syscall6 trampoline cannot express. Use pipe2 (4328) on
+  mips instead -- number from the o32 table, verified.
+- riscv32 has no wait4 (260 is 64-only). Needs waitid, or the
+  time64 variants. Verify before writing.
+- Darwin fork cannot be called raw from libc without care (the child
+  pid comes back in a second return register, and Apple actively
+  discourages raw fork). Defer Darwin in this tier rather than
+  letting it block Linux+Plan9.
+
+Tier 5: time
+------------------------------------------------------------------------
+
+               386/arm            amd64   arm64/riscv64   mips(o32)  Darwin   Plan9
+  time/nsec    gettimeofday  78   96      169             4078       116      (/dev/bintime)
+  sleep        nanosleep    162   35      101             4166       --       SLEEP = 23
+
+riscv32 again: gettimeofday (169), clock_gettime (113) and nanosleep
+(101) are all 64-only. rv32 must use clock_gettime64 (403) and
+clock_nanosleep_time64 (407).
+
+Plan9 needs far fewer new syscalls than these tables suggest
+------------------------------------------------------------------------
+
+Worth stating explicitly so nobody transcribes a Unix-shaped list into
+the Plan9 column: getwd, getenv, time, getpid and sysname are all
+*file* operations on Plan9 (/dev/bintime, /env/*, /dev/pid, and
+FD2PATH=9 for getwd). They need nothing beyond the open/read/close
+already implemented. The real Plan9 column collapses to roughly:
+
+  BRK 5, DUP 8, FD2PATH 9, CREATE 13, REMOVE 14, CHDIR 15,
+  STAT 16, FSTAT 17, then RFORK 1, EXEC 2, AWAIT 4, PIPE 27.
+
+Found along the way: riscv32 lseek is wrong today
+------------------------------------------------------------------------
+
+NOT a plan item -- a latent bug in shipped code, found while checking
+riscv32 against scripts/syscall.tbl. Recorded here rather than in
+notes_arch_riscv.txt because it is found-but-unfixed; move it there
+(and drop this section) once it is actually fixed and tested.
+
+numbers_riscv.h is a verbatim copy of numbers_riscv64.h. That is
+correct for read/write/openat/close/exit, which are `common` in
+scripts/syscall.tbl. It is NOT correct for lseek:
+
+  62  32  llseek   sys_llseek
+  62  64  lseek    sys_lseek
+
+So on riscv32, number 62 is llseek, whose signature is
+llseek(fd, offset_high, offset_low, loff_t *result, whence) -- five
+args, returning 0 and writing the resulting offset *through a
+pointer*. But zsyscall_linux_riscv.c generates:
+
+  long lseek(int fd, vlong offset, int whence)
+  { return (long)_syscall6(SYS_lseek, (long)fd, (long)offset,
+                           (long)whence, 0, 0, 0); }
+
+which lands as llseek(fd, offset_lo32, whence, NULL, 0): the arguments
+do not line up at all, and result is NULL.
+
+Why the test suite does not catch it: tests/c/hello_libc/io.c is in
+the 7-arch qemu ARCHS loop and does call seek, but only ever
+seek(fd, 0, 0). That degenerates to llseek(fd, 0, 0, NULL, 0) --
+whence=0 (SEEK_SET), offset = (0<<32)|0 = 0 -- so the kernel performs
+the correct seek-to-zero, and only *then* fails copying the result to
+the NULL pointer, returning -EFAULT. io.c ignores seek's return value
+and checks only the re-read bytes, so the test passes. Any nonzero
+seek on riscv32 would go to the wrong offset.
+
+Evidence level: derived from the kernel table plus the generated C,
+not from an executed failing test. Confirm with a seek(fd, N, 0) for
+nonzero N under qemu-riscv32 before fixing.
+
+The same 32-vs-64 split hits ftruncate (46 is ftruncate64 on rv32)
+and fcntl (25 is fcntl64), if those are ever added.
+
+Recommendation: generate numbers_*.h before Tier 3
+------------------------------------------------------------------------
+
+numbers_amd64.h's own comment already anticipates this ("a
+kernel-header-scraping generator ... is a natural follow-up once more
+are needed"), and GO/pkg/syscall/mksysnum_linux.sh is the in-tree
+model. Seven Linux arches times ~25 more calls is ~175 hand-
+transcribed integers across five numbering conventions, with the
+32-bit *64 traps above lying in wait -- and the riscv32 lseek bug is
+proof that hand-copying one arch's file to another already produced a
+real bug at only six calls. Generating from the kernel's syscall_*.tbl
+files also gets the 32/64 column split right by construction, which
+is exactly the distinction hand-copying loses.
+
+Suggested ordering overall: Tier 1 (unblocks pool.c) -> Tier 2 (cheap,
+retires 70+ call sites) -> generator -> Tier 3 -> Tier 4 (self-host
+milestone) -> Tier 5.
