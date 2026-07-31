@@ -7,12 +7,11 @@
 // guarantee plan9-ABI stack args, no Win64 alignment/shadow space at
 // the call site, so every stub here has to make its own room).
 //
-// NOT wired into lib_core/libc/mkfile: there is no GOOS=windows
-// rt0/_main entry point there yet (unlike linux/darwin -- see
-// docs/claude_notes/notes_libc_selfhost.txt), so this is source only,
-// not yet even compile-checked, let alone run. Best-effort per the
-// user's own "I'll refine on my Windows machine" framing when this was
-// requested.
+// Wired via lib_core/libc/mkfile's OSEXTRAFILES override (see that
+// mkfile's own comment); arch/amd64/rt0.s's generic _main is reused
+// unmodified as the windows/amd64 entry point too -- see this file's
+// own exit() below for why no separate rt0_windows.s was needed.
+// Verified with a real native build+run on a Windows/Cygwin host.
 
 #define OPEN_EXISTING		3
 #define FILE_SHARE_READ		1
@@ -159,4 +158,23 @@ TEXT _wingetstdhandle+0(SB), $0
 	MOVQ	__imp_GetStdHandle(SB), AX
 	CALL	AX
 	MOVQ	DI, SP
+	RET
+
+// exit(status) -- ExitProcess(status), never returns. Lives here
+// (rather than a separate rt0_windows.s) because arch/amd64/rt0.s's
+// generic _main (CALL main(SB); MOVL $0,(SP); CALL exit(SB)) already
+// works unmodified for windows: hello.c/io.c's main() takes no
+// arguments, so there's no dyld-style register-vs-stack argc/argv
+// bridging to do the way rt0_darwin.s needs -- the only GOOS-specific
+// piece process startup actually needs is exit() itself having a real
+// body instead of the raw-syscall one every other GOOS gets from
+// syscall/os/$GOOS/zsyscall_*.c. Same shape as
+// tests/c/mini2/windows_amd64.s's exit(), which predates this and was
+// verified working native on this Windows host.
+TEXT exit(SB), $0
+	MOVL	8(SP), CX		// status
+	ANDQ	$-16, SP
+	SUBQ	$32, SP			// shadow space
+	MOVQ	__imp_ExitProcess(SB), AX
+	CALL	AX
 	RET

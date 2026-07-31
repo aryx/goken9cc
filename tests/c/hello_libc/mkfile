@@ -198,3 +198,37 @@ hello_macos_amd64.exe: hello.c
 	$CC $CFLAGS -z -Damd64 -c hello.c
 	$LD $LDFLAGS -s -H6 -o $target -E _main hello.6 -lc
 	$TOP/scripts/macos-codesign $target
+
+# Windows/amd64 (native, no wine -- the host running `mk test_windows` IS
+# Windows, same story as tests/c/mini2's own test_windows target): same
+# rebuild+reinstall-libc.a-fresh dance as test_macos_amd64 above, but
+# 'GOOS=windows' has two wrinkles neither darwin nor linux need. First,
+# windows has no raw-syscall convention at all (kernel32.dll is the one
+# stable ABI -- see lib_core/libc/os/windows/open.c's own header comment),
+# so lib_core/libc/mkfile's normal SYSCALLOFILES (syscall/os/$GOOS/svc_
+# $cputype.$O + zsyscall_${GOOS}_$cputype.$O) has nothing to point at --
+# overridden to empty here. Second, unlike os/$GOOS/open.$O (arch-
+# independent on every other GOOS), windows' kernel32 stubs are real
+# per-arch assembly (os/windows/winio_amd64.s, amd64-only so far), so
+# OSEXTRAFILES pulls it in explicitly -- see that mkfile's own OSFILES
+# comment. No RT0OFILE override needed unlike test_macos_amd64: hello.c/
+# io.c's main() takes no arguments, so arch/amd64/rt0.s's generic _main
+# (CALL main(SB); MOVL $0,(SP); CALL exit(SB)) works unmodified once
+# exit() itself has a real (kernel32 ExitProcess) body -- see
+# winio_amd64.s's own exit() for why that lives there instead of a
+# separate rt0_windows.s. 6l -H 10 never produces a PIE image (unlike
+# -H6 above), so no -z/codesign story either.
+test_windows:V:
+	mk clean
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=windows' 'OSEXTRAFILES=os/windows/winio_amd64.6' 'SYSCALLOFILES=' install }
+	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe
+	./hello_windows_amd64.exe | cmp /dev/stdin expected.txt
+	./io_windows_amd64.exe | cmp /dev/stdin io_expected.txt
+
+hello_windows_amd64.exe: hello.c
+	$CC $CFLAGS -Damd64 -Dwindows -c hello.c
+	$LD $LDFLAGS -H 10 -o $target -E _main hello.6 -lc
+
+io_windows_amd64.exe: io.c
+	$CC $CFLAGS -Damd64 -Dwindows -c io.c
+	$LD $LDFLAGS -H 10 -o $target -E _main io.6 -lc

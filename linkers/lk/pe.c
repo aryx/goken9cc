@@ -60,6 +60,14 @@ static struct importfunc {
 	{ "GetStdHandle", 0 },
 	{ "WriteFile", 0 },
 	{ "ExitProcess", 0 },
+	// claude: added for lib_core/libc/os/windows/{open.c,winio_amd64.s}'s
+	// real open()/read()/seek()/close() (beyond the write-only/exit-only
+	// set every existing hand-rolled tests/c/mini*/tests/s/mini .s test
+	// needed) -- CreateFileA/ReadFile/SetFilePointerEx/CloseHandle.
+	{ "CreateFileA", 0 },
+	{ "ReadFile", 0 },
+	{ "SetFilePointerEx", 0 },
+	{ "CloseHandle", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

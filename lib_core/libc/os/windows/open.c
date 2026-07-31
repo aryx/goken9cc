@@ -20,10 +20,12 @@
  * glue directory instead of a syscall/os/windows/ that would otherwise
  * just be a thin, pointless pass-through.
  *
- * NOT wired into lib_core/libc/mkfile (no GOOS=windows entry point
- * exists there yet -- see winio_amd64.s's own header comment) and NOT
- * yet compile-checked on this session's Linux host. Best-effort source
- * per the user's own "I'll refine on my Windows machine" framing.
+ * Wired via 'GOOS=windows OSEXTRAFILES=os/windows/winio_$cputype.$O
+ * SYSCALLOFILES=' on lib_core/libc/mkfile's command line (see that
+ * mkfile's OSFILES/SYSCALLOFILES comments) and verified with a real
+ * native build+run on a Windows/Cygwin host -- see
+ * tests/c/hello_libc/mkfile's test_windows target and
+ * docs/claude_notes/notes_os_windows.txt.
  *
  * The bigger known simplification: fdt is `int` (include/os/file.h)
  * but a real Win32 HANDLE is an 8-byte pointer -- open()'s return value

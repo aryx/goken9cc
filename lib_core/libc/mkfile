@@ -159,6 +159,19 @@ SYSCALLOFILES=\
 # name regardless of which raw syscall backs it on a given arch.
 OSFILES=\
 	os/$GOOS/open.$O\
+	$OSEXTRAFILES\
+
+# $OSEXTRAFILES: same "leave unset, not assigned empty" convention as
+# $ARCHEXTRAOFILES below, for an OS whose glue needs more than the one
+# arch-independent os/$GOOS/open.$O every other GOOS gets away with.
+# windows/amd64 is the first such case: os/windows/open.c's own header
+# comment explains why there's no syscall/os/windows/ raw-syscall layer
+# at all (kernel32.dll has no documented raw NT-syscall-number
+# convention the way Linux/BSD do) -- its os/windows/winio_amd64.$O
+# (the per-arch kernel32 stubs, plus exit()) has to be added here
+# explicitly via 'OSEXTRAFILES=os/windows/winio_$cputype.$O' on the
+# command line, same override style tests/c/hello_libc/mkfile's
+# test_macos_amd64 already uses for RT0OFILE.
 
 # $ARCHEXTRAOFILES: for arch-specific runtime support beyond rt0.s that
 # only some arches need (e.g. arm has no hardware integer divide, so

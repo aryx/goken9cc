@@ -17,8 +17,12 @@ MACOS_AMD64_DIRS=s/mini c/mini c/mini2 c/hello_libc
 # Dirs holding Windows-native run tests (PE binaries executed directly,
 # no wine, since the host running `mk test_windows` IS Windows). Each
 # dir's mkfile exposes a test_windows target. Driven from the top-level
-# `mk test_windows`.
-WINDOWS_DIRS=s/mini c/mini c/mini2
+# `mk test_windows`. c/hello_libc is the odd one out here too, same
+# story as MACOS_ARM64_DIRS/MACOS_AMD64_DIRS's own comment above: it
+# also rebuild+reinstalls lib_core/libc's windows/amd64 libc.a first
+# (see that dir's mkfile), since it's the only one linking against the
+# real libc.a rather than a per-test stub.
+WINDOWS_DIRS=s/mini c/mini c/mini2 c/hello_libc
 
 <$TOP/mkfiles/mkdirs
 

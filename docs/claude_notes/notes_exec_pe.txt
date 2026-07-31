@@ -232,6 +232,15 @@ Three levels, in the order they were actually used as -H10 matured:
    corrupted return address. Both tests/c/mini and tests/c/mini2 are
    now in WINDOWS_DIRS alongside tests/s/mini.
 
+   tests/c/hello_libc joined WINDOWS_DIRS later (2026-07-31): unlike
+   mini/mini2's per-test hand-rolled kernel32 stubs, this one links
+   against the real, shared lib_core/libc/libc.a built with
+   GOOS=windows -- see docs/claude_notes/notes_libc_selfhost.txt's
+   Windows bring-up section for that side of the story (SYSCALLOFILES/
+   OSEXTRAFILES overrides, exit()'s new home, the port/seek.c guard,
+   and the importfuncs[] additions this file's own "What's not
+   implemented yet" section below already reflects).
+
 Build-system gotcha: two build systems, two places to list pe.$O
 ------------------------------------------------------------------
 
@@ -257,9 +266,16 @@ What's not implemented yet
   fixed, ranges from ImageBase..+SizeOfImage are absolute.
 - No arm/arm64 Windows target (only 386 and amd64 have PE cases in
   8l/6l respectively; 5l/7l have no -H10 case).
-- 386 and amd64 both only import from kernel32.dll
-  (GetStdHandle/WriteFile/ExitProcess) -- enough for a hello-world,
-  not a general -I mechanism the way lk/macho.c's dynamic-import
-  support is (see docs/claude_notes/notes_exec_macho.txt's "got:remote:lib" section);
-  peimports() hardcodes the one DLL and the three imports needed by
-  the existing tests.
+- 386 and amd64 both only import from kernel32.dll -- still just the
+  one hardcoded DLL, not a general -I mechanism the way lk/macho.c's
+  dynamic-import support is (see docs/claude_notes/notes_exec_macho.txt's
+  "got:remote:lib" section). The import list itself grew from the
+  original three (GetStdHandle/WriteFile/ExitProcess, enough for a
+  hello-world) to also cover CreateFileA/ReadFile/SetFilePointerEx/
+  CloseHandle once lib_core/libc's windows/amd64 open/read/seek/close
+  glue (os/windows/{open.c,winio_amd64.s}) needed them for
+  tests/c/hello_libc's io.c -- see
+  docs/claude_notes/notes_libc_selfhost.txt's Windows bring-up section
+  for the full story. peimports()'s importfuncs[] table still hardcodes
+  the list; adding a new kernel32 call anyone actually links against
+  means adding it there and reinstalling 6l/8l, not a config knob.

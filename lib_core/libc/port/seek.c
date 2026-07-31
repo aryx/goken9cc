@@ -24,12 +24,22 @@
  * plan9`-guarded out for that GOOS -- linking this shim in
  * unconditionally would either fail to resolve `lseek` (which plan9
  * has no such symbol for at all) or silently conflict with the real
- * one. This file is compiled once, for every (GOOS, arch) combination
- * (port/), which is also why the rest of it -- the return-width #ifdef
- * below -- has to match lseek()'s own real prototype exactly on every
- * OTHER os/arch it as compiled for.
+ * one. Windows is the same situation for a different reason: it has no
+ * raw-syscall layer at all (see os/windows/open.c's own header
+ * comment), so os/windows/open.c defines a real seek() itself directly
+ * on top of winio_amd64.s's _winseek -- linking this shim in too would
+ * fail to resolve `lseek` (windows has no such symbol either) the same
+ * way the plan9 case would. This file is compiled once, for every
+ * (GOOS, arch) combination (port/), which is also why the rest of it --
+ * the return-width #ifdef below -- has to match lseek()'s own real
+ * prototype exactly on every OTHER os/arch it as compiled for.
+ *
+ * claude: nested #ifndef, not `#ifndef plan9 && !windows` -- same
+ * reason as the amd64/arm64/riscv64 nesting below: 7c/vc/ic's
+ * preprocessor has no `#if` expression support at all.
  */
 #ifndef plan9
+#ifndef windows
 
 /* lseek()'s own return type differs by arch: on the archs with a real
  * 64-bit register to return a `vlong` off_t in (amd64/arm64/riscv64 --
@@ -67,4 +77,5 @@ seek(fdt fd, vlong offset, int whence)
 	return (vlong)lseek(fd, offset, whence);
 }
 
+#endif /* !windows */
 #endif /* !plan9 */

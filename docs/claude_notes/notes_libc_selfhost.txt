@@ -751,16 +751,48 @@ does NOT install (mkfiles/mkone's own `all:V: $O.out` vs `install:V:
 $BIN/$TARG`), so each of 6c/8c/8ck still needed an explicit `mk install`
 afterward for ROOT/arch/boot-gcc/bin/ to actually pick up the new build.
 
-Darwin (amd64/arm64) and a best-effort, unwired Windows/amd64 draft
+Darwin (amd64/arm64) was written the same way. Windows/amd64
 (kernel32 CreateFileA/ReadFile/WriteFile/CloseHandle/SetFilePointerEx
-via os/windows/winio_amd64.s + os/windows/open.c, no GOOS=windows
-rt0/_main exists in this tree yet) were written the same way -- no
-macOS or Windows host available this session, so both are compile-
-untested. Windows is explicitly a bigger gap than darwin: unlike
+via os/windows/winio_amd64.s + os/windows/open.c) started as the same
+kind of best-effort, unwired, compile-untested draft (no macOS or
+Windows host available that session) but was later wired up and
+verified end to end on a real Windows/Cygwin host (2026-07-31, see
+tests/c/hello_libc/mkfile's test_windows target). Windows is a bigger
+gap than darwin in one structural way that bring-up confirmed: unlike
 Linux/Darwin, there's no raw-syscall-number convention Windows
 applications are meant to use directly, so it has no syscall/os/
 windows/ layer at all -- kernel32 IS the ABI, called straight from
-os/windows/'s glue.
+os/windows/'s glue, and lib_core/libc/mkfile's SYSCALLOFILES (which
+every other GOOS points at syscall/os/$GOOS/svc_$cputype.$O +
+zsyscall_${GOOS}_$cputype.$O) has to be overridden to empty on the
+command line for GOOS=windows instead. Two more things fell out of
+finishing the bring-up that the original draft's own header comments
+didn't anticipate:
+- exit() has no home either (same "no raw syscall" reason) -- added as
+  a plain kernel32 ExitProcess() TEXT symbol directly in
+  winio_amd64.s, rather than a separate rt0_windows.s: hello.c/io.c's
+  main() takes no arguments, so arch/amd64/rt0.s's existing generic
+  _main (CALL main(SB); MOVL $0,(SP); CALL exit(SB)) works unmodified
+  once exit() itself has a real body -- no dyld-style argc/argv
+  register bridging like rt0_darwin.s needed.
+- port/seek.c's `#ifndef plan9` guard (see that file's own comment)
+  had to become a second nested `#ifndef windows`: os/windows/open.c
+  defines a real seek() itself (on top of _winseek), same situation as
+  plan9's own real seek(2) syscall, so linking port/seek.c's
+  lseek()-renaming shim in unconditionally produced a "duplicate text
+  symbol: seek" archive error, not a missing-symbol one (windows has
+  no `lseek` symbol at all for the shim to even resolve against).
+- linkers/lk/pe.c's importfuncs[] table only listed the three imports
+  (GetStdHandle/WriteFile/ExitProcess) every existing hand-rolled
+  tests/c/mini*/tests/s/mini .s test needed -- io.exe's real
+  open/read/seek/close needed CreateFileA/ReadFile/
+  SetFilePointerEx/CloseHandle added to that table too (6l relinked
+  and reinstalled after, since it's compiled-in to the linker itself,
+  not read from a config file at link time).
+lib_core/libc/mkfile also gained an OSEXTRAFILES override (same "leave
+unset elsewhere" convention as ARCHEXTRAOFILES) since OSFILES's
+default (os/$GOOS/open.$O, arch-independent on every other GOOS) has
+no way to pull in windows' per-arch winio_$cputype.s otherwise.
 
 Plan9 (GOOS=plan9) and principia: NOT started. This would be a third,
 structurally different bring-up (no INT/SYSCALL-style raw trap --
