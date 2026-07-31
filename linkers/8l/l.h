@@ -457,6 +457,9 @@ void	dodata(void);
 void	doinit(void);
 void	dostkoff(void);
 void	dynreloc(Sym*, ulong, int);
+// claude: needed so shared ../lk/pe.c (asmbpe()) can call it; elf.c already
+// forward-declares its own copy locally since it doesn't include this via l.h
+long	entryvalue(void);
 
 void	errorexit(void);
 void	export(void);
