@@ -25,3 +25,15 @@
 #define SYS_open	5
 #define SYS_close	6
 #define SYS_lseek	199
+/* claude: unlink/chdir back Plan9's remove()/chdir() (include/os/dir.h).
+ * Unlike lseek above, XNU never renumbered these two: they're still the
+ * classic-BSD 10/12, the same numbers Linux/386 and Linux/arm use --
+ * confirmed against GO/pkg/syscall/zsysnum_darwin_amd64.go
+ * (SYS_UNLINK = 10, SYS_CHDIR = 12), the same 2010-era snapshot the
+ * numbers above came from. Still the arch-independent BSD table, so
+ * numbers_arm64.h repeats them verbatim. See
+ * syscall/os/linux/numbers_386.h's own comment for why create() needs
+ * no syscall number of its own.
+ */
+#define SYS_unlink	10
+#define SYS_chdir	12

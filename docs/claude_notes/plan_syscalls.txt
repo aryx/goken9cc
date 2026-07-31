@@ -1,5 +1,5 @@
 Plan: what lib_core/libc/syscall/ should grow next, and with which numbers
-==========================================================================================================
+===========================================================================
 
 Unlike every other file in docs/claude_notes/ (which record done,
 verified work -- see CLAUDE.md), this one is deliberately forward
@@ -56,6 +56,14 @@ remove, dup, stat/fstat, access, getwd, pipe, exec, fork/rfork,
 await/wait, getpid, time, sleep -- has no implementation in the
 self-hosted libc. They resolve today only in the gcc-built BOOT/lib9,
 which is exactly the layer self-hosting is meant to stop depending on.
+
+UPDATE: the create/remove/chdir subset of Tier 2 below has since
+landed, on all 11 OS/arch combinations plus windows/amd64, verified by
+tests/c/hello_libc/dir.c. The outcome (including a real mips o32 bug
+the new test exposed) is written up in notes_libc_selfhost.txt; the
+Tier 2 section below is left as-is, since access/dup are still
+outstanding and its number tables are still the reference for them.
+Everything above and in the other tiers is unchanged.
 
 On "the missing low numbers"
 ------------------------------------------------------------------------

@@ -13,3 +13,10 @@
 #define SYS_open	5
 #define SYS_close	6
 #define SYS_lseek	19
+/* claude: same two numbers as 386's (see numbers_386.h's own comment on
+ * why create() needs none) -- confirmed against arch/arm/tools/syscall.tbl
+ * upstream ("10 common unlink", "12 common chdir"), which really does
+ * still match the i386 legacy numbering here.
+ */
+#define SYS_unlink	10
+#define SYS_chdir	12

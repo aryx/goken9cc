@@ -29,6 +29,16 @@ long openat(int dirfd, void* path, int flags, int mode)
 	return (long)_syscall6(SYS_openat, (long)dirfd, (long)path, (long)flags, (long)mode, 0, 0);
 }
 
+int unlinkat(int dirfd, char* path, int flags)
+{
+	return (int)_syscall6(SYS_unlinkat, (long)dirfd, (long)path, (long)flags, 0, 0, 0);
+}
+
+int chdir(char* path)
+{
+	return (int)_syscall6(SYS_chdir, (long)path, 0, 0, 0, 0, 0);
+}
+
 void exit(int code)
 {
 	_syscall6(SYS_exit, (long)code, 0, 0, 0, 0, 0);

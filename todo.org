@@ -1015,6 +1015,32 @@ which are all 64-only. See docs/claude_notes/plan_syscalls.txt for
 the full per-OS/arch number tables and the argument for generating
 numbers_*.h from the kernel tables instead of hand-copying.
 
+**** gap: create() cannot make directories (no mkdir/mkdirat wired up)
+claude:
+Plan9's create(char *path, int mode, ulong perm) makes a *directory*
+when perm has DMDIR set (include/os/dir.h) -- that is how mkdir(1) is
+implemented on Plan9, there is no separate syscall. On GOOS=plan9 this
+works for free (CREATE=13 is the real kernel call, syscall/os/plan9/
+svc_$cputype.s). On every other GOOS, create() is built out of
+open(O_CREAT|O_TRUNC) in os/$GOOS/open.c, and O_CREAT cannot make a
+directory -- that needs mkdir(2), or mkdirat(2) on arm64/riscv/riscv64,
+which no numbers_*.h in this tree carries yet.
+
+Rather than silently creating a plain file where the caller asked for
+a directory, create() currently returns -1 when it sees DMDIR, on
+linux, darwin and windows alike. So this is a documented gap, not a
+latent wrong-behavior bug -- but it does mean create() is not yet a
+complete implementation of the Plan9 API on those targets.
+
+To close it: mkdir is 39 on 386/arm, 83 on amd64, 4039 on mips o32,
+136 on Darwin (all read off the same kernel/Go tables the rest of the
+numbers came from, see docs/claude_notes/plan_syscalls.txt); the
+generic-ABI archs need mkdirat=34 with AT_FDCWD, the same shim shape
+remove()/unlinkat() and _sysopen()/openat() already use. Windows would
+need CreateDirectoryA added to linkers/lk/pe.c's importfuncs[].
+BOOT/lib9/open.c's p9create() already has the whole `if(perm&DMDIR)`
+branch written against the host libc and is the model to follow.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

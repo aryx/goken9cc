@@ -274,7 +274,11 @@ What's not implemented yet
   hello-world) to also cover CreateFileA/ReadFile/SetFilePointerEx/
   CloseHandle once lib_core/libc's windows/amd64 open/read/seek/close
   glue (os/windows/{open.c,winio_amd64.s}) needed them for
-  tests/c/hello_libc's io.c -- see
+  tests/c/hello_libc's io.c, and then DeleteFileA/
+  SetCurrentDirectoryA for that same glue's create/remove/chdir
+  (tests/c/hello_libc's dir.c). create() needed no new import:
+  CreateFileA already covers it, differing from open() only in
+  dwCreationDisposition (CREATE_ALWAYS vs OPEN_EXISTING). See
   docs/claude_notes/notes_libc_selfhost.txt's Windows bring-up section
   for the full story. peimports()'s importfuncs[] table still hardcodes
   the list; adding a new kernel32 call anyone actually links against

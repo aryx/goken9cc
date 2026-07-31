@@ -15,3 +15,12 @@
 #define SYS_close	3
 #define SYS_lseek	8
 #define SYS_exit	60
+/* claude: unlink/chdir back Plan9's remove()/chdir() (include/os/dir.h).
+ * This arch renumbered everything above open/close/lseek, so these are
+ * NOT 386's 10/12 -- read straight off
+ * arch/x86/entry/syscalls/syscall_64.tbl upstream ("87 common unlink",
+ * "80 common chdir"). See numbers_386.h's own comment for why create()
+ * needs no syscall number of its own on any Unix here.
+ */
+#define SYS_chdir	80
+#define SYS_unlink	87

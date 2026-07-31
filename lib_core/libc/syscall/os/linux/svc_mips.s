@@ -41,4 +41,33 @@ TEXT _syscall6+0(SB), $0
 	// real result from R2 into R1 before RET so callers actually see
 	// it.
 	MOVW	R2, R1
+	// claude: ...and then convert o32's error convention into the
+	// negative-errno one every other arch's _syscall6 already returns,
+	// because mips is the odd one out here. On 386/amd64/arm/arm64/
+	// riscv/riscv64 a failing syscall returns -errno directly in the
+	// result register, so a caller's `if(fd < 0)` just works. o32 mips
+	// instead reports failure out-of-band in $a3 (R7): 0 on success, 1
+	// on error, with $v0 holding a POSITIVE errno in the error case. So
+	// without this, open() on a missing file returned +2 (ENOENT), which
+	// is >= 0 -- i.e. every error check in libc silently read a failure
+	// as a valid small fd on this arch alone.
+	//
+	// Found by tests/c/hello_libc/dir.c, the first test in this tree to
+	// check a *failing* syscall's return value on mips (it requires
+	// open() to fail after remove() deletes the file); hello.c/io.c only
+	// ever make calls that succeed, which is the same reason the MOVW
+	// R2,R1 above went unnoticed for so long. Verified against a
+	// qemu-mips -strace showing the kernel itself returning the right
+	// answer (unlink = 0, then open = -1 errno=2) while the C caller saw
+	// +2.
+	//
+	// R0 is mips's hardwired zero register (include/obj/v.out.h's
+	// REGZERO), and this assembler's SUBU is "dst = src1 - src2" written
+	// `SUBU src2, src1, dst` (see syscall/os/plan9/svc_mips.s's own
+	// SUBU $-1, R1, R3), so this negates $v0 into the return register.
+	// BEQ takes a single register operand (branch if zero) in this
+	// assembler -- again as in the plan9 svc_mips.s.
+	BEQ	R7, syscallok
+	SUBU	R2, R0, R1
+syscallok:
 	RET

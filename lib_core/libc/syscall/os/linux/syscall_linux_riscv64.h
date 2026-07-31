@@ -36,3 +36,13 @@ long _sysopen(void *path, int flags, int mode)
 {
 	return openat(AT_FDCWD, path, flags, mode);
 }
+
+/* claude: same story for remove() over unlinkat() -- see
+ * syscall_linux_arm64.h's fuller comment.
+ */
+extern int unlinkat(int dirfd, char *path, int flags);
+
+int remove(char *path)
+{
+	return unlinkat(AT_FDCWD, path, 0);
+}

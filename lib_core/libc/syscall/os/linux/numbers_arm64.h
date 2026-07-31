@@ -9,6 +9,18 @@
 // asm-generic/unistd.h -- newer archs are openat()-only, see
 // zsyscall_linux_arm64.c's own hand-written _sysopen() shim in
 // syscall_linux_arm64.h, which calls this with AT_FDCWD)
+/* claude: no legacy SYS_unlink either, for the same reason there's no
+ * SYS_open -- the "generic" ABI kept only the *at() forms, so remove()
+ * is built on unlinkat(AT_FDCWD, path, 0) by a shim in
+ * syscall_linux_arm64.h, exactly parallel to _sysopen()/openat() below.
+ * chdir survived unchanged (it takes no dirfd to generalize over).
+ * Both numbers read straight off scripts/syscall.tbl upstream ("35
+ * common unlinkat", "49 common chdir") -- the single table arm64,
+ * riscv and riscv64 all generate from, which is why their three
+ * numbers_*.h files agree here too.
+ */
+#define SYS_unlinkat	35
+#define SYS_chdir	49
 #define SYS_openat	56
 #define SYS_close	57
 #define SYS_lseek	62

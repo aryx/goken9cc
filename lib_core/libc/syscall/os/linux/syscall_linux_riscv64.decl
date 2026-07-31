@@ -20,4 +20,9 @@
 // no legacy SYS_open on this arch -- see syscall_linux_arm64.decl's
 // identical comment; syscall_linux_riscv64.h adds the _sysopen() shim.
 //sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
+// see syscall_linux_arm64.decl's identical comment -- same "generic"
+// ABI, so remove() is a shim over unlinkat() in
+// syscall_linux_riscv64.h, while chdir needs nothing.
+//sys unlinkat(int dirfd, char *path, int flags) int = SYS_unlinkat
+//sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

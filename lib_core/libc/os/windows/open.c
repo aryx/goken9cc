@@ -44,11 +44,33 @@
 #define STD_ERROR_HANDLE	(-12)
 
 extern void	*_winopen(char *path, uvlong access);
+extern void	*_wincreate(char *path, uvlong access);
+extern long	_windelete(char *path);
+extern long	_winchdir(char *path);
 extern long	_winread(void *handle, void *buf, long n);
 extern long	_winwrite(void *handle, void *buf, long n);
 extern long	_winclose(void *handle);
 extern vlong	_winseek(void *handle, vlong offset, int whence);
 extern void	*_wingetstdhandle(int std);
+
+/* claude: the Plan9-mode-bits -> Win32 dwDesiredAccess translation
+ * shared by open() and create(), split out for the same reason
+ * os/linux/open.c's openflags() was.
+ */
+static uvlong
+winaccess(int mode)
+{
+	switch (mode & 3) {
+	case OWRITE:
+		return GENERIC_WRITE;
+	case ORDWR:
+		return GENERIC_READ | GENERIC_WRITE;
+	case OEXEC: /* no POSIX/Win32 "exec-only" open mode */
+	case OREAD:
+	default:
+		return GENERIC_READ;
+	}
+}
 
 static void*
 fdhandle(fdt fd)
@@ -68,27 +90,49 @@ fdhandle(fdt fd)
 fdt
 open(char *path, int mode)
 {
-	uvlong access;
-
-	switch (mode & 3) {
-	case OWRITE:
-		access = GENERIC_WRITE;
-		break;
-	case ORDWR:
-		access = GENERIC_READ | GENERIC_WRITE;
-		break;
-	case OEXEC: /* no POSIX/Win32 "exec-only" open mode */
-	case OREAD:
-	default:
-		access = GENERIC_READ;
-		break;
-	}
 	/* OTRUNC/OCEXEC/ORCLOSE/OEXCL: not translated yet -- would need
 	 * TRUNCATE_EXISTING's dwCreationDisposition, HANDLE_FLAG_INHERIT,
 	 * FILE_FLAG_DELETE_ON_CLOSE, CREATE_NEW respectively. Same kind of
 	 * documented gap as os/linux/open.c's ORCLOSE note.
 	 */
-	return (fdt)(vlong)_winopen(path, access);
+	return (fdt)(vlong)_winopen(path, winaccess(mode));
+}
+
+/* claude: Plan9's create() (include/os/dir.h). On the Unix targets this
+ * is open() with two extra flag bits; here it's the same CreateFileA
+ * call as open() with a different dwCreationDisposition (CREATE_ALWAYS
+ * instead of OPEN_EXISTING) -- see winio_amd64.s's _wincreate.
+ *
+ * Two gaps, both wider than the Unix side's: `perm` is ignored entirely
+ * (Win32 ACLs aren't Unix mode bits, and CreateFileA has no parameter
+ * that would carry rwxrwxrwx), and DMDIR is rejected the same way
+ * os/linux/open.c rejects it, though here the missing piece is
+ * CreateDirectoryA rather than a syscall number. Unverified on a real
+ * Windows host.
+ */
+int
+create(char *path, int mode, ulong perm)
+{
+	if (perm & DMDIR)
+		return -1;
+	return (int)(vlong)_wincreate(path, winaccess(mode));
+}
+
+/* claude: remove()/chdir(). Both Win32 calls return a BOOL (nonzero on
+ * success), not POSIX's 0/-1, so unlike every other GOOS in this tree
+ * -- where these two are the raw syscall, needing no glue at all --
+ * they need the result inverted here. Unverified on a real Windows host.
+ */
+int
+remove(char *path)
+{
+	return _windelete(path) ? 0 : -1;
+}
+
+int
+chdir(char *path)
+{
+	return _winchdir(path) ? 0 : -1;
 }
 
 long

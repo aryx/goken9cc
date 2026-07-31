@@ -22,3 +22,9 @@
 #define SYS_open	5
 #define SYS_close	6
 #define SYS_lseek	199
+/* claude: unlink/chdir, same arch-independent BSD table -- see
+ * numbers_amd64.h's own comment for the provenance (and for why these
+ * two, unlike lseek, kept their classic 10/12).
+ */
+#define SYS_unlink	10
+#define SYS_chdir	12

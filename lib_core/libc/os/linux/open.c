@@ -35,15 +35,24 @@
 #define O_TRUNC		0x200
 #define O_CLOEXEC	0x80000
 #ifdef mips
+#define O_CREAT		0x100
 #define O_EXCL		0x400
 #else
+#define O_CREAT		0x40
 #define O_EXCL		0x80
 #endif
 
 extern long _sysopen(void *path, int flags, int mode);
 
-fdt
-open(char *path, int mode)
+/* claude: the Plan9-mode-bits -> O_* translation, split out of open()
+ * when create() arrived rather than copied into it: both Plan9 calls
+ * take the same `mode` argument with the same meaning (include/os/file.h),
+ * and this switch plus the three or'ed bits above it are exactly the
+ * part that's OS-specific -- so having one copy per OS, not per
+ * function per OS, is the whole point of this file existing.
+ */
+static int
+openflags(int mode)
 {
 	int flags;
 
@@ -69,6 +78,44 @@ open(char *path, int mode)
 	/* ORCLOSE (remove-on-close) has no POSIX open() equivalent -- would
 	 * need a following unlink(), not wired up in this project yet.
 	 */
+	return flags;
+}
 
-	return (fdt)_sysopen(path, flags, 0);
+fdt
+open(char *path, int mode)
+{
+	return (fdt)_sysopen(path, openflags(mode), 0);
+}
+
+/* claude: Plan9's create() (include/os/dir.h) is open()-with-O_CREAT,
+ * not a syscall of its own on any Unix -- which is why no numbers_*.h
+ * in this tree grew a SYS_create. This tree's Unix targets all do have
+ * a real creat(2) (386/arm/mips: 8, amd64: 85), but it's useless here:
+ * creat() is hardwired to write-only, while Plan9's create() takes a
+ * full mode argument and is routinely called with OREAD or ORDWR.
+ *
+ * Semantics being matched (Plan9's create(2)): the file is created if
+ * absent, TRUNCATED IF PRESENT -- unconditionally, not only when the
+ * caller passes OTRUNC -- and left open with the access mode given by
+ * `mode`. That unconditional O_TRUNC is the one part that doesn't fall
+ * out of openflags() above, so it's or'ed in here.
+ *
+ * `perm` is Plan9's permission word: the low 9 bits are rwxrwxrwx,
+ * laid out exactly like POSIX's, so they pass straight through. The
+ * high DM* bits (include/os/dir.h) have no open(2) equivalent and are
+ * masked off -- except DMDIR, which in Plan9 means "make a directory
+ * instead of a file". That needs mkdir(2)/mkdirat(2), a syscall number
+ * this tree doesn't carry yet, so it's rejected outright rather than
+ * silently creating a plain file of that name. BOOT/lib9/open.c's
+ * p9create() (the gcc-built reference implementation) is the model
+ * here, including its own `if(perm&DMDIR)` branch -- that's where to
+ * look when wiring mkdir up.
+ */
+int
+create(char *path, int mode, ulong perm)
+{
+	if (perm & DMDIR)
+		return -1;
+	return (int)_sysopen(path, openflags(mode)|O_CREAT|O_TRUNC,
+		(int)(perm & 0777));
 }

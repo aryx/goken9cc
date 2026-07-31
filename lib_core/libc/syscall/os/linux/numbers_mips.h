@@ -14,3 +14,10 @@
 #define SYS_close	4006
 #define SYS_lseek	4019
 #define SYS_exit	4001
+/* claude: the same legacy 10/12 as 386/arm, plus this table's 4000
+ * offset -- confirmed against arch/mips/kernel/syscalls/syscall_o32.tbl
+ * upstream ("10 o32 unlink", "12 o32 chdir"). See numbers_386.h's own
+ * comment for why create() needs no number of its own.
+ */
+#define SYS_unlink	4010
+#define SYS_chdir	4012

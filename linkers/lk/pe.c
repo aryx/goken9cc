@@ -68,6 +68,15 @@ static struct importfunc {
 	{ "ReadFile", 0 },
 	{ "SetFilePointerEx", 0 },
 	{ "CloseHandle", 0 },
+	// claude: added for the same files' create()/remove()/chdir().
+	// CreateFileA above already covers create() (it differs from open()
+	// only in dwCreationDisposition), so only the other two are new.
+	// Note this list is why a new Win32 call needs a linker change at
+	// all: with no relocation pass, __imp_<name> has to exist before
+	// instruction encoding, so an unlisted import fails to resolve
+	// rather than being discovered from the object files.
+	{ "DeleteFileA", 0 },
+	{ "SetCurrentDirectoryA", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

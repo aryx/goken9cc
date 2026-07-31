@@ -14,6 +14,11 @@
 // Verified with a real native build+run on a Windows/Cygwin host.
 
 #define OPEN_EXISTING		3
+// claude: CREATE_ALWAYS == "create it, and truncate it if it already
+// exists", which is exactly Plan9 create(2)'s contract (see
+// lib_core/libc/os/linux/open.c's create() for the same reasoning
+// applied to O_CREAT|O_TRUNC). Used only by _wincreate below.
+#define CREATE_ALWAYS		2
 #define FILE_SHARE_READ		1
 #define FILE_SHARE_WRITE	2
 #define FILE_ATTRIBUTE_NORMAL	0x80
@@ -43,6 +48,67 @@ TEXT _winopen+0(SB), $0
 
 	MOVQ	DI, SP
 	RET				// HANDLE (or INVALID_HANDLE_VALUE) in AX
+
+// h = _wincreate(path, access)
+//   CreateFileA(path, access, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+//               CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)
+// Byte-for-byte _winopen above except for dwCreationDisposition, which
+// is the single Win32 parameter that separates Plan9's open() from its
+// create(). A shared stub taking the disposition as a third argument
+// would have been the obvious alternative; kept separate so _winopen's
+// already-verified argument layout is untouched.
+//
+// Plan9's create() also takes a `perm` word, which has no CreateFileA
+// equivalent worth emulating (Win32 ACLs are not Unix mode bits), so
+// open.c drops it -- see that file's create() comment. NOT verified on
+// a real Windows host, unlike the stubs above; this arrived with
+// create/remove/chdir for the other GOOSes and no Windows machine was
+// available to run it.
+TEXT _wincreate+0(SB), $0
+	MOVQ	SP, DI			// save caller's SP
+	MOVQ	path+0(FP), CX		// 1st: lpFileName
+	MOVQ	access+8(FP), DX	// 2nd: dwDesiredAccess
+
+	ANDQ	$-16, SP
+	SUBQ	$64, SP			// 32 shadow + 3 stack args (24), 16-aligned
+
+	MOVQ	$(FILE_SHARE_READ|FILE_SHARE_WRITE), R8
+	MOVQ	$0, R9			// lpSecurityAttributes = NULL
+	MOVQ	$CREATE_ALWAYS, 32(SP)
+	MOVQ	$FILE_ATTRIBUTE_NORMAL, 40(SP)
+	MOVQ	$0, 48(SP)		// hTemplateFile = NULL
+	MOVQ	__imp_CreateFileA(SB), AX
+	CALL	AX
+
+	MOVQ	DI, SP
+	RET				// HANDLE (or INVALID_HANDLE_VALUE) in AX
+
+// ok = _windelete(path) -- DeleteFileA(path), backing remove().
+// Returns a BOOL, like _winclose below; open.c does the 0/-1
+// translation. Unverified on a real Windows host, see _wincreate.
+TEXT _windelete+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	path+0(FP), CX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_DeleteFileA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET
+
+// ok = _winchdir(path) -- SetCurrentDirectoryA(path), backing chdir().
+// Same BOOL-returning shape as _windelete. Note this moves the
+// process-wide current directory, the same thing chdir(2) does on the
+// Unix targets. Unverified on a real Windows host, see _wincreate.
+TEXT _winchdir+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	path+0(FP), CX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_SetCurrentDirectoryA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET
 
 // n = _winread(handle, buf, len) -- ReadFile(handle, buf, len, &nread, NULL)
 TEXT _winread+0(SB), $0

@@ -42,6 +42,26 @@ TEXT close(SB), $0
 	SYSCALL
 	RET
 
+// create/remove/chdir -- see svc_arm.s's identical comment on why these
+// need no os/plan9/ translation glue, unlike every other GOOS.
+TEXT create(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$CREATE, R1
+	SYSCALL
+	RET
+
+TEXT remove(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$REMOVE, R1
+	SYSCALL
+	RET
+
+TEXT chdir(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$CHDIR, R1
+	SYSCALL
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R1, 0(FP)
 	MOVW	$PREAD, R1

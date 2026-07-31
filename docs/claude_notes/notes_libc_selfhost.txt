@@ -852,3 +852,117 @@ tests/c/regressions' `mk test` (no regressions). Darwin's own
 _syscall6v (amd64/arm64) is written the same way but, like the rest of
 this file's darwin work, unverified by execution -- no macOS host this
 session.
+
+create/remove/chdir: the file-system-modifying calls
+------------------------------------------------------------------------
+
+Added July 2026, following docs/claude_notes/plan_syscalls.txt's Tier 2
+(read that file's number tables before adding access/dup, the two Tier
+2 calls still outstanding). Landed on all 11 (OS, arch) combinations
+plus windows/amd64. Interesting mostly because these three calls
+happen to need all three of the implementation strategies the
+syscall/ vs os/ split was designed around -- one call each:
+
+- chdir: identical shape on every Unix AND on Plan9, so it is a plain
+  .decl line generating the public symbol directly, on all 9 Unix
+  (OS, arch) pairs. No glue anywhere.
+
+- remove: Plan9's name for POSIX unlink(2); same shape, so also a
+  plain .decl line -- except on arm64/riscv/riscv64, whose "generic"
+  Linux ABI dropped every syscall that has an *at() form. There is no
+  SYS_unlink there at all, only unlinkat=35. So those three .decl
+  files generate unlinkat() and their syscall_linux_$arch.h hand-adds
+  a remove(path){return unlinkat(AT_FDCWD,path,0);} shim -- the exact
+  pattern _sysopen()/openat() already established, one level down.
+  Worth internalizing: on those archs, "is there a syscall for X"
+  usually resolves to "there is an Xat()".
+
+- create: needs real translation and NO syscall number. Every Unix
+  here does have a creat(2) (386/arm/mips: 8, amd64: 85), but it is
+  useless -- creat() is hardwired write-only, while Plan9's
+  create(char*,int,ulong) takes a full mode argument and is routinely
+  called with OREAD or ORDWR. So it is _sysopen(path, flags|O_CREAT|
+  O_TRUNC, perm&0777) in os/$GOOS/open.c. The unconditional O_TRUNC is
+  the part that does not fall out of open()'s own flag translation:
+  Plan9's create(2) truncates an existing file whether or not the
+  caller passed OTRUNC.
+
+Because create() and open() now share that mode-bit translation, each
+os/$GOOS/open.c grew a static openflags() helper rather than a second
+copy of the switch -- that per-OS table (Linux O_CREAT=0x40, mips
+0x100, Darwin 0x200) being the whole reason the file is per-GOOS.
+
+DMDIR is the one deliberate gap: in Plan9, create() with DMDIR set in
+perm makes a *directory*, which needs mkdir(2)/mkdirat(2) -- a number
+this tree does not carry yet. Rather than silently creating a plain
+file of that name, create() returns -1 when it sees DMDIR, on every
+GOOS. BOOT/lib9/open.c's p9create() has the matching `if(perm&DMDIR)`
+branch already written against the host libc, and is the model to
+follow when mkdir gets wired up.
+
+GOOS=plan9 is the sharpest illustration of the layering: all three are
+plain raw kernel stubs in syscall/os/plan9/svc_{arm,mips}.s (CREATE=13,
+REMOVE=14, CHDIR=15), with no os/plan9/ glue at all -- create()
+included, DMDIR and all, since it is the API the rest of this tree was
+already shaped to. 5i/vi needed no work either: machines/5i/
+syscall_posix.c's syscreate/sysremove/syschdir already existed.
+
+include/os/dir.h had to be made includable to land this. It declares
+create/remove/chdir (and struct Dir, getwd, access, ...) but had never
+been included by anything, and could not be: struct Dir has a `Qid
+qid;` field and nothing in include/ ever typedef'd Qid or Dir. Both
+typedefs added (Qid next to its struct in os/file.h, Dir in dir.h,
+matching os/proc.h's own `typedef struct Waitmsg Waitmsg;`), and
+libc.h's "directory" section -- empty until now -- includes the
+header. Note most of what it declares still has no implementation
+behind it; those need the stat(2) family first (plan_syscalls.txt's
+Tier 3).
+
+The mips o32 error convention: a real bug the new test found
+------------------------------------------------------------------------
+
+tests/c/hello_libc/dir.c is the first test in this tree to check a
+*failing* syscall's return value, and it immediately failed on mips
+only. The syscalls themselves were all correct -- a qemu-mips -strace
+showed the kernel doing exactly the right thing (unlink = 0, then the
+deliberate reopen = -1 errno=2) while the C caller saw a valid fd.
+
+Cause: mips o32 is the only arch here that does NOT report errors by
+returning a negative value. On 386/amd64/arm/arm64/riscv/riscv64 the
+kernel returns -errno directly in the result register, so a caller's
+`if(fd < 0)` just works. o32 instead reports failure out of band in
+$a3 (R7): 0 on success, 1 on error, with $v0 holding a POSITIVE errno
+when it is 1. syscall/os/linux/svc_mips.s ignored R7 entirely, so
+open() on a missing file returned +2 (ENOENT) -- i.e. every error
+check in libc read a failure as a valid small fd, on that arch alone.
+
+Fixed in svc_mips.s by branching on R7 and negating $v0 into the
+return register (`BEQ R7, ok; SUBU R2, R0, R1`), converting o32's
+convention into the negative-errno one every other arch already
+returns, so nothing above the trampoline has to know. This is the
+third bug of exactly this shape in this one file (see the MOVW R2,R1
+story in the file-syscalls section above, and Darwin's carry flag),
+and the pattern is worth stating plainly: a raw syscall trampoline's
+*error* path is invisible to any test whose syscalls all succeed.
+hello.c and io.c only ever make calls that work, which is why both
+earlier bugs and this one survived so long. See notes_arch_mips.txt
+for the ABI fact itself.
+
+Verified: full `mk test` in tests/c/hello_libc -- all 7 Linux arches
+under qemu (386/amd64/arm/arm64/mips/riscv/riscv64) plus GOOS=plan9
+arm and mips under 5i/vi, hello.exe + io.exe + the new dir.exe each.
+mips passes only with the R7 fix. darwin (create/remove/chdir in
+os/darwin/open.c and both .decl files) and windows are written but
+unverified by execution -- no macOS or Windows host this session, same
+standing caveat as the rest of those two targets in this file.
+
+windows/amd64 needed a linker change too, which is worth knowing about
+before adding any further Win32 call: linkers/lk/pe.c carries a
+hardcoded list of kernel32 imports (importfuncs[]). Because this ?l
+has no separate relocation pass, __imp_<name> must already exist when
+instructions are encoded, so an import that is not in that list simply
+fails to resolve -- it is not discovered from the object files.
+DeleteFileA and SetCurrentDirectoryA were added there; CreateFileA was
+already present and covers create() too, which differs from open()
+only in dwCreationDisposition (CREATE_ALWAYS vs OPEN_EXISTING). Note
+pe.c is shared by 6l and 8l, so both must be rebuilt after editing it.

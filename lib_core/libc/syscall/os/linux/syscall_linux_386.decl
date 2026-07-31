@@ -14,4 +14,13 @@
 // open(char*,int) (include/os/file.h), which os/linux/open.c builds
 // on top of this.
 //sys _sysopen(void *path, int flags, int mode) long = SYS_open
+// remove/chdir: Plan9's own names (include/os/dir.h) for what POSIX
+// calls unlink(2)/chdir(2). Same argument shape, same semantics, same
+// 0/-1 result -- so unlike open(), these two need no os/$GOOS/ API-shape
+// translation layer at all and are generated straight into their public
+// symbol names here. Plan9's create() is the opposite case: it needs
+// real translation but no syscall number, and is built on _sysopen()
+// above by os/linux/open.c.
+//sys remove(char *path) int = SYS_unlink
+//sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

@@ -10,6 +10,14 @@
 // see numbers_arm64.h's identical comment: the "generic" ABI has no
 // legacy open(), only openat() -- _sysopen() in syscall_linux_riscv.h
 // bridges the gap with AT_FDCWD.
+// claude: see numbers_arm64.h's identical comment -- no legacy unlink()
+// in this ABI, so remove() is a shim over unlinkat() in
+// syscall_linux_riscv.h. Unlike SYS_lseek two lines below (which is
+// really llseek on this 32-bit arch, see todo.org's own entry), both of
+// these are marked "common" in scripts/syscall.tbl, so rv32 and rv64
+// genuinely do share them.
+#define SYS_unlinkat	35
+#define SYS_chdir	49
 #define SYS_openat	56
 #define SYS_close	57
 #define SYS_lseek	62

@@ -24,4 +24,15 @@
 // _sysopen() name uniformly on every Linux arch regardless of which raw
 // syscall backs it.
 //sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
+// chdir: Plan9's chdir() (include/os/dir.h) is shaped exactly like
+// POSIX chdir(2), so it needs no os/$GOOS/ translation glue and is
+// generated straight into its public symbol name -- see
+// syscall_linux_386.decl's fuller comment. remove() would be the same
+// story via SYS_unlink, except this ABI has no legacy unlink() (see
+// numbers_arm64.h), only unlinkat() -- so, exactly as with
+// _sysopen()/openat() above, the raw *at() form is generated here and
+// syscall_linux_arm64.h hand-adds the one-line remove() shim on top
+// calling unlinkat(AT_FDCWD, path, 0).
+//sys unlinkat(int dirfd, char *path, int flags) int = SYS_unlinkat
+//sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

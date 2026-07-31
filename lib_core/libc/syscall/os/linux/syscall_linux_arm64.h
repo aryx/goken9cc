@@ -45,3 +45,20 @@ long _sysopen(void *path, int flags, int mode)
 {
 	return openat(AT_FDCWD, path, flags, mode);
 }
+
+/* claude: same story one level down -- this ABI dropped legacy unlink()
+ * along with open() (see numbers_arm64.h), so Plan9's remove()
+ * (include/os/dir.h), which every other arch here generates directly
+ * from SYS_unlink, is a hand-written bridge over unlinkat() instead.
+ * Unlike _sysopen() above, the public name is the real one (remove, not
+ * a _sys-prefixed raw shape): remove(2) and unlink(2) are the same
+ * call under two names, so there's nothing left for an os/$GOOS/ layer
+ * to translate. flags=0 means "plain unlink"; AT_REMOVEDIR (0x200) is
+ * the bit that would make it an rmdir instead, deliberately not passed.
+ */
+extern int unlinkat(int dirfd, char *path, int flags);
+
+int remove(char *path)
+{
+	return unlinkat(AT_FDCWD, path, 0);
+}

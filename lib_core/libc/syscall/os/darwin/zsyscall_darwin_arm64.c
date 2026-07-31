@@ -29,6 +29,16 @@ long _sysopen(void* path, int flags, int mode)
 	return (long)_syscall6(SYS_open, (vlong)path, (vlong)flags, (vlong)mode, 0, 0, 0);
 }
 
+int remove(char* path)
+{
+	return (int)_syscall6(SYS_unlink, (vlong)path, 0, 0, 0, 0, 0);
+}
+
+int chdir(char* path)
+{
+	return (int)_syscall6(SYS_chdir, (vlong)path, 0, 0, 0, 0, 0);
+}
+
 void exit(int code)
 {
 	_syscall6(SYS_exit, (vlong)code, 0, 0, 0, 0, 0);

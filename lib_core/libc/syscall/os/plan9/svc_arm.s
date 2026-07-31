@@ -50,6 +50,34 @@ TEXT close(SB), $0
 	SWI	$0
 	RET
 
+// create/remove/chdir: the clearest illustration of why GOOS=plan9
+// needs no os/plan9/ glue layer (see lib_core/libc/os/plan9/open.c's
+// "intentionally empty" comment). On Linux and Darwin, remove() and
+// chdir() at least map onto identically-shaped POSIX syscalls, but
+// create() genuinely has to be *built* out of open(O_CREAT|O_TRUNC)
+// with the Plan9 mode bits translated into O_* flags, and DMDIR
+// rejected for want of a mkdir syscall (os/linux/open.c). Here all
+// three are the real kernel calls, with the real signatures
+// include/os/dir.h already declares -- create(char*, int, ulong)
+// included, DMDIR and all.
+TEXT create(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$CREATE, R0
+	SWI	$0
+	RET
+
+TEXT remove(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$REMOVE, R0
+	SWI	$0
+	RET
+
+TEXT chdir(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$CHDIR, R0
+	SWI	$0
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R0, 0(FP)
 	MOVW	$PREAD, R0

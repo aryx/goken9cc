@@ -345,6 +345,44 @@ before writing a single line of debug instrumentation, and correctly
 redirecting suspicion toward the *processing* that happens after the
 whole file is read rather than the file-reading path itself.
 
+qemu-user's -strace to split "wrong syscall" from "right syscall, mis-read result"
+-------------------------------------------------------------------------------------
+
+A sharper variant of the plain-strace technique above, for the
+cross-compiled targets: every arch this tree tests under qemu-user can
+be run as `qemu-<arch> -strace ./foo.exe` directly (scripts/qemu-runner
+picks the binary name; call qemu yourself when you want the flag).
+Unlike host strace, this works for all seven Linux arches from one x86
+box.
+
+What makes it worth reaching for early is that it draws a line the
+program's own output cannot: it shows what the *kernel* was asked and
+what the kernel answered, independently of what libc then did with
+that answer. When tests/c/hello_libc/dir.c failed on mips only, the
+trace showed:
+
+  unlink("dir_tmp.txt") = 0
+  open("dir_tmp.txt",O_RDONLY) = -1 errno=2 (No such file or directory)
+
+i.e. both syscalls behaved perfectly -- while the program printed
+"remove left the file behind", which it only does when that open()
+returns >= 0. That single contradiction localizes the bug to the
+syscall *return-value* path (svc_mips.s's trampoline, which was
+ignoring o32's $a3 error flag -- see notes_arch_mips.txt) with no
+instrumentation, no bisection, and no reading of generated assembly.
+
+Generalizing: whenever a libc-level call misbehaves on one arch only,
+check the trace before suspecting the syscall number, the arguments,
+or the compiler. "Kernel did the right thing, caller disagreed" and
+"kernel did the wrong thing" look identical from inside the program
+and completely different in one line of -strace output.
+
+A corollary worth designing tests around, since it is what let three
+successive bugs hide in this one file: a trampoline's *error* path is
+invisible to any test whose syscalls all succeed. hello.c and io.c
+only ever make calls that work. dir.c deliberately requires a call to
+FAIL (open() after remove()), which is what finally exposed it.
+
 gdb refusing to load this project's own linker output at all
 -------------------------------------------------------------------
 

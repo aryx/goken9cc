@@ -158,6 +158,17 @@
 // directory
 //----------------------------------------------------------------------------
 
+// claude: this section was empty until create()/remove()/chdir() got
+// real implementations (lib_core/libc/syscall/os/$GOOS/ plus, for
+// create() alone, os/$GOOS/open.c's flag translation). Note that most
+// of what os/dir.h declares -- dirread/dirreadall/nulldir/fd2path/
+// getwd/access/fileexists, and struct Dir itself -- is still only a
+// prototype here with no implementation behind it; those need the
+// stat(2) family first (see docs/claude_notes/plan_syscalls.txt's
+// Tier 3). Including the whole header anyway, rather than cherry-
+// picking three externs, keeps a single declaration site.
+#include "os/dir.h"
+
 //----------------------------------------------------------------------------
 // namespace
 //----------------------------------------------------------------------------

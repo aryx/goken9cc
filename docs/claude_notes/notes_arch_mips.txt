@@ -172,6 +172,48 @@ OLIST gap (notes_shared_frontend_bugs.txt) and the missing-return
 6c-only compile error in the fmt/*.c files shared with every other
 arch here.
 
+The o32 error convention: $a3, not a negative return
+---------------------------------------------------------
+
+The single most surprising thing about mips syscalls here, and unique
+to this arch among the seven Linux targets: o32 does NOT signal errors
+by returning a negative value. Every other arch in this tree
+(386/amd64/arm/arm64/riscv/riscv64) returns -errno directly in the
+result register, so a C caller's `if(fd < 0)` works with no help. o32
+instead splits it:
+
+  $v0 (R2)  the result on success -- or a POSITIVE errno on failure
+  $a3 (R7)  0 on success, 1 on failure
+
+So the errno value alone is ambiguous: 2 could be a valid fd or
+ENOENT, and only R7 distinguishes them. A trampoline that reads only
+$v0 will report every failure as a plausible small success.
+
+That is exactly the bug lib_core/libc/syscall/os/linux/svc_mips.s had
+until July 2026: open() on a missing file returned +2, which is >= 0,
+so every error check in libc silently passed on this arch alone. Fixed
+by branching on R7 and negating $v0 into the return register, so the
+trampoline hands up the same negative-errno convention every other
+arch already produces and nothing above it needs an #ifdef mips:
+
+  SYSCALL
+  MOVW  R2, R1        // this compiler returns via R1, not $v0
+  BEQ   R7, ok        // R7==0: success, keep the result
+  SUBU  R2, R0, R1    // else negate: R1 = 0 - $v0 = -errno
+ ok:
+  RET
+
+(R0 is mips's hardwired zero register, include/obj/v.out.h's REGZERO;
+this assembler writes "dst = src1 - src2" as `SUBU src2, src1, dst`,
+and its BEQ takes a single register operand, branch-if-zero.)
+
+Found by tests/c/hello_libc/dir.c, the first test here to check a
+failing syscall's return value at all -- see notes_libc_selfhost.txt
+for why that class of bug survived three separate passes over this
+file, and notes_debug_techniques.txt for the qemu-mips -strace
+technique that separated "the kernel did the wrong thing" from "the
+kernel did the right thing and the trampoline mis-reported it".
+
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------
 
