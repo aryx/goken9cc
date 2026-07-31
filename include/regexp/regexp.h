@@ -1,6 +1,5 @@
-// TODO? use autolib like in bio.h and ifdef guards?
-#pragma	src	"/src/libregexp"
 #pragma	lib	"libregexp.a"
+#pragma	src	"/sys/src/libregexp"
 
 typedef struct Resub		Resub;
 typedef struct Reclass		Reclass;

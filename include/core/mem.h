@@ -1,4 +1,11 @@
 
+extern  void*   memset(void*, int, ulong);
+extern  void*   memcpy(void*, void*, ulong);
+extern  void*   memmove(void*, void*, ulong);
+extern  int     memcmp(void*, void*, ulong);
+extern  void*   memchr(void*, int, ulong);
+extern  void*   memccpy(void*, void*, int, ulong);
+
 extern  void*   malloc(ulong);
 extern  void    free(void*);
 extern  void*   mallocz(ulong, bool);
@@ -7,13 +14,6 @@ extern  void*   calloc(ulong, ulong);
 // less useful
 //extern  ulong   msize(void*);
 //extern  void*   mallocalign(ulong, ulong, long, ulong);
-
-extern  void*   memset(void*, int, ulong);
-extern  void*   memcpy(void*, void*, ulong);
-extern  void*   memmove(void*, void*, ulong);
-extern  int     memcmp(void*, void*, ulong);
-extern  void*   memchr(void*, int, ulong);
-extern  void*   memccpy(void*, void*, int, ulong);
 
 // internals (useful for debugging)
 // alt: in debug.h

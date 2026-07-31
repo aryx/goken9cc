@@ -1,4 +1,5 @@
 
+typedef struct Tm Tm;
 struct Tm {
     int sec;
     int min;

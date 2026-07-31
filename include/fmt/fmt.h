@@ -1,9 +1,13 @@
 #ifndef _FMT_H_
 #define _FMT_H_ 1
 
-// va_list is expected to already be defined by the time this header is
-// reached: every .c file includes <u.h> before <libc.h> (which pulls in
+// require: <u.h> for va_list
+// va_list used below is expected to already be defined by the time this header
+// is reached: every .c file includes <u.h> before <libc.h> (which pulls in
 // this file), and u.h is where each arch/host provides va_list.
+
+// require: <utf.h> for Rune
+
 #include <utf.h>
 
 // most useful one

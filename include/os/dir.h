@@ -1,10 +1,7 @@
 
-// claude: this header is included by libc.h (after os/file.h, which it
-// depends on for Qid and fdt). The two typedefs here and in os/file.h
-// were missing until create()/remove()/chdir() got real implementations
-// and something finally needed to include this file.
-typedef struct Dir Dir;
+// require: <os/file.h> for Qid and fdt
 
+typedef struct Dir Dir;
 // a similar structure is defined in the kernel!
 struct Dir {
  /* system-modified data */
@@ -51,4 +48,3 @@ extern	long	dirreadall(int, Dir**);
 extern  char*   getwd(char*, int);
 extern	int	access(char*, int); // ???
 extern	bool	fileexists(char*); // new: used to be in linkers/
-

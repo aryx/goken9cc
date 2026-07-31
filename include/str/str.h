@@ -5,9 +5,8 @@
 // well with the 3-letters utf.h, bio.h, fmt.h, etc.).
 // Copied from plan9 include/string.h
 
-//TODO? use autolib and ifdef guards like in bio.h?
-#pragma	src	"/sys/src/libstring"
 #pragma	lib	"libstring.a"
+#pragma	src	"/sys/src/libstring"
 
 /* extensible Strings */
 typedef struct String {
@@ -55,4 +54,5 @@ typedef struct Sinstack Sinstack;
 extern char	    *s_rdinstack(Sinstack*, String*);
 extern Sinstack	*s_allocinstack(char*);
 extern void	     s_freeinstack(Sinstack*);
+
 #endif /* BGETC */

@@ -19,16 +19,12 @@ typedef int fdt; // file descriptor type
 #define	AREAD	4	/* read access */
 
 // Qid as in uniQue id
-// claude: typedef added (same shape as os/proc.h's own `typedef struct
-// Waitmsg Waitmsg;`) so os/dir.h, whose struct Dir has a `Qid qid;`
-// field, can actually be included -- it never could be before, which is
-// why libc.h's "directory" section sat empty.
 typedef struct Qid Qid;
 struct Qid {
- uvlong	path;
- ulong	vers;
-    // bitset<Qidtype>
- uchar	type;
+  uvlong	path;
+  ulong	vers;
+  // bitset<Qidtype>
+  uchar	type;
 };
 
 /* bits in Qid.type */

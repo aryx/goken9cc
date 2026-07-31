@@ -1,4 +1,3 @@
-// TODO? use autolib like in bio.h? and ifdef guards?
 #pragma	lib	"libflate.a"
 #pragma	src	"/sys/src/libflate"
 

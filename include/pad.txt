@@ -1,1 +1,0 @@
-modeled after the Go and OCaml stdlib, as well as my XiX stdlib.

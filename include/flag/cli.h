@@ -1,6 +1,7 @@
 
 // getopt like macros
 
+// useful beyond temp for ARGBEGIN ?
 extern char *argv0;
 
 #define ARGBEGIN    for((argv0||(argv0=*argv)),argv++,argc--;\

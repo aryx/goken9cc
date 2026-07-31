@@ -6,7 +6,7 @@
 
 // bool (not builtin, in base/bool.h)
 // char
-// int, short, long, long long
+// int, short, long, long long, and signed/unsigned
 // float, double
 
 // ??
@@ -25,4 +25,3 @@
 // Builtin (polymorphic) stuff
 // ---------------------------------
 // sizeof (see also reflect.h)
-
