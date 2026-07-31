@@ -74,9 +74,12 @@ TEXT pwrite(SB), $0
 	SYSCALL
 	RET
 
-// see svc_arm.s's identical comment on seek's hidden-return-pointer /
-// write-back-unless-error convention -- same story, R1 here instead of
-// R0/R2.
+// see svc_arm.s's fuller comment on seek's hidden-return-pointer
+// convention: the kernel writes the 8-byte result through that pointer
+// itself and returns 0, so this stub must write back ONLY on error
+// (raw result == -1), never on success. Same story here, R1 instead of
+// R0/R2 -- and this stub had the same inverted condition, fixed
+// alongside arm's.
 TEXT seek(SB), $0
 	MOVW	R1, 0(FP)
 	MOVW	$SEEK, R1
@@ -84,11 +87,14 @@ TEXT seek(SB), $0
 	// this assembler's BEQ only takes one register operand (branch if
 	// ==0, see tests/s/features/mips_atomic_llsc.s's own BEQ R6,retry
 	// for the same pattern) -- no 2-register-compare form, so compute
-	// R1-(-1) first and branch on *that* being zero.
+	// R1-(-1) first and branch on *that* being zero. Structured as
+	// "branch to the error path, else return" rather than arm's
+	// "branch past it" so only BEQ is needed, no BNE.
 	SUBU	$-1, R1, R3
-	BEQ	R3, seekdone
+	BEQ	R3, seekerr
+	RET
+seekerr:
 	MOVW	0(FP), R2
 	MOVW	R1, 0(R2)
 	MOVW	R1, 4(R2)
-seekdone:
 	RET

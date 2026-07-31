@@ -19,9 +19,9 @@ int close(int fd)
 	return (int)_syscall6(SYS_close, (long)fd, 0, 0, 0, 0, 0);
 }
 
-long lseek(int fd, vlong offset, int whence)
+int _sysllseek(int fd, ulong offhi, ulong offlo, vlong* result, int whence)
 {
-	return (long)_syscall6(SYS_lseek, (long)fd, (long)offset, (long)whence, 0, 0, 0);
+	return (int)_syscall6(SYS_llseek, (long)fd, (long)offhi, (long)offlo, (long)result, (long)whence, 0);
 }
 
 long openat(int dirfd, void* path, int flags, int mode)

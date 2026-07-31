@@ -6,6 +6,36 @@
 
 extern long _syscall6(long num, long a1, long a2, long a3, long a4, long a5, long a6);
 
+/* claude: lseek() on this arch is a shim over llseek(), not a directly
+ * generated wrapper: syscall 62 is llseek here, not lseek (see
+ * numbers_riscv.h for the kernel table rows). llseek splits the 64-bit
+ * offset across two argument slots -- high word first -- and returns 0,
+ * delivering the resulting offset by writing it through a pointer
+ * instead of returning it.
+ *
+ * The `long` return type is what port/seek.c's own extern expects on
+ * every 32-bit arch here (its #ifdef ladder widens only amd64/arm64/
+ * riscv64), so the vlong the kernel writes back is truncated on the way
+ * out. That is a real, if theoretical, limit -- files past 2GB would
+ * report a wrong position even though llseek SEEKS correctly, since the
+ * offset argument is now passed at full 64-bit width. Left as-is
+ * deliberately: rv32 is no worse off than 386/arm/mips, whose real
+ * 32-bit lseek syscall cannot express a large offset at all. Widening
+ * it would mean adding a fourth arch to that ladder, which is the
+ * opposite of the direction CLAUDE.md asks for.
+ */
+extern int _sysllseek(int fd, ulong offhi, ulong offlo, vlong *result, int whence);
+
+long lseek(int fd, vlong offset, int whence)
+{
+	vlong result;
+
+	if (_sysllseek(fd, (ulong)(offset >> 32), (ulong)offset, &result,
+			whence) < 0)
+		return -1;
+	return (long)result;
+}
+
 /* See syscall_linux_arm64.h's identical comment: this arch's "generic"
  * Linux ABI has no legacy 3-arg open(), only openat() -- _sysopen()
  * bridges the gap with AT_FDCWD so os/linux/open.c can call the same

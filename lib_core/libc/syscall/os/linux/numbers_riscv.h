@@ -22,7 +22,22 @@
 #define SYS_chdir	49
 #define SYS_openat	56
 #define SYS_close	57
-#define SYS_lseek	62
+/* claude: 62 is llseek here, NOT lseek. scripts/syscall.tbl marks the
+ * two entries at this number by width:
+ *
+ *   62  32  llseek   sys_llseek
+ *   62  64  lseek    sys_lseek
+ *
+ * and this is the 32-bit one. They are not the same call: llseek takes
+ * FIVE arguments (fd, offset_high, offset_low, loff_t *result, whence)
+ * and returns 0, writing the resulting offset back THROUGH THE POINTER,
+ * whereas rv64's lseek takes three and returns the offset directly.
+ * This file was originally a verbatim copy of numbers_riscv64.h, so it
+ * inherited rv64's shape and generated a 3-arg lseek() against a 5-arg
+ * syscall -- see syscall_linux_riscv.h's lseek() for the shim that
+ * bridges it, and notes_arch_riscv.txt for how the bug hid.
+ */
+#define SYS_llseek	62
 #define SYS_read	63
 #define SYS_write	64
 #define SYS_exit	93

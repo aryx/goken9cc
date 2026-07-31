@@ -328,3 +328,66 @@ libc.a (fmt/printf, syscalls) built entirely by ic/ia/il and jc/ja/jl,
 linked with -lc, run under qemu-riscv/qemu-riscv64 via
 scripts/qemu-runner, output compared against expected.txt -- see
 notes_libc_selfhost.txt.
+
+rv32's syscall 62 is llseek, not lseek
+---------------------------------------------------------
+
+The single most important rv32-vs-rv64 difference this tree has hit.
+lib_core/libc/syscall/os/linux/numbers_riscv.h started life as a
+verbatim copy of numbers_riscv64.h, which is correct for read/write/
+openat/close/exit -- scripts/syscall.tbl marks those "common", i.e.
+genuinely the same number on both widths. It is NOT correct for 62:
+
+  62  32  llseek   sys_llseek
+  62  64  lseek    sys_lseek
+
+These are different calls, not two names for one:
+
+  rv64  off_t lseek(int fd, off_t offset, int whence)
+  rv32  int   llseek(int fd, ulong offset_high, ulong offset_low,
+                     loff_t *result, int whence)
+
+llseek takes FIVE arguments, splits the 64-bit offset across two of
+them (high word first), returns 0, and delivers the resulting offset by
+writing it THROUGH A POINTER rather than returning it -- which is the
+whole point of its existence on a 32-bit arch.
+
+So the generated 3-arg wrapper landed as llseek(fd, offset_lo, whence,
+NULL, 0): arguments misaligned and the result pointer NULL. Fixed by
+generating the real 5-arg form as _sysllseek() and adding an
+lseek(fd, offset, whence) shim in syscall_linux_riscv.h -- the same
+raw-plus-shim split _sysopen()/openat() already uses on this arch.
+
+Why it survived so long, and the general lesson: seek(fd, 0, 0) is the
+one call that hides this completely. With every argument zero, the
+misaligned slots are all zero too, so the kernel computes the correct
+seek-to-zero and only THEN fails writing the result to NULL, returning
+-EFAULT. tests/c/hello_libc/io.c did exactly that and ignored the
+return value, so it passed. Confirmed with qemu-riscv32 -strace before
+the fix:
+
+  llseek(3,0,0,NULL,SEEK_SET)  = -1 errno=14 (Bad address)   <- "passed"
+  llseek(3,6,0,NULL,SEEK_SET)  = -1 errno=14 (Bad address)   <- offset 6<<32
+
+and after:
+
+  llseek(3,0,6,0x2b2aa7b8,SEEK_SET) = 0                      <- offset 6
+
+io.c now seeks to a NONZERO offset and checks seek's RETURN VALUE, not
+just the bytes that come back. Zero is a uniquely bad test input for an
+offset: it is the one value that survives being passed in the wrong
+slot, truncated, or dropped entirely.
+
+Still-open consequence of the same 32-vs-64 split: ftruncate (46 is
+ftruncate64 on rv32) and fcntl (25 is fcntl64) will need the same
+treatment, and gettimeofday/clock_gettime/nanosleep/wait4/fstat/
+newfstatat/mmap are all 64-only, needing the time64/mmap2 variants
+instead. See docs/claude_notes/plan_syscalls.txt for the tables.
+
+Note the shim truncates the returned offset to `long`, because
+port/seek.c's extern expects that on every 32-bit arch here. The
+offset ARGUMENT is now passed at full 64-bit width, so seeks past 2GB
+go to the right place; only the reported position would be wrong.
+Deliberate: rv32 is no worse off than 386/arm/mips, whose real 32-bit
+lseek cannot express a large offset at all, and widening it would mean
+adding a fourth arch to that file's #ifdef ladder.

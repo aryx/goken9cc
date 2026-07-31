@@ -8,7 +8,12 @@
 //sys write(int fd, void *buf, long n) long = SYS_write
 //sys read(int fd, void *buf, long n) long = SYS_read
 //sys close(int fd) int = SYS_close
-//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// NOT lseek: syscall 62 is llseek on this 32-bit arch (see
+// numbers_riscv.h), a different call with a different shape. The raw
+// 5-arg form is generated here and syscall_linux_riscv.h adds the
+// lseek(fd, offset, whence) shim on top -- the same raw-plus-shim split
+// as _sysopen()/openat() below.
+//sys _sysllseek(int fd, ulong offhi, ulong offlo, vlong *result, int whence) int = SYS_llseek
 // no legacy SYS_open on this arch -- see syscall_linux_arm64.decl's
 // identical comment; syscall_linux_riscv.h adds the _sysopen() shim.
 //sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat

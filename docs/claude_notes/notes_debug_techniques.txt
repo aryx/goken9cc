@@ -383,6 +383,36 @@ invisible to any test whose syscalls all succeed. hello.c and io.c
 only ever make calls that work. dir.c deliberately requires a call to
 FAIL (open() after remove()), which is what finally exposed it.
 
+A throwaway probe that prints one suspect value across several inputs
+-------------------------------------------------------------------------
+
+When a value is wrong but you cannot tell WHERE it went wrong, a
+ten-line program that prints just that value for a handful of chosen
+inputs often identifies the exact defect from the PATTERN of wrongness,
+with no debugger and no disassembly.
+
+Concretely, while chasing a Plan9 seek() that returned the wrong
+offset: rather than instrument libc, a scratch main() did
+
+  off = seek(fd, 6, 0);   print("seek(6,0) -> %lld\n", off);
+  off = seek(fd, 0, 0);   print("seek(0,0) -> %lld\n", off);
+  off = seek(fd, 3, 1);   print("seek(3,CUR) -> %lld\n", off);
+
+and printed 0, 0, and 4294967296. That last value is exactly 1<<32 --
+the whence argument (1) appearing in the HIGH word of the returned
+64-bit offset. A single number named the bug: something was reading the
+vlong one 4-byte stack slot too high, picking up
+(whence<<32)|offset_high. Confirmed in one grep of the emulator's
+sysseek() (+16 where the kernel uses +12).
+
+The technique generalizes: choose inputs that are DISTINCT SMALL
+POWERS or otherwise mutually distinguishable, never all-zero or
+all-equal. Zero is the worst possible probe value for an offset, index,
+or flag word, because it survives being truncated, mis-slotted, or
+dropped entirely -- which is precisely why the bug had hidden behind
+seek(fd, 0, 0) for so long. Picking 6 and 3/SEEK_CUR made the
+misplacement arithmetic legible at a glance.
+
 gdb refusing to load this project's own linker output at all
 -------------------------------------------------------------------
 

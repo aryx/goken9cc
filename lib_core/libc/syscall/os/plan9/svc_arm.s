@@ -95,27 +95,40 @@ TEXT pwrite(SB), $0
 // pointer this compiler passes as the function's own first argument
 // (same register-spill dance as every other stub above, since as far
 // as the calling convention is concerned that hidden pointer just IS
-// this function's first argument) -- the kernel's real sysseek()
-// (principia's kernel/files/sysfile.c) plainly `return 0`s on success
-// and only ever produces -1 via Plan9's general error-note convention
-// (any syscall that calls error() gets its return register forced to
-// -1, regardless of which specific error), so write-back happens
-// whenever the raw result is NOT -1. principia's own generator script
-// (9syscall/mkfile) writes back on the *opposite* condition (R0==-1) --
-// concluded to be its own latent, seemingly-never-exercised bug (see
-// docs/claude_notes/notes_abi_plan9.txt's own "only PWRITE/EXITS ever
-// exercised" caveat, which covers principia's generator too, not just
-// goken); this version was written the way sysseek()'s own C source
-// reads, then verified against a real seek() call under 5i, not
-// assumed either way -- see that same notes file for the verification
-// record.
+// this function's first argument).
+//
+// THE KERNEL ITSELF FILLS THAT POINTER IN on success -- principia's
+// kernel/files/sysfile.c sysseek() validates arg[0], calls sseek(arg)
+// (which writes the resulting 8-byte offset through it), and then
+// plainly `return 0`s, so the return REGISTER carries no offset at all.
+// machines/5i/syscall_posix.c's sysseek() models exactly this, ending
+// in putmem_v(retp, v). What the register does carry is Plan9's general
+// error-note convention: any syscall that calls error() gets its return
+// register forced to -1, regardless of which specific error.
+//
+// So the write-back below must happen ONLY on error, to turn that -1
+// into a -1-valued vlong the C caller can see; on success it must leave
+// the kernel's own write alone. That is exactly what principia's
+// generator (9syscall/mkfile) emits -- "CMP $-1,R0; BNE 4(PC)" --
+// i.e. skip the write-back unless R0 == -1.
+//
+// claude: this stub previously had the condition INVERTED (BEQ, writing
+// back whenever the result was not -1), on the mistaken reading that
+// the kernel returned the offset in the register and that principia's
+// generator was the buggy one. It is the other way round. The effect
+// was that every successful seek() overwrote the kernel's correct
+// 8-byte result with whatever the return register happened to hold
+// (under 5i, the stale syscall number), so seek() returned garbage --
+// invisible until tests/c/hello_libc/io.c started CHECKING seek's
+// return value rather than only its side effect. See
+// notes_abi_plan9.txt.
 TEXT seek(SB), $0
 	MOVW	R0, 0(FP)
 	MOVW	$SEEK, R0
 	SWI	$0
 	MOVW	$-1, R2
 	CMP	R2, R0
-	BEQ	seekdone
+	BNE	seekdone
 	MOVW	0(FP), R1
 	MOVW	R0, 0(R1)
 	MOVW	R0, 4(R1)

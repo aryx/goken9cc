@@ -170,18 +170,51 @@ lib_core/libc/mkfile. seek's own raw stub is the one genuinely tricky
 one: a vlong return doesn't fit one register, so the compiler passes a
 hidden result-pointer as the function's own first argument (same
 register-spill dance as every other stub), and the raw syscall itself
-returns a small 0-or-(-1) status -- principia's own generator writes
-the result back on the *opposite* condition from what its own kernel
-source (sysseek() in kernel/files/sysfile.c, `return 0` on success,
--1 uniformly via Plan9's general error-note convention) implies;
-concluded to be principia's own latent, apparently-never-exercised bug
-and NOT copied -- this version writes back whenever the raw result is
-NOT -1, matching the kernel source's plain reading. port/seek.c's
-portable lseek()-renaming shim is `#ifndef plan9`-guarded out (new
-`-D$GOOS` CFLAGS, alongside the existing `-D$cputype`) since Plan9's
-own seek(2) is already named/shaped exactly like the public seek() --
-linking the shim in too would fail to resolve `lseek` (plan9 has no
-such symbol) or silently conflict with the real one.
+returns a small 0-or-(-1) status.
+
+CORRECTION (July 2026). This file previously recorded the opposite of
+the truth here, and the code matched it, so read this carefully before
+touching seek's stub again. The claim was that principia's generator
+wrote the result back on the wrong condition and that goken should
+write back whenever the raw result is NOT -1. That is backwards. THE
+KERNEL ITSELF WRITES THE 8-BYTE RESULT through the hidden pointer:
+principia's kernel/files/sysfile.c sysseek() validates arg[0], calls
+sseek(arg) -- which reads the offset from arg[2]/arg[3] and stores the
+new position through arg[0] -- and only then `return 0`s. The return
+register therefore never carries an offset at all; it carries 0, or -1
+via Plan9's general error-note convention. So the stub must write back
+ONLY on error, to turn that -1 into a -1-valued vlong the caller can
+see, and must leave the kernel's own write untouched on success --
+exactly what principia's generator emits ("CMP $-1,R0; BNE 4(PC)").
+principia was right; goken's inversion silently overwrote every
+successful seek's correct result with whatever the return register held
+(under 5i, the stale syscall number). Both svc_arm.s and svc_mips.s are
+now fixed to match principia.
+
+Second bug, in 5i rather than in libc, found in the same pass:
+machines/5i/syscall_posix.c's sysseek() read the offset with
+getmem_v(REGSP+16) when the kernel's own sseek() reads arg[2]/arg[3],
+i.e. SP+12 -- confirmed against 5c's actual output for seek(fd, 6, 0),
+which emits "MOVW R3,12(R13)" and "MOVW R4,16(R13)" for the two halves
+and whence at 20(R13). Reading from +16 picked up
+(whence<<32)|offset_high instead, so seek(fd, 6, 0) silently went to 0
+and seek(fd, 3, SEEK_CUR) to 1<<32. machines/vi/syscall.c already had
++12, which is what settled it; principia's own machine/5i/syscall.c
+still carries +16, a real divergence from its own kernel and NOT
+something to sync back.
+
+Both were invisible for the same reason: every seek in this tree was
+seek(fd, 0, 0), where all the misread slots are zero anyway and nothing
+inspected the return value. tests/c/hello_libc/io.c now seeks to a
+nonzero offset and checks what seek() returns.
+
+port/seek.c's portable lseek()-renaming shim must not be linked for
+this GOOS, since Plan9's own seek(2) is already named/shaped exactly
+like the public seek() -- doing so would fail to resolve `lseek` (plan9
+has no such symbol) or silently conflict with the real one. That
+exclusion was originally a `#ifndef plan9` inside the file; it now
+lives in lib_core/libc/mkfile's PORTPOSIXOFILES instead, to keep port/
+free of GOOS branching (see CLAUDE.md).
 
 A genuine, previously-undiscovered bug in 5i itself, found while
 verifying the above: machines/5i/run.c's Ib()/Ibl() (the B/BL
