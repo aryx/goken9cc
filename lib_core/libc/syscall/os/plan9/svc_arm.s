@@ -78,6 +78,22 @@ TEXT chdir(SB), $0
 	SWI	$0
 	RET
 
+// dup(oldfd, newfd) -- the real kernel call, already exactly the shape
+// include/os/file.h declares, newfd == -1 ("lowest free fd") included.
+// On every other GOOS this needs port/dup.c to pick between POSIX's
+// dup() and dup2(); here the one syscall covers both cases itself (see
+// principia's kernel/files/sysfile.c sysdup, whose `if(fd != -1)`
+// branch is where that split comes from in the first place).
+//
+// access() is the mirror image and is NOT here: it is a real syscall on
+// every other GOOS, but on Plan9 it is a libc function built out of
+// open()/stat() -- see os/plan9/access.c.
+TEXT dup(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$DUP, R0
+	SWI	$0
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R0, 0(FP)
 	MOVW	$PREAD, R0

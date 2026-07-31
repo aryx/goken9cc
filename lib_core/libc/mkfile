@@ -144,23 +144,24 @@ PORTOFILES=\
 # instead of branching in the source; cf. os/$GOOS/ and arch/$cputype/
 # right below, which exist for exactly this reason).
 #
-# Both bridge a Plan9 API call onto POSIX syscalls that don't match it
-# 1:1 -- seek() onto lseek(), and remove() onto unlink()-or-rmdir()
-# (Plan9's removes a directory too; POSIX's unlink refuses one). Neither
-# bridge is wanted where the Plan9 shape IS the native one: plan9's
-# kernel provides seek(2)/remove(2) under exactly these names and
+# Each bridges a Plan9 API call onto POSIX syscalls that don't match it
+# 1:1 -- seek() onto lseek(), remove() onto unlink()-or-rmdir() (Plan9's
+# removes a directory too; POSIX's unlink refuses one), and dup(old,new)
+# onto dup()-or-dup2() (Plan9 passes newfd == -1 to mean "lowest free").
+# None of them is wanted where the Plan9 shape IS the native one: plan9's
+# kernel provides seek(2)/remove(2)/dup(2) under exactly these names and
 # semantics (syscall/os/plan9/svc_$cputype.s), and windows has no
-# raw-syscall layer at all, so os/windows/open.c defines both itself on
-# top of kernel32. Compiling them there would fail to resolve the POSIX
-# primitives (which those GOOSes have no symbol for) or collide with the
-# real definitions.
+# raw-syscall layer at all, so os/windows/open.c defines what it can
+# itself on top of kernel32. Compiling them there would fail to resolve
+# the POSIX primitives (which those GOOSes have no symbol for) or collide
+# with the real definitions.
 #
 # mk evaluates this backquote when the mkfile is read, and a
 # command-line 'GOOS=plan9' has already overridden the default above by
 # then -- so callers need no override of their own, unlike
 # SYSCALLOFILES=/OSEXTRAFILES= below, which windows must still pass
 # explicitly.
-PORTPOSIXOFILES=`{if(~ $GOOS plan9 windows) echo -n; if not echo port/seek.$O port/remove.$O}
+PORTPOSIXOFILES=`{if(~ $GOOS plan9 windows) echo -n; if not echo port/seek.$O port/remove.$O port/dup.$O}
 
 # UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
 # Plan9-native equivalent at all, unlike strdup/seek/etc above, which
@@ -181,8 +182,18 @@ SYSCALLOFILES=\
 # arch/, os/ split mirroring syscall/'s). Arch-independent (unlike
 # SYSCALLOFILES, which is per-cputype): open.c calls the same _sysopen()
 # name regardless of which raw syscall backs it on a given arch.
+# claude: per-GOOS glue beyond open.$O, selected here for the same
+# reason PORTPOSIXOFILES is (choose files, don't #ifdef inside them).
+# Only plan9 needs any so far, and for the mirror-image reason to
+# PORTPOSIXOFILES's: access() is a real syscall on every other GOOS but
+# an ordinary libc function on Plan9, which has no access(2) at all.
+# Distinct from $OSEXTRAFILES below, which is set by the CALLER for
+# cases the mkfile cannot know about (windows' per-arch kernel32 stubs).
+OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O; if not echo -n}
+
 OSFILES=\
 	os/$GOOS/open.$O\
+	$OSGOOSOFILES\
 	$OSEXTRAFILES\
 
 # $OSEXTRAFILES: same "leave unset, not assigned empty" convention as

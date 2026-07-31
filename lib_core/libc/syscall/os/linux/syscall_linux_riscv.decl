@@ -21,8 +21,16 @@
 // ABI, so _sysunlink/_sysrmdir/_sysmkdir are shims over these two in
 // syscall_linux_riscv.h, while chdir needs nothing. All three numbers
 // are "common" in scripts/syscall.tbl, i.e. genuinely shared with rv64,
-// unlike lseek above (see numbers_riscv.h and todo.org).
+// unlike syscall 62 above (llseek here, lseek on rv64 -- see
+// numbers_riscv.h).
 //sys unlinkat(int dirfd, char *path, int flags) int = SYS_unlinkat
 //sys mkdirat(int dirfd, char *path, int mode) int = SYS_mkdirat
+// access/dup: this ABI kept dup but replaced dup2 with dup3 and access
+// with faccessat, so syscall_linux_arm64.h shims access() and
+// _sysdup2() over them -- see syscall_linux_386.decl for why Plan9's
+// dup(oldfd, newfd) needs both dup forms in the first place.
+//sys faccessat(int dirfd, char *path, int mode, int flags) int = SYS_faccessat
+//sys _sysdup(int fd) int = SYS_dup
+//sys dup3(int oldfd, int newfd, int flags) int = SYS_dup3
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

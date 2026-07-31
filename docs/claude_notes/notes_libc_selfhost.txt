@@ -983,6 +983,52 @@ type is vlong on amd64/arm64/riscv64 and long elsewhere), which are a
 different problem -- they would need per-arch files, not per-GOOS ones,
 to remove. Worth revisiting if that file grows.
 
+access and dup: Tier 2 finished, and two more shapes
+------------------------------------------------------------------------
+
+These two complete plan_syscalls.txt's Tier 2, and between them they
+add the two remaining ways a Plan9 call can fail to line up with a
+POSIX one -- neither of which create/remove/chdir had shown:
+
+- access() runs the OTHER way round from everything else here. Its
+  Plan9 mode bits (AEXIST/AEXEC/AWRITE/AREAD = 0/1/2/4) are
+  numerically identical to POSIX's F_OK/X_OK/W_OK/R_OK, so on Linux and
+  Darwin it is a bare generated wrapper with no glue at all -- but
+  PLAN9 ITSELF has no access(2) syscall. It is an ordinary libc
+  function there, built over open(). So os/plan9/ gained its first real
+  file (access.c, ported from principia's 9sys/access.c, omode[] table
+  and "only approximate" caveats included), and the mkfile gained
+  OSGOOSOFILES to select it -- the mirror image of PORTPOSIXOFILES,
+  and the same file-selection-not-#ifdef habit.
+
+  One deliberate gap: principia special-cases AEXIST via dirstat(),
+  because "exists" and "can be opened for reading" are different
+  questions. dirstat needs stat(2) (Tier 3), so AEXIST currently falls
+  through to open(OREAD). Restoring that branch is the whole fix once
+  stat lands.
+
+- dup() is one Plan9 syscall covering what POSIX splits in two:
+  newfd == -1 means "lowest free descriptor" (POSIX dup), anything else
+  is dup2. Confirmed against principia's sysdup(), whose `if(fd != -1)`
+  branch is exactly that split. So port/dup.c picks between
+  _sysdup()/_sysdup2(), and on arm64/riscv/riscv64 -- which kept dup
+  but dropped dup2 -- _sysdup2 is a dup3(old,new,0) shim. Worth
+  knowing: dup3 is NOT a drop-in dup2, since dup3(fd,fd,0) fails EINVAL
+  where dup2(fd,fd) returns fd.
+
+Numbers: access 33 on 386/arm (4033 mips), 21 on amd64, 33 on Darwin;
+dup 41/4041/32/41; dup2 63/4063/33/90. The generic ABI has dup=23,
+dup3=24, faccessat=48.
+
+windows gets access() (GetFileAttributesA, approximate -- existence and
+the read-only bit only, since Win32 permissions are ACLs) but NOT
+dup(), which cannot be honest until fd numbers stop being truncated
+HANDLEs: dup(old, newfd) has to place a descriptor at a caller-chosen
+number, which that model cannot express. Filed in todo.org.
+tests/c/hello_libc/fd.c is therefore built for every GOOS except
+windows -- easy because test_windows lists its binaries explicitly
+rather than building `all`.
+
 The mips o32 error convention: a real bug the new test found
 ------------------------------------------------------------------------
 

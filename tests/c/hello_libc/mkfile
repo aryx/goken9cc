@@ -11,19 +11,20 @@ TOP=../../..
 # three share this one hello.c; only the libc.a underneath and the
 # link/run step differ (see lib_core/libc/mkfile's own GOOS story).
 
-all:V: hello.exe io.exe dir.exe
+all:V: hello.exe io.exe dir.exe fd.exe
 # claude: dir_tmp.txt and the dir_tmp_d/ directory are created by dir.c
 # and removed by it again, so they are only ever left behind if that
 # test died in between -- cleaned up here rather than left to confuse
 # the next run.
 clean:V:
-	rm -f *.[5678ijv] *.exe hello_macos_arm64.exe hello_macos_amd64.exe io_macos_arm64.exe io_macos_amd64.exe dir_macos_arm64.exe dir_macos_amd64.exe dir_tmp.txt
+	rm -f *.[5678ijv] *.exe hello_macos_arm64.exe hello_macos_amd64.exe io_macos_arm64.exe io_macos_amd64.exe dir_macos_arm64.exe dir_macos_amd64.exe fd_macos_arm64.exe fd_macos_amd64.exe dir_tmp.txt
 	rm -rf dir_tmp_d
 test_one:V:
 	mk 'objtype='$cputype all
 	$TOP/scripts/qemu-runner $cputype ./hello.exe | cmp /dev/stdin expected.txt
 	$TOP/scripts/qemu-runner $cputype ./io.exe | cmp /dev/stdin io_expected.txt
 	$TOP/scripts/qemu-runner $cputype ./dir.exe | cmp /dev/stdin dir_expected.txt
+	$TOP/scripts/qemu-runner $cputype ./fd.exe | cmp /dev/stdin fd_expected.txt
 
 # unlike tests/c/mini2's own ARCHS loop (a self-contained per-test stub,
 # no external library), each arch here also needs lib_core/libc's real
@@ -45,6 +46,7 @@ test:V:
 		$TOP/scripts/qemu-runner $arch ./hello.exe | cmp /dev/stdin expected.txt
 		$TOP/scripts/qemu-runner $arch ./io.exe | cmp /dev/stdin io_expected.txt
 		$TOP/scripts/qemu-runner $arch ./dir.exe | cmp /dev/stdin dir_expected.txt
+		$TOP/scripts/qemu-runner $arch ./fd.exe | cmp /dev/stdin fd_expected.txt
 	}
 	mk test_plan9
 
@@ -65,16 +67,18 @@ test:V:
 test_plan9:V:
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm' 'cputype=arm' 'GOOS=plan9' install }
-	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe
+	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe fd_plan9_arm.exe
 	printf ':c\n$q\n' | 5i ./hello_plan9_arm.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | 5i ./io_plan9_arm.exe | sed -n 2,4p | cmp /dev/stdin io_expected.txt
 	printf ':c\n$q\n' | 5i ./dir_plan9_arm.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
+	printf ':c\n$q\n' | 5i ./fd_plan9_arm.exe | sed -n 2,4p | cmp /dev/stdin fd_expected.txt
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=mips' 'cputype=mips' 'GOOS=plan9' install }
-	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe
+	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe fd_plan9_mips.exe
 	printf ':c\n$q\n' | vi ./hello_plan9_mips.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | vi ./io_plan9_mips.exe | sed -n 2,4p | cmp /dev/stdin io_expected.txt
 	printf ':c\n$q\n' | vi ./dir_plan9_mips.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
+	printf ':c\n$q\n' | vi ./fd_plan9_mips.exe | sed -n 2,4p | cmp /dev/stdin fd_expected.txt
 
 # -H7 (ELF) is explicit, not left to 6l/7l/8l's own default: those
 # three (unlike vl/il/jl, which always default to ELF regardless of
@@ -106,6 +110,13 @@ io.exe: io.c
 dir.exe: dir.c
 	$CC $CFLAGS -D$objtype -c dir.c
 	$LD $LDFLAGS -H7 -o $target -E _main dir.$O -lc
+
+# claude: fd.c: access/dup. NOT built for windows -- see fd.c's own
+# comment and os/windows/open.c's access() for why dup() cannot be
+# implemented there yet.
+fd.exe: fd.c
+	$CC $CFLAGS -D$objtype -c fd.c
+	$LD $LDFLAGS -H7 -o $target -E _main fd.$O -lc
 
 # claude: Plan9 (GOOS=plan9)/arm+mips, run under 5i/vi -- see the
 # test:V: rule's own comment above for why 5c/5l/vc/vl are invoked
@@ -142,6 +153,14 @@ dir_plan9_mips.exe: dir.c
 	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o dir_plan9_mips.v -c dir.c
 	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main dir_plan9_mips.v -lc
 
+fd_plan9_arm.exe: fd.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o fd_plan9_arm.5 -c fd.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main fd_plan9_arm.5 -lc
+
+fd_plan9_mips.exe: fd.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o fd_plan9_mips.v -c fd.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main fd_plan9_mips.v -lc
+
 # macOS-native (no qemu -- Mach-O only runs on real macOS, see
 # tests/s/mini/mkfile's test_macos_arm64 for the same pattern): first
 # rebuild+reinstall the darwin/arm64 libc.a lib_core/libc/mkfile
@@ -165,10 +184,11 @@ dir_plan9_mips.exe: dir.c
 # stale bits. See docs/claude_notes/notes_libc_selfhost.txt.
 test_macos_arm64:V:
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm64' 'cputype=arm64' 'GOOS=darwin' install }
-	mk -a 'objtype=arm64' hello_macos_arm64.exe io_macos_arm64.exe dir_macos_arm64.exe
+	mk -a 'objtype=arm64' hello_macos_arm64.exe io_macos_arm64.exe dir_macos_arm64.exe fd_macos_arm64.exe
 	./hello_macos_arm64.exe | cmp /dev/stdin expected.txt
 	./io_macos_arm64.exe | cmp /dev/stdin io_expected.txt
 	./dir_macos_arm64.exe | cmp /dev/stdin dir_expected.txt
+	./fd_macos_arm64.exe | cmp /dev/stdin fd_expected.txt
 
 hello_macos_arm64.exe: hello.c
 	$CC $CFLAGS -Darm64 -c hello.c
@@ -183,6 +203,11 @@ io_macos_arm64.exe: io.c
 dir_macos_arm64.exe: dir.c
 	$CC $CFLAGS -Darm64 -c dir.c
 	$LD $LDFLAGS -H6 -o $target -E _main dir.7 -lc
+	$TOP/scripts/macos-codesign $target
+
+fd_macos_arm64.exe: fd.c
+	$CC $CFLAGS -Darm64 -c fd.c
+	$LD $LDFLAGS -H6 -o $target -E _main fd.7 -lc
 	$TOP/scripts/macos-codesign $target
 
 # macOS/amd64: same story as arm64 above, plus one extra wrinkle 6c
@@ -220,10 +245,11 @@ dir_macos_arm64.exe: dir.c
 # translation) as well as real Intel Macs.
 test_macos_amd64:V:
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=darwin' 'CFLAGS_EXTRA=-z' 'RT0OFILE=arch/amd64/rt0_darwin.6' install }
-	mk -a 'objtype=amd64' hello_macos_amd64.exe io_macos_amd64.exe dir_macos_amd64.exe
+	mk -a 'objtype=amd64' hello_macos_amd64.exe io_macos_amd64.exe dir_macos_amd64.exe fd_macos_amd64.exe
 	./hello_macos_amd64.exe | cmp /dev/stdin expected.txt
 	./io_macos_amd64.exe | cmp /dev/stdin io_expected.txt
 	./dir_macos_amd64.exe | cmp /dev/stdin dir_expected.txt
+	./fd_macos_amd64.exe | cmp /dev/stdin fd_expected.txt
 
 io_macos_amd64.exe: io.c
 	$CC $CFLAGS -z -Damd64 -c io.c
@@ -233,6 +259,11 @@ io_macos_amd64.exe: io.c
 dir_macos_amd64.exe: dir.c
 	$CC $CFLAGS -z -Damd64 -c dir.c
 	$LD $LDFLAGS -s -H6 -o $target -E _main dir.6 -lc
+	$TOP/scripts/macos-codesign $target
+
+fd_macos_amd64.exe: fd.c
+	$CC $CFLAGS -z -Damd64 -c fd.c
+	$LD $LDFLAGS -s -H6 -o $target -E _main fd.6 -lc
 	$TOP/scripts/macos-codesign $target
 
 hello_macos_amd64.exe: hello.c

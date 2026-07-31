@@ -39,6 +39,21 @@ int mkdirat(int dirfd, char* path, int mode)
 	return (int)_syscall6(SYS_mkdirat, (vlong)dirfd, (vlong)path, (vlong)mode, 0, 0, 0);
 }
 
+int faccessat(int dirfd, char* path, int mode, int flags)
+{
+	return (int)_syscall6(SYS_faccessat, (vlong)dirfd, (vlong)path, (vlong)mode, (vlong)flags, 0, 0);
+}
+
+int _sysdup(int fd)
+{
+	return (int)_syscall6(SYS_dup, (vlong)fd, 0, 0, 0, 0, 0);
+}
+
+int dup3(int oldfd, int newfd, int flags)
+{
+	return (int)_syscall6(SYS_dup3, (vlong)oldfd, (vlong)newfd, (vlong)flags, 0, 0, 0);
+}
+
 int chdir(char* path)
 {
 	return (int)_syscall6(SYS_chdir, (vlong)path, 0, 0, 0, 0, 0);

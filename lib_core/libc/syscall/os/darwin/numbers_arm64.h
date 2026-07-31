@@ -31,3 +31,11 @@
 /* claude: mkdir/rmdir -- see numbers_amd64.h's comment. */
 #define SYS_mkdir	136
 #define SYS_rmdir	137
+/* claude: access/dup/dup2 -- confirmed against
+ * GO/pkg/syscall/zsysnum_darwin_amd64.go (SYS_ACCESS = 33, SYS_DUP = 41,
+ * SYS_DUP2 = 90). access and dup kept their classic BSD numbers, dup2
+ * did not. See numbers_386.h for why dup needs both forms.
+ */
+#define SYS_access	33
+#define SYS_dup	41
+#define SYS_dup2	90

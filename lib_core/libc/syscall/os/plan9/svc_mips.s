@@ -62,6 +62,15 @@ TEXT chdir(SB), $0
 	SYSCALL
 	RET
 
+// dup(oldfd, newfd) -- see svc_arm.s's comment: one kernel call covers
+// what POSIX splits into dup/dup2, and access() deliberately lives in
+// os/plan9/access.c instead, being a libc function on this GOOS.
+TEXT dup(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$DUP, R1
+	SYSCALL
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R1, 0(FP)
 	MOVW	$PREAD, R1

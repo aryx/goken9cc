@@ -50,6 +50,7 @@ extern long	_windelete(char *path);
 extern long	_winchdir(char *path);
 extern long	_winmkdir(char *path);
 extern long	_winrmdir(char *path);
+extern ulong	_winattrs(char *path);
 extern long	_winread(void *handle, void *buf, long n);
 extern long	_winwrite(void *handle, void *buf, long n);
 extern long	_winclose(void *handle);
@@ -155,6 +156,38 @@ int
 chdir(char *path)
 {
 	return _winchdir(path) ? 0 : -1;
+}
+
+/* claude: access(). Win32 has no access(2); GetFileAttributesA is the
+ * closest thing, and it answers only two of the four questions Plan9's
+ * mode bits ask: existence (INVALID_FILE_ATTRIBUTES means no) and
+ * writability (FILE_ATTRIBUTE_READONLY). AREAD and AEXEC are treated as
+ * satisfied by existence, which is what a real ACL check would have to
+ * replace -- Win32 permissions are not mode bits and cannot be probed
+ * this cheaply. Documented as approximate rather than silently wrong.
+ * Unverified on a real Windows host.
+ *
+ * Note dup() is deliberately absent from this file, unlike every other
+ * call in this group -- see todo.org: it cannot be implemented honestly
+ * until fd numbers stop being truncated HANDLEs (this file's header
+ * comment), since dup(old, newfd) has to place a descriptor at a
+ * CALLER-CHOSEN number, which a HANDLE-as-fd model cannot express at
+ * all. tests/c/hello_libc/fd.c is therefore not built for windows.
+ */
+#define INVALID_FILE_ATTRIBUTES		0xffffffff
+#define FILE_ATTRIBUTE_READONLY		0x1
+
+int
+access(char *path, int mode)
+{
+	ulong attrs;
+
+	attrs = _winattrs(path);
+	if (attrs == INVALID_FILE_ATTRIBUTES)
+		return -1;
+	if ((mode & AWRITE) && (attrs & FILE_ATTRIBUTE_READONLY))
+		return -1;
+	return 0;
 }
 
 long

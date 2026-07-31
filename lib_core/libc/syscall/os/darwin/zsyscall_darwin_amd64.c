@@ -44,6 +44,21 @@ int _sysmkdir(char* path, int mode)
 	return (int)_syscall6(SYS_mkdir, (vlong)path, (vlong)mode, 0, 0, 0, 0);
 }
 
+int access(char* path, int mode)
+{
+	return (int)_syscall6(SYS_access, (vlong)path, (vlong)mode, 0, 0, 0, 0);
+}
+
+int _sysdup(int fd)
+{
+	return (int)_syscall6(SYS_dup, (vlong)fd, 0, 0, 0, 0, 0);
+}
+
+int _sysdup2(int oldfd, int newfd)
+{
+	return (int)_syscall6(SYS_dup2, (vlong)oldfd, (vlong)newfd, 0, 0, 0, 0);
+}
+
 int chdir(char* path)
 {
 	return (int)_syscall6(SYS_chdir, (vlong)path, 0, 0, 0, 0, 0);

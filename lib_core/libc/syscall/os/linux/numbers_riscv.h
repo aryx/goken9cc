@@ -12,13 +12,22 @@
 // bridges the gap with AT_FDCWD.
 // claude: see numbers_arm64.h's identical comment -- no legacy unlink()
 // in this ABI, so remove() is a shim over unlinkat() in
-// syscall_linux_riscv.h. Unlike SYS_lseek two lines below (which is
-// really llseek on this 32-bit arch, see todo.org's own entry), both of
-// these are marked "common" in scripts/syscall.tbl, so rv32 and rv64
-// genuinely do share them.
+// syscall_linux_riscv.h. Unlike syscall 62 below (which is llseek, not
+// lseek, on this 32-bit arch -- see its own comment), both of these are
+// marked "common" in scripts/syscall.tbl, so rv32 and rv64 genuinely do
+// share them.
 // claude: mkdirat -- see numbers_arm64.h; rmdir is unlinkat+AT_REMOVEDIR.
+/* claude: dup survived into this ABI unchanged (it takes no path to
+ * generalize over), but dup2 did not -- dup3(old,new,0) replaces it,
+ * and access is faccessat. See syscall_linux_arm64.h for both shims,
+ * and numbers_386.h for why Plan9's dup(old,new) needs both forms.
+ * "23 common dup", "24 common dup3", "48 common faccessat".
+ */
+#define SYS_dup	23
+#define SYS_dup3	24
 #define SYS_mkdirat	34
 #define SYS_unlinkat	35
+#define SYS_faccessat	48
 #define SYS_chdir	49
 #define SYS_openat	56
 #define SYS_close	57

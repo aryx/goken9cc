@@ -77,3 +77,26 @@ int _sysmkdir(char *path, int mode)
 {
 	return mkdirat(AT_FDCWD, path, mode);
 }
+
+/* claude: access() and _sysdup2() over the forms this ABI actually
+ * kept. AT_EACCESS/AT_SYMLINK_NOFOLLOW are the only flags faccessat
+ * defines; 0 means "behave exactly like access(2)".
+ *
+ * dup3 is NOT a drop-in dup2: dup3(fd, fd, 0) fails with EINVAL where
+ * dup2(fd, fd) succeeds and returns fd. port/dup.c never issues that
+ * case (Plan9 code dup'ing a fd onto itself would be pointless), but
+ * it is the one behavioural difference to know about if this shim ever
+ * grows a caller that does.
+ */
+extern int faccessat(int dirfd, char *path, int mode, int flags);
+extern int dup3(int oldfd, int newfd, int flags);
+
+int access(char *path, int mode)
+{
+	return faccessat(AT_FDCWD, path, mode, 0);
+}
+
+int _sysdup2(int oldfd, int newfd)
+{
+	return dup3(oldfd, newfd, 0);
+}

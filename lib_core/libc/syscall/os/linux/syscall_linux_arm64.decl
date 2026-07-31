@@ -38,5 +38,12 @@
 // is free here: it is unlinkat() with AT_REMOVEDIR, no second number.
 //sys unlinkat(int dirfd, char *path, int flags) int = SYS_unlinkat
 //sys mkdirat(int dirfd, char *path, int mode) int = SYS_mkdirat
+// access/dup: this ABI kept dup but replaced dup2 with dup3 and access
+// with faccessat, so syscall_linux_arm64.h shims access() and
+// _sysdup2() over them -- see syscall_linux_386.decl for why Plan9's
+// dup(oldfd, newfd) needs both dup forms in the first place.
+//sys faccessat(int dirfd, char *path, int mode, int flags) int = SYS_faccessat
+//sys _sysdup(int fd) int = SYS_dup
+//sys dup3(int oldfd, int newfd, int flags) int = SYS_dup3
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

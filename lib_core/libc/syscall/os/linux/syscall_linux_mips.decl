@@ -22,5 +22,15 @@
 //sys _sysunlink(char *path) int = SYS_unlink
 //sys _sysrmdir(char *path) int = SYS_rmdir
 //sys _sysmkdir(char *path, int mode) int = SYS_mkdir
+// access: Plan9's mode bits (AEXIST/AEXEC/AWRITE/AREAD = 0/1/2/4,
+// include/os/file.h) are numerically identical to POSIX's
+// F_OK/X_OK/W_OK/R_OK, so like chdir this needs no translation and is
+// generated straight into its public name.
+//sys access(char *path, int mode) int = SYS_access
+// dup is _sys-prefixed because Plan9's dup(oldfd, newfd) is ONE call
+// covering what POSIX splits in two: newfd == -1 means "lowest free
+// fd" (POSIX dup), anything else is dup2. port/dup.c bridges them.
+//sys _sysdup(int fd) int = SYS_dup
+//sys _sysdup2(int oldfd, int newfd) int = SYS_dup2
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit

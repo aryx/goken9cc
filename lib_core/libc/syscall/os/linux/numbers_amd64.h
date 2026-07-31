@@ -30,3 +30,13 @@
  */
 #define SYS_mkdir	83
 #define SYS_rmdir	84
+/* claude: access/dup/dup2. Plan9's access() mode bits (AEXIST=0,
+ * AEXEC=1, AWRITE=2, AREAD=4 -- include/os/file.h) happen to equal
+ * POSIX's F_OK/X_OK/W_OK/R_OK exactly, so access needs no
+ * translation at all. Plan9's dup(old,new) needs BOTH of the other
+ * two: new==-1 means "lowest free fd" (plain dup), anything else is
+ * dup2. See port/dup.c. From syscall_64.tbl.
+ */
+#define SYS_access	21
+#define SYS_dup	32
+#define SYS_dup2	33

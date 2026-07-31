@@ -173,6 +173,20 @@ TEXT _winrmdir+0(SB), $0
 	MOVQ	DI, SP
 	RET
 
+// attrs = _winattrs(path) -- GetFileAttributesA(path), backing
+// access(). Returns INVALID_FILE_ATTRIBUTES (0xffffffff) if the path
+// does not exist; open.c tests for that and for FILE_ATTRIBUTE_READONLY.
+// Unverified on a real Windows host, see _wincreate.
+TEXT _winattrs+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	path+0(FP), CX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetFileAttributesA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET
+
 // n = _winread(handle, buf, len) -- ReadFile(handle, buf, len, &nread, NULL)
 TEXT _winread+0(SB), $0
 	MOVQ	SP, R15			// save caller's SP

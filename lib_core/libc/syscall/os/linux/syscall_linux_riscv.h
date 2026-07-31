@@ -73,3 +73,20 @@ int _sysmkdir(char *path, int mode)
 {
 	return mkdirat(AT_FDCWD, path, mode);
 }
+
+/* claude: access()/_sysdup2() over faccessat/dup3 -- see
+ * syscall_linux_arm64.h's fuller comment, including dup3's one
+ * behavioural difference from dup2.
+ */
+extern int faccessat(int dirfd, char *path, int mode, int flags);
+extern int dup3(int oldfd, int newfd, int flags);
+
+int access(char *path, int mode)
+{
+	return faccessat(AT_FDCWD, path, mode, 0);
+}
+
+int _sysdup2(int oldfd, int newfd)
+{
+	return dup3(oldfd, newfd, 0);
+}

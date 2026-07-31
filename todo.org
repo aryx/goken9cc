@@ -973,6 +973,36 @@ pass length each time, safer
 
 *** libsyscall
 
+**** gap: no dup() on windows (needs an fd -> HANDLE table first)
+claude:
+access/dup finished Tier 2 of docs/claude_notes/plan_syscalls.txt on
+every GOOS except this one, where dup() is deliberately absent rather
+than approximated. The blocker is the simplification
+lib_core/libc/os/windows/open.c's own header comment already documents:
+fdt is `int` but a real Win32 HANDLE is an 8-byte pointer, so open()
+truncates it and the other calls widen it back. That works only because
+CreateFileA happens to return small handle values.
+
+dup() is the first call that cannot live with it. Plan9's
+dup(oldfd, newfd) must place a descriptor at a number the CALLER
+chooses -- that is the whole point of the newfd argument, and what
+every shell redirection needs. A HANDLE-as-fd model has no way to
+express "make this copy be number 9": DuplicateHandle returns whatever
+handle the kernel picks, and nothing maps that back to 9.
+
+So the fix is the fd table that open.c already names as the real
+solution: a small array mapping int fds to HANDLEs, with open/create
+allocating the lowest free slot, close freeing it, and read/write/seek
+indirecting through it. dup then becomes trivial (copy the slot, or
+DuplicateHandle into a chosen slot). Until then
+tests/c/hello_libc/fd.c is not built for windows -- see that file's
+comment and this mkfile's test_windows target, which lists its
+binaries explicitly rather than using `all`.
+
+access() IS implemented for windows (GetFileAttributesA), but only
+approximately: it can answer existence and the read-only bit, not AREAD
+or AEXEC, since Win32 permissions are ACLs rather than mode bits.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

@@ -83,6 +83,8 @@ static struct importfunc {
 	// unlink/rmdir, while Plan9's remove() covers both.
 	{ "CreateDirectoryA", 0 },
 	{ "RemoveDirectoryA", 0 },
+	// claude: and this one for access().
+	{ "GetFileAttributesA", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];
