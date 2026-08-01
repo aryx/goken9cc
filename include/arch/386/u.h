@@ -4,14 +4,14 @@
  * TODO: jmp_buf! Rune? mpdigit/FCR-FSR?
  */
 
-typedef signed char s8int;
-typedef unsigned char u8int;
-typedef signed short s16int;
-typedef unsigned short u16int;
-typedef signed int s32int;
-typedef unsigned int u32int;
-typedef signed long long s64int;
-typedef unsigned long long u64int;
+typedef signed char s8;
+typedef unsigned char u8;
+typedef signed short s16;
+typedef unsigned short u16;
+typedef signed int s32;
+typedef unsigned int u32;
+typedef signed long long s64;
+typedef unsigned long long u64;
 
 typedef float float32;
 typedef double float64;
