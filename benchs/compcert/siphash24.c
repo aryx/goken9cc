@@ -15,9 +15,11 @@
 
 #include <stdio.h>
 #include <string.h>
-typedef unsigned long long u64;
-typedef unsigned long u32;
-typedef unsigned char u8;
+
+//pad: in u.h included from APE/stdio.h now
+//typedef unsigned long long u64;
+//typedef unsigned long u32;
+//typedef unsigned char u8;
 
 #define ROTL(x,b) (u64)( ((x) << (b)) | ( (x) >> (64 - (b))) )
 
