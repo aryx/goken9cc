@@ -25,8 +25,8 @@ typedef long intptr;
 union FPdbleword {
 	double x;
 	struct {	/* little endian */
-		u32int lo;
-		u32int hi;
+		u32 lo;
+		u32 hi;
 	};
 };
 typedef union FPdbleword FPdbleword;
