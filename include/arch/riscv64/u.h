@@ -48,8 +48,8 @@ typedef long long intptr;
 union FPdbleword {
 	double x;
 	struct {	/* little endian */
-		ulong lo;
-		ulong hi;
+		unsigned long lo;
+		unsigned long hi;
 	};
 };
 typedef union FPdbleword FPdbleword;
