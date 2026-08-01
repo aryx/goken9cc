@@ -1,4 +1,8 @@
 
+/*
+ * string routines (provided by system <string.h>)
+ */
+
 // memxxx equivalent, but with special handling for '\0' (no need pass ulong)
 
 extern  long    strlen(char*);

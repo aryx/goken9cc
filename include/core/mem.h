@@ -1,4 +1,8 @@
 
+/*
+ * mem routines (provided by C stdlib <string.h>)
+ */
+
 extern  void*   memset(void*, int, ulong);
 extern  void*   memcpy(void*, void*, ulong);
 extern  void*   memmove(void*, void*, ulong);

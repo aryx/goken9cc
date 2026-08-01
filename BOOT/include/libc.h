@@ -497,11 +497,13 @@ struct Tm
 	int	sec;
 	int	min;
 	int	hour;
+
 	int	mday;
 	int	mon;
 	int	year;
 	int	wday;
 	int	yday;
+
 	char	zone[4];
 	int	tzoff;
 } Tm;

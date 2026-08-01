@@ -15,3 +15,8 @@ extern	int	notify(void(*)(void*, char*));
 
 extern  int     postnote(int, int, char *);
 extern  int     atnotify(int(*)(void*, char*), int);
+
+//extern	int	noteenable(char*);
+//extern	int	notedisable(char*);
+//extern	int	notifyon(char*);
+//extern	int	notifyoff(char*);

@@ -12,5 +12,4 @@ extern  int     rwakeup(Rendez*);
 extern  int     rwakeupall(Rendez*);
 
 
-
 extern	void*	rendezvous(void*, void*);

@@ -1,4 +1,22 @@
 
+// Plan 9 specific
+// exits() is the libc exit that performs some cleanup (and handle atexit)
+// while _exits() is the syscall that is more abrupt
+extern	void	_exits(char*);
+extern  void    exits(char*);
+
+// in <stdlib.h>, with _exit() in <unistd.h>
+// plain POSIX-style exit(int), alongside Plan9's own exits(char*)/_exits(char*)
+extern	void	exit(int);
+
+extern  int     atexit(void(*)(void));
+
+// Plan 9 specific
+extern	int	rfork(int);
+// in <unistd.h>
+extern	int	fork(void);
+
+// alt: Plan 9 specific, no wait message in Unix, move under os/plan9/wait.h?
 /* keep /sys/src/ape/lib/ap/plan9/sys9.h in sync with this -rsc */
 typedef struct Waitmsg Waitmsg;
 struct Waitmsg {
@@ -8,24 +26,20 @@ struct Waitmsg {
  char	*msg;
 };
 
-extern	void	_exits(char*);
+extern	Waitmsg* wait(void);
+//extern	Waitmsg*	waitfor(pidt);
+//extern	Waitmsg*	waitnohang(void);
 
-// plain POSIX-style exit(int), alongside Plan9's own exits(char*)/_exits(char*)
-// convention above -- matches the convention every existing goken test
-// (tests/c/mini2/*.s etc.) already uses, as its own direct syscall wrapper.
-extern	void	exit(int);
-
-extern	int	rfork(int);
-extern	int	exec(char*, char*[]);
 extern	int	await(char*, int);
+//extern	int	awaitfor(int, char*, int);
+//extern	int	awaitnohang(char*, int);
 
-extern  void    exits(char*);
-extern  int     atexit(void(*)(void));
+extern	int	exec(char*, char*[]);
 
-extern	int	fork(void);
 extern	int	execl(char*, ...);
-extern	Waitmsg*wait(void);
+
 extern	int	waitpid(void);
 
+// in <unistd.h>
 extern	int	getpid(void);
 extern	int	getppid(void);

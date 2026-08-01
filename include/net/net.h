@@ -1,6 +1,7 @@
 
 #define NETPATHLEN 40
 
+// alt: Plan 9 specific, could move in os/plan9/
 extern  int     dial(char*, char*, char*, int*);
 extern  int     accept(int, char*);
 extern  int     announce(char*, char*);

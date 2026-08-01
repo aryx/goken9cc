@@ -1,19 +1,6 @@
 /* arm64 base types for goken's own toolchain (7c/7a/7l).
- *
- * Freestanding: no Unix/host headers (lib_core/ code may only depend on
- * headers under include/, never on the host's libc -- that's lib9/'s job).
  */
 
-#define nil ((void*)0)
-
-typedef signed char schar;
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned int uint;
-typedef unsigned long ulong;
-
-typedef long long vlong;
-typedef unsigned long long uvlong;
 
 typedef signed char s8int;
 typedef unsigned char u8int;
@@ -53,8 +40,6 @@ enum {
 };
 #define __bool_true_false_are_defined 1
 #endif
-
-typedef uint8 byte;
 
 // bit-level double access for port/frexp.c (frexp/ldexp/modf), adapted
 // from principia's include/arch/{arm,386}/u.h (same little-endian

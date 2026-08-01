@@ -1,6 +1,7 @@
 
 #define	STATMAX	65535U	/* max length of machine-independent stat structure */
 
+// plan9 specific
 extern	int	fstat(int, uchar*, int);
 extern	int	stat(char*, uchar*, int);
 extern	int	fwstat(int, uchar*, int);

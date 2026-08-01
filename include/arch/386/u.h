@@ -1,24 +1,8 @@
 /* 386 base types for goken's own toolchain (8c/8a/8l).
  *
- * Freestanding: no Unix/host headers (lib_core/ code may only depend on
- * headers under include/, never on the host's libc -- that's lib9/'s job).
- *
- * Typedefs and va_list adapted from ~/principia/include/arch/386/u.h
- * (a known-working reference for this exact arch) -- trimmed to what
- * lib_core/libc actually uses so far (no Rune/jmp_buf/mpdigit/FCR-FSR
- * flags yet, matching the same policy as arm64's/mips's/riscv's u.h).
+ * Typedefs and va_list adapted from Principia's include/arch/386/u.h
+ * TODO: jmp_buf! Rune? mpdigit/FCR-FSR?
  */
-
-#define nil ((void*)0)
-
-typedef signed char schar;
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned int uint;
-typedef unsigned long ulong;
-
-typedef long long vlong;
-typedef unsigned long long uvlong;
 
 typedef signed char s8int;
 typedef unsigned char u8int;
@@ -43,6 +27,10 @@ typedef double float64;
 
 typedef unsigned long uintptr;
 typedef long intptr;
+
+//pad: I added that, for ed.c
+//alt: remove this typedef and use ptrdiff_t which is standard
+// but types without the _t suffix is more plan9ish
 typedef intptr ptrdiff;
 
 // fmt/fmtfd.c uses the raw C99 stdint.h name in one spot rather than
@@ -58,8 +46,6 @@ enum {
 };
 #define __bool_true_false_are_defined 1
 #endif
-
-typedef uint8 byte;
 
 // bit-level double access for port/frexp.c (frexp/ldexp/modf) -- 386
 // is little-endian; ulong is 4 bytes here, matching uint32, no

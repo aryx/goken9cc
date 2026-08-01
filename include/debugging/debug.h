@@ -1,4 +1,5 @@
 
+// in <assert.h>
 #define assert(x)   do{ if(x) {} else _assert("x"); }while(0)
 
 extern  void    (*_assert)(char*);

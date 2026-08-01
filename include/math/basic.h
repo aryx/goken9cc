@@ -1,5 +1,12 @@
 
+// in <stdlib.h> in standard C library
+
 extern  int     abs(int);
+
+/*
+ * provided by system <math.h>
+ */
+
 extern  double  fabs(double);
 
 extern  double  floor(double);
@@ -8,17 +15,10 @@ extern  double  fmod(double, double);
 
 //extern  long    labs(long);
 
-extern  double  frexp(double, int*);
-extern  double  ldexp(double, int);
-extern  double  modf(double, double*);
-
 #define HUGE    3.4028234e38
 
 extern  double  NaN(void);
 extern  double  Inf(int);
-
-extern  int     isNaN(double);
-extern  int     isInf(double, int);
 
 extern  double  exp(double);
 extern  double  log(double);
@@ -29,10 +29,22 @@ extern  double  sqrt(double);
 
 extern  double  hypot(double, double);
 
+extern  double  ldexp(double, int);
+extern  double  modf(double, double*);
+
+// plan 9 specific?
+extern  int     isNaN(double);
+extern  int     isInf(double, int);
+extern  double  frexp(double, int*);
+
 //----------------------------------------------------------------------------
 // Trigonometry
 //----------------------------------------------------------------------------
 //alt: trigonometry.h
+
+/*
+ * provided by system <math.h>
+ */
 
 #define PIO2    1.570796326794896619231e0
 #define PI  (PIO2+PIO2)

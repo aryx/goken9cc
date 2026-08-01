@@ -1,10 +1,9 @@
 
+// in <stdlib.h> in standard C library
+
 extern  int     atoi(char*);
 extern  double  atof(char*);
 extern  long    atol(char*);
-
-extern  double  strtod(char*, char**);
-extern  long    strtol(char*, char**, int);
 
 extern  vlong   atoll(char*);
 
@@ -12,7 +11,12 @@ extern  ulong   strtoul(char*, char**, int);
 extern  vlong   strtoll(char*, char**, int);
 extern  uvlong  strtoull(char*, char**, int);
 
-// was in ctype.h
+// plan 9?
+
+extern  double  strtod(char*, char**);
+extern  long    strtol(char*, char**, int);
+
+// was in <ctype.h> in plan 9 (and also in standard C library)
 
 #define	_U	01 // upper
 #define	_L	02 // lower
