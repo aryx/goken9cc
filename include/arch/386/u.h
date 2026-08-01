@@ -13,39 +13,11 @@ typedef unsigned int u32int;
 typedef signed long long s64int;
 typedef unsigned long long u64int;
 
-typedef s8int int8;
-typedef u8int uint8;
-typedef s16int int16;
-typedef u16int uint16;
-typedef s32int int32;
-typedef u32int uint32;
-typedef s64int int64;
-typedef u64int uint64;
-
 typedef float float32;
 typedef double float64;
 
 typedef unsigned long uintptr;
 typedef long intptr;
-
-//pad: I added that, for ed.c
-//alt: remove this typedef and use ptrdiff_t which is standard
-// but types without the _t suffix is more plan9ish
-typedef intptr ptrdiff;
-
-// fmt/fmtfd.c uses the raw C99 stdint.h name in one spot rather than
-// the Plan9-style alias above; can't #include <stdint.h> (Unix header),
-// so just alias it here instead of editing that ported file.
-typedef uintptr uintptr_t;
-
-#ifndef __bool_true_false_are_defined
-typedef uint8 bool;
-enum {
-	false = 0,
-	true = 1,
-};
-#define __bool_true_false_are_defined 1
-#endif
 
 // bit-level double access for port/frexp.c (frexp/ldexp/modf) -- 386
 // is little-endian; ulong is 4 bytes here, matching uint32, no
