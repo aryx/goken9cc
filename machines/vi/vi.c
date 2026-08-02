@@ -3,7 +3,7 @@
 #include <bio.h>
 #include <mach.h>
 
-#include "../5i/tos.h"
+#include <tos.h>
 
 #define Extern
 #include "mips.h"
