@@ -1,4 +1,4 @@
-/*s: machine/5i/5i.c */
+/*s: 5i/5i.c */
 /*s: basic includes */
 #include <u.h>
 #include <libc.h>
@@ -8,7 +8,7 @@
 #include "arm.h"
 /*e: basic includes */
 
-#include "tos.h"
+#include <tos.h>
 
 /*s: global [[file]] */
 char*	file = "5.out";
@@ -210,4 +210,4 @@ void main(int argc, char **argv)
     cmd();
 }
 /*e: function [[main]] */
-/*e: machine/5i/5i.c */
+/*e: 5i/5i.c */

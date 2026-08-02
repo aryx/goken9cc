@@ -1,4 +1,4 @@
-/*s: machine/5i/stats.c */
+/*s: 5i/stats.c */
 /*s: basic includes */
 #include <u.h>
 #include <libc.h>
@@ -224,7 +224,7 @@ iprofile(void)
         printsource(aprof[b].s.value);
         Bputc(bout, '\n');
     }
-    memset(prof, 0, sizeof(Prof)*i);
+    memset(aprof, 0, sizeof(Prof)*i);
 }
 /*e: function [[iprofile]] */
-/*e: machine/5i/stats.c */
+/*e: 5i/stats.c */

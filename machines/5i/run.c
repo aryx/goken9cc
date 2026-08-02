@@ -1,4 +1,4 @@
-/*s: machine/5i/run.c */
+/*s: 5i/run.c */
 /*s: basic includes */
 #include <u.h>
 #include <libc.h>
@@ -1281,4 +1281,4 @@ Ibl(instruction inst)
     reg.r[REGPC] = v - 4;
 }
 /*e: function [[Ibl]] */
-/*e: machine/5i/run.c */
+/*e: 5i/run.c */
