@@ -1,10 +1,9 @@
 
-
 // ----------------
 // Builtin types
 // ----------------
 
-// bool (not builtin, in base/bool.h)
+// bool? not builtin actually, in base/bool.h
 // char
 // int, short, long, long long, and signed/unsigned
 // float, double
@@ -18,10 +17,14 @@
 // +, -, *, /, % for many numeric types
 // ==, !=
 // <, >, <=, >= again for many types
+// &, |, >>, <<
 
 // ...
 
 // ---------------------------------
-// Builtin (polymorphic) stuff
+// Other builtins
 // ---------------------------------
 // sizeof (see also reflect.h)
+
+// SET(), USED() are kencc builtins
+

@@ -13,7 +13,7 @@ extern  void*   calloc(ulong, ulong);
 //extern  void*   mallocalign(ulong, ulong, long, ulong);
 
 // internals (useful for debugging), Plan 9 specific
-// alt: in debug.h
+// alt: in debug.h or os/plan9/debug.h ?
 extern  void    setmalloctag(void*, ulong);
 extern  void    setrealloctag(void*, ulong);
 extern  ulong   getmalloctag(void*);
