@@ -587,6 +587,107 @@ file that a syscall-level race (quarantine removal, or simply writing
 to the wrong cwd -- see the note below) has already made disappear by
 the time the *next* command runs; `file` forces an actual open().
 
+Cross-arch rt0.s bring-up: verifying a calling convention when there is no disassembler
+------------------------------------------------------------------------------------------
+
+claude: grown out of wiring real argc/argv into every arch's
+lib_core/libc/arch/$cputype/rt0.s (previously all 7 arches just did
+`CALL main` / `BL main` with no argument setup at all -- every existing
+test used `void main(void)` specifically to dodge this, and todo.org
+already had a related, unexplained crash-on-argv[1] report). Two
+techniques worth keeping, and one specific gotcha they both exist to
+catch.
+
+First-order technique: empirically confirm each compiler's own
+argument-passing convention with a throwaway 2-arg probe compiled with
+-S, rather than assume it matches another arch or a textbook ABI doc:
+
+    echo 'void probe(int a, char **b) { *b = (char*)a; }' > probe.c
+    7c -S probe.c   # or 6c/8c/5c/vc/ic/jc for the other arches
+
+Reading the output tells you, per arch, whether the FIRST argument
+arrives in a register (arm/arm64/mips/riscv/riscv64 all do -- R0, R0,
+R1, R8, R8 respectively) or is caller-stack-passed like every other
+argument (amd64/386, no registers at all), and at what FP-relative
+offset the second argument lives (a full pointer-width slot per
+argument on every arch here, confirmed via the *first* register-passed
+argument still "reserving" its own phantom FP+0 slot in the numbering).
+
+Second-order gotcha this alone does NOT catch: -S output shows the
+compiler's own *logical* FP-relative addressing, resolved assuming
+whatever prologue the compiler+assembler decide to emit -- it does NOT
+tell you what raw, hand-written code operating on the bare hardware SP
+register (as rt0.s must, since there is no frame yet at the process
+entry point) needs to add or subtract to land on the same memory. Two
+compounding effects, found only by live inspection (see below), not by
+reasoning about the ABI on paper:
+
+  - Calling BL/JAL/CALL from within a TEXT block makes it "non-leaf",
+    and the assembler auto-inserts a prologue that saves the return
+    address BEFORE any of your own hand-written instructions run --
+    even with an explicit `TEXT foo(SB), $0` (zero declared frame
+    size!). This silently shifts the raw SP by a fixed, arch-specific
+    amount that raw register-relative code must compensate for: one
+    word on arm/mips/riscv/riscv64 (4 bytes on the 32-bit ones, still
+    only 8 -- not 16 -- on riscv64 despite its wider registers), a
+    full 16-byte-aligned block on arm64 (its ABI's mandatory stack
+    alignment), and none at all on amd64/386 (CALL's own push IS the
+    only stack effect, and there is no separate LR/RA register to
+    save).
+  - Separately, and NOT fully explained by the auto-push alone: the
+    exact stack slot where an *outgoing* argument must be written for
+    the callee to read it back correctly was consistently one pointer-
+    width slot further out than the naive "argv is the callee's FP+N,
+    so write it at (my adjusted SP)+N" arithmetic predicts, on every
+    arch tested (arm, arm64, mips, riscv, riscv64). Confirmed
+    empirically each time, never fully re-derived from first
+    principles -- treat any first attempt at these offsets as a
+    hypothesis to verify live, not a formula to trust.
+
+How to verify live when the toolchain's own binaries aren't
+disassembler-readable: this project's linkers produce ELF/Mach-O files
+that `file` recognizes but `objdump -d` and `gdb`'s own symbol loader
+both reject outright ("file format not recognized") -- there is no
+"just disassemble it" option here. Two techniques stood in:
+
+  1. qemu-user's built-in GDB stub, for any arch other than the host's
+     own: `qemu-$arch -g 1234 ./binary args... &`, then
+     `gdb-multiarch -ex "target remote localhost:1234" -ex "set
+     architecture $arch" -ex "x/Ni $pc" -ex "info registers"`. gdb
+     still can't load symbols from the file (same "not recognized"
+     complaint), but it can single-step, dump registers, and dump raw
+     memory at any address on the *live* remote target regardless --
+     `x/Ni $pc` conveniently disassembles instructions AT the target
+     even though it could not load the file as an object. On the
+     host's own arch (here, arm64), the exact same recipe works
+     natively without qemu at all.
+  2. When even that address-finding is awkward (e.g. main's own
+     compiled entry point isn't a fixed, known address to break at
+     ahead of time), skip disassembly entirely: write a tiny, separate
+     C "debug helper" function with known, simple parameters (e.g.
+     `void dbg1(uintptr a) { print("a=%p\n", (void*)a); exits(nil); }`),
+     hand-write a throwaway entry stub that computes a candidate value
+     and calls the helper with it (`-E _dbgmain` to override the
+     linker's default entry symbol so this coexists with the real
+     rt0.s untouched), and read the printed result. This turns "what
+     is actually at this memory location" into an ordinary print-
+     debugging loop -- sweep a handful of candidate offsets (0, 4, 8,
+     12, 16, ...) this way rather than trying to compute the right one
+     by hand, since the auto-push amount above is exactly the kind of
+     fact this technique exists to pin down instead of assume.
+
+One tooling trap met while doing this: `ia` (the riscv/riscv64
+assembler, riscv64 via its `ja`/`jc`/`jl` aliases) reliably crashes
+with "stack smashing detected" on a *very short* standalone .s file
+assembled directly (as few as 2-3 instructions), but assembles the
+same real, larger rt0.s file (built through its normal mkfile, with
+several instructions and a trailing infinite loop) without any issue.
+Root cause not investigated -- unrelated to whatever fix is in
+progress when it's hit -- but worth recognizing immediately: pad
+throwaway probe files out to roughly the same shape as a real,
+already-working TEXT block (ending in the same `loop: JMP loop` idiom,
+rather than a bare `RET`) instead of spending time on the crash itself.
+
 Two non-lldb, non-otool gotchas on this host that both produce the
 *identical* symptom -- a build reports success (`exit=0`) but the
 output file "doesn't exist" moments later -- and are worth telling
