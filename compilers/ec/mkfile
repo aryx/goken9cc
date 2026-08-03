@@ -2,7 +2,7 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=ec
-LDLIBS=-lbio -l9 -lm
+LDLIBS=-lbio $BOOTLIBS
 
 OFILES=\
 	cgen.$O\

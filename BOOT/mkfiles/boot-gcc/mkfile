@@ -45,3 +45,9 @@ O=o
 # gcc/clang-produced library is only ever linked by the host's own
 # linker, never by goken's own Xl
 AR=ar
+
+# gcc doesn't understand libc.h's "#pragma lib libc.a" (goken's own
+# linkers do -- see mkfiles/mkfile.proto's BOOTLIBS comment), so the host
+# link needs these spelled out: lib9.a for the Plan9-style POSIX shim,
+# and the host's own libm since BOOT/lib9 doesn't reimplement math.
+BOOTLIBS=-l9 -lm

@@ -1,7 +1,7 @@
 TOP=../../..
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-lstring -l9 -lm
+LDLIBS=-lstring $BOOTLIBS
 TARG=tar
 
 <$TOP/mkfiles/mkmany

@@ -1,7 +1,7 @@
 TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-l9
+LDLIBS=$BOOTLIBS
 
 TARG=eqn
 OFILES=main.$O\

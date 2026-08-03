@@ -2,7 +2,7 @@ TOP=../
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=mk
-LDLIBS=-lregexp -lbio -l9 -lm
+LDLIBS=-lregexp -lbio $BOOTLIBS
 
 # Posix.$O below not Plan9.$O!
 OFILES=\

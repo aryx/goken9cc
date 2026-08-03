@@ -1,7 +1,7 @@
 TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-lbio -l9 -lm
+LDLIBS=-lbio $BOOTLIBS
 
 #TODO: could use mkmany but need sed to be in PATH in Dockerfile?
 #TODO: dd seems to not work for mk disk in principia so let's skip

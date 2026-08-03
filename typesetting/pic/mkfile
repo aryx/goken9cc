@@ -1,7 +1,7 @@
 TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-l9 -lm
+LDLIBS=$BOOTLIBS
 
 TARG=pic
 

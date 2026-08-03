@@ -2,7 +2,7 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=iar	# inferno archiver
-LDLIBS=-lmach -lbio -l9 -lm
+LDLIBS=-lmach -lbio $BOOTLIBS
 
 OFILES=	ar.$O\
 

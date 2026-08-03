@@ -2,7 +2,7 @@ TOP=../../..
 <$TOP/mkfiles/$objtype/mkfile
 
 # -lregex for sed and ed
-LDLIBS=-lregexp -lbio -l9 -lm
+LDLIBS=-lregexp -lbio $BOOTLIBS
 
 # sort: miss tobaserune, join: ?? error j1
 TARG=uniq tr ed sed

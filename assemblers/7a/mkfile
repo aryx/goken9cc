@@ -2,7 +2,7 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=7a
-LDLIBS=-lbio -l9 -lm
+LDLIBS=-lbio $BOOTLIBS
 OFILES=\
 	y.tab.$O\
 	lex.$O\

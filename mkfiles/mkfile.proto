@@ -26,6 +26,15 @@ CFLAGS_COMMON=-I$TOP/include -I$TOP/include/ALL -I.
 #note: SANITIZE is optionally set by ./configure --asan
 LDFLAGS=-L$ROOT/arch/$objtype/lib $SANITIZE
 
+# libraries only the host bootstrap link needs: lib9.a (POSIX shim for
+# Plan9-style calls) and the host's libm (goken's own libc.a already bakes
+# in its own math/, see lib_core/libc/port/{sin,pow,sqrt,...}.c, and
+# lib9.a's role is replaced by libc.h's own "#pragma lib libc.a" -- see
+# mkfiles/boot-gcc/mkfile). Empty here; set to "-l9 -lm" only by
+# boot-gcc/boot-clang. Leaf mkfiles reference $BOOTLIBS instead of
+# hardcoding -l9/-lm so the same LDLIBS line works self-hosted too.
+BOOTLIBS=
+
 LEX=lex
 #alt: bison but not always super compatible. apparently on my Linux /bin/yacc
 # is actually bison in disguise but compatible :)

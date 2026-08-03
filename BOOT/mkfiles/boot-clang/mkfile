@@ -14,3 +14,6 @@ LD=clang
 AS=clang
 O=o
 AR=ar
+
+# see mkfiles/boot-gcc/mkfile's identical BOOTLIBS comment
+BOOTLIBS=-l9 -lm

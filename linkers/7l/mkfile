@@ -2,7 +2,7 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=7l
-LDLIBS=-lbio -l9 -lm
+LDLIBS=-lbio $BOOTLIBS
 #LATER: falloc.c mod.c pass.c pobj.c sub.c were actually
 # in ld/ in 9cc because forsyth probably thought they 
 # were general enough and could be used by other linkers

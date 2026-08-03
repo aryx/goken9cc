@@ -2,7 +2,7 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=mtime_float
-LDLIBS=-l9 -lm
+LDLIBS=$BOOTLIBS
 
 OFILES=mtime_float.$O
 

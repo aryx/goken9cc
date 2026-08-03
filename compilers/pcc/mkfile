@@ -2,7 +2,7 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=pcc
-LDLIBS=-l9
+LDLIBS=$BOOTLIBS
 
 OFILES=pcc.$O
 

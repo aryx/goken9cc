@@ -2,7 +2,7 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=iyacc
-LDLIBS=-lbio -l9
+LDLIBS=-lbio $BOOTLIBS
 
 OFILES=yacc.$O
 

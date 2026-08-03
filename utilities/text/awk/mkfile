@@ -1,9 +1,9 @@
 TOP=../../..
 <$TOP/mkfiles/$objtype/mkfile
 
-# -l9 just for chartorune
+# $BOOTLIBS just for chartorune
 # -lm just for a few math functions
-LDLIBS=-l9 -lm
+LDLIBS=$BOOTLIBS
 
 #TODO: has some segfault hence the _buggy suffix
 TARG=awk_buggy

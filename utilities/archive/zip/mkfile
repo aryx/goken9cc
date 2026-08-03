@@ -1,7 +1,7 @@
 TOP=../../..
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-lflate -lbio -l9 -lm
+LDLIBS=-lflate -lbio $BOOTLIBS
 
 TARG=zip unzip
 

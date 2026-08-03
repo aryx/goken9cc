@@ -5,7 +5,7 @@ TOP=../..
 CFLAGS_EXTRA=-DUnix
 # -lstring needed only for du
 # -lbio needed only for wc
-LDLIBS=-lbio -lstring -l9 -lm
+LDLIBS=-lbio -lstring $BOOTLIBS
 
 # we skip 'cp' as mk install will lead to a "Text file busy" error
 # we skip ls, mv, and they are breaking current usage or buggy

@@ -4,7 +4,7 @@ TOP=../
 TARG=rc
 
 # -lstring is needed just for one function in processes.c (for `{...})
-LDLIBS=-lstring -l9 -lm
+LDLIBS=-lstring $BOOTLIBS
 
 CFLAGS_EXTRA=-DUnix
 

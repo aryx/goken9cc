@@ -1,7 +1,7 @@
 TOP=../../..
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=-lbio -l9 -lm
+LDLIBS=-lbio $BOOTLIBS
 
 TARG=hoc
 
