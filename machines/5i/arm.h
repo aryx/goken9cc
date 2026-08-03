@@ -14,7 +14,7 @@ typedef	struct	Breakpoint	Breakpoint;
 
 /*s: typedef instruction */
 // claude: u32int, not ulong -- an ARM instruction word is always 32
-// bits; on this 64-bit host ulong is 64 bits, and composing the word
+// bits; on some 64-bit host with gcc ulong is 64 bits, and composing the word
 // byte-by-byte (ifetch/getmem_w) then returning it as a wider signed-
 // looking value sign-extends it, corrupting the top 32 bits
 typedef u32int instruction;
@@ -213,8 +213,7 @@ struct Inst
 struct Registers
 {
     // claude: u32int, not long -- an ARM register is always 32 bits;
-    // storing it in a 64-bit `long` on this 64-bit host let several
-    // ALU helpers (run.c's shift()/dpex()/Idp0..3) compute a 32-bit
+    // otherwise ALU helpers (run.c's shift()/dpex()/Idp0..3) compute a 32-bit
     // result (a rotate, an ASR) using shifts that only stay within 32
     // bits if the type itself is 32 bits, corrupting the top 32 bits
     // otherwise -- see run.c's Idp3() comment for the concrete crash
@@ -371,6 +370,7 @@ extern	Tlb			tlb;
 
 extern	Inst		itab[];
 
+//TODO? use instruction instead of uintptr?
 extern	uintptr		dot;
 extern	int		count;
 
