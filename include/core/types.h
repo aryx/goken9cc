@@ -22,6 +22,7 @@ typedef s8 int8;
 typedef u8 uint8;
 typedef s16 int16;
 typedef u16 uint16;
+// those 2 are really the only one used in goken/principia
 typedef s32 int32;
 typedef u32 uint32;
 typedef s64 int64;

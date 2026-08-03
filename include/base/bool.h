@@ -1,7 +1,7 @@
 
 // a bool type! not part of C89, appeared in C11?
 
-// bool is needed to compile {mk,rc,5c,8c,...} which
+// bool is now needed to compile {mk,rc,5c,8c,...} which
 // comes from pad's principia which use a few extra C types
 // (I like types, and I especially don't like abusing ints for everything)
 

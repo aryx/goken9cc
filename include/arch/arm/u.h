@@ -4,12 +4,10 @@
  * headers under include/, never on the host's libc -- that's lib9/'s job).
  *
  * Typedefs and va_list adapted from ~/principia/include/arch/arm/u.h
- * (a known-working reference for this exact arch) -- trimmed to what
- * lib_core/libc actually uses so far (no Rune/jmp_buf/mpdigit/FCR-FSR
- * flags yet, matching the same policy as arm64's/mips's/riscv's u.h).
+ * TODO: Rune/jmp_buf/mpdigit/FCR-FSR
  */
 
-//old: used to be s8int, u8int, etc. but shorted s8/u8/... like in Rust and Zig.
+//old: used to be s8int, u8int, etc. but shorter s8/u8/... like in Rust and Zig.
 typedef signed char s8;
 typedef unsigned char u8;
 typedef signed short s16;
