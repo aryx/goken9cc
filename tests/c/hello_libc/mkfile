@@ -122,9 +122,9 @@ fd.exe: fd.c
 	$CC $CFLAGS -D$objtype -c fd.c
 	$LD $LDFLAGS -H7 -o $target -E _main fd.$O -lc
 
-# claude: mem.c: sbrk. NOT built for windows, same as fd.c -- there is no
-# sbrk there yet (see lib_core/libc/mkfile's SBRKOFILES and todo.org).
-# Same -H7/-D$objtype story as hello.exe above.
+# claude: mem.c: sbrk. Built for every GOOS including windows -- unlike
+# fd.c, nothing here depends on the fd-as-truncated-HANDLE
+# simplification. Same -H7/-D$objtype story as hello.exe above.
 mem.exe: mem.c
 	$CC $CFLAGS -D$objtype -c mem.c
 	$LD $LDFLAGS -H7 -o $target -E _main mem.$O -lc
@@ -331,10 +331,11 @@ hello_macos_amd64.exe: hello.c
 test_windows:V:
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=windows' 'OSEXTRAFILES=os/windows/winio_amd64.6' 'SYSCALLOFILES=' install }
-	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe dir_windows_amd64.exe
+	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe dir_windows_amd64.exe mem_windows_amd64.exe
 	./hello_windows_amd64.exe | cmp /dev/stdin expected.txt
 	./io_windows_amd64.exe | cmp /dev/stdin io_expected.txt
 	./dir_windows_amd64.exe | cmp /dev/stdin dir_expected.txt
+	./mem_windows_amd64.exe | cmp /dev/stdin mem_expected.txt
 
 hello_windows_amd64.exe: hello.c
 	$CC $CFLAGS -Damd64 -Dwindows -c hello.c
@@ -347,3 +348,11 @@ io_windows_amd64.exe: io.c
 dir_windows_amd64.exe: dir.c
 	$CC $CFLAGS -Damd64 -Dwindows -c dir.c
 	$LD $LDFLAGS -H 10 -o $target -E _main dir.6 -lc
+
+# claude: mem.c on windows -- sbrk over VirtualAlloc (os/windows/sbrk.c
+# plus winio_amd64.s's _winalloc). Needed a linker change to exist at
+# all: linkers/lk/pe.c's importfuncs[] is a hardcoded list, so
+# __imp_VirtualAlloc had to be added there before this could link.
+mem_windows_amd64.exe: mem.c
+	$CC $CFLAGS -Damd64 -Dwindows -c mem.c
+	$LD $LDFLAGS -H 10 -o $target -E _main mem.6 -lc

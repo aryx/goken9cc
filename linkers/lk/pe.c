@@ -85,6 +85,12 @@ static struct importfunc {
 	{ "RemoveDirectoryA", 0 },
 	// claude: and this one for access().
 	{ "GetFileAttributesA", 0 },
+	// claude: and this one for sbrk() -- the first entry here that is
+	// not a file operation at all. Windows has no program break, but
+	// sbrk's contract never required one (successive blocks need not
+	// abut), so os/windows/sbrk.c just takes a fresh VirtualAlloc region
+	// per call, exactly as os/darwin/sbrk.c does with mmap.
+	{ "VirtualAlloc", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

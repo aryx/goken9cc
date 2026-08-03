@@ -28,6 +28,14 @@
 // already open (see open.c's create()); _winopendir below is the only
 // caller.
 #define FILE_FLAG_BACKUP_SEMANTICS	0x02000000
+// claude: _winopendir below is the only user, and this was missing --
+// the same constant is #defined in open.c, but that is a C file and
+// says nothing about this one, so the file did not assemble at all
+// ("syntax error, last name: GENERIC_READ"). It went unnoticed because
+// the windows build is only reachable via `mk test_windows`, which
+// needs a real Windows host and so never runs on the Linux dev box or
+// in CI. Found while adding _winalloc.
+#define GENERIC_READ	0x80000000
 
 // h = _winopen(path, access)
 //   CreateFileA(path, access, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
@@ -321,3 +329,39 @@ TEXT exit(SB), $0
 	MOVQ	__imp_ExitProcess(SB), AX
 	CALL	AX
 	RET
+
+// claude: p = _winalloc(n)
+//   VirtualAlloc(NULL, n, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+// Backs os/windows/sbrk.c -- the only stub in this file that is not a
+// file operation. Four arguments, all register-passed on Win64
+// (RCX/RDX/R8/R9), so this needs only the mandatory 32-byte shadow
+// space and no stack arguments at all -- the simplest stub here after
+// _winattrs.
+//
+// lpAddress is NULL rather than a requested address: letting the kernel
+// choose is what makes this a legal sbrk without a break. MEM_COMMIT
+// and MEM_RESERVE together in one call means "reserve the range and
+// back it with real pages now", which is what a caller expecting sbrk
+// memory to be immediately writable needs; reserving without committing
+// would hand back an address that faults on first touch.
+//
+// VirtualAlloc returns NULL (not -1) on failure -- sbrk.c converts.
+#define MEM_COMMIT	0x1000
+#define MEM_RESERVE	0x2000
+#define PAGE_READWRITE	0x04
+
+TEXT _winalloc+0(SB), $0
+	MOVQ	SP, DI			// save caller's SP
+	MOVQ	n+0(FP), DX		// 2nd: dwSize
+
+	ANDQ	$-16, SP
+	SUBQ	$32, SP			// shadow space only, no stack args
+
+	MOVQ	$0, CX			// 1st: lpAddress = NULL
+	MOVQ	$(MEM_COMMIT|MEM_RESERVE), R8	// 3rd: flAllocationType
+	MOVQ	$PAGE_READWRITE, R9		// 4th: flProtect
+	MOVQ	__imp_VirtualAlloc(SB), AX
+	CALL	AX
+
+	MOVQ	DI, SP
+	RET				// LPVOID (or NULL) in AX

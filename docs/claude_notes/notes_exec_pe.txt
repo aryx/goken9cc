@@ -283,3 +283,21 @@ What's not implemented yet
   for the full story. peimports()'s importfuncs[] table still hardcodes
   the list; adding a new kernel32 call anyone actually links against
   means adding it there and reinstalling 6l/8l, not a config knob.
+
+  claude: now 13 entries, with VirtualAlloc added for sbrk
+  (os/windows/sbrk.c) -- the first import here that is not a file
+  operation at all. Two practical notes from that round:
+  - "reinstalling" means a top-level `mk install`, not `mk` alone and
+    not `mk install` inside linkers/6l. The latter fails outright ($CC
+    is empty: that directory is built through the host bootstrap
+    mkfile). Plain top-level `mk` DOES recompile lk/pe.c but leaves the
+    stale 6l in ROOT/arch/boot-gcc/bin, so the next link still fails
+    with "__imp_VirtualAlloc: not defined" and looks like a source
+    problem. Check the installed binary's timestamp when that happens.
+  - The tests/s/variants pe_amd64 golden changes every time this table
+    grows, since the .idata section does. Regenerate with
+    `mk pe_amd64.mkgoldpe` AFTER validating the new image structurally
+    rather than trusting the diff: PE32+ optional-header magic (0x20b),
+    the import data directory's RVA equal to .idata's VirtualAddress,
+    and an IAT whose entries are all resolvable and null-terminated.
+    All three were checked for the 13-entry version.

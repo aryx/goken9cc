@@ -184,9 +184,32 @@ PORTPOSIXOFILES=`{if(~ $GOOS plan9 windows) echo -n; if not echo port/seek.$O po
 #           against all three in-tree callers (utilities/text/grep/sub.c,
 #           utilities/byte/dd.c, linkers/8lk/compat.c), none of which
 #           assume contiguity.
-#   windows no sbrk yet (see todo.org) -- nothing is selected, exactly
-#           like dup() there.
-SBRKOFILES=`{if(~ $GOOS linux) echo port/sbrk.$O os/linux/brk.$O; if not if(~ $GOOS plan9) echo port/sbrk.$O; if not if(~ $GOOS darwin) echo os/darwin/sbrk.$O; if not echo -n}
+#   windows same as darwin: no break, so os/windows/sbrk.$O over
+#           VirtualAlloc. Unlike dup(), nothing here is blocked by that
+#           port's fd-as-truncated-HANDLE simplification -- no
+#           descriptors are involved.
+SBRKOFILES=`{if(~ $GOOS linux) echo port/sbrk.$O os/linux/brk.$O; if not if(~ $GOOS plan9) echo port/sbrk.$O; if not if(~ $GOOS darwin) echo os/darwin/sbrk.$O; if not if(~ $GOOS windows) echo os/windows/sbrk.$O; if not echo -n}
+
+# claude: exits()/_exits() -- Plan9's process-termination pair
+# (include/os/proc.h: "exits() is the libc exit that performs some
+# cleanup ... while _exits() is the syscall that is more abrupt").
+#
+# plan9 already gets exits(char*) for free: syscall/os/plan9/
+# svc_$cputype.s defines it directly as the raw EXITS syscall (the same
+# file that supplies open/close/dup/brk/etc, see its own header
+# comment) -- there is no separate raw-vs-cooked distinction to make
+# there since the kernel call IS the primitive, so the only gap is
+# _exits(), a one-line C alias for that same asm symbol
+# (os/plan9/_exits.c).
+#
+# Every other GOOS has no native exits(char*) at all, and (unlike
+# sbrk's per-OS split above) doesn't need per-OS glue either: this
+# libc's own exit(int) is already a bare syscall/ExitProcess trampoline
+# with no atexit-style cleanup phase to skip, so exits() and _exits()
+# collapse to the exact same "map msg to 0/1, call exit()" logic on
+# linux/darwin/windows alike -- one portable port/exits.c, not three
+# os/$GOOS/ copies.
+EXITSOFILES=`{if(~ $GOOS plan9) echo os/plan9/_exits.$O; if not echo port/exits.$O}
 
 # UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
 # Plan9-native equivalent at all, unlike strdup/seek/etc above, which
@@ -260,7 +283,7 @@ ARCHOFILES=\
 	$RT0OFILE\
 	$ARCHEXTRAOFILES\
 
-OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
+OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $EXITSOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
 
 HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 

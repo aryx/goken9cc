@@ -1134,7 +1134,21 @@ FILES, not by #ifdef -- see CLAUDE.md):
   darwin   no brk at all, so port/sbrk.c is not built; os/darwin/sbrk.c
            hands out a fresh MAP_ANON region per call instead. NOTE
            MAP_ANON is 0x1000 here, not Linux's 0x20.
-  windows  nothing yet (see todo.org), same as dup().
+  windows  os/windows/sbrk.c over VirtualAlloc(NULL, n,
+           MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE) -- structurally the
+           same as darwin's. Unlike dup(), nothing here is blocked by
+           that port's fd-as-truncated-HANDLE simplification, since no
+           descriptors are involved. MEM_COMMIT *and* MEM_RESERVE in one
+           call matters: reserving without committing hands back an
+           address that faults on first touch.
+           This needed a linker change to exist at all -- linkers/lk/pe.c's
+           importfuncs[] is a hardcoded list (no relocation pass, so
+           __imp_<name> must exist before instruction encoding), so
+           VirtualAlloc had to be added there, making it the 13th import
+           and the first that is not a file operation. Shared by 6l and
+           8l; tests/s/variants' pe_amd64 golden was regenerated, after
+           validating the new image structurally (PE32+, import dir RVA
+           matching .idata, 13 null-terminated IAT entries).
 
 os/linux/brk.c is arch-independent and lives in os/$GOOS/ rather than
 being copied into each of the seven syscall_linux_$cputype.h shims: only

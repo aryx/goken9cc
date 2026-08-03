@@ -96,3 +96,35 @@ dialect gaps (this codebase is largely C89/C99 with some GNU
 extensions). None of that exists yet -- this file is a placeholder for
 when it does, per this project's own "not with Windows native
 compilers yet" TODO.
+
+The windows build is not exercised by anything on a Linux host
+------------------------------------------------------------------
+
+Worth stating explicitly, because it let a build-breaking error sit
+undetected: `mk test_windows` needs a real Windows host, so on the Linux
+dev box and in CI nothing ever compiles lib_core/libc with GOOS=windows.
+`mk test` passing says nothing whatsoever about this port.
+
+Concretely, os/windows/winio_amd64.s did not assemble AT ALL between the
+create()/DMDIR work and the sbrk work: _winopendir referenced
+$GENERIC_READ, but that constant is #defined in os/windows/open.c, a C
+file, which says nothing about the assembly one. 6a failed with
+"syntax error, last name: GENERIC_READ". Found only because adding
+_winalloc (for sbrk) meant assembling the file again.
+
+Two habits that follow:
+
+- After touching anything under os/windows/, at minimum cross-build it
+  on the Linux host, which does work and would have caught this:
+    cd lib_core/libc && rm -f libc.a && mk -a objtype=amd64 \
+      cputype=amd64 GOOS=windows OSEXTRAFILES=os/windows/winio_amd64.6 \
+      SYSCALLOFILES= install
+  then link the tests/c/hello_libc windows binaries. Linking is a real
+  check here, not a formality: it is what catches a missing
+  linkers/lk/pe.c importfuncs[] entry ("__imp_X: not defined").
+- Remember that a constant shared between os/windows/open.c and
+  winio_amd64.s has to be defined TWICE, once per language. There is no
+  shared header between them, deliberately (the .s is preprocessed by
+  the assembler, not the C compiler), so the duplication is by design --
+  but it means adding a Win32 flag in one file and using it in the other
+  fails, and fails at assembly time rather than anywhere informative.
