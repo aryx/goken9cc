@@ -8,13 +8,6 @@ Bseek(Biobuf *bp, vlong offset, int base)
 	vlong n, d;
 	int bufsz;
 
-#ifndef _WIN32
-	if(sizeof(offset) != sizeof(off_t)) {
-		fprint(2, "Bseek: libbio compiled with %d-byte offset\n", sizeof(off_t));
-		abort();
-	}
-#endif
-
 	switch(bp->state) {
 	default:
 		fprint(2, "Bseek: unknown state %d\n", bp->state);
@@ -53,14 +46,14 @@ Bseek(Biobuf *bp, vlong offset, int base)
 		/*
 		 * reset the buffer
 		 */
-		n = lseek(bp->fid, n, base);
+		n = seek(bp->fid, n, base);
 		bp->icount = 0;
 		bp->gbuf = bp->ebuf;
 		break;
 
 	case Bwactive:
 		Bflush(bp);
-		n = lseek(bp->fid, offset, base);
+		n = seek(bp->fid, offset, base);
 		break;
 	}
 	bp->offset = n;
