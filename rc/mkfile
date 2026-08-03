@@ -63,7 +63,7 @@ recmk:
 	mk clean
 
 # ------------------------------------------------------------------------------
-VIEWS=$HFILES ${OFILES:%.o=%.c}
+VIEWS=$HFILES ${OFILES:%.$O=%.c}
 sync:VI:
 	for (i in $VIEWS) {
 	   if (~ $i y.tab.[ch]) echo skipping $i
