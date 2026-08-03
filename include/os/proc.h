@@ -2,6 +2,8 @@
 // Plan 9 specific
 // exits() is the libc exit that performs some cleanup (and handle atexit)
 // while _exits() is the syscall that is more abrupt
+// TODO? still the case in goken libc? maybe reverted now
+// alt: move under os/plan9/proc.h
 extern	void	_exits(char*);
 extern  void    exits(char*);
 
@@ -11,7 +13,7 @@ extern	void	exit(int);
 
 extern  int     atexit(void(*)(void));
 
-// Plan 9 specific
+// Plan 9 specific (move in os/plan9/proc.h?)
 extern	int	rfork(int);
 // in <unistd.h>
 extern	int	fork(void);
