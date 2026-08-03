@@ -407,11 +407,12 @@ hello_macos_amd64.exe: hello.c
 test_windows:V:
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=windows' 'OSEXTRAFILES=os/windows/winio_amd64.6' 'SYSCALLOFILES=' install }
-	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe dir_windows_amd64.exe mem_windows_amd64.exe
+	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe dir_windows_amd64.exe mem_windows_amd64.exe proc_windows_amd64.exe
 	./hello_windows_amd64.exe | cmp /dev/stdin expected.txt
 	./io_windows_amd64.exe | cmp /dev/stdin io_expected.txt
 	./dir_windows_amd64.exe | cmp /dev/stdin dir_expected.txt
 	./mem_windows_amd64.exe | cmp /dev/stdin mem_expected.txt
+	./proc_windows_amd64.exe | cmp /dev/stdin proc_expected.txt
 
 hello_windows_amd64.exe: hello.c
 	$CC $CFLAGS -Damd64 -Dwindows -c hello.c
@@ -432,3 +433,11 @@ dir_windows_amd64.exe: dir.c
 mem_windows_amd64.exe: mem.c
 	$CC $CFLAGS -Damd64 -Dwindows -c mem.c
 	$LD $LDFLAGS -H 10 -o $target -E _main mem.6 -lc
+
+# claude: proc.c on windows -- getpid/getwd/time/nsec/sleep, all four
+# ordinary kernel32 calls here rather than syscalls (os/windows/time.c
+# and getwd.c, over winio_amd64.s). Needed four new linkers/lk/pe.c
+# importfuncs[] entries to link at all.
+proc_windows_amd64.exe: proc.c
+	$CC $CFLAGS -Damd64 -Dwindows -c proc.c
+	$LD $LDFLAGS -H 10 -o $target -E _main proc.6 -lc
