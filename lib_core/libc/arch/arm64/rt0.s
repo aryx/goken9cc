@@ -26,6 +26,7 @@ TEXT _main+0(SB), $0
 	MOV	$setSB(SB), R28
 	MOV	16(RSP), R0	// argc
 	ADD	$24, RSP, R1	// argv
+	MOV	R1, _mainargv+0(SB)	// see port/mainargs.c
 	SUB	$32, RSP, RSP
 	MOV	R1, 16(RSP)
 	BL	main+0(SB)

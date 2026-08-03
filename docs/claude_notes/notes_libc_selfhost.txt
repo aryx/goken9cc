@@ -1263,3 +1263,49 @@ Why it hid: tests/c/vlong/ has its own LOCAL copy of vlrt.c and links
 against no libc, so it never consulted lib_core/libc's. Gated now by
 tests/c/regressions/vlong_mul.c, which links vlrt.c + vlop.s directly
 (not -lc) so it does not depend on a freshly-installed per-arch libc.a.
+
+getenv: the environment reached four different ways
+------------------------------------------------------------
+
+23 call sites across the toolchain ($objtype, $GOROOT, $PATH lookups),
+and no new syscall on any GOOS -- which is the interesting part.
+
+  linux/darwin  NOT a syscall or a call of any kind. The SysV startup
+                contract puts the environment on the initial stack
+                immediately past argv's terminating nil, so "environ" is
+                just argv walked past its own end. Both GOOSes agree
+                exactly, so this is port/getenv.c, not os/$GOOS/ --
+                the one call in recent tiers where they do.
+  plan9         the environment is a DIRECTORY, /env, one file per
+                variable. Needs nothing beyond open/seek/read/close.
+                Also means it is shared and mutable through the file
+                system rather than copied per-process at exec, which is
+                why there is no array to walk.
+  windows       GetEnvironmentVariableA. Windows does keep a block much
+                like the SysV one, but the entry point is handed
+                nothing, so it must be asked for rather than walked to.
+
+Getting at the stack copy needed one store per rt0.s: _mainargv (see
+port/mainargs.c). argv only, not argc -- getenv.c scans forward to
+argv's nil, which needs one global instead of two. _mainargv is defined
+in PORTOFILES, i.e. for every GOOS, because arch/$cputype/rt0.s is
+SHARED between linux and plan9 (only darwin has its own rt0_darwin.s),
+so the store is compiled for plan9 too and the symbol must resolve.
+
+Do not name such a global _argc: include/flag/cli.h's ARGBEGIN already
+uses that name for a local Rune.
+
+Two testing notes:
+
+- The sharp edge in any getenv is matching a NAME PREFIX: comparing
+  strlen(name) bytes and forgetting to require '=' next makes "PATH"
+  match "PATHEXT=...". tests/c/hello_libc/env.c gates both directions,
+  and was confirmed to catch it by dropping the '=' test and watching
+  it fail.
+- env.c tests against $PATH rather than a variable the mkfile sets,
+  because "VAR=val cmd" in an mk recipe does NOT reach the child here:
+  rc/unix.c's Updenv() is a no-op (its POSIX environ-rebuilding half is
+  commented out, unlike rc/plan9.c's real one). Verified directly. That
+  is worth remembering for any future test that wants to control a
+  child's environment -- it cannot, until rc/unix.c's mkenv() is
+  uncommented and wired up.

@@ -431,3 +431,24 @@ TEXT _winsleep+0(SB), $0
 	CALL	AX
 	MOVQ	DI, SP
 	RET
+
+// claude: n = _wingetenv(name, buf, size)
+//   GetEnvironmentVariableA(lpName, lpBuffer, nSize)
+// Backs os/windows/getenv.c. Three register arguments (RCX/RDX/R8), so
+// shadow space only. Called twice per lookup: first with buf = nil and
+// size = 0 to learn the required length, then to fill. See getenv.c for
+// the three-way overloading of the return value.
+TEXT _wingetenv+0(SB), $0
+	MOVQ	SP, DI			// save caller's SP
+	MOVQ	name+0(FP), CX		// 1st: lpName
+	MOVQ	buf+8(FP), DX		// 2nd: lpBuffer
+	MOVL	size+16(FP), R8		// 3rd: nSize (zero-extend)
+
+	ANDQ	$-16, SP
+	SUBQ	$32, SP			// shadow space only, no stack args
+
+	MOVQ	__imp_GetEnvironmentVariableA(SB), AX
+	CALL	AX
+
+	MOVQ	DI, SP
+	RET				// DWORD: chars written, or required size, or 0

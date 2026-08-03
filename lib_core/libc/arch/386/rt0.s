@@ -26,6 +26,7 @@
 TEXT _main+0(SB), $0
 	MOVL	0(SP), AX	// argc
 	LEAL	4(SP), BX	// argv
+	MOVL	BX, _mainargv+0(SB)	// see port/mainargs.c
 	SUBL	$8, SP
 	MOVL	AX, 0(SP)
 	MOVL	BX, 4(SP)

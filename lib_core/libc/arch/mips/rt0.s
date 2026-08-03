@@ -20,6 +20,7 @@ TEXT _main(SB), $0
 	MOVW	$setR30(SB), R30
 	MOVW	4(R29), R1	// argc
 	MOVW	$8(R29), R2	// argv
+	MOVW	R2, _mainargv+0(SB)	// see port/mainargs.c
 	SUB	$12, R29
 	MOVW	R2, 8(R29)
 	JAL	main(SB)

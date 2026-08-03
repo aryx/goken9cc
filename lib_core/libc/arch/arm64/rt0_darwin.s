@@ -24,6 +24,7 @@
 // fix.
 TEXT _main+0(SB), $0
 	MOV	$setSB(SB), R28
+	MOV	R1, _mainargv+0(SB)	// argv (dyld: R0=argc, R1=argv); see port/mainargs.c
 	BL	main+0(SB)
 	MOV	$0, R0
 	BL	exit+0(SB)

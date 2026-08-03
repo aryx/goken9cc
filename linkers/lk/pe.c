@@ -101,6 +101,11 @@ static struct importfunc {
 	{ "GetCurrentDirectoryA", 0 },
 	{ "GetSystemTimeAsFileTime", 0 },
 	{ "Sleep", 0 },
+	// claude: and this one for getenv(). Windows does keep a per-process
+	// environment block much like the SysV one port/getenv.c walks, but
+	// it is not handed to the program on the stack, so it has to be
+	// asked for rather than walked to.
+	{ "GetEnvironmentVariableA", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

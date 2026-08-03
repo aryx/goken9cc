@@ -21,6 +21,7 @@ TEXT _main(SB), $0
 	MOVW	$setSB(SB), R3
 	MOVW	8(R2), R8	// argc
 	MOVW	$12(R2), R9	// argv
+	MOVW	R9, _mainargv+0(SB)	// see port/mainargs.c
 	SUB	$12, R2
 	MOVW	R9, 8(R2)
 	JAL	R1, main(SB)
