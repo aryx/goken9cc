@@ -37,8 +37,8 @@ Caveats:
     noticeably more accurate (see the sym.c spot-check in this script's
     commit message / conversation), but is minutes slower per large file;
     not used here by default.
-  - Lines with uncommitted local changes (blame hash all-zero) are reported
-    separately and excluded from the percentage.
+  - Lines with uncommitted local changes (blame hash all-zero) are excluded
+    from the percentage (but not broken out in the report).
 """
 import os
 import re
@@ -149,8 +149,8 @@ def main():
             if i % 100 == 0:
                 print(f"  ...blamed {i}/{len(files)} files", file=sys.stderr)
 
-    print(f"{'Dir':<16} {'LOC':>8} {'AI':>8} {'%AI':>6} {'Uncommitted':>12}")
-    print("-" * 54)
+    print(f"{'Dir':<16} {'LOC':>8} {'AI':>8} {'%AI':>6}")
+    print("-" * 41)
 
     grand_total = grand_ai = grand_human = grand_uncommitted = 0
     active_total = active_ai = 0          # excl GO/
@@ -158,7 +158,7 @@ def main():
     for d in sorted(stats, key=lambda k: -stats[k][0]):
         t, a, h, u = stats[d]
         pct = 100.0 * a / (t - u) if (t - u) else 0.0
-        print(f"{d:<16} {t:>8} {a:>8} {pct:>5.1f}% {u:>12}")
+        print(f"{d:<16} {t:>8} {a:>8} {pct:>5.1f}%")
         grand_total += t; grand_ai += a; grand_human += h; grand_uncommitted += u
         if d != "GO":
             active_total += t - u
@@ -167,10 +167,10 @@ def main():
                 core_total += t - u
                 core_ai += a
 
-    print("-" * 54)
+    print("-" * 41)
     denom = grand_total - grand_uncommitted
     tpct = 100.0 * grand_ai / denom if denom else 0.0
-    print(f"{'TOTAL':<16} {grand_total:>8} {grand_ai:>8} {tpct:>5.1f}% {grand_uncommitted:>12}")
+    print(f"{'TOTAL':<16} {grand_total:>8} {grand_ai:>8} {tpct:>5.1f}%")
 
     apct = 100.0 * active_ai / active_total if active_total else 0.0
     print(f"{'TOTAL excl GO/':<16} {active_total:>8} {active_ai:>8} {apct:>5.1f}%")
