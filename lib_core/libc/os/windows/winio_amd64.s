@@ -432,6 +432,44 @@ TEXT _winsleep+0(SB), $0
 	MOVQ	DI, SP
 	RET
 
+// claude: ok = _winfileinfo(handle, buf)
+//   GetFileInformationByHandle(handle, lpFileInformation)
+// Backs dirfstat() (os/windows/stat.c) -- the by-handle stat-family
+// equivalent, chosen over GetFileAttributesA (already used by access(),
+// see _winattrs above) because that call only returns the attributes
+// bitmask, not size/inode/timestamps. Two register arguments, so shadow
+// space only, same shape as _wingetpid. BOOL result; buf is a
+// BY_HANDLE_FILE_INFORMATION-shaped Windows.c-local struct, not defined
+// here -- same "raw layer stays struct-free" split as every _sysXxx
+// syscall wrapper on the Linux/Darwin side. Unverified on a real
+// Windows host, see _wincreate above.
+TEXT _winfileinfo+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	handle+0(FP), CX	// 1st: hFile
+	MOVQ	buf+8(FP), DX		// 2nd: lpFileInformation
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetFileInformationByHandle(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET
+
+// claude: ok = _winseteof(handle) -- SetEndOfFile(handle)
+// Backs dirfwstat()'s length field: Win32 has no direct by-handle
+// ftruncate, only "truncate to wherever the file pointer currently is"
+// -- os/windows/stat.c seeks to the target length with the existing
+// _winseek stub first, then calls this. One register argument, shadow
+// space only. Unverified on a real Windows host, see _wincreate above.
+TEXT _winseteof+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	handle+0(FP), CX	// 1st: hFile
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_SetEndOfFile(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET
+
 // claude: n = _wingetenv(name, buf, size)
 //   GetEnvironmentVariableA(lpName, lpBuffer, nSize)
 // Backs os/windows/getenv.c. Three register arguments (RCX/RDX/R8), so

@@ -821,3 +821,44 @@ the failing program directly.
    compiler/linker codegen than a direct `x = V`) and read through the
    specific path under test, so a wrong address shows up as a real
    value mismatch instead of two wrongs silently agreeing.
+
+Driving an interactive REPL-style host tool (5i/vi) non-interactively under gdb
+----------------------------------------------------------------------------------
+
+machines/5i and machines/vi are themselves interactive debuggers (read
+a `:c`/`$q`-style command language from stdin, print to a Bio stream) --
+which makes a HOST-side crash inside one of them (as opposed to the
+guest program it's running) awkward to catch with a plain `gdb 5i` plus
+manual typing, since the crash only happens after the emulator has
+already accepted commands and started executing guest code.
+
+The fix is to give gdb the same stdin script scripts/qemu-runner-style
+callers already pipe in (`printf ':c\n$q\n' | 5i ./x.exe`), but via
+file redirection instead of a pipe, and set the guest binary as gdb's
+own `args` rather than folding it into `--args` alongside redirection
+(the two do not compose the way you'd expect -- `--args 5i ./x.exe`
+combined with `run < file` on the same line drops the program's own
+argv, and 5i falls back to its default guest name, `5.out`):
+
+    printf ':c\n$q\n' > /tmp/in.txt
+    gdb -q -batch \
+      -ex "set args ./x.exe" \
+      -ex "run < /tmp/in.txt" \
+      -ex "bt full" \
+      /path/to/5i
+
+`bt full` is what actually pays off here: it prints every frame's
+locals, not just the call chain, which is what turned a plain
+"SIGSEGV in sysfstat()" into "reg.r[REGARG] == 4294967295" -- the exact
+value that explained the bug (see notes_libc_selfhost.txt's stat-family
+section). Reading the crashing line's source alone would not have shown
+that REGARG and REGRET happened to be the same register at that point
+in the register file; the concrete runtime value did.
+
+Also worth noting: a plain (non-gdb) run of the same repro under bash
+segfaults with "core dumped" printed, but this box's apport handler
+intercepts the actual core file (`/proc/sys/kernel/core_pattern` pipes
+to `apport`), so there is nothing under `./core*` to load into gdb
+after the fact -- running the crash live under gdb from the start (as
+above) sidesteps that entirely, rather than fighting with core-dump
+configuration.

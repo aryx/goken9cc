@@ -150,6 +150,26 @@ TEXT pwrite(SB), $0
 	SWI	$0
 	RET
 
+// claude: fstat(fd, buf, nbuf) / fwstat(fd, buf, nbuf) -- the raw
+// machine-independent-buffer syscalls Tier 3's dirfstat()/dirfwstat()
+// (os/plan9/stat.c) unpack/pack via convM2D/convD2M (os/plan9/
+// convM2D.c, convD2M.c). Same plain "result in R0" shape as open/
+// close/create/remove/chdir/dup/brk/pread/pwrite above -- no vlong
+// write-back dance like seek needs, since the result here is just an
+// int byte count, not a wider value the kernel writes through a
+// hidden pointer.
+TEXT fstat(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$FSTAT, R0
+	SWI	$0
+	RET
+
+TEXT fwstat(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$FWSTAT, R0
+	SWI	$0
+	RET
+
 // seek's raw syscall return doesn't fit the usual "result in R0"
 // shape: a vlong (8-byte) C return value is returned via a hidden
 // pointer this compiler passes as the function's own first argument

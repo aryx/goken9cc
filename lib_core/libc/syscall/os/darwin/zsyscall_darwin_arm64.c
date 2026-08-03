@@ -74,3 +74,38 @@ uintptr _sysmmap(void* addr, ulong len, int prot, int flags, int fd, vlong offse
 	return (uintptr)_syscall6v(SYS_mmap, (vlong)addr, (vlong)len, (vlong)prot, (vlong)flags, (vlong)fd, (vlong)offset);
 }
 
+int getpid(void)
+{
+	return (int)_syscall6(SYS_getpid, 0, 0, 0, 0, 0, 0);
+}
+
+int _sysfcntl(int fd, int cmd, void* arg)
+{
+	return (int)_syscall6(SYS_fcntl, (vlong)fd, (vlong)cmd, (vlong)arg, 0, 0, 0);
+}
+
+int _sysgettimeofday(void* tv, void* tz, void* mach)
+{
+	return (int)_syscall6(SYS_gettimeofday, (vlong)tv, (vlong)tz, (vlong)mach, 0, 0, 0);
+}
+
+int _sysselect(int nd, void* in, void* ou, void* ex, void* tv)
+{
+	return (int)_syscall6(SYS_select, (vlong)nd, (vlong)in, (vlong)ou, (vlong)ex, (vlong)tv, 0);
+}
+
+int _sysfstat(int fd, void* buf)
+{
+	return (int)_syscall6(SYS_fstat, (vlong)fd, (vlong)buf, 0, 0, 0, 0);
+}
+
+int _sysfchmod(int fd, int mode)
+{
+	return (int)_syscall6(SYS_fchmod, (vlong)fd, (vlong)mode, 0, 0, 0, 0);
+}
+
+int _sysftruncate(int fd, vlong length)
+{
+	return (int)_syscall6(SYS_ftruncate, (vlong)fd, (vlong)length, 0, 0, 0, 0);
+}
+

@@ -370,13 +370,25 @@ sysstat(void)
         itrace("stat(0x%lux='%s', 0x%lux, 0x%lux)", name, nambuf, edir, n);
     if(n > sizeof buf)
         errstr(errbuf, sizeof errbuf);
-    else{	
+    else{
         //n = stat(nambuf, buf, n);
         //if(n < 0)
         //    errstr(errbuf, sizeof errbuf);
         //else
         //    memio((char*)buf, edir, n, MemWrite);
-        Bprint(bout, "TODO stat() system call %s\n", sysctab[reg.r[REGARG]]);
+        /* claude: NOT sysctab[reg.r[REGARG]] here -- REGARG and REGRET
+         * are the same register (arm.h: both 0), and this function's
+         * own "reg.r[REGRET] = n" below (or sysfstat's earlier
+         * "reg.r[REGRET] = -1") can run before this line depending on
+         * control flow, silently turning the syscall-number index into
+         * whatever the last return value was -- e.g. -1, read as an
+         * unsigned array index, segfaulting on a wild sysctab[] read.
+         * Found via real execution (Tier 3's dirfstat()/dirfwstat(),
+         * docs/claude_notes/plan_syscalls.txt) crashing 5i outright the
+         * first time anything called STAT/FSTAT under it -- this TODO
+         * path is otherwise never exercised.
+         */
+        Bprint(bout, "TODO stat() system call\n");
         exits(0);
     }
     reg.r[REGRET] = n;
@@ -406,7 +418,13 @@ sysfstat(void)
     //else
     //    memio((char*)buf, edir, n, MemWrite);
     //reg.r[REGRET] = n;
-    Bprint(bout, "TODO fstat() system call %s\n", sysctab[reg.r[REGARG]]);
+    /* claude: not sysctab[reg.r[REGARG]] -- see sysstat()'s identical
+     * comment just above. Here it's not hypothetical: this function's
+     * own "reg.r[REGRET] = -1" a few lines up already clobbered
+     * reg.r[REGARG] (same register) by the time this line runs, so the
+     * old form always indexed sysctab[0xffffffff] and crashed.
+     */
+    Bprint(bout, "TODO fstat() system call\n");
     exits(0);
 
 }

@@ -97,3 +97,18 @@
 #define SYS_fcntl	92
 #define SYS_select	93
 #define SYS_gettimeofday	116
+/* claude: the stat family (Tier 3, docs/claude_notes/plan_syscalls.txt).
+ * Confirmed against apple-oss-distributions/xnu's bsd/kern/syscalls.master
+ * (same primary-source discipline as the getwd/time comment above, not
+ * the 2010 Go snapshot -- that snapshot predates arm64 macOS entirely,
+ * see plan_syscalls.txt's own caveat on trusting it for this family).
+ * fstat64=339 here is NOT numbers_arm64.h's fstat=189: XNU unified the
+ * two stat ABIs at different times per arch (arm64 macOS postdates the
+ * unification, amd64 does not), so the plain and *64 syscalls diverged
+ * -- but both land in the SAME struct shape in stat_amd64.c/
+ * stat_arm64.c, only the syscall NUMBER differs. fchmod/ftruncate are
+ * the arch-independent classic-BSD numbers, same on both arches.
+ */
+#define SYS_fstat64	339
+#define SYS_fchmod	124
+#define SYS_ftruncate	201

@@ -1309,3 +1309,140 @@ Two testing notes:
   environment again -- but env.c is deliberately left as it is, since
   testing getenv() against something the harness supplies would couple
   it to bin/rc being freshly promoted.
+
+dirfstat/dirfwstat: the stat family (Tier 3)
+------------------------------------------------------------------------
+
+The design that shipped differs from plan_syscalls.txt's original plan
+in one real way, worth recording because it wasn't obvious going in:
+dirstat()/dirwstat() (BY PATH) are portable, not per-GOOS/arch. Grepping
+every actual caller in this tree first (linkers/ar/ar.c, debuggers/
+acid/{main,builtin}.c) showed none of them ever calls a raw byte-buffer
+stat()/fstat() -- only the Dir*-returning dirstat()/dirfstat() pair.
+That means the machine-independent wire format Plan9's own STAT/FSTAT
+syscalls speak is not something this tree needs to expose as a portable
+API at all: only dirfstat()/dirfwstat() (BY FD) are per-GOOS/arch now,
+and dirstat()/dirwstat() are one portable open()+dirfstat()/dirfwstat()+
+close() each (port/dirstat.c, port/dirwstat.c). Concretely this means:
+
+  linux/darwin/windows  dirfstat() builds a Dir straight from that OS's
+                         own native stat struct/BY_HANDLE_FILE_INFORMATION.
+                         No marshal step, no convM2D/convD2M needed.
+  plan9                 the ONE GOOS where the wire format is real:
+                         FSTAT/FWSTAT genuinely return/expect it, so
+                         os/plan9/stat.c needs convM2D/convD2M (ported
+                         from principia's lib_core/libc/9sys/, adapted
+                         to this tree's own type names -- see
+                         os/plan9/stat9p.h, a deliberately tiny fcall.h
+                         subset, not a general port).
+
+Known, accepted tradeoff: dirstat()'s open(OREAD)-then-dirfstat() means
+something statable-but-unreadable (0300 owned by someone else) would
+fail here where a real stat(2) would succeed -- no caller in this tree
+hits that. dirwstat()'s open(ORDWR)-then-dirfwstat() has the mirror-
+image gap: chmod'ing a currently-read-only file to add write permission
+back can't even open ORDWR to try. Both documented in port/dirstat.c
+and port/dirwstat.c themselves, not just here.
+
+Per-arch struct-stat layout, and why each source was trusted:
+
+  linux 386/arm    glibc's struct stat64, from GO/pkg/syscall/
+                    ztypes_linux_{386,arm}.go -- same 2010-era Go
+                    snapshot numbers_386.h's own comment already treats
+                    as ground truth for this tree. Note the double
+                    inode field (truncated __st_ino vs the real
+                    trailing 64-bit ino) -- qid.path uses the latter.
+  linux amd64      ztypes_linux_amd64.go's Stat_t. The one field that
+                    looks like it should be 4 bytes but is not: Nlink
+                    and Blksize are BOTH uint64/int64 on amd64
+                    specifically, unlike every other arch here -- easy
+                    to get wrong by pattern-matching against arm64's
+                    struct instead of checking amd64's own.
+  linux arm64/riscv64
+                    the Linux "generic" struct stat (asm-generic/
+                    stat.h upstream), confirmed against this dev box's
+                    own /usr/include/asm-generic/stat.h since it's
+                    aarch64 -- resolves natively here, no cross header
+                    needed. NOT shared with riscv32: that arch has no
+                    fstat/newfstatat syscall at all (scripts/
+                    syscall.tbl marks 79/80 64-bit-only), only statx,
+                    not implemented -- see numbers_riscv.h.
+  linux mips (o32) struct stat64 from arch/mips/include/uapi/asm/
+                    stat.h, fetched directly rather than transcribed
+                    from memory -- this tree carries no
+                    ztypes_linux_mips.go to cross-check against (the Go
+                    snapshot only has 386/amd64/arm), and o32 struct
+                    layouts have enough padding-field history to make
+                    memory risky. Verified correct via real qemu-mips
+                    execution, not just compiled.
+  darwin amd64/arm64
+                    XNU's unified 64-bit stat64 struct, from
+                    ztypes_darwin_amd64.go's Stat_t. Same struct on
+                    BOTH arches despite different syscall NUMBERS
+                    (numbers_arm64.h's own comment: arm64 macOS
+                    postdates the stat64 unification, so its plain
+                    fstat already returns this shape). Unverified by
+                    execution -- no macOS host here, same as every
+                    other os/darwin file added blind.
+  windows          BY_HANDLE_FILE_INFORMATION via
+                    GetFileInformationByHandle, a kernel32 call added
+                    to winio_amd64.s -- needed a new linkers/lk/pe.c
+                    importfuncs[] entry to even link (same "unlisted
+                    import fails to resolve, no relocation pass" story
+                    every prior windows call added there hit).
+
+The recurring long-vs-vlong trap, reconfirmed here: every struct field
+above that is genuinely 8 bytes on its arch's real kernel ABI (amd64's
+Nlink/Blksize, arm64/riscv64's whole "unsigned long" family) has to be
+declared vlong/uvlong in the Kstat struct, never this project's own
+`long`/`ulong` -- SZ_LONG is 4 bytes in every compiler here regardless
+of arch, exactly the same fact syscall_linux_amd64.h's own comment
+already documents for syscall *arguments*. Using `long` for one of
+these fields would not just truncate one value, it would misalign
+every field declared after it.
+
+dirfwstat()'s real, deliberately-scoped gaps (not oversights -- each
+documented in the relevant file's own comment, not just here):
+
+  mtime-setting     unimplemented on EVERY arch/GOOS. No caller in this
+                     tree sets an mtime yet; would need utimensat (or
+                     the *_time64 variant on 32-bit arches), whose
+                     numbers were not sourced with the same rigor as
+                     fstat's for this pass.
+  mips length        mode (fchmod) works, length (ftruncate) does not.
+                     o32's calling convention register-pads a 64-bit
+                     syscall argument (sys_ftruncate64 takes fd, a
+                     dummy word, then a high/low split) -- the same
+                     class of arg-marshaling trap as the riscv32
+                     llseek bug plan_syscalls.txt already documents,
+                     and not worth guessing at blind.
+  windows mode        length (SetEndOfFile, via seek-then-truncate)
+                     works, mode does not. Win32 has no by-HANDLE
+                     chmod equivalent -- SetFileAttributes takes a
+                     PATH, which a bare fd/HANDLE here cannot reach
+                     (same fd-as-truncated-HANDLE simplification
+                     os/windows/open.c's own header comment already
+                     flags). Would need SetFileInformationByHandle
+                     with a FILE_BASIC_INFO struct, not written here.
+
+Found along the way, and it very nearly made this whole tier untestable
+under 5i: machines/5i's sysstat()/sysfstat() (syscall_posix.c) SEGFAULT
+the emulator itself (not the guest program -- the host process) the
+first time anything actually calls STAT/FSTAT under it. Root cause is
+an ARM-specific register-aliasing bug, not a Plan9-libc one:
+arm.h defines REGARG and REGRET as the same register (0), and
+sysfstat()'s own "reg.r[REGRET] = -1" (an early "assume failure" store)
+clobbers reg.r[REGARG] before a later debug line reads it back as
+sysctab[reg.r[REGARG]] -- landing on sysctab[0xffffffff] and
+dereferencing whatever garbage pointer was there. Confirmed with gdb
+(`gdb -batch -ex "run ./x.exe < input" -ex "bt full" 5i`), not guessed:
+the backtrace showed reg.r[REGARG] == 4294967295 at the crash site.
+Fixed to fail cleanly (drop the %s/sysctab[] read from the debug
+message) rather than actually implementing STAT/FSTAT emulation --
+that is a real, separately-scoped gap (both are still TODO stubs that
+exits(0) the whole emulator), tracked in todo.org next to the existing
+getpid()/nsec() device-file gap this tier's own dirfstat() test ran
+straight into. vi's mips equivalent never had this exact bug (its debug
+message never indexed sysctab[] at all, unlike 5i's) -- confirmed by
+plain execution under qemu-mips + vi, no crash, not by re-running the
+gdb session (only 5i's crash needed that level of digging).

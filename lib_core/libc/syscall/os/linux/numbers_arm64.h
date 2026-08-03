@@ -78,3 +78,11 @@
 #define SYS_getcwd	17
 #define SYS_clock_gettime	113
 #define SYS_clock_nanosleep	115
+/* claude: the stat family (Tier 3). Confirmed against this host's own
+ * /usr/include/asm-generic/unistd.h (this box is aarch64, so the
+ * generic ABI table resolves natively here): fstat=80, fchmod=52,
+ * ftruncate=46. Same table riscv64 shares below.
+ */
+#define SYS_fstat	80
+#define SYS_fchmod	52
+#define SYS_ftruncate	46

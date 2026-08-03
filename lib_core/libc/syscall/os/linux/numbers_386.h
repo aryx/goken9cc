@@ -79,3 +79,13 @@
  * a 64-bit one. Keeping one name lets os/linux/time.c stay a single
  * arch-independent file instead of growing an #ifdef ladder.
  */
+/* claude: the stat family (Tier 3, docs/claude_notes/plan_syscalls.txt).
+ * *64 forms are mandatory on every 32-bit Linux arch here -- the plain
+ * fstat/ftruncate would silently truncate ino_t/off_t, the same class
+ * of bug as the lseek/vlong one fixed in 8bbdbab5a. Confirmed against
+ * arch/x86/entry/syscalls/syscall_32.tbl. fchmod needs no *64 variant
+ * (its argument is a plain mode_t, not an offset/inode).
+ */
+#define SYS_fstat64	197
+#define SYS_fchmod	94
+#define SYS_ftruncate64	194

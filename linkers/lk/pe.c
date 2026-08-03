@@ -106,6 +106,14 @@ static struct importfunc {
 	// it is not handed to the program on the stack, so it has to be
 	// asked for rather than walked to.
 	{ "GetEnvironmentVariableA", 0 },
+	// claude: and these two for dirfstat()/dirfwstat() (Tier 3,
+	// docs/claude_notes/plan_syscalls.txt) -- GetFileInformationByHandle
+	// for the stat side (GetFileAttributesA above only returns the
+	// attributes bitmask, not size/timestamps), SetEndOfFile for
+	// length-truncation on the wstat side. See os/windows/stat.c and
+	// winio_amd64.s's own comments on these two stubs.
+	{ "GetFileInformationByHandle", 0 },
+	{ "SetEndOfFile", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

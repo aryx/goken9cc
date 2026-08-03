@@ -70,3 +70,10 @@
  * a 64-bit one. Keeping one name lets os/linux/time.c stay a single
  * arch-independent file instead of growing an #ifdef ladder.
  */
+/* claude: the stat family (Tier 3) -- same numbers as numbers_386.h,
+ * confirmed against arch/arm/tools/syscall.tbl, which marks these
+ * "common" (shared between OABI and EABI, and identical to 386's).
+ */
+#define SYS_fstat64	197
+#define SYS_fchmod	94
+#define SYS_ftruncate64	194

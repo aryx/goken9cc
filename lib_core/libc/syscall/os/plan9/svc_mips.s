@@ -109,6 +109,21 @@ TEXT pwrite(SB), $0
 	SYSCALL
 	RET
 
+// claude: fstat(fd, buf, nbuf) / fwstat(fd, buf, nbuf) -- see
+// svc_arm.s's identical comment. Same plain "result in R1" shape as
+// open/close/create/remove/chdir/dup/pread/pwrite above.
+TEXT fstat(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$FSTAT, R1
+	SYSCALL
+	RET
+
+TEXT fwstat(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$FWSTAT, R1
+	SYSCALL
+	RET
+
 // see svc_arm.s's fuller comment on seek's hidden-return-pointer
 // convention: the kernel writes the 8-byte result through that pointer
 // itself and returns 0, so this stub must write back ONLY on error

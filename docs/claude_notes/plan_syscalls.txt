@@ -174,6 +174,65 @@ function there (os/plan9/access.c), not a syscall number.
 Tier 3: the stat family (the expensive one)
 ------------------------------------------------------------------------
 
+UPDATE: TIER 3 IS DONE, for linux (386/amd64/arm/arm64/mips/riscv64,
+not riscv32 -- see below), darwin (amd64/arm64, unverified -- no macOS
+host here) and windows (amd64, unverified, mode-setting only implemented
+partially -- see below), and plan9 (arm/mips, guest side only -- see
+below). The design that actually shipped differs from this section's
+original plan in one real way: dirstat()/dirwstat() (by PATH) are not
+per-GOOS/arch at all. Only dirfstat()/dirfwstat() (by FD) are -- every
+real caller in this tree (linkers/ar/ar.c, debuggers/acid/) already only
+ever used the Dir*-returning calls, never a raw byte-buffer stat/fstat,
+so dirstat()/dirwstat() are now portable wrappers (port/dirstat.c,
+port/dirwstat.c) built on open()+dirfstat()/dirfwstat()+close(). That
+also means the raw machine-independent-buffer stat()/fstat()/wstat()/
+fwstat() this section originally planned as a portable primitive
+everywhere are NOT exposed outside Plan9: on linux/darwin/windows,
+dirfstat()/dirfwstat() build a Dir straight from that OS's native
+kernel struct, no wire-format marshal step at all -- only Plan9 (where
+FSTAT/FWSTAT genuinely speak that wire format) needs convM2D/convD2M
+(ported from principia's lib_core/libc/9sys/, now
+lib_core/libc/os/plan9/{convM2D,convD2M}.c). Full design writeup and the
+per-arch struct-layout sourcing (GO/pkg/syscall/ztypes_linux_*.go for
+386/amd64/arm, this host's own /usr/include/asm-generic/stat.h for
+arm64/riscv64, a fetched arch/mips/include/uapi/asm/stat.h for mips,
+GO/pkg/syscall/ztypes_darwin_amd64.go for both darwin arches) is in
+notes_libc_selfhost.txt's own Tier 3 section. Verified end to end (not
+just compiled) for every Linux arch except riscv32 via a manual
+create+dirfstat+dirfwstat(mode)+dirfstat+dirstat+dirstat(".") check,
+both natively (amd64, arm64 -- this dev box) and under qemu (386, arm,
+mips, riscv64), and via the real tests/c/hello_libc/stat.c now wired
+into `mk test`'s ARCHS loop. Darwin/Windows are compiled+linked only, no
+host to run them on, same epistemic status as every other os/darwin and
+os/windows file added without one.
+
+Two real, deliberately-scoped gaps, not oversights:
+- riscv32 gets no stat file at all -- see this section's own original
+  note below, now confirmed rather than merely predicted: scripts/
+  syscall.tbl really does mark fstat/newfstatat 64-bit-only, so rv32
+  would need statx(2), a materially bigger struct this pass didn't
+  write. numbers_riscv.h documents the gap in place.
+- dirfwstat() implements mode+length on every arch except: mips (mode
+  only -- o32's ftruncate64 needs a register-pair-aligned argument
+  layout this pass didn't want to guess at, see numbers_mips.h) and
+  windows (length only -- Win32 has no by-HANDLE chmod equivalent, only
+  a by-PATH one a bare fd/HANDLE can't reach, see os/windows/stat.c).
+  mtime-setting is unimplemented EVERYWHERE (no caller needs it yet) --
+  see any dirfwstat()'s own comment.
+
+Also found and fixed along the way, unrelated to the libc side but
+blocking it from being testable at all: machines/5i's sysstat()/
+sysfstat() (syscall_posix.c) used to flat-out SEGFAULT the emulator
+itself the moment anything called STAT/FSTAT under it -- not a guest-
+side bug, a host-side one (reg.r[REGARG] and reg.r[REGRET] are the same
+ARM register per arm.h, and sysfstat()'s own "reg.r[REGRET] = -1"
+clobbered it before a later debug Bprint read reg.r[REGARG] back as a
+sysctab[] index, landing on sysctab[0xffffffff]). Fixed to fail cleanly
+instead (both functions are still TODO stubs -- STAT/FSTAT are not
+actually served by 5i/vi yet, so a Plan9 binary reaching either one
+still gets no real answer, just no longer a crash). This is a NEW,
+separate gap from the one below, tracked in todo.org.
+
 fstat is what fopen/stdio, libbio sizing, ar, and mk's dependency
 timestamps all ultimately want. The syscall is the easy half: Plan9's
 stat returns a 9P stat buffer that dirstat() unpacks into a Dir, while

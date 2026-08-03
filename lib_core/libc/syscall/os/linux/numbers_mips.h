@@ -71,3 +71,19 @@
  * a 64-bit one. Keeping one name lets os/linux/time.c stay a single
  * arch-independent file instead of growing an #ifdef ladder.
  */
+/* claude: the stat family (Tier 3). fstat64/fchmod confirmed against
+ * arch/mips/kernel/syscalls/syscall_o32.tbl (215/94, +4000 base same
+ * as every other row in this file). SYS_ftruncate64 is NOT the 386/arm
+ * 194 -- mips o32 renumbered it to 212 (+4000 = 4212); do not copy
+ * numbers_386.h's value here. os/linux/stat_mips.c does NOT use
+ * ftruncate64 despite that -- mips o32's calling convention pads a
+ * 64-bit syscall argument to an aligned register pair (the same class
+ * of arg-marshaling trap as the riscv32 llseek bug in
+ * docs/claude_notes/plan_syscalls.txt), which needs verification
+ * against the kernel's actual sys_ftruncate64() signature before
+ * trusting a hand-guessed argument layout -- left as a documented gap
+ * rather than a guess.
+ */
+#define SYS_fstat64	4215
+#define SYS_fchmod	4094
+#define SYS_ftruncate64	4212

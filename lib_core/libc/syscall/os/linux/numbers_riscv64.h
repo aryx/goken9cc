@@ -64,3 +64,13 @@
 #define SYS_getcwd	17
 #define SYS_clock_gettime	113
 #define SYS_clock_nanosleep	115
+/* claude: the stat family (Tier 3) -- same generic-ABI numbers as
+ * arm64 (see numbers_arm64.h's comment): fstat=80, fchmod=52,
+ * ftruncate=46. NOT shared with numbers_riscv.h (riscv32): per
+ * docs/claude_notes/plan_syscalls.txt, 79/80 are 64-bit-only in
+ * scripts/syscall.tbl, so riscv32 has no fstat/newfstatat at all and
+ * would need statx instead -- not implemented, see numbers_riscv.h.
+ */
+#define SYS_fstat	80
+#define SYS_fchmod	52
+#define SYS_ftruncate	46

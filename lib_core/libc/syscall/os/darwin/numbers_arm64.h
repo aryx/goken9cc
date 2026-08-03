@@ -83,3 +83,13 @@
 #define SYS_fcntl	92
 #define SYS_select	93
 #define SYS_gettimeofday	116
+/* claude: the stat family (Tier 3) -- see numbers_amd64.h's identical
+ * comment. fstat=189 here, NOT amd64's fstat64=339: arm64 macOS
+ * postdates XNU's stat64 unification, so the plain syscall already
+ * returns the unified struct -- same shape stat_arm64.c and
+ * stat_amd64.c both build a Dir from, just this arch's own number.
+ * fchmod/ftruncate are the arch-independent classic-BSD numbers.
+ */
+#define SYS_fstat	189
+#define SYS_fchmod	124
+#define SYS_ftruncate	201

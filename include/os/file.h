@@ -55,6 +55,7 @@ extern	fdt	open(char*, int);
 extern	int	close(fdt);
 
 // plan9 specific
+// alt: move in os/plan9/file.h?
 extern	long	pread(fdt, void*, long, vlong);
 extern	long	pwrite(fdt, void*, long, vlong);
 // called dup2 in unix?

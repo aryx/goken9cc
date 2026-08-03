@@ -67,3 +67,11 @@
 #define SYS_getcwd	79
 #define SYS_clock_gettime	228
 #define SYS_clock_nanosleep	230
+/* claude: the stat family (Tier 3). Confirmed against
+ * arch/x86/entry/syscalls/syscall_64.tbl: fstat=5, fchmod=91,
+ * ftruncate=77 -- amd64 is 64-bit-native throughout, so unlike
+ * 386/arm/mips there is no *64 variant to reach for.
+ */
+#define SYS_fstat	5
+#define SYS_fchmod	91
+#define SYS_ftruncate	77

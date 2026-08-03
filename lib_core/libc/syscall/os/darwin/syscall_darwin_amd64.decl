@@ -58,3 +58,9 @@
 //sys _sysfcntl(int fd, int cmd, void *arg) int = SYS_fcntl
 //sys _sysgettimeofday(void *tv, void *tz, void *mach) int = SYS_gettimeofday
 //sys _sysselect(int nd, void *in, void *ou, void *ex, void *tv) int = SYS_select
+// the stat family (Tier 3). This arch is 64-bit-native like amd64/
+// arm64/riscv64 on the Linux side, so ftruncate takes one plain vlong
+// argument, no register-pair split needed.
+//sys _sysfstat(int fd, void *buf) int = SYS_fstat64
+//sys _sysfchmod(int fd, int mode) int = SYS_fchmod
+//sys _sysftruncate(int fd, vlong length) int = SYS_ftruncate

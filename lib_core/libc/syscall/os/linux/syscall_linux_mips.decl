@@ -61,3 +61,13 @@
 // declares the one shape it needs.
 //sys _sysclockgettime(int clockid, void *ts) int = SYS_clock_gettime
 //sys _sysclocknanosleep(int clockid, int flags, void *req, void *rem) int = SYS_clock_nanosleep
+// the stat family (Tier 3): fstat/fchmod only. Deliberately no
+// _sysftruncate64 here, unlike syscall_linux_386.decl/syscall_linux_arm.decl
+// -- mips o32's calling convention aligns 64-bit syscall arguments to an
+// even register pair, so sys_ftruncate64() takes an extra padding word
+// before the high/low split (the same class of arg-marshaling trap as
+// the riscv32 llseek bug numbers_mips.h's own SYS_ftruncate64 comment
+// points at). Left unimplemented pending verification against the
+// kernel's actual signature rather than guessing the padding's position.
+//sys _sysfstat(int fd, void *buf) int = SYS_fstat64
+//sys _sysfchmod(int fd, int mode) int = SYS_fchmod

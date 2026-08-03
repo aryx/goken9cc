@@ -73,3 +73,14 @@
 // declares the one shape it needs.
 //sys _sysclockgettime(int clockid, void *ts) int = SYS_clock_gettime
 //sys _sysclocknanosleep(int clockid, int flags, void *req, void *rem) int = SYS_clock_nanosleep
+// the stat family (Tier 3). buf is void* for the same reason the
+// clock_* calls above are -- os/linux/stat_386.c declares the one
+// struct stat64 shape it needs, the raw layer stays struct-free.
+// _sysftruncate64 takes the 64-bit length pre-split into two 32-bit
+// halves rather than one vlong argument: the kernel's own
+// sys_ftruncate64() signature is (fd, offset_low, offset_high), not a
+// single loff_t, precisely so 32-bit ABIs don't need register-pair
+// alignment for it -- os/linux/stat_386.c does the splitting.
+//sys _sysfstat(int fd, void *buf) int = SYS_fstat64
+//sys _sysfchmod(int fd, int mode) int = SYS_fchmod
+//sys _sysftruncate64(int fd, ulong lo, ulong hi) int = SYS_ftruncate64

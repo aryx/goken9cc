@@ -94,3 +94,13 @@ int _sysclocknanosleep(int clockid, int flags, void* req, void* rem)
 	return (int)_syscall6(SYS_clock_nanosleep, (long)clockid, (long)flags, (long)req, (long)rem, 0, 0);
 }
 
+int _sysfstat(int fd, void* buf)
+{
+	return (int)_syscall6(SYS_fstat64, (long)fd, (long)buf, 0, 0, 0, 0);
+}
+
+int _sysfchmod(int fd, int mode)
+{
+	return (int)_syscall6(SYS_fchmod, (long)fd, (long)mode, 0, 0, 0, 0);
+}
+

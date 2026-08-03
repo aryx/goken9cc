@@ -997,6 +997,38 @@ contents from the host on read (getpid() -> the host's own pid,
 testable rather than merely compiled. Worth doing before the stat or
 process-control tiers, both of which will want more of /dev.
 
+**** gap: 5i/vi don't actually serve FSTAT/STAT (still TODO stubs)
+claude:
+Tier 3 (docs/claude_notes/plan_syscalls.txt, notes_libc_selfhost.txt)
+landed lib_core/libc's dirfstat()/dirfwstat() for plan9/arm+mips
+(os/plan9/stat.c, convM2D.c, convD2M.c) -- correct on the guest side,
+confirmed by reaching the syscall boundary cleanly under 5i/vi. But
+machines/5i/vi's own sysstat()/sysfstat() (syscall_posix.c) are
+themselves unfinished: both just Bprint "TODO stat()/fstat() system
+call" and exits(0) the WHOLE EMULATOR the first time a guest program
+calls either. tests/c/hello_libc/stat_plan9_{arm,mips}.exe are built by
+test_plan9 but, like proc.exe/env.exe above, deliberately not asserted
+against -- same "kept compiled, not yet runnable end to end" shape as
+the getpid/nsec gap just above, and worth fixing together with it since
+both need the same kind of host-fd -> Dir -> wire-format-buffer bridge
+(the getpid/nsec gap needs synthetic device *reads*; this one needs a
+real stat/fstat *answer*, which means teaching the emulator to marshal
+a host stat() result through convD2M so the guest's own convM2D can
+unpack it -- there is no ready-made 3-argument Plan9-shaped fstat() on
+the host to call directly; BOOT/lib9 only has the Dir*-returning
+dirfstat(), no raw wire-buffer form).
+
+While adding this test, machines/5i/syscall_posix.c's sysstat()/
+sysfstat() were ALSO found to SEGFAULT the emulator process outright
+(not just print TODO and exit) -- an unrelated, already-fixed bug: a
+debug Bprint indexed sysctab[reg.r[REGARG]] after the same function had
+already overwritten reg.r[REGRET] (REGARG and REGRET are the same ARM
+register, arm.h), landing on sysctab[0xffffffff]. Fixed to fail cleanly
+instead; see notes_libc_selfhost.txt's stat-family section and
+notes_debug_techniques.txt's gdb-under-5i section for how it was found.
+That fix does NOT close this gap -- FSTAT/STAT are still unserved,
+just no longer crash-on-touch.
+
 **** gap: no dup() on windows (needs an fd -> HANDLE table first)
 claude:
 access/dup finished Tier 2 of docs/claude_notes/plan_syscalls.txt on

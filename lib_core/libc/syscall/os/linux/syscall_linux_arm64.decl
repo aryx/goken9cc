@@ -74,3 +74,8 @@
 // declares the one shape it needs.
 //sys _sysclockgettime(int clockid, void *ts) int = SYS_clock_gettime
 //sys _sysclocknanosleep(int clockid, int flags, void *req, void *rem) int = SYS_clock_nanosleep
+// the stat family (Tier 3) -- see syscall_linux_amd64.decl's identical
+// comment on why ftruncate needs no register-pair split here.
+//sys _sysfstat(int fd, void *buf) int = SYS_fstat
+//sys _sysfchmod(int fd, int mode) int = SYS_fchmod
+//sys _sysftruncate(int fd, vlong length) int = SYS_ftruncate

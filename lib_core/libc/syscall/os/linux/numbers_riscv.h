@@ -104,3 +104,11 @@
  * postdates the y2038 cleanup). Calling 169 or 101 here would land on
  * whatever else occupies those numbers, or on nothing at all.
  */
+/* claude: the stat family (Tier 3, docs/claude_notes/plan_syscalls.txt)
+ * is a deliberate GAP on this arch, not an oversight -- no SYS_fstat
+ * here. scripts/syscall.tbl marks fstat/newfstatat (79/80) as 64-bit
+ * only; rv32, like every "new" 32-bit port, has no fstat/stat/lstat
+ * syscalls at all, only statx. os/linux/ has no stat_riscv.c as a
+ * result (see lib_core/libc/mkfile's STATOFILES), so dirfstat/dirfwstat
+ * are unavailable on this one arch until statx support is written.
+ */

@@ -140,6 +140,9 @@ PORTOFILES=\
 	port/argv0.$O\
 	port/sysfatal.$O\
 	port/lock.$O\
+	port/nulldir.$O\
+	port/dirstat.$O\
+	port/dirwstat.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
 # but must NOT be compiled for plan9 or windows at all -- selected here
@@ -257,11 +260,28 @@ SYSCALLOFILES=\
 #            timeval; plan9 reads /dev/bintime for time but has a real
 #            SLEEP syscall needing no glue at all; windows converts the
 #            FILETIME epoch.
-OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O os/plan9/getwd.$O os/plan9/getpid.$O os/plan9/time.$O os/plan9/getenv.$O; if not if(~ $GOOS linux) echo os/linux/getwd.$O os/linux/time.$O; if not if(~ $GOOS darwin) echo os/darwin/getwd.$O os/darwin/time.$O; if not if(~ $GOOS windows) echo os/windows/getwd.$O os/windows/time.$O os/windows/getenv.$O; if not echo -n}
+OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O os/plan9/getwd.$O os/plan9/getpid.$O os/plan9/time.$O os/plan9/getenv.$O os/plan9/convM2D.$O os/plan9/convD2M.$O; if not if(~ $GOOS linux) echo os/linux/getwd.$O os/linux/time.$O; if not if(~ $GOOS darwin) echo os/darwin/getwd.$O os/darwin/time.$O; if not if(~ $GOOS windows) echo os/windows/getwd.$O os/windows/time.$O os/windows/getenv.$O; if not echo -n}
+
+# claude: dirfstat()/dirfwstat() (Tier 3, docs/claude_notes/plan_syscalls.txt).
+# Unlike every other OSFILES entry, struct-stat layout is genuinely
+# per-ARCH, not just per-GOOS -- so linux/darwin get a $cputype-suffixed
+# file, the same way SYSCALLOFILES's svc_$cputype.$O is per-arch, rather
+# than the arch-independent os/$GOOS/open.$O pattern every other call in
+# this group follows. plan9 and windows don't need that split: only one
+# or two arches are implemented there at all, and (unlike linux/darwin's
+# raw kernel struct) the C-level glue itself doesn't vary by arch -- see
+# os/plan9/stat.c's and os/windows/stat.c's own comments. riscv (rv32)
+# gets no stat file at all, checked first regardless of GOOS since it
+# only ever appears under linux here: numbers_riscv.h's own comment
+# explains why (no fstat/newfstatat syscall on that arch, needs statx,
+# not yet implemented) -- leaving STATOFILES empty for it is the file-
+# selection way of tracking that gap, not a bug.
+STATOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS plan9) echo os/plan9/stat.$O; if not if(~ $GOOS windows) echo os/windows/stat.$O; if not echo os/$GOOS/stat_$cputype.$O}
 
 OSFILES=\
 	os/$GOOS/open.$O\
 	$OSGOOSOFILES\
+	$STATOFILES\
 	$OSEXTRAFILES\
 
 # $OSEXTRAFILES: same "leave unset, not assigned empty" convention as
