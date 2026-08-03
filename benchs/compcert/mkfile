@@ -66,15 +66,29 @@ all:V: $GCCO0BINS $GCCO3BINS $CLANGO0BINS $CLANGO3BINS
 # ROOT/arch/$objtype/bin is ahead of the system cmp on $PATH. /dev/stdin is a
 # real path any cmp can open, so it works with either implementation.
 test:V: all
+	anyfailed=()
 	for(opt in gcc-O0 gcc-O3 clang-O0 clang-O3){
 		echo '--' $opt '--'
 		for(i in $PROGS){
 			if(./$i.$opt | cmp -s /dev/stdin Results/$i)
 				echo $i': passed'
-			if not
+			if not {
 				echo $i': FAILED'
+				anyfailed=1
+			}
 		}
 	}
+	# claude: `if(cond)` with no `if not` leaves $status set to the
+	# *condition check's own* status when cond is false (a documented
+	# rc pitfall this project's own tests/rc/if_no_else_status.sh
+	# already covers) -- as the last statement in the recipe, that
+	# leftover nonzero status from `~` not matching would make mk
+	# think this recipe failed even when anyfailed was never set.
+	# Explicit if-not avoids it.
+	if(~ $anyfailed 1)
+		exit failed
+	if not
+		exit 0
 
 # Timing summary, every variant vs the gcc -O0 baseline. The arithmetic
 # (best-of-N, speedup ratios) is easier in bash than rc, so that part
@@ -451,6 +465,7 @@ test_goken:V:
 		if(~ $cputype $hostcputype)
 			usenative=1
 	}
+	anyfailed=()
 	for(p in $GOKENPROGS){
 		if(~ $usenative 1)
 			ok=`{./$p.goken | cmp -s /dev/stdin Results/$p; echo $status}
@@ -461,9 +476,30 @@ test_goken:V:
 		# stage) rather than comparing $ok to a plain 0.
 		if(~ $ok *'|0')
 			echo $p': passed ('$cputype')'
-		if not
+		if not {
 			echo $p': FAILED ('$cputype')'
+			anyfailed=1
+		}
 	}
+	# claude: this loop used to always exit 0 regardless of any FAILED
+	# line above -- the top-level `mk test` (root mkfile's own `test:`)
+	# calls this target as its last step, so a real arm64 regression
+	# (nsieve/nsievebits/spectral, see docs/claude_notes/
+	# notes_arch_arm64.txt) printed FAILED here but `mk test` still
+	# reported success. Propagate failure like tests/s/regressions/
+	# mkfile's own `exit failed` convention already does elsewhere in
+	# this codebase.
+	# claude: `if(cond)` with no `if not` leaves $status set to the
+	# *condition check's own* status when cond is false (a documented
+	# rc pitfall this project's own tests/rc/if_no_else_status.sh
+	# already covers) -- as the last statement in the recipe, that
+	# leftover nonzero status from `~` not matching would make mk
+	# think this recipe failed even when anyfailed was never set.
+	# Explicit if-not avoids it.
+	if(~ $anyfailed 1)
+		exit failed
+	if not
+		exit 0
 
 # Same as test_goken above, but across every cputype goken's %.goken rule
 # switches on, one qemu-user emulator per arch (see scripts/qemu-runner's

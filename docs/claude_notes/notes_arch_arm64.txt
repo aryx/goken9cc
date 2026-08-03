@@ -414,6 +414,95 @@ exercised by any program using bitwise operators with a constant
 operand, not just siphash24.c, so this had real reach across the
 existing suite.
 
+Large SB-offset load/store: dead case 47/48 finally wired up
+------------------------------------------------------------------
+
+Found chasing an arm64-only regression in three benchs/compcert
+programs (nsieve.c, nsievebits.c, spectral.c): all three started
+segfaulting right after commit 49e29b025 ("wire real argc/argv into
+every arch's rt0.s") gave main() real parameters -- but the argc/argv
+plumbing itself was a red herring. The actual trigger was that this
+was the first time main() also called an external function (atoi())
+from within a conditional expression; that call's mere *presence* (not
+whether it ran) perturbed which order 7l's dodata() visits its symbol
+hash table in, and that in turn decided whether fmt.c's small static
+`fmtalloc` table landed *before* or *after* lib_core/libc/port/
+minimal_malloc.c's 64MB `heap[]` array in the linked data/bss segment.
+When it landed after, memset()ing into heap[] silently corrupted
+fmtalloc's verb-lookup table, and the next printf() call walked off
+the end of it into unmapped memory.
+
+Root cause, once traced past the hash-order coincidence: linkers/7l/
+asmout.c's case 30/31 (global-variable load/store through a `L(R)`
+SB-relative operand) always materializes the target as REGSB + hi via
+a single ADD-immediate (oaddi()), which can only encode ~16MB (imm12,
+optionally <<12). Any symbol whose *linked* SB-offset exceeds that --
+trivially true for anything placed after a >16MB global, or for
+directly indexing more than ~16MB into one large array -- silently got
+a wrong address, not a link error: oaddi()'s own overflow check
+(`(v & 0xFFF000) != 0`) only tests bits [23:12], so a value like
+0x4000000 (exactly 64MB, heap[]'s own size) has nothing set in that
+narrow window despite needing bits well above it, and sailed through
+as "fits directly", encoding 0 instead of erroring.
+
+9front's own 7l already has the fix: case 30/31 checks
+`if(v<0 || (v>>s) >= (1<<24)) goto Hugestxr/Hugeldxr;` and falls back
+to a genuinely general form (materialize the offset via omovlit() --
+which itself falls back to the literal pool for values too big to be
+a plain immediate -- then a register-extended-offset LDR/STR via
+olsxrr()). Goken's port turned out to already have cases 47/48 written
+in this exact shape, just never reachable (case 30/31 never branched
+to them) and with two of its own bugs on top: `omovlit(AMOVW, ...)`
+instead of `omovlit(AMOV, ...)` (built only the low 32 bits of REGTMP
+-- fine by coincidence for offsets that fit in 32 bits, but pointless
+since REGTMP needs the full 64-bit value), and `olsxrr()` itself was
+still a stub that unconditionally diag()'d. Three-part fix, all
+verbatim-matching 9front (verified line-for-line against a local
+9front checkout, not reconstructed from ARM64 docs alone):
+1. linkers/7l/optab.c: add the LTO/LFROM flags to the plain-move
+   (AMOVB/AMOVH/AMOVW/AMOV) C_LEXT rows -- 9front already has these;
+   goken's port had them on AFMOVS's C_LEXT rows but not the integer
+   ones, so span() never called addpool() for the integer case at all.
+2. linkers/7l/asmout.c case 30/31: add the magnitude check + goto,
+   ported verbatim from 9front.
+3. linkers/7l/asmout.c case 47/48 + olsxrr(): fix the AMOVW->AMOV bug,
+   add the missing `o2 |= 7<<13; // REGTMP.SX` (case 47 was also
+   missing LD2STR() on its store form), and implement olsxrr() for
+   real -- safe to port verbatim since goken's opldrpp() (which it
+   builds on) is byte-identical to 9front's for every case this needs.
+
+Also hardened oaddi() itself (not part of the 9front port -- a latent
+gap 9front has too, just never triggered there because case 30/31's
+new magnitude check keeps `hi` within a range oaddi() happens to
+handle correctly): its overflow check now verifies the full [0,
+0xFFF000] encodable range up front and diag()s on anything outside it,
+rather than only checking bits [23:12] and silently truncating.
+
+Verified: tests/c/regressions/arm64_large_bss_sb_offset.c (a single
+self-contained repro -- writes through an independently-computed
+correct address via `p = &big[N-1]`, then reads back through the
+buggy `big[N-1]` L(R) path under test, so a wrong address shows up as
+a real mismatch instead of the write and read silently agreeing on the
+same wrong location, which a naive "big[N-1]=X; if(big[N-1]!=X)"
+version of this test failed to catch -- confirmed empirically before
+settling on this shape). Confirmed fails against the pre-fix linker
+(exit 2, not 0) and passes after. All 22 benchs/compcert GOKENPROGS
+pass after the fix via a full `mk test` from repo root, not just the
+three programs that motivated finding it.
+
+Separately, benchs/compcert/mkfile's own `test:`/`test_goken:` targets
+never actually failed the build on a mismatch -- they printed 'FAILED'
+per-program but always exited 0, so this regression was invisible to
+CI/`mk test` the whole time it existed. Fixed by tracking failures and
+`exit failed` at the end of both loops -- but naively as a bare
+`if(~ $anyfailed 1)\n\texit failed` with no `if not`, which hit
+another, unrelated rc pitfall: `if(cond)` with no `if not` clause
+leaves `$status` set to the *condition check's own* status when cond
+is false, and as the last statement in the recipe that leftover status
+becomes the whole recipe's exit code -- exactly what tests/rc/
+if_no_else_status.sh already exists to catch, just not in this file.
+Needed an explicit `if not exit 0` to clear it.
+
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------
 

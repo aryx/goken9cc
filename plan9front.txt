@@ -156,6 +156,42 @@ for riscv.
    conventions elsewhere in the assembly suggesting otherwise --
    documented in the test's comments.
 
+ - 7l: linkers/7l/asmout.c's case 30/31 (global-variable load/store
+   through a `L(R)` SB-relative operand) always materialized the
+   target as REGSB + hi via a single ADD-immediate, which can only
+   encode ~16MB (imm12, optionally <<12) -- any symbol whose linked
+   SB-offset exceeded that (trivially true once lib_core/libc/port/
+   minimal_malloc.c's own 64MB heap[] existed and pushed some later
+   symbol's offset past it) got a silently wrong, not diagnosed,
+   address. Root-caused chasing an arm64-only SIGSEGV regression in
+   three benchs/compcert programs (nsieve.c, nsievebits.c, spectral.c)
+   -- see docs/claude_notes/notes_arch_arm64.txt for the full
+   diagnosis writeup and docs/claude_notes/notes_debug_techniques.txt
+   for the bisection method. Goken's own case 47/48 (the intended
+   fallback) and olsxrr() (the load/store-extended-register helper it
+   needs) already existed in source but were dead code: case 30/31
+   never branched to them, olsxrr() was still an unconditional
+   diag()-and-fail stub, and case 47/48 itself had a latent bug
+   (`omovlit(AMOVW, ...)` instead of `omovlit(AMOV, ...)`, building
+   only the low 32 bits of the 64-bit REGTMP address) -- a previously
+   started, never-finished port of the same 9front commit below.
+   => Ported verbatim from 9front (cinap_lenrek):
+     1d330c0bd 7l: deal with huge (negative or > 24bit) register
+   offsets, fix LACON, avoid DWORD in constant pool when we can sign
+   extend
+   (this same commit's DWORD/constant-pool-widening half was already
+   ported separately -- see linkers/7l/span.c's addpool() comment; this
+   entry is specifically the case 30/31 + case 47/48 + olsxrr() half,
+   which had not been). Also added the LTO/LFROM flags to the
+   AMOVB/AMOVH/AMOVW/AMOV C_LEXT rows in linkers/7l/optab.c (9front
+   already has these; goken's port had them on AFMOVS's C_LEXT rows
+   but not the integer ones, so span() never called addpool() for the
+   integer case, meaning omovlit() could never take its literal-pool
+   path for them even once case 30/31 started calling it).
+   tests/c/regressions/arm64_large_bss_sb_offset.c: confirmed fails
+   (exit 2, not 0) against the pre-fix linker and passes after; all 22
+   benchs/compcert GOKENPROGS pass after the fix via a full `mk test`.
+
  - 7a: assemble() had the exact same fixed `char ofile[100]`/
    raw strcpy() stack buffer overflow as va's (see below) -- found
    organically when a feature-test source file happened to live at a

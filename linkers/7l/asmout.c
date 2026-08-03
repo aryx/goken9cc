@@ -448,10 +448,24 @@ asmout(Prog *p, Optab *o)
 		if(s < 0)
 			diag("unexpected long move, op %A tab %A\n%P", p->as, o->as, p);
 		v = regoff(&p->to);
-		if(v < 0)
-			diag("negative large offset\n%P", p);
 		if((v & ((1<<s)-1)) != 0)
 			diag("misaligned offset\n%P", p);
+		/* claude: was missing this bailout entirely (compare 9front's
+		 * 7l/asmout.c case 30, which has the identical check) -- a
+		 * single ADD-immediate (imm12, optionally <<12) can only reach
+		 * ~16MB, so any L(R) whose *linked* offset lands past that
+		 * (e.g. any symbol placed after lib_core/libc/port/
+		 * minimal_malloc.c's 64MB heap[] in the data/bss segment --
+		 * genuinely possible for ANY small global, not just this one,
+		 * since dodata()'s placement order is hash-table-iteration-
+		 * order-dependent) silently wrapped through oaddi() with no
+		 * error at all. Route those through the (already-present but
+		 * dead, never reached until now) case 47 instead, same as
+		 * 9front. See tests/c/regressions/arm64_large_bss_sb_offset.c
+		 * and docs/claude_notes/notes_arch_arm64.txt.
+		 */
+		if(v < 0 || (v>>s) >= (1<<24))
+			goto Hugestxr;
 		hi = v - (v & (0xFFF<<s));
 		if((hi & 0xFFF) != 0)
 			diag("internal: miscalculated offset %ld [%d]\n%P", v, s, p);
@@ -468,10 +482,11 @@ asmout(Prog *p, Optab *o)
 		if(s < 0)
 			diag("unexpected long move, op %A tab %A\n%P", p->as, o->as, p);
 		v = regoff(&p->from);
-		if(v < 0)
-			diag("negative large offset\n%P", p);
 		if((v & ((1<<s)-1)) != 0)
 			diag("misaligned offset\n%P", p);
+		/* claude: see case 30's comment above. */
+		if(v < 0 || (v>>s) >= (1<<24))
+			goto Hugeldxr;
 		hi = v - (v & (0xFFF<<s));
 		if((hi & 0xFFF) != 0)
 			diag("internal: miscalculated offset %ld [%d]\n%P", v, s, p);
@@ -670,23 +685,36 @@ asmout(Prog *p, Optab *o)
 		break;
 
 	case 47:	/* movT R,V(R) -> strT (huge offset) */
-		o1 = omovlit(AMOVW, p, &p->to, REGTMP);
+	Hugestxr:
+		/* claude: was `omovlit(AMOVW, ...)` -- REGTMP holds the full
+		 * offset/address (up to 64 bits), not a 32-bit value; AMOVW
+		 * there silently built only the low 32 bits via omovlit()'s
+		 * own as-dependent width logic. Matches 9front's case 47/48
+		 * (AMOV, plus the REGTMP.SX bit on o2 below) -- this whole
+		 * case was already present but unreachable (case 30 never
+		 * branched here) and had this bug plus a stubbed-out
+		 * olsxrr(), so it was never actually exercised until now.
+		 */
+		o1 = omovlit(AMOV, p, &p->to, REGTMP);
 		if(!o1)
 			break;
 		r = p->to.reg;
 		if(r == NREG)
 			r = o->param;
-		o2 = olsxrr(p->as, REGTMP,r, p->from.reg);
+		o2 = LD2STR(olsxrr(p->as, REGTMP, r, p->from.reg));
+		o2 |= 7<<13;	// REGTMP.SX
 		break;
 
 	case 48:	/* movT V(R), R -> ldrT (huge offset) */
-		o1 = omovlit(AMOVW, p, &p->from, REGTMP);
+	Hugeldxr:
+		o1 = omovlit(AMOV, p, &p->from, REGTMP);
 		if(!o1)
 			break;
 		r = p->from.reg;
 		if(r == NREG)
 			r = o->param;
-		o2 = olsxrr(p->as, REGTMP,r, p->to.reg);
+		o2 = olsxrr(p->as, REGTMP, r, p->to.reg);
+		o2 |= 7<<13;	// REGTMP.SX
 		break;
 
 	case 50:	/* sys/sysl */
@@ -1632,18 +1660,44 @@ opldrpp(int a)
 
 /*
  * load/store register (extended register)
+ * claude: ported from 9front's 7l/asmout.c (same function name/shape,
+ * builds on opldrpp()'s opcode template -- verified identical to
+ * 9front's for every AMOV/AMOVW/AMOVWU/AMOVH/AMOVHU/AMOVB/AMOVBU case,
+ * the only ones this project's case 47/48 callers use). Was a stub
+ * that always diag()'d; case 47/48 (the "huge SB-offset" fallback) were
+ * already written to call it but never reachable until case 30/31
+ * grew the magnitude check that jumps here -- see those cases' own
+ * comments and docs/claude_notes/notes_arch_arm64.txt.
  */
 static int32
 olsxrr(int a, int b, int c, int d)
 {
-	diag("need load/store extended register\n%P", curp);
-	return -1;
+	return opldrpp(a) | 1<<21 | b<<16 | 2<<10 | c<<5 | d;
 }
 
 static int32
 oaddi(int32 o1, int32 v, int r, int rt)
 {
-	if((v & 0xFFF000) != 0){
+	/* claude: was `if((v & 0xFFF000) != 0)` -- only tests bits [23:12],
+	 * so a value with nothing set in that window but bits set at 24+
+	 * (e.g. 0x4000000, a plain 64MB offset) reads as "fits in imm12
+	 * directly" and gets silently masked to its low 12 bits instead of
+	 * being shifted, dropping the high bits entirely with no error. Real
+	 * repro: a global BSS array >=16MB (lib_core/libc/port/
+	 * minimal_malloc.c's 64MB heap[]) pushes some *other* small static's
+	 * linked SB-offset past what a single ADD-immediate (imm12,
+	 * optionally <<12) can ever encode -- see asmout.c's case 30/31,
+	 * the actual caller for the SB-relative-load/store shape that hit
+	 * this, and tests/c/regressions/arm64_large_bss_sb_offset.c. Check
+	 * the full encodable range up front and diag() if `v` doesn't fit
+	 * either form, rather than silently emitting a wrong-but-valid
+	 * instruction.
+	 */
+	if(v < 0 || v > 0xFFF000)
+		diag("oaddi: offset out of range for ADD/SUB immediate: %#lux\n%P", v, curp);
+	if(v > 0xFFF){
+		if((v & 0xFFF) != 0)
+			diag("oaddi: offset needs both direct and shifted immediate bits: %#lux\n%P", v, curp);
 		v >>= 12;
 		o1 |= 1<<22;
 	}

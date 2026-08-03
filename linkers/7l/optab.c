@@ -225,35 +225,41 @@ Optab	optab[] =
 	{ AMOV,	C_NSOREG,C_NONE,	C_REG,	21, 4, REGSP },
 
 	/* long displacement store */
-	{ AMOVB,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB },  // 
-	{ AMOVB,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  // 
-	{ AMOVB,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  // 
-	{ AMOVH,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB },  // 
-	{ AMOVH,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  // 
-	{ AMOVH,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  // 
-	{ AMOVW,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB },  // 
-	{ AMOVW,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  // 
-	{ AMOVW,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  // 
-	{ AMOV,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB },  // 
-	{ AMOV,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  // 
-	{ AMOV,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  // 
+	// claude: LTO on the C_LEXT rows only (not C_LAUTO/C_LOREG, whose
+	// base is a runtime register, not a link-time-constant address) --
+	// see asmout.c case 30's comment. Needed so span() actually calls
+	// addpool() for these, populating p->cond for omovlit() to use.
+	{ AMOVB,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB,	LTO },  //
+	{ AMOVB,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  //
+	{ AMOVB,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  //
+	{ AMOVH,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB,	LTO },  //
+	{ AMOVH,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  //
+	{ AMOVH,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  //
+	{ AMOVW,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB,	LTO },  //
+	{ AMOVW,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  //
+	{ AMOVW,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  //
+	{ AMOV,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB,	LTO },  //
+	{ AMOV,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  //
+	{ AMOV,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  //
 
 	/* long displacement load */
-	{ AMOVB,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB },  // 
-	{ AMOVB,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  // 
-	{ AMOVB,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  // 
+	// claude: LFROM on the C_LEXT rows only, same reasoning as the LTO
+	// rows above.
+	{ AMOVB,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB,	LFROM },  //
+	{ AMOVB,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  //
+	{ AMOVB,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  //
 	{ AMOVB,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },	//
-	{ AMOVH,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB },  // 
-	{ AMOVH,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  // 
-	{ AMOVH,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  // 
+	{ AMOVH,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB,	LFROM },  //
+	{ AMOVH,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  //
+	{ AMOVH,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  //
 	{ AMOVH,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },	//
-	{ AMOVW,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB },  // 
-	{ AMOVW,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  // 
-	{ AMOVW,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  // 
+	{ AMOVW,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB,	LFROM },  //
+	{ AMOVW,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  //
+	{ AMOVW,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  //
 	{ AMOVW,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },	//
-	{ AMOV,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB },  // 
-	{ AMOV,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  // 
-	{ AMOV,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  // 
+	{ AMOV,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB,	LFROM },  //
+	{ AMOV,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  //
+	{ AMOV,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  //
 	{ AMOV,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },	//
 
 	/* load long effective stack address (load long offset and add) */

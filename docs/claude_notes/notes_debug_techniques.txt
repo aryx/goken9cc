@@ -709,3 +709,115 @@ apart before suspecting the toolchain:
   few attempts) or building under a name/path not previously
   quarantined this session; do not attempt to disable or bypass the
   security tool itself.
+
+Bisecting a "mere presence of an unrelated call corrupts something else" bug
+------------------------------------------------------------------------------
+
+claude: grown out of the arm64_large_bss_sb_offset regression (see
+notes_arch_arm64.txt's own section) -- a shape of bug where adding one
+semantically-unrelated function call to main() (here: atoi(), inside a
+ternary whose branch never actually ran) made a *different*, unrelated
+part of the program crash later. This shape recurs in this codebase
+(todo.org's still-open knucleotide.c multi-object-file note is another
+instance) and is worth a dedicated approach rather than reasoning about
+the failing program directly.
+
+1. Reduce to the smallest C file that still reproduces, by literally
+   copying the failing source and deleting/simplifying one thing at a
+   time, rebuilding and rerunning after each cut -- not by reading the
+   code and guessing which part matters. Each step is one Write + one
+   7c/7l/run cycle; keep every intermediate file (a.c, b.c, c.c, ...)
+   rather than overwriting, so a later step can go back and re-check an
+   earlier hypothesis cheaply. This found, in order: the loop wasn't
+   needed (single call reproduced), the malloc size wasn't needed (100
+   bytes reproduced same as 5MB), argc/argv alone weren't sufficient
+   (needed the extra call too), and finally that the *unreached* atoi()
+   branch alone -- with no malloc/memset/print at all -- did nothing,
+   but adding back just one more real call (memset after malloc) turned
+   it into a crash. That last step is what pointed at "combination of
+   call *count*", not any single suspicious-looking line.
+2. Once the minimal repro exists, use it to test cross-arch: build and
+   run the *same* source for another arch via qemu-user (here: amd64
+   through qemu-x86_64, since the host is arm64) before touching any
+   compiler/linker source. A clean pass on another arch changes the
+   search space entirely -- from "logic bug in this C code" to
+   "codegen/linker bug specific to one backend" -- and costs one build
+   +run, far cheaper than any source-level investigation.
+3. To find *where* corruption actually happens (as opposed to where it
+   crashes, which can be arbitrarily far downstream -- here, a printf()
+   call that had nothing to do with the actual bug), run under
+   qemu-$arch's GDB stub even on the host's own native arch (`qemu-
+   aarch64 -g 1234 ./a.out &` then `gdb -ex "target remote :1234" -ex
+   c`); native execution alone gives you a core dump you may not have
+   permission to read (see below) and no way to inspect registers at
+   the exact faulting instruction. `x/Ni $pc`, `info registers`, and
+   `x/Nxg <addr>` at the crash point identify which register holds a
+   clearly-wrong value (garbage, or a value that decodes suspiciously
+   as a memset() fill byte repeated four times, etc.) and which
+   instruction produced it -- gdb still can't load this project's own
+   binaries as an "executable" (same "file format not recognized" as
+   noted elsewhere in this file), but remote register/memory inspection
+   doesn't need that.
+4. `ulimit -c unlimited` plus a native segfault does NOT reliably give
+   you a readable core file on a locked-down host -- here, apport
+   redirected it to a root-owned, `-r--------` file under
+   /var/lib/apport/coredump, unreadable without sudo. Don't spend time
+   fighting the OS's own crash-dump policy; go straight to the qemu-gdb
+   approach in (3), which sidesteps the host's core-dump handling
+   entirely by running the target under emulation regardless of host
+   arch.
+5. Once a specific instruction's encoded immediate looks wrong, decode
+   it by hand (a short Python snippet extracting the relevant bitfields
+   is faster and less error-prone than eyeballing hex) and compare the
+   decoded value against the *expected* value computed independently
+   (e.g. from the linker's own symbol-placement pass, see below) --
+   don't stop at "this looks wrong", compute what it should have been
+   and confirm the delta matches a specific, nameable failure mode
+   (here: the delta between the wrong and right address was exactly
+   0x10101010, i.e. a 4x-repeated 0x01 byte -- immediately recognizable
+   as memset(p,1,n)'s own fill pattern once you know to look for it,
+   which is what turned "some register has a weird value" into "this
+   register is reading stale memset'd memory instead of the intended
+   struct field").
+6. When the suspect is a linker internal pass (here: 7l's dodata(),
+   which assigns each global symbol's final offset by walking a hash
+   table -- not a resolvable-by-inspection order), add temporary
+   fprint(2, ...) instrumentation directly to that pass (gated behind
+   `getenv("SOMEDEBUG")` so it's opt-in), rebuild just that one tool
+   (`mk 'objtype=boot-gcc' install` in the tool's own directory -- see
+   the gotcha below), and diff its output between the working and
+   crashing link. This is far faster and more reliable than
+   reconstructing the same information by hand-decoding every relevant
+   instruction's encoded immediate -- use hand-decoding (step 5) to
+   find *which* symbols are suspect, then instrumentation to get their
+   *actual* assigned offsets directly from the source of truth, and use
+   the two together rather than either alone.
+7. Gotcha hit repeatedly this session: rebuilding one of this project's
+   own host tools (7l here) requires passing `objtype=boot-gcc`
+   explicitly on the `mk` command line when invoking `mk` directly
+   inside that tool's own directory (`cd linkers/7l && mk
+   'objtype=boot-gcc' install`) -- plain `mk install` there silently
+   resolves `$objtype` to empty (mkconfig's values are sourced as
+   *shell* variables by env.sh, not exported, so a bare `mk` invoked
+   directly doesn't see them the way it does when reached through the
+   top-level mkfile's own `<$TOP/mkconfig` include), producing
+   confusing, unrelated-looking compile failures ("-o: No such file or
+   directory") for a handful of source files instead of a clear "unset
+   variable" error. Same root cause as the already-documented goken9cc/
+   goken PATH-shadowing note; this is the mk-variable-scoping variant of
+   it. Same fix applies to running any of this project's own test
+   suites (e.g. `tests/mkfile`) directly instead of through the
+   top-level `mk test` -- those also assume the top-level mkfile's
+   objtype binding is already in scope and don't `<$TOP/mkconfig`
+   themselves.
+8. A regression test for this class of bug needs care in what it
+   actually asserts: writing and reading the *same* buggy L(R)-style
+   memory reference (`x = V; if(x != V)`) can pass even with the bug
+   present, if the write and the read both consistently compute the
+   same *wrong* address (confirmed empirically while writing this
+   session's own regression test -- the naive version didn't catch the
+   bug at all). Write through an independently-computed-correct address
+   (e.g. `p = &x; *p = V;`, which typically goes through different
+   compiler/linker codegen than a direct `x = V`) and read through the
+   specific path under test, so a wrong address shows up as a real
+   value mismatch instead of two wrongs silently agreeing.
