@@ -8,10 +8,7 @@
 #pragma	lib	"libstring.a"
 #pragma	src	"/sys/src/libstring"
 
-// claude: String's own Lock field needs this -- str.h is included
-// standalone (not through libc.h, see libc.h's "separately included"
-// comment), so it can't rely on inclusion order from callers.
-#include "concurrency/lock.h"
+// require: "concurrency/lock.h" for the Lock below
 
 /* extensible Strings */
 typedef struct String {

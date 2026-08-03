@@ -1,7 +1,8 @@
 
 //alt: could also be in reflect.h
 
-// jmp_buf defined in per-arch <u.h>
+//TODO: jmp_buf defined in per-arch <u.h>
+typedef int jmp_buf;
 
 extern  int     setjmp(jmp_buf);
 extern  void    longjmp(jmp_buf, int);

@@ -11,7 +11,6 @@
 
 // makes goken's own linkers (5l/6l/7l/8l/vl/il) auto-link libc.a
 #pragma	lib	"libc.a"
-//#pragma	src	"/sys/src/libc"
 
 //******************************************************************************
 // Foundations
@@ -33,7 +32,12 @@
 //----------------------------------------------------------------------------
 // Exception (setjmp)
 //----------------------------------------------------------------------------
-//#include "core/exn.h"
+#include "core/exn.h"
+
+//----------------------------------------------------------------------------
+// Locks
+//----------------------------------------------------------------------------
+#include "concurrency/lock.h"
 
 //----------------------------------------------------------------------------
 // Malloc/free
@@ -174,14 +178,11 @@
 // Concurrency and communication
 //******************************************************************************
 // see also the separately included "concurrency/thread.h"
+// and "concurrency/lock.h" in foundations section
 
 //----------------------------------------------------------------------------
 // Concurrency
 //----------------------------------------------------------------------------
-// claude: Lock -- port/lock.c's own lock()/unlock()/canlock() need the
-// type declared, and str.h's String struct embeds one too (str.h has
-// its own include as well, now guarded against double-inclusion here).
-#include "concurrency/lock.h"
 
 //----------------------------------------------------------------------------
 // IPC
