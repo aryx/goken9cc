@@ -1368,5 +1368,18 @@ l1:
 }
 /*e: function [[yylex]] */
 
+int32 stmtline;
+
+long
+yylex(void)
+{
+    long t;
+
+    t = yylex0();
+    if(t != ';')
+        stmtline = lineno;
+    return t;
+}
+
 // #include "../cc/macbody"
 /*e: assemblers/8a/lex.c */
