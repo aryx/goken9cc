@@ -136,6 +136,8 @@ PORTOFILES=\
 	port/qsort.$O\
 	port/strdup.$O\
 	port/getcallerpc.$O\
+	port/argv0.$O\
+	port/sysfatal.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
 # but must NOT be compiled for plan9 or windows at all -- selected here

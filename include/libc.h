@@ -129,6 +129,11 @@
 // file
 //----------------------------------------------------------------------------
 #include "os/file.h"
+// claude: STDIN/STDOUT/STDERR + the IOchunk/IOUNIT 9p constants -- unlike
+// io/bio.h (the buffered layer, its own separate #pragma lib), these are
+// just macros/a struct def with no library to link, so libc.h pulls
+// them in directly, matching real Plan9's own libc.h.
+#include "io/io.h"
 
 //----------------------------------------------------------------------------
 // directory
@@ -143,6 +148,10 @@
 // process
 //----------------------------------------------------------------------------
 #include "os/proc.h"
+// claude: argv0 (read by sysfatal() below) + the ARGBEGIN/ARGEND/ARGF/
+// EARGF/ARGC command-line-flag macros built around it -- process-argv
+// concerns, hence pulled in next to proc.h rather than under Foundations.
+#include "flag/cli.h"
 
 //----------------------------------------------------------------------------
 // memory
@@ -184,6 +193,10 @@
 // error management
 //----------------------------------------------------------------------------
 #include "os/posix/errno.h"
+// claude: sysfatal() -- port/sysfatal.c's implementation, ported from
+// principia's 9sys/sysfatal.c, reads argv0 (flag/cli.h above) to prefix
+// its message.
+#include "os/err.h"
 
 //----------------------------------------------------------------------------
 // Misc
