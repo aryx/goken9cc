@@ -75,3 +75,8 @@
 #define SYS_fstat	5
 #define SYS_fchmod	91
 #define SYS_ftruncate	77
+/* claude: dirread's two raw calls (Tier 3.5). Confirmed against
+ * arch/x86/entry/syscalls/syscall_64.tbl: openat=257, getdents64=217.
+ */
+#define SYS_openat	257
+#define SYS_getdents64	217

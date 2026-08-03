@@ -74,3 +74,7 @@
 #define SYS_fstat	80
 #define SYS_fchmod	52
 #define SYS_ftruncate	46
+/* claude: dirread's other raw call (Tier 3.5) -- same generic-ABI
+ * number as arm64, getdents64=61 (see numbers_arm64.h's comment).
+ */
+#define SYS_getdents64	61

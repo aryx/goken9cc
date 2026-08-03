@@ -87,3 +87,9 @@
 #define SYS_fstat64	4215
 #define SYS_fchmod	4094
 #define SYS_ftruncate64	4212
+/* claude: dirread's two raw calls (Tier 3.5). Confirmed against
+ * arch/mips/kernel/syscalls/syscall_o32.tbl: openat=288, getdents64=219
+ * (+4000 base, same as every other row in this file).
+ */
+#define SYS_openat	4288
+#define SYS_getdents64	4219

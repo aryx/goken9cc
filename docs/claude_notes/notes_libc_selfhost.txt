@@ -1446,3 +1446,125 @@ straight into. vi's mips equivalent never had this exact bug (its debug
 message never indexed sysctab[] at all, unlike 5i's) -- confirmed by
 plain execution under qemu-mips + vi, no crash, not by re-running the
 gdb session (only 5i's crash needed that level of digging).
+
+dirread/dirreadall: listing a directory (Tier 3.5)
+------------------------------------------------------------------------
+
+Landed right after Tier 3 above, once dirfstat() made it possible to
+actually validate against real utilities (see "compiling real utilities
+against the self-hosted libc" below) -- mtime.c and cat.c already ran,
+but ls.c needed a way to enumerate a directory's contents, which
+dirstat()/dirfstat() alone cannot do (they answer "what is this ONE
+named thing", not "what is IN this thing").
+
+  linux    getdents64 (a new raw syscall, one number per arch -- see
+           numbers_$cputype.h) gives names (+ a cheap d_type hint this
+           code ignores) in a batch per call; each name is turned into
+           a full Dir by openat(dirfd, name, ...) (a NEW public raw
+           wrapper on 386/amd64/arm/mips; arm64/riscv64/riscv already
+           had it, generated for _sysopen's own AT_FDCWD bridge) + this
+           file's own dirfstat(). Folded into the SAME per-arch
+           stat_$cputype.c files as dirfstat/dirfwstat, not a separate
+           OFILES entry -- it depends on the exact same fstat, so it
+           inherits the exact same riscv32 exclusion for free by living
+           in the same file.
+           One real trap avoided, not hit: mips is this project's one
+           BIG-ENDIAN target (include/arch/mips/u.h's own header
+           comment). Reading linux_dirent64's d_reclen field via manual
+           byte-shifting (`buf[16] | buf[17]<<8`) would have been
+           silently wrong there. Reading it through a real typed C
+           struct instead (`struct Dirent64 { uvlong ino; vlong off;
+           ushort reclen; uchar type; char name[1]; }`) sidesteps the
+           whole question -- the COMPILER decodes the multi-byte field
+           in the target's native endianness, the same way it already
+           does for every other struct field in this codebase. Verified
+           correct on real qemu-mips execution, not just reasoned about.
+  plan9    ported near-verbatim from principia's lib_core/libc/9sys/
+           dirread.c (os/plan9/dirread.c) -- on Plan9 a directory is
+           just a file whose read() returns back-to-back packed stat
+           entries, the exact same wire format os/plan9/stat.c's
+           dirfstat() already unpacks ONE of via convM2D. dirpackage()
+           is the only real logic: walk the buffer finding each entry's
+           boundary via statcheck() (ported alongside convM2D -- it was
+           skipped when convM2D.c first landed since nothing called it
+           yet) and convM2D() each one. Blocked on the SAME 5i/vi FSTAT
+           gap Tier 3 already found (this needs a working read()-of-a-
+           directory under the emulator too, itself untested) -- built,
+           not run, same as stat_plan9_*.exe.
+  darwin/windows
+           NOT implemented -- deliberately deferred, not forgotten
+           (todo.org has the gap entry). Unverifiable by execution here
+           regardless (no host), and each needs real new work rather
+           than a small extension: darwin wants getdirentries64 (BSD,
+           different shape from Linux's getdents64), windows wants
+           FindFirstFileA/FindNextFileA stubs plus new linkers/lk/pe.c
+           importfuncs[] entries.
+
+Design note distinct from dirfstat's own: dirread() returns whatever
+fit in ONE getdents64 batch, not an artificial fixed count. BOOT/lib9's
+own host-hosted dirreadmax() caps at 10 readdir() calls per dirread()
+invocation purely because host readdir() hands back one entry at a
+time and needed SOME cap; raw getdents64 has no such constraint, so
+capping at all would have been copying a host-library limitation this
+code doesn't share, not matching a real Plan9 semantic.
+
+Compiling real utilities against the self-hosted libc
+------------------------------------------------------------------------
+
+Not a synthetic tests/c/hello_libc/*.c probe -- utilities/files/ already
+has cat.c, mtime.c, ls.c etc. (originally built only against the
+gcc-based BOOT/lib9 reference, per todo.org's pre-existing "make
+utilities work on goken" item), so compiling THOSE against the
+self-hosted lib_core/libc.a is a much stronger validation than another
+purpose-written test, and was tried directly rather than assumed:
+
+  cat.c    compiled, linked, ran correctly -- needed only open/read/
+           write/close, already present before this session.
+  mtime.c  compiled, linked, ran correctly -- a genuine dirstat()
+           consumer, the best possible validation of Tier 3 itself.
+  ls.c     needed real, separate porting work beyond dirread() (see
+           below), NOT just calling the new syscalls -- caught mid-
+           session by actually trying to compile it, not assumed to
+           work once dirread() existed.
+
+ls.c's specific gaps, each independently confirmed by isolating a
+minimal repro before fixing:
+
+  - `#ifdef Unix ... #include <fcall.h> ... #endif`: the file's own
+    comment already called this "DEAD include? remove the whole
+    ifdef?" -- confirmed true (nothing in the file uses a single
+    fcall.h symbol) and removed.
+  - `const NDir*`/`const void*`: this codebase uses `const` NOWHERE
+    else (grepped before assuming this was the issue), and stripping
+    it compiles cleanly -- whether 6c genuinely lacks const support or
+    just something about this particular usage wasn't chased further,
+    since the fix costs nothing (const was purely documentation here).
+  - A real, narrow 6c parser bug, isolated with a sequence of minimal
+    repros (mini.c through mini9.c) down to: a top-level (or parameter-
+    list) declaration using the `ord` typedef (typedef int ord;
+    include/base/ord.h) fails to parse -- "not a function / syntax
+    error, last name: <next identifier>" -- specifically when it
+    immediately follows ANY declaration containing a pointer type
+    (a struct field, or even just the enclosing function's own pointer
+    PARAMETERS, which is why `ord i;` inside `compar(NDir *a, NDir *b)`
+    hit it too, not just the file-scope forward declaration). A
+    same-shaped typedef under a different name does NOT trigger it,
+    and plain `int` doesn't either -- worked around by using `int`
+    instead of `ord` at both the declaration and the definition (they
+    are the same type, so this changes nothing observable). Root cause
+    in 6c itself not investigated further -- out of scope for this
+    session, and the workaround is free.
+  - `include/base/ord.h` (EQ/INF/SUP enum, `ord` typedef) exists but
+    was never `#include`d by libc.h at all -- confirmed by grepping,
+    not assumed. Wired in now (include/libc.h, alongside base/bool.h).
+    ls.c itself used the OLDER `ORD__EQ`/`ORD__SUP`/`ORD__INF` names
+    (principia's include/core/libc.h, per a direct diff) rather than
+    this port's shorter `EQ`/`SUP`/`INF` -- renamed in ls.c to match.
+  - `ctime(long)` is declared in include/os/time.h but commented out,
+    with no implementation anywhere -- a real, separate, NOT-yet-
+    implemented feature (epoch-seconds-to-date-string formatting),
+    needed only for ls.c's optional `-l` long-listing flag. Left
+    unimplemented rather than stubbed with fake output: ls.c compiles
+    up to this point and no further within this session -- the ctime()
+    gap is the actual, honest stopping point, not a workaround-able
+    quirk like the ones above.

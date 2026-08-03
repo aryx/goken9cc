@@ -104,3 +104,8 @@ int _sysftruncate(int fd, vlong length)
 	return (int)_syscall6(SYS_ftruncate, (vlong)fd, (vlong)length, 0, 0, 0, 0);
 }
 
+long _sysgetdents64(int fd, void* buf, uint count)
+{
+	return (long)_syscall6(SYS_getdents64, (vlong)fd, (vlong)buf, (vlong)count, 0, 0, 0);
+}
+

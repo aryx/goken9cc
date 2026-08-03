@@ -46,3 +46,4 @@
 extern uint	convM2D(uchar*, uint, Dir*, char*);
 extern uint	convD2M(Dir*, uchar*, uint);
 extern uint	sizeD2M(Dir*);
+extern int	statcheck(uchar*, uint);

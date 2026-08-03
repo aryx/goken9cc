@@ -262,6 +262,24 @@ loudly:
   scripts/syscall.tbl. It must use statx (291, common to both). See
   below.
 
+Tier 3.5: dirread/dirreadall -- listing a directory
+------------------------------------------------------------------------
+
+UPDATE: DONE for linux (getdents64 + openat per entry, all arches
+except riscv32) and plan9 (native read()-of-a-directory + convM2D,
+ported near-verbatim from principia). NOT done for darwin (needs BSD
+getdirentries64, a different shape from Linux's call) or windows (needs
+FindFirstFileA/FindNextFileA) -- deliberately deferred, tracked in
+todo.org, not a silent gap. Landed right after Tier 3 specifically to
+unlock utilities/files/ls.c, which dirstat()/dirfstat() alone cannot
+serve (they answer "what is this ONE named thing", not "what's in this
+directory"). Full design, the mips-endianness trap avoided (a real
+typed struct instead of manual byte-shifting for getdents64's
+d_reclen), and the further ls.c porting work this surfaced (a real 6c
+parser bug around the `ord` typedef, an orphaned include/base/ord.h
+never wired into libc.h, stale ORD__EQ-style names, and a still-missing
+ctime()) are all in notes_libc_selfhost.txt's own Tier 3.5 section.
+
 Tier 4: process control -- the actual self-hosting milestone
 ------------------------------------------------------------------------
 

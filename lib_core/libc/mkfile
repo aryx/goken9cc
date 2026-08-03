@@ -260,7 +260,7 @@ SYSCALLOFILES=\
 #            timeval; plan9 reads /dev/bintime for time but has a real
 #            SLEEP syscall needing no glue at all; windows converts the
 #            FILETIME epoch.
-OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O os/plan9/getwd.$O os/plan9/getpid.$O os/plan9/time.$O os/plan9/getenv.$O os/plan9/convM2D.$O os/plan9/convD2M.$O; if not if(~ $GOOS linux) echo os/linux/getwd.$O os/linux/time.$O; if not if(~ $GOOS darwin) echo os/darwin/getwd.$O os/darwin/time.$O; if not if(~ $GOOS windows) echo os/windows/getwd.$O os/windows/time.$O os/windows/getenv.$O; if not echo -n}
+OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O os/plan9/getwd.$O os/plan9/getpid.$O os/plan9/time.$O os/plan9/getenv.$O os/plan9/convM2D.$O os/plan9/convD2M.$O os/plan9/dirread.$O; if not if(~ $GOOS linux) echo os/linux/getwd.$O os/linux/time.$O; if not if(~ $GOOS darwin) echo os/darwin/getwd.$O os/darwin/time.$O; if not if(~ $GOOS windows) echo os/windows/getwd.$O os/windows/time.$O os/windows/getenv.$O; if not echo -n}
 
 # claude: dirfstat()/dirfwstat() (Tier 3, docs/claude_notes/plan_syscalls.txt).
 # Unlike every other OSFILES entry, struct-stat layout is genuinely

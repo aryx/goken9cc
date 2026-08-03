@@ -86,3 +86,8 @@
 #define SYS_fstat	80
 #define SYS_fchmod	52
 #define SYS_ftruncate	46
+/* claude: dirread's other raw call (Tier 3.5) -- openat already exists
+ * above for _sysopen's own bridge. Confirmed against this host's own
+ * /usr/include/asm-generic/unistd.h: getdents64=61.
+ */
+#define SYS_getdents64	61

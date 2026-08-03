@@ -89,3 +89,10 @@
 #define SYS_fstat64	197
 #define SYS_fchmod	94
 #define SYS_ftruncate64	194
+/* claude: dirread's two raw calls (Tier 3.5). Confirmed against
+ * arch/x86/entry/syscalls/syscall_32.tbl: openat=295, getdents64=220 --
+ * NOT the same numbers as amd64/arm below, this arch's table renumbered
+ * both independently as usual.
+ */
+#define SYS_openat	295
+#define SYS_getdents64	220

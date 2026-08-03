@@ -4,11 +4,6 @@
 #include <libc.h>
 /*e: plan9 includes */
 #include <bio.h>
-#ifdef Unix
-#else
-//DEAD include? remove the whole ifdef?
-#include <fcall.h>
-#endif
 
 // use char[] so put in data writable section, otherwise
 // we can get a segfault in xcleanname
@@ -76,7 +71,15 @@ ulong   clk;
 
 // forward decls
 error1  ls(char*, bool);
-ord     compar(const NDir*, const NDir*);
+// claude: `int`, not `ord` (typedef int ord; include/base/ord.h) -- a
+// real 6c parser quirk found while getting this file to compile against
+// goken's own libc: `ord compar(...)` right after any struct
+// declaration containing a pointer field (NDir above has two) fails
+// with "not a function / syntax error, last name: compar", while the
+// identical declaration spelled with a locally-defined typedef, or
+// plain `int`, compiles fine. `ord` IS `int` under the hood, so this
+// changes nothing about compar()'s actual return value.
+int     compar(NDir*, NDir*);
 char*   asciitime(long);
 char*   darwx(long);
 void    rwx(long, char*);
@@ -194,7 +197,7 @@ output(void)
     char *s;
 
     if(!nflag)
-        qsort(dirbuf, ndir, sizeof dirbuf[0], (int (*)(const void*, const void*))compar);
+        qsort(dirbuf, ndir, sizeof dirbuf[0], (int (*)(void*, void*))compar);
 
     for(i=0; i<ndir; i++)
         dowidths(dirbuf[i].d);
@@ -313,10 +316,10 @@ growto(long n)
 }
 /*e: function [[growto]](ls.c) */
 /*s: function [[compar]](ls.c) */
-ord
-compar(const NDir *a, const NDir *b)
+int
+compar(NDir *a, NDir *b)
 {
-    ord i;
+    int i;
     Dir *ad, *bd;
 
     ad = a->d;
@@ -330,21 +333,21 @@ compar(const NDir *a, const NDir *b)
     }else{
         if(a->prefix && b->prefix){
             i = strcmp(a->prefix, b->prefix);
-            if(i == ORD__EQ)
+            if(i == EQ)
                 i = strcmp(ad->name, bd->name);
         }else if(a->prefix){
             i = strcmp(a->prefix, bd->name);
-            if(i == ORD__EQ)
-                i = ORD__SUP;  /* a is longer than b */
+            if(i == EQ)
+                i = SUP;  /* a is longer than b */
         }else if(b->prefix){
             i = strcmp(ad->name, b->prefix);
-            if(i == ORD__EQ)
-                i = ORD__INF; /* b is longer than a */
+            if(i == EQ)
+                i = INF; /* b is longer than a */
         }else
             i = strcmp(ad->name, bd->name);
     }
-    if(i == ORD__EQ)
-        i = (a<b? ORD__INF : ORD__SUP);
+    if(i == EQ)
+        i = (a<b? INF : SUP);
     if(rflag)
         i = -i;
     return i;

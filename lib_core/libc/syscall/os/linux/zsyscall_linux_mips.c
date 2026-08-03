@@ -104,3 +104,13 @@ int _sysfchmod(int fd, int mode)
 	return (int)_syscall6(SYS_fchmod, (long)fd, (long)mode, 0, 0, 0, 0);
 }
 
+long openat(int dirfd, void* path, int flags, int mode)
+{
+	return (long)_syscall6(SYS_openat, (long)dirfd, (long)path, (long)flags, (long)mode, 0, 0);
+}
+
+long _sysgetdents64(int fd, void* buf, uint count)
+{
+	return (long)_syscall6(SYS_getdents64, (long)fd, (long)buf, (long)count, 0, 0, 0);
+}
+

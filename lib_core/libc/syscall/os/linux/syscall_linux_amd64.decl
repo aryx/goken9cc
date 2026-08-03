@@ -79,3 +79,7 @@
 //sys _sysfstat(int fd, void *buf) int = SYS_fstat
 //sys _sysfchmod(int fd, int mode) int = SYS_fchmod
 //sys _sysftruncate(int fd, vlong length) int = SYS_ftruncate
+// dirread's two raw calls (Tier 3.5) -- see syscall_linux_386.decl's
+// identical comment on the openat naming.
+//sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
+//sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64

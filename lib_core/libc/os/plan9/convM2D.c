@@ -20,6 +20,39 @@
  */
 static char nullstring[] = "";
 
+/* statcheck: is buf a single well-formed packed stat entry? Skipped
+ * when convM2D.c was first ported (nothing called it -- os/plan9/
+ * stat.c's dirfstat/dirfwstat don't need it, they already know the
+ * buffer they're unpacking came straight from one FSTAT call). Ported
+ * now for os/plan9/dirread.c's dirpackage(), which reads a BATCH of
+ * back-to-back entries from one directory read() and needs to find
+ * each entry's boundary before it can hand the entry to convM2D.
+ */
+int
+statcheck(uchar *buf, uint nbuf)
+{
+	uchar *ebuf;
+	int i;
+
+	ebuf = buf + nbuf;
+
+	if (nbuf < STATFIXLEN || nbuf != BIT16SZ + GBIT16(buf))
+		return -1;
+
+	buf += STATFIXLEN - 4*BIT16SZ;
+
+	for (i = 0; i < 4; i++) {
+		if (buf + BIT16SZ > ebuf)
+			return -1;
+		buf += BIT16SZ + GBIT16(buf);
+	}
+
+	if (buf != ebuf)
+		return -1;
+
+	return 0;
+}
+
 uint
 convM2D(uchar *buf, uint nbuf, Dir *d, char *strs)
 {

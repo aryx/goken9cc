@@ -101,3 +101,96 @@ dirfwstat(fdt fd, Dir *d)
 	}
 	return ret;
 }
+
+/* claude: dirread()/dirreadall() (Tier 3.5). getdents64 gives names
+ * (plus a cheap type hint this code doesn't use, since dirfstat()
+ * above already gives the real mode/size/times), so each name is
+ * turned into a full Dir by opening it relative to the directory fd
+ * -- openat(), never a concatenated path string, since dirread's own
+ * Plan9 API (include/os/dir.h) only ever hands this an fd, no path --
+ * and calling this file's own dirfstat() above. "." and ".." are
+ * skipped, matching every readdir()-based implementation (Plan9
+ * directories never list them at all). One dirread() call returns
+ * whatever fit in one getdents64 buffer -- not an artificial fixed
+ * count -- which is at least as close to Plan9's own "however much
+ * fit in one read()" semantics as BOOT/lib9's host-readdir()-capped-
+ * at-10 approach. dirreadall() loops until getdents64 reports EOF (0).
+ *
+ * The kernel's linux_dirent64 layout (fixed-width fields, all on
+ * naturally aligned offsets already -- 8+8+2+1, no padding needed) is
+ * read through a real C struct rather than manual byte-shifting, so
+ * the reclen/ino fields come out correctly on mips's big-endian target
+ * too, not just the little-endian arches.
+ */
+typedef struct Dirent64 Dirent64;
+struct Dirent64 {
+	uvlong	ino;
+	vlong	off;
+	ushort	reclen;
+	uchar	type;
+	char	name[1];
+};
+
+extern long openat(int dirfd, void *path, int flags, int mode);
+extern long _sysgetdents64(int fd, void *buf, uint count);
+
+static long
+dirreadbuf(fdt fd, Dir **dp, int all)
+{
+	uchar buf[8192];
+	Dir *d, *nd, *tmp;
+	long n, off, ndir, cap;
+	fdt cfd;
+	Dirent64 *de;
+
+	d = nil;
+	ndir = 0;
+	cap = 0;
+	for (;;) {
+		n = _sysgetdents64(fd, buf, sizeof buf);
+		if (n <= 0)
+			break;
+		for (off = 0; off < n; off += de->reclen) {
+			de = (Dirent64*)(buf + off);
+			if (de->name[0] == '.' && (de->name[1] == 0 ||
+			    (de->name[1] == '.' && de->name[2] == 0)))
+				continue;
+			cfd = openat(fd, de->name, 0, 0);
+			if (cfd < 0)
+				continue;
+			nd = dirfstat(cfd);
+			close(cfd);
+			if (nd == nil)
+				continue;
+			nd->name = strdup(de->name);
+			if (ndir >= cap) {
+				cap = cap ? cap*2 : 16;
+				tmp = realloc(d, cap * sizeof(Dir));
+				if (tmp == nil) {
+					free(nd);
+					free(d);
+					return -1;
+				}
+				d = tmp;
+			}
+			d[ndir++] = *nd;
+			free(nd);
+		}
+		if (!all)
+			break;
+	}
+	*dp = d;
+	return ndir;
+}
+
+long
+dirread(fdt fd, Dir **dp)
+{
+	return dirreadbuf(fd, dp, 0);
+}
+
+long
+dirreadall(fdt fd, Dir **dp)
+{
+	return dirreadbuf(fd, dp, 1);
+}

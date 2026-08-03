@@ -1059,6 +1059,25 @@ access() IS implemented for windows (GetFileAttributesA), but only
 approximately: it can answer existence and the read-only bit, not AREAD
 or AEXEC, since Win32 permissions are ACLs rather than mode bits.
 
+**** gap: dirread()/dirreadall() not implemented for darwin/windows
+claude:
+Tier 3.5 (docs/claude_notes/plan_syscalls.txt, notes_libc_selfhost.txt)
+landed dirread()/dirreadall() for linux (getdents64 + openat per entry,
+all 6 arches except riscv32) and plan9 (native read()-of-a-directory +
+convM2D, ported near-verbatim from principia's lib_core/libc/9sys/
+dirread.c). Darwin and windows were deliberately deferred, not
+forgotten: both are unverifiable by execution here anyway (no host),
+and each needs real new work rather than a small extension --
+darwin needs the BSD getdirentries64 syscall (a different shape from
+Linux's getdents64, its own number/struct), windows needs
+FindFirstFileA/FindNextFileA stubs added to winio_amd64.s plus new
+linkers/lk/pe.c importfuncs[] entries (same "no relocation pass, must
+be listed before it'll link" story every windows call already hits).
+Until then, utilities/files/ls.c (see below) only runs self-hosted on
+linux; darwin/windows os/$GOOS/ get no dirread.c at all, so anything
+that needs one fails to link there -- same shape of gap as riscv32's
+missing stat file.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

@@ -22,6 +22,7 @@
 #include "core/types.h"
 #include "base/bool.h"
 #include "base/byte.h"
+#include "base/ord.h"
 
 //----------------------------------------------------------------------------
 // Macros (Array/Struct)

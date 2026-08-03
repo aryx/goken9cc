@@ -15,18 +15,22 @@ all:V: hello.exe io.exe dir.exe fd.exe mem.exe proc.exe args.exe env.exe
 # claude: dir_tmp.txt and the dir_tmp_d/ directory are created by dir.c
 # and removed by it again, so they are only ever left behind if that
 # test died in between -- cleaned up here rather than left to confuse
-# the next run. stat_tmp.txt is stat.c's equivalent.
+# the next run. stat_tmp.txt is stat.c's equivalent; dirread_tmp_d/ is
+# dirread.c's (a directory with two files and a subdirectory).
 clean:V:
 	rm -f *.[5678ijv] *.exe hello_macos_arm64.exe hello_macos_amd64.exe io_macos_arm64.exe io_macos_amd64.exe dir_macos_arm64.exe dir_macos_amd64.exe fd_macos_arm64.exe fd_macos_amd64.exe mem_macos_arm64.exe mem_macos_amd64.exe proc_macos_arm64.exe proc_macos_amd64.exe args_macos_arm64.exe args_macos_amd64.exe stat_macos_arm64.exe stat_macos_amd64.exe dir_tmp.txt stat_tmp.txt
-	rm -rf dir_tmp_d
-# claude: stat.exe is deliberately NOT in all:V: above -- unlike every
-# other binary here, it cannot be built for every arch in $ARCHS below:
-# riscv (rv32) has no lib_core/libc/os/linux/stat_riscv.c at all (see
-# numbers_riscv.h's own comment -- that arch has no fstat syscall,
-# needs statx, not yet implemented), so linking it there would fail
-# where every other test here still succeeds. Wired into test_one/
-# test:V:/test_plan9 individually below instead, with riscv skipped in
-# the ARCHS loop specifically.
+	rm -rf dir_tmp_d dirread_tmp_d
+# claude: stat.exe/dirread.exe are deliberately NOT in all:V: above --
+# unlike every other binary here, neither can be built for every arch in
+# $ARCHS below: riscv (rv32) has no lib_core/libc/os/linux/stat_riscv.c
+# at all (see numbers_riscv.h's own comment -- that arch has no fstat
+# syscall, needs statx, not yet implemented, and dirread() needs fstat
+# too), so linking either there would fail where every other test here
+# still succeeds. dirread.exe additionally has NO darwin/windows build
+# rule at all (todo.org's own gap entry -- dirread() isn't implemented
+# for either GOOS yet), unlike stat.exe which at least compiles there.
+# Wired into test_one/test:V:/test_plan9 individually below instead,
+# with riscv skipped in the ARCHS loop specifically.
 test_one:V:
 	mk 'objtype='$cputype all
 	$TOP/scripts/qemu-runner $cputype ./hello.exe | cmp /dev/stdin expected.txt
@@ -38,8 +42,9 @@ test_one:V:
 	$TOP/scripts/qemu-runner $cputype ./env.exe | cmp /dev/stdin env_expected.txt
 	$TOP/scripts/qemu-runner $cputype ./args.exe one two three | cmp /dev/stdin args_expected.txt
 	if(! ~ $cputype riscv){
-		mk 'objtype='$cputype stat.exe
+		mk 'objtype='$cputype stat.exe dirread.exe
 		$TOP/scripts/qemu-runner $cputype ./stat.exe | cmp /dev/stdin stat_expected.txt
+		$TOP/scripts/qemu-runner $cputype ./dirread.exe | cmp /dev/stdin dirread_expected.txt
 	}
 
 # unlike tests/c/mini2's own ARCHS loop (a self-contained per-test stub,
@@ -68,8 +73,9 @@ test:V:
 		$TOP/scripts/qemu-runner $arch ./env.exe | cmp /dev/stdin env_expected.txt
 		$TOP/scripts/qemu-runner $arch ./args.exe one two three | cmp /dev/stdin args_expected.txt
 		if(! ~ $arch riscv){
-			mk 'objtype='$arch 'cputype='$arch stat.exe
+			mk 'objtype='$arch 'cputype='$arch stat.exe dirread.exe
 			$TOP/scripts/qemu-runner $arch ./stat.exe | cmp /dev/stdin stat_expected.txt
+			$TOP/scripts/qemu-runner $arch ./dirread.exe | cmp /dev/stdin dirread_expected.txt
 		}
 	}
 	mk test_plan9
@@ -91,7 +97,7 @@ test:V:
 test_plan9:V:
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm' 'cputype=arm' 'GOOS=plan9' install }
-	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe fd_plan9_arm.exe mem_plan9_arm.exe proc_plan9_arm.exe env_plan9_arm.exe args_plan9_arm.exe stat_plan9_arm.exe
+	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe fd_plan9_arm.exe mem_plan9_arm.exe proc_plan9_arm.exe env_plan9_arm.exe args_plan9_arm.exe stat_plan9_arm.exe dirread_plan9_arm.exe
 	printf ':c\n$q\n' | 5i ./hello_plan9_arm.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | 5i ./io_plan9_arm.exe | sed -n 2,4p | cmp /dev/stdin io_expected.txt
 	printf ':c\n$q\n' | 5i ./dir_plan9_arm.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
@@ -100,7 +106,7 @@ test_plan9:V:
 	printf ':c\n$q\n' | 5i ./args_plan9_arm.exe one two three | sed -n 2,5p | cmp /dev/stdin args_expected.txt
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=mips' 'cputype=mips' 'GOOS=plan9' install }
-	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe fd_plan9_mips.exe mem_plan9_mips.exe proc_plan9_mips.exe env_plan9_mips.exe args_plan9_mips.exe stat_plan9_mips.exe
+	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe fd_plan9_mips.exe mem_plan9_mips.exe proc_plan9_mips.exe env_plan9_mips.exe args_plan9_mips.exe stat_plan9_mips.exe dirread_plan9_mips.exe
 	printf ':c\n$q\n' | vi ./hello_plan9_mips.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | vi ./io_plan9_mips.exe | sed -n 2,4p | cmp /dev/stdin io_expected.txt
 	printf ':c\n$q\n' | vi ./dir_plan9_mips.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
@@ -182,6 +188,13 @@ env.exe: env.c
 stat.exe: stat.c
 	$CC $CFLAGS -D$objtype -c stat.c
 	$LD $LDFLAGS -H7 -o $target -E _main stat.$O -lc
+
+# claude: dirread.c: dirread/dirreadall (Tier 3.5). NOT built for every
+# $cputype, and no darwin/windows rule at all -- see all:V:'s own
+# comment. Same -H7/-D$objtype story as hello.exe above.
+dirread.exe: dirread.c
+	$CC $CFLAGS -D$objtype -c dirread.c
+	$LD $LDFLAGS -H7 -o $target -E _main dirread.$O -lc
 
 # claude: Plan9 (GOOS=plan9)/arm+mips, run under 5i/vi -- see the
 # test:V: rule's own comment above for why 5c/5l/vc/vl are invoked
@@ -306,6 +319,21 @@ stat_plan9_arm.exe: stat.c
 stat_plan9_mips.exe: stat.c
 	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o stat_plan9_mips.v -c stat.c
 	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main stat_plan9_mips.v -lc
+
+# claude: dirread.c on plan9 -- built, not run, same reason as stat.c
+# just above (5i/vi don't serve FSTAT, which dirread() needs per entry
+# just as dirfstat() does) plus its own prerequisite: dirread() first
+# needs a plain read() OF A DIRECTORY to even get names, which is a
+# real Plan9 kernel behavior os/plan9/dirread.c relies on (unlike
+# linux/darwin, which need a getdents-style syscall instead) -- not
+# yet confirmed working under 5i/vi either.
+dirread_plan9_arm.exe: dirread.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o dirread_plan9_arm.5 -c dirread.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main dirread_plan9_arm.5 -lc
+
+dirread_plan9_mips.exe: dirread.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o dirread_plan9_mips.v -c dirread.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main dirread_plan9_mips.v -lc
 
 # macOS-native (no qemu -- Mach-O only runs on real macOS, see
 # tests/s/mini/mkfile's test_macos_arm64 for the same pattern): first
