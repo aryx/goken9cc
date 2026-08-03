@@ -51,6 +51,13 @@ EXTENSIONS = (".c", ".h", ".s")
 ZERO_HASH = "0" * 40
 BLAME_FLAGS = ["-C", "-C"]
 
+# The wasm toolchain (compilers/ec, assemblers/ea, linkers/el) was built by
+# Claude Code. It lives as subdirs *inside* the compilers/, assemblers/,
+# linkers/ top-level dirs (alongside e.g. 5c, 6a, 7l), so plain
+# top-level-dir grouping can't isolate it; carve it out by path prefix into
+# its own synthetic "wasm" row for a more accurate per-area %AI breakdown.
+WASM_PREFIXES = ("compilers/ec/", "assemblers/ea/", "linkers/el/")
+
 
 def run(cmd):
     return subprocess.run(
@@ -110,6 +117,8 @@ def blame_counts(path, claude_set):
 
 
 def top_dir(path):
+    if path.startswith(WASM_PREFIXES):
+        return "wasm (ec/ea/el)"
     parts = path.split("/", 1)
     return parts[0] if len(parts) > 1 else "."
 
@@ -144,7 +153,8 @@ def main():
     print("-" * 54)
 
     grand_total = grand_ai = grand_human = grand_uncommitted = 0
-    active_total = active_ai = 0
+    active_total = active_ai = 0          # excl GO/
+    core_total = core_ai = 0              # excl GO/ and wasm
     for d in sorted(stats, key=lambda k: -stats[k][0]):
         t, a, h, u = stats[d]
         pct = 100.0 * a / (t - u) if (t - u) else 0.0
@@ -153,6 +163,9 @@ def main():
         if d != "GO":
             active_total += t - u
             active_ai += a
+            if d != "wasm (ec/ea/el)":
+                core_total += t - u
+                core_ai += a
 
     print("-" * 54)
     denom = grand_total - grand_uncommitted
@@ -161,6 +174,9 @@ def main():
 
     apct = 100.0 * active_ai / active_total if active_total else 0.0
     print(f"{'TOTAL excl GO/':<16} {active_total:>8} {active_ai:>8} {apct:>5.1f}%")
+
+    cpct = 100.0 * core_ai / core_total if core_total else 0.0
+    print(f"{'TOTAL excl GO/+wasm':<16} {core_total:>8} {core_ai:>8} {cpct:>5.1f}%")
     print(f"\n({len(claude_set)} Claude-authored commits, {len(files)} source files)")
 
 
