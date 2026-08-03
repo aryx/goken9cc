@@ -91,6 +91,16 @@ static struct importfunc {
 	// abut), so os/windows/sbrk.c just takes a fresh VirtualAlloc region
 	// per call, exactly as os/darwin/sbrk.c does with mmap.
 	{ "VirtualAlloc", 0 },
+	// claude: the "small tier" -- getpid/getwd/time/sleep. Windows is
+	// the one GOOS where all four are ordinary library calls rather than
+	// syscalls, so each needs its own import here. GetSystemTimeAsFileTime
+	// (not GetSystemTime) because it yields a 64-bit count directly
+	// rather than a broken-down struct that would then need converting
+	// back; see os/windows/time.c for the epoch shift it still needs.
+	{ "GetCurrentProcessId", 0 },
+	{ "GetCurrentDirectoryA", 0 },
+	{ "GetSystemTimeAsFileTime", 0 },
+	{ "Sleep", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

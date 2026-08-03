@@ -1177,3 +1177,89 @@ same gap and fix as the earlier os/dir.h one.
 On testing it, see notes_test_infra.txt's "qemu-user is not the kernel"
 section: the failure path is deliberately NOT asserted, because qemu
 implements brk itself and accepts what a real kernel refuses.
+
+The "small tier": getpid, getwd, time/nsec, sleep
+------------------------------------------------------------
+
+Picked over the stat and process-control tiers precisely because these
+four are NOT a uniform group: each is a plain syscall on some systems
+and not a syscall at all on others, so between them they exercise every
+shape of glue this directory has.
+
+  getpid  syscall on linux/darwin (generated straight into its public
+          name -- Plan9 and POSIX agree exactly). An ordinary FILE READ
+          on plan9 ("#c/pid"), needing no syscall at all. A kernel32
+          call on windows.
+  getwd   a real getcwd(2) only on LINUX. darwin and plan9 both lack one
+          entirely and independently arrive at the same alternative:
+          open ".", then ask the kernel what path that DESCRIPTOR refers
+          to -- fcntl(F_GETPATH) and fd2path respectively. Strictly
+          better than a cached string, which can go stale. windows has
+          GetCurrentDirectoryA, whose return value is overloaded three
+          ways (0 = failure, < nbuf = length written, >= nbuf = required
+          size and nothing written), so ">= nbuf" is failure, not
+          success.
+  time    clock_gettime on linux, gettimeofday on darwin, /dev/bintime
+          on plan9 (8 bytes, BIG-endian regardless of machine, since it
+          is 9P-served), a FILETIME epoch shift on windows.
+  sleep   MILLISECONDS, per include/os/time.h -- not POSIX seconds.
+          A real syscall on plan9 and a plain Sleep() on windows, both
+          needing zero conversion; built from a timespec on linux, and
+          from select() on darwin, which has no nanosleep syscall.
+
+Two findings worth keeping:
+
+- Darwin has NO getcwd syscall under any name, and NO nanosleep syscall.
+  plan_syscalls.txt guessed __getcwd = 296 and flagged it unverified;
+  296 is actually vm_pressure_monitor. Both were settled from XNU's own
+  bsd/kern/syscalls.master, not from the 2010 Go snapshot the rest of
+  syscall/os/darwin/ came from -- that snapshot simply does not have
+  them. When a Darwin number is not in the Go snapshot, use the XNU
+  tree; do not guess.
+- Use clock_gettime/clock_nanosleep, NOT gettimeofday/nanosleep, on
+  linux. The obvious pair takes a struct whose fields are the kernel's
+  `long` -- 4 bytes on 32-bit, 8 on 64-bit -- so a single portable
+  declaration is impossible and os/linux/time.c would need an #ifdef
+  ladder. Taking the *_time64 forms on the 32-bit arches and the plain
+  ones on the 64-bit arches makes the struct 8+8 EVERYWHERE, so that
+  file is arch-independent. numbers_$cputype.h deliberately aliases both
+  to the same SYS_clock_gettime name to keep it that way. It is also
+  y2038-correct, and forced anyway on riscv32, which has neither
+  gettimeofday nor nanosleep (arch/riscv/include/asm/unistd.h puts
+  __ARCH_WANT_NEW_STAT and friends inside #if defined(__LP64__), and
+  never defines __ARCH_WANT_TIME32_SYSCALLS at all).
+
+Not runnable under the emulators: plan9's getpid and nsec read "#c/pid"
+and "/dev/bintime", and 5i/vi forward open() straight to the host, which
+on Linux has neither. The code is right for real Plan9 (it is
+principia's); it just cannot be exercised here until the emulators
+synthesize those two files. getwd and sleep DO run there, since FD2PATH
+and SLEEP are both implemented in machines/{5i,vi}. See todo.org.
+
+_mulv: vlong multiply had never worked in the self-hosted libc
+------------------------------------------------------------
+
+Found by nsec()'s "sec * 1000000000LL" -- the first vlong*vlong anything
+had ever asked lib_core/libc for. 5l reported "undefined: _mulv"
+followed by a cascade of bogus encoding errors on the unresolved BL
+("illegal combination BL 0 0 16", "bad rrr 54"), which makes the real
+cause easy to miss.
+
+compilers/cc/com64.c and compilers/cck/com64.c both turn vlong*vlong on
+a 32-bit arch into a call to _mulv, exactly as they turn + and - into
+_addv/_subv. But _addv/_subv are portable C in port/vlrt.c, while a
+64x64 multiply needs the machine's widening-multiply instruction, so
+upstream Plan9 keeps it in per-arch assembly (libc/$arch/vlop.s) -- and
+lib_core/libc had no vlop.s at all, for any arch. Now added for
+arm/386/mips/riscv, adapted from principia (arm, 386), plan9front (mips)
+and Richard Miller's riscv port, wired via each mkfiles/$cputype/mkfile's
+ARCHEXTRAOFILES.
+
+Take ONLY _mulv from those files: they also carry _addv/_subv (and, on
+386, _mul64by32/_div64by32), which port/vlrt.c already defines in C
+here -- copying wholesale is a duplicate-symbol link error.
+
+Why it hid: tests/c/vlong/ has its own LOCAL copy of vlrt.c and links
+against no libc, so it never consulted lib_core/libc's. Gated now by
+tests/c/regressions/vlong_mul.c, which links vlrt.c + vlop.s directly
+(not -lc) so it does not depend on a freshly-installed per-arch libc.a.

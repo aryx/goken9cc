@@ -51,3 +51,10 @@
 // even on these 64-bit arches, so the mapping's address would be
 // truncated. Same reason lseek and linux's _sysbrk need it.
 //sys _sysmmap(void *addr, ulong len, int prot, int flags, int fd, vlong offset) uintptr = SYS_mmap:_syscall6v
+// the "small tier": getpid, getwd, time/nsec, sleep -- see
+// numbers_darwin_amd64.h for why two of these are not the calls the
+// Linux side uses (Darwin has neither getcwd nor nanosleep).
+//sys getpid(void) int = SYS_getpid
+//sys _sysfcntl(int fd, int cmd, void *arg) int = SYS_fcntl
+//sys _sysgettimeofday(void *tv, void *tz, void *mach) int = SYS_gettimeofday
+//sys _sysselect(int nd, void *in, void *ou, void *ex, void *tv) int = SYS_select

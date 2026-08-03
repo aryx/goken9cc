@@ -82,6 +82,21 @@ TEXT brk(SB), $0
 	SYSCALL
 	RET
 
+// claude: fd2path/sleep -- see svc_arm.s's comments. Both are already
+// implemented by vi (machines/vi/syscall.c's sysfd2path/syssleep), so
+// getwd and sleep both run under the emulator with no machines/ work.
+TEXT fd2path(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$FD2PATH, R1
+	SYSCALL
+	RET
+
+TEXT sleep(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$SLEEP, R1
+	SYSCALL
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R1, 0(FP)
 	MOVW	$PREAD, R1

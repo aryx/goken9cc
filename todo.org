@@ -973,6 +973,30 @@ pass length each time, safer
 
 *** libsyscall
 
+**** gap: 5i/vi cannot serve plan9's synthetic device files
+claude:
+plan9's getpid() and nsec() are FILE READS on that GOOS, not syscalls --
+"#c/pid" and "/dev/bintime" (see lib_core/libc/os/plan9/{getpid,time}.c,
+ported from principia). That is correct for real Plan9, and is exactly
+why plan_syscalls.txt predicted Plan9 needs far fewer syscalls than the
+Unix column suggests.
+
+But machines/5i and machines/vi forward open() straight to the host
+(machines/5i/syscall_posix.c's sysopen calls the host open()), and a
+Linux host has neither file. So under the emulators getpid() returns 0
+and nsec() returns 0, and tests/c/hello_libc/proc.c's first check fails.
+proc.c is therefore built for plan9 but not RUN in that mkfile's
+test_plan9 target -- getwd() and sleep() there do work, since FD2PATH
+and SLEEP are already implemented in both emulators.
+
+The fix is a small synthetic-device layer in each emulator: intercept
+open() of a known device path, hand back a synthetic fd, and serve its
+contents from the host on read (getpid() -> the host's own pid,
+/dev/bintime -> the host clock as 8 big-endian nanosecond bytes). Maybe
+60 lines per emulator, and it would make the plan9 target genuinely
+testable rather than merely compiled. Worth doing before the stat or
+process-control tiers, both of which will want more of /dev.
+
 **** gap: no dup() on windows (needs an fd -> HANDLE table first)
 claude:
 access/dup finished Tier 2 of docs/claude_notes/plan_syscalls.txt on

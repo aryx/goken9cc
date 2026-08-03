@@ -159,7 +159,7 @@
 # arches, not just the two that were broken: riscv64 was already correct
 # and is the control, which is the whole point of checking an invariant
 # rather than a fix.
-test:V: uintptr_width.check mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check mulconst_unsigned_char_host.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check
+test:V: uintptr_width.check vlong_mul.check mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check mulconst_unsigned_char_host.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -167,6 +167,66 @@ mips_aut3_align.check:V: mips_aut3_align.c
 	rm -f /tmp/mips_aut3_align.$pid.trace
 
 INC=-I../../../include -I../../../include/ALL
+
+# vlong_mul: not diff-derived -- a gap in lib_core/libc itself (see the
+# comment in the .c file). "vlong * vlong" on a 32-bit arch compiles to a
+# call to _mulv, which every frontend here emits but which lib_core/libc
+# had no implementation of, for any arch: _addv/_subv are portable C in
+# port/vlrt.c, but a 64x64 multiply needs the machine's widening
+# multiply, so upstream Plan9 keeps it in libc/$arch/vlop.s -- and there
+# was no vlop.s here at all. Fixed by adding
+# lib_core/libc/arch/{arm,386,mips,riscv}/vlop.s.
+#
+# Deliberately links vlrt.c + vlop.s DIRECTLY rather than -lc: that pair
+# is exactly the unit that was broken, and it avoids this target
+# depending on a freshly-installed per-arch libc.a (which would mean
+# rebuilding libc five times, and would break if a previous target left
+# a GOOS=plan9 libc.a installed). -D$arch matters for vlrt.c, whose
+# Vlong struct is hi/lo-swapped on big-endian mips.
+# arm64 is the control: it multiplies vlongs with one native instruction
+# and never calls _mulv, so it proves the expected values are right.
+#
+# -H7 is not optional on the 5l/8l/7l lines: 5l defaults to Plan9 a.out
+# for arm regardless of host (it has no host-GOOS detection at all), and
+# 8l/6l/7l fall back to the HOST's GOOS. Omitting it produces a binary
+# qemu-user cannot run, which shows up as a uniform exit status 1 from
+# every test -- indistinguishable from a genuine assertion failure, and
+# easy to misread as the code under test being wrong. vl/il/jl always
+# default to ELF, so their lines need nothing.
+vlong_mul.check:V: vlong_mul.c
+	8c $INC -I../../../include/arch/386 -D386 -o vlong_mul_386.8 -c vlong_mul.c
+	8c $INC -I../../../include/arch/386 -D386 -o vlrt_386.8 -c ../../../lib_core/libc/port/vlrt.c
+	8a -o vlop_386.8 -c ../../../lib_core/libc/arch/386/vlop.s
+	8a -o vlong_mul_start_386.8 -c mulzero_start_386.s
+	8l -H7 -o vlong_mul_386.exe -E _main vlong_mul_386.8 vlrt_386.8 vlop_386.8 vlong_mul_start_386.8
+	5c $INC -I../../../include/arch/arm -Darm -o vlong_mul_arm.5 -c vlong_mul.c
+	5c $INC -I../../../include/arch/arm -Darm -o vlrt_arm.5 -c ../../../lib_core/libc/port/vlrt.c
+	5a -o vlop_arm.5 -c ../../../lib_core/libc/arch/arm/vlop.s
+	5a -o vlong_mul_div_arm.5 -c ../../../lib_core/libc/arch/arm/div.s
+	5a -o vlong_mul_start_arm.5 -c arm_div_from_lib_start.s
+	5l -H7 -o vlong_mul_arm.exe -E _main vlong_mul_arm.5 vlrt_arm.5 vlop_arm.5 vlong_mul_div_arm.5 vlong_mul_start_arm.5
+	vc $INC -I../../../include/arch/mips -Dmips -o vlong_mul_mips.v -c vlong_mul.c
+	vc $INC -I../../../include/arch/mips -Dmips -o vlrt_mips.v -c ../../../lib_core/libc/port/vlrt.c
+	va -o vlop_mips.v -c ../../../lib_core/libc/arch/mips/vlop.s
+	va -o vlong_mul_start_mips.v -c float_const_oob_start_mips.s
+	vl -o vlong_mul_mips.exe -E _main vlong_mul_mips.v vlrt_mips.v vlop_mips.v vlong_mul_start_mips.v
+	ic $INC -I../../../include/arch/riscv -Driscv -o vlong_mul_riscv.i -c vlong_mul.c
+	ic $INC -I../../../include/arch/riscv -Driscv -o vlrt_riscv.i -c ../../../lib_core/libc/port/vlrt.c
+	ia -o vlop_riscv.i -c ../../../lib_core/libc/arch/riscv/vlop.s
+	ia -o vlong_mul_start_riscv.i -c riscv64_ptr_width_start.s
+	il -o vlong_mul_riscv.exe -E _main vlong_mul_riscv.i vlrt_riscv.i vlop_riscv.i vlong_mul_start_riscv.i
+	7c $INC -I../../../include/arch/arm64 -Darm64 -o vlong_mul_arm64.7 -c vlong_mul.c
+	7a -o vlong_mul_start_arm64.7 -c arm64_regressions_start.s
+	7l -H7 -o vlong_mul_arm64.exe -E _main vlong_mul_arm64.7 vlong_mul_start_arm64.7
+	for (a in 386 arm mips riscv arm64) {
+		st=`{ ../../../scripts/qemu-runner $a ./vlong_mul_$a.exe; echo $status }
+		if (~ $st 0)
+			echo 'ok: vlong_mul_'$a'.exe exit 0'
+		if not {
+			echo 'FAILED: vlong_mul_'$a'.exe (got '$st')'
+			exit failed
+		}
+	}
 
 uintptr_width.check:V: uintptr_width.c arm64_regressions_start.s mulzero_start_amd64.s riscv64_ptr_width_start.s
 	7c $INC -I../../../include/arch/arm64 -Darm64 -o uintptr_width_arm64.7 -c uintptr_width.c

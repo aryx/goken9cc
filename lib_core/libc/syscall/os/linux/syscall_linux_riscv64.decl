@@ -44,3 +44,20 @@
 // cast ever saw it. This is the second caller of _syscall6v, and the
 // first that is not about a 64-bit *offset*.
 //sys _sysbrk(void *addr) uintptr = SYS_brk:_syscall6v
+// the "small tier": getpid, getwd, time/nsec, sleep.
+// getpid is the only one generated straight into its public name -- it
+// takes nothing, returns an int, and Plan9 and POSIX agree exactly.
+//sys getpid(void) int = SYS_getpid
+// getcwd is _sys-prefixed because the shapes differ twice over: POSIX
+// returns the LENGTH written (or -errno), Plan9's getwd() returns the
+// buffer (or nil). os/linux/getwd.c bridges it.
+//sys _sysgetcwd(char *buf, ulong size) long = SYS_getcwd
+// clock_gettime/clock_nanosleep rather than gettimeofday/nanosleep, and
+// on the 32-bit arches these numbers are the *_time64 variants -- see
+// numbers_$cputype.h for why (the timespec is 8+8 on every arch this
+// way, so os/linux/time.c needs no per-arch layout). The timespec is
+// passed as void* here for the same reason _sysopen takes void*: the
+// raw layer stays free of struct definitions, and os/linux/time.c
+// declares the one shape it needs.
+//sys _sysclockgettime(int clockid, void *ts) int = SYS_clock_gettime
+//sys _sysclocknanosleep(int clockid, int flags, void *req, void *rem) int = SYS_clock_nanosleep

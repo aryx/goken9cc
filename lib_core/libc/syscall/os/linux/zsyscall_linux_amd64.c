@@ -74,3 +74,23 @@ uintptr _sysbrk(void* addr)
 	return (uintptr)_syscall6v(SYS_brk, (vlong)addr, 0, 0, 0, 0, 0);
 }
 
+int getpid(void)
+{
+	return (int)_syscall6(SYS_getpid, 0, 0, 0, 0, 0, 0);
+}
+
+long _sysgetcwd(char* buf, ulong size)
+{
+	return (long)_syscall6(SYS_getcwd, (vlong)buf, (vlong)size, 0, 0, 0, 0);
+}
+
+int _sysclockgettime(int clockid, void* ts)
+{
+	return (int)_syscall6(SYS_clock_gettime, (vlong)clockid, (vlong)ts, 0, 0, 0, 0);
+}
+
+int _sysclocknanosleep(int clockid, int flags, void* req, void* rem)
+{
+	return (int)_syscall6(SYS_clock_nanosleep, (vlong)clockid, (vlong)flags, (vlong)req, (vlong)rem, 0, 0);
+}
+

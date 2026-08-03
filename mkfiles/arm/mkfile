@@ -17,4 +17,4 @@ CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/arm
 # getcallerpc.s: lib_core/libc/port/getcallerpc.c's own #ifdef guards
 # this arch out of its portable fallback, expecting the real
 # implementation here instead.
-ARCHEXTRAOFILES=arch/arm/div.$O arch/arm/getcallerpc.$O
+ARCHEXTRAOFILES=arch/arm/div.$O arch/arm/getcallerpc.$O arch/arm/vlop.$O

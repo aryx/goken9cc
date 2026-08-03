@@ -9,3 +9,12 @@ AS=va
 AR=iar
 
 CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/mips
+
+# claude: _mulv, the 64-bit multiply helper the compiler frontends emit
+# for "vlong * vlong" on a 32-bit arch. Unlike _addv/_subv (portable C in
+# lib_core/libc/port/vlrt.c) it needs the machine's widening multiply, so
+# upstream Plan9 keeps it in per-arch assembly. See
+# lib_core/libc/arch/mips/vlop.s. Set here rather than in
+# lib_core/libc/mkfile for the same reason 386's/arm's are -- see
+# mkfiles/386/mkfile's own ARCHEXTRAOFILES comment.
+ARCHEXTRAOFILES=arch/mips/vlop.$O

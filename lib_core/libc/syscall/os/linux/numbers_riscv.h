@@ -63,3 +63,44 @@
  * common to rv32/rv64 (not one of the 32-vs-64 split rows).
  */
 #define SYS_brk	214
+/* claude: the "small tier" -- getpid, getwd, time/nsec, sleep.
+ *
+ * The clock_* choice needs explaining, since the obvious calls would be
+ * gettimeofday and nanosleep. Those take a struct timeval/timespec whose
+ * fields are the kernel's `long` -- 4 bytes on 32-bit arches, 8 on
+ * 64-bit -- so a single portable declaration of that struct is
+ * impossible, and every consumer would need an arch-dependent layout.
+ *
+ * The clock_gettime/clock_nanosleep family avoids that completely. On
+ * the 32-bit arches we use the *_time64 forms, whose struct
+ * __kernel_timespec is {s64 tv_sec; s64 tv_nsec} by definition; on the
+ * 64-bit arches plain clock_gettime/clock_nanosleep already have an
+ * 8+8 struct timespec. So the SHAPE is two vlongs everywhere, and
+ * os/linux/time.c can be one arch-independent file with no #ifdef.
+ * They are also y2038-correct, which gettimeofday on 32-bit is not.
+ * This is additionally forced on riscv32, which has no gettimeofday or
+ * nanosleep at all (see numbers_riscv.h).
+ */
+#define SYS_getpid	172
+#define SYS_getcwd	17
+#define SYS_clock_gettime	403
+#define SYS_clock_nanosleep	407
+/* claude: note the two names above are deliberately the *plain* ones
+ * even though the NUMBERS are the kernel's *_time64 variants
+ * (clock_gettime64 / clock_nanosleep_time64). That aliasing is the
+ * point: "SYS_clock_gettime" here means "the clock_gettime on this arch
+ * whose timespec is 8+8", which is 403 on a 32-bit arch and 113/228 on
+ * a 64-bit one. Keeping one name lets os/linux/time.c stay a single
+ * arch-independent file instead of growing an #ifdef ladder.
+ */
+/* claude: on THIS arch the time64 forms are not merely preferable, they
+ * are the only option -- the third time rv32 diverges from the riscv64
+ * file it was copied from (see SYS_llseek above for the first).
+ * gettimeofday (169) and nanosleep (101) exist only under the `time32`
+ * ABI, and rv32 is not in it: include/uapi/asm-generic/unistd.h guards
+ * both with
+ *     #if defined(__ARCH_WANT_TIME32_SYSCALLS) || __BITS_PER_LONG != 32
+ * and arch/riscv/include/asm/unistd.h never defines that macro (riscv
+ * postdates the y2038 cleanup). Calling 169 or 101 here would land on
+ * whatever else occupies those numbers, or on nothing at all.
+ */

@@ -114,6 +114,30 @@ TEXT brk(SB), $0
 	SWI	$0
 	RET
 
+// claude: fd2path(fd, buf, nbuf) -- "what path is this descriptor?".
+// No Unix has an equivalent syscall, which is exactly why os/plan9/
+// getwd.c can be three lines while the other GOOSes each need their own
+// mechanism: linux has a real getcwd(2), and darwin (which has none
+// either) reaches for fcntl(F_GETPATH), the closest thing to this call
+// outside Plan9. 5i implements FD2PATH already (machines/5i/
+// syscall_posix.c's sysfd2path), so getwd runs under the emulator.
+TEXT fd2path(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$FD2PATH, R0
+	SWI	$0
+	RET
+
+// claude: sleep(ms) -- milliseconds, matching include/os/time.h's
+// sleep(long) exactly, so no glue at all on this GOOS (contrast
+// os/linux/time.c, which has to build a timespec, and os/darwin/time.c,
+// which has no nanosleep syscall to call in the first place). sleep(0)
+// means yield. 5i implements SLEEP (syssleep).
+TEXT sleep(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$SLEEP, R0
+	SWI	$0
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R0, 0(FP)
 	MOVW	$PREAD, R0

@@ -80,6 +80,17 @@ awk -v syscallarg="$syscallarg" '
 		sysname = substr(sysname, 1, ci - 1)
 	}
 
+	# claude: "name(void)" means zero arguments, not one argument named
+	# "void" -- which is what the generic parse below would otherwise
+	# make of it (the parameter name is taken to be the last token, and
+	# "void" is the only token), emitting `int getpid(void)` with a
+	# `(long)void` argument. Normalized to the empty-parameter case here
+	# so the declaration in the .decl can keep saying (void), matching
+	# both C and the prototype in include/os/*.h.
+	gsub(/^[ \t]+|[ \t]+$/, "", params)
+	if (params == "void")
+		params = ""
+
 	n = split(params, plist, ",")
 	argstr = ""
 	callargs = ""
@@ -110,6 +121,13 @@ awk -v syscallarg="$syscallarg" '
 	}
 	for (i = nargs; i < 6; i++)
 		callargs = callargs ", 0"
+
+	# emit (void), not (), for a zero-argument syscall -- an empty
+	# parameter list is an old-style declaration in C, which these
+	# compilers accept but which does not match the (void) prototypes in
+	# include/os/*.h
+	if (nargs == 0)
+		argstr = "void"
 
 	print rettype " " name "(" argstr ")"
 	print "{"

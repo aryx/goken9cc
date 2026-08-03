@@ -365,3 +365,69 @@ TEXT _winalloc+0(SB), $0
 
 	MOVQ	DI, SP
 	RET				// LPVOID (or NULL) in AX
+
+// claude: the "small tier" stubs -- getpid/getwd/time/sleep. All four
+// are ordinary kernel32 calls here rather than syscalls, and all four
+// take 0, 1 or 2 register arguments, so each needs only the mandatory
+// 32-byte shadow space and no stack arguments.
+
+// pid = _wingetpid()
+//   GetCurrentProcessId(void)
+// No arguments at all -- the shortest stub in this file. The shadow
+// space is still mandatory even with zero arguments: the callee owns
+// those 32 bytes unconditionally under the Win64 ABI.
+TEXT _wingetpid+0(SB), $0
+	MOVQ	SP, DI
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetCurrentProcessId(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// DWORD pid in AX
+
+// n = _wingetcwd(nbuf, buf)
+//   GetCurrentDirectoryA(nBufferLength, lpBuffer)
+// Argument order is deliberately (nbuf, buf), matching Win32's own
+// (length first) rather than the (buf, len) every other call in this
+// tree uses -- so the two arguments land in RCX/RDX with no shuffling.
+// os/windows/getwd.c does the reordering, where it is visible in C.
+TEXT _wingetcwd+0(SB), $0
+	MOVQ	SP, DI
+	MOVL	nbuf+0(FP), CX		// 1st: nBufferLength (zero-extend)
+	MOVQ	buf+8(FP), DX		// 2nd: lpBuffer
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetCurrentDirectoryA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// chars written, or 0 on failure
+
+// _winfiletime(ft)
+//   GetSystemTimeAsFileTime(lpSystemTimeAsFileTime)
+// Writes a 64-bit FILETIME (100-nanosecond ticks since 1601) through
+// the pointer; returns void, so callers cannot check for failure and
+// this stub reports none. os/windows/time.c converts the epoch.
+TEXT _winfiletime+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	ft+0(FP), CX		// 1st: lpSystemTimeAsFileTime
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetSystemTimeAsFileTime(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET
+
+// _winsleep(ms)
+//   Sleep(dwMilliseconds)
+// Win32's Sleep already takes milliseconds, exactly like
+// include/os/time.h's sleep(long) -- the only GOOS besides plan9 where
+// the units need no conversion. Returns void.
+TEXT _winsleep+0(SB), $0
+	MOVQ	SP, DI
+	MOVL	ms+0(FP), CX		// 1st: dwMilliseconds (zero-extend)
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_Sleep(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET

@@ -66,3 +66,34 @@
  * munmap (73) is deliberately NOT here: nothing frees an sbrk region.
  */
 #define SYS_mmap	197
+/* claude: the "small tier" -- getpid, getwd, time/nsec, sleep. All four
+ * verified against XNU's own bsd/kern/syscalls.master, not the 2010 Go
+ * snapshot the rest of this file came from, because two of them are not
+ * in that snapshot at all and the plan file's guess for one was wrong.
+ *
+ * getpid (20) and gettimeofday (116) are straightforward. The other two
+ * are not, and both are cases where Darwin simply has no equivalent of
+ * the Linux syscall:
+ *
+ * - There is NO getcwd syscall on Darwin, under any name. (Note
+ *   docs/claude_notes/plan_syscalls.txt guessed __getcwd = 296 and
+ *   flagged it unverified; 296 is in fact vm_pressure_monitor.) So
+ *   getwd is built on fcntl(F_GETPATH) instead -- open the directory,
+ *   ask the kernel that descriptor's path. This is the same idea as
+ *   Plan9's fd2path, which is why os/darwin/getwd.c and
+ *   os/plan9/getwd.c look alike and neither looks like linux's.
+ * - There is NO nanosleep syscall either; Darwin implements it in
+ *   libSystem over __semwait_signal. select(2) with only a timeout is
+ *   the classic portable substitute and is a real syscall here, so
+ *   os/darwin/time.c uses that.
+ *
+ * gettimeofday is marked NO_SYSCALL_STUB in syscalls.master, meaning
+ * libSystem exports no automatic wrapper -- irrelevant to us, since we
+ * trap directly, but it explains why it looks unusual there. Its third
+ * argument (uint64_t *mach_absolute_time) is a Darwin addition; passing
+ * nil asks for just the timeval.
+ */
+#define SYS_getpid	20
+#define SYS_fcntl	92
+#define SYS_select	93
+#define SYS_gettimeofday	116

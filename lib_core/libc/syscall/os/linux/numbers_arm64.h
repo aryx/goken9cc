@@ -56,3 +56,25 @@
  * common to rv32/rv64 (not one of the 32-vs-64 split rows).
  */
 #define SYS_brk	214
+/* claude: the "small tier" -- getpid, getwd, time/nsec, sleep.
+ *
+ * The clock_* choice needs explaining, since the obvious calls would be
+ * gettimeofday and nanosleep. Those take a struct timeval/timespec whose
+ * fields are the kernel's `long` -- 4 bytes on 32-bit arches, 8 on
+ * 64-bit -- so a single portable declaration of that struct is
+ * impossible, and every consumer would need an arch-dependent layout.
+ *
+ * The clock_gettime/clock_nanosleep family avoids that completely. On
+ * the 32-bit arches we use the *_time64 forms, whose struct
+ * __kernel_timespec is {s64 tv_sec; s64 tv_nsec} by definition; on the
+ * 64-bit arches plain clock_gettime/clock_nanosleep already have an
+ * 8+8 struct timespec. So the SHAPE is two vlongs everywhere, and
+ * os/linux/time.c can be one arch-independent file with no #ifdef.
+ * They are also y2038-correct, which gettimeofday on 32-bit is not.
+ * This is additionally forced on riscv32, which has no gettimeofday or
+ * nanosleep at all (see numbers_riscv.h).
+ */
+#define SYS_getpid	172
+#define SYS_getcwd	17
+#define SYS_clock_gettime	113
+#define SYS_clock_nanosleep	115
