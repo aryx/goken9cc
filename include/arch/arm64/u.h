@@ -13,15 +13,21 @@ typedef unsigned long long u64;
 typedef float float32;
 typedef double float64;
 
-//TODO? not unsigned long long like in riscv64/u.h? see the comment there
-typedef unsigned long uintptr;
-typedef long intptr;
+// claude: deliberately vlong-width, like riscv64/u.h's and amd64/u.h's
+// (see the latter for the full reasoning). 7c's `long` is 4 bytes
+// (SZ_LONG in compilers/7c/gc.h) while pointers are 8 (SZ_IND), so
+// `unsigned long` here would make uintptr 4 bytes on a 64-bit arch and
+// truncate every pointer cast through it.
+typedef unsigned long long uintptr;
+typedef long long intptr;
 
 // bit-level double access for port/frexp.c (frexp/ldexp/modf), adapted
 // from principia's include/arch/{arm,386}/u.h (same little-endian
-// layout) -- note this deliberately uses uint32 for hi/lo, not ulong:
-// ulong is 8 bytes on this arch (unlike 32-bit arm/386, where it's the
-// same size as uint32), which would silently double the union's size.
+// layout) -- note this deliberately uses u32 for hi/lo, not ulong: u32
+// states the exact width this bit layout requires, rather than relying
+// on whatever `ulong` happens to be. claude: `ulong` is in fact also 4
+// bytes here (7c's `long` is 4 -- see the uintptr note above). See
+// amd64/u.h's identical note.
 union FPdbleword {
 	double x;
 	struct {	/* little endian */

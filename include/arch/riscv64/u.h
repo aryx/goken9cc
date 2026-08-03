@@ -11,9 +11,13 @@
  * this tree, jc's `long` is 4 bytes even here, on a genuine 64-bit
  * arch (confirmed: sizeof(long)==4 via a direct probe) -- but pointers
  * are 8 bytes. uintptr/intptr below are deliberately `unsigned long
- * long`/`long long` (vlong-width), NOT `unsigned long`/`long` the way
- * arm64's/amd64's u.h (correctly) use, because those two *do* have an
- * 8-byte `long`. Using `ulong` here would silently truncate any
+ * long`/`long long` (vlong-width), NOT `unsigned long`/`long`. claude:
+ * this is not an rv64 quirk -- arm64's and amd64's u.h do exactly the
+ * same, for exactly the same reason. 6c and 7c both have SZ_LONG 4
+ * with SZ_IND 8, just like jc (confirmed by probe: `sizeof(uintptr)`
+ * emits $8 alongside `sizeof(void*)`'s $8 and `sizeof(ulong)`'s $4).
+ * Do not assume any arch in this tree has a pointer-wide `long`.
+ * Using `ulong` here would silently truncate any
  * pointer cast through it to 32 bits -- this is exactly what happened
  * while deriving this file's own va_arg alignment logic (a `(uintptr)
  * list` cast through a wrongly-`ulong`-typed uintptr corrupted the

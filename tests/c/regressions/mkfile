@@ -149,12 +149,44 @@
 # 8c didn't hit this because compilers/8c/'s own `mk -a install`
 # rebuilds compilers/cc/cc.ao (mac.o included) as part of the same
 # invocation. See docs/claude_notes/notes_shared_frontend_bugs.txt.
-test:V: mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check mulconst_unsigned_char_host.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check
+# uintptr_width: not diff-derived -- a goken-original bug in the base
+# typedefs (include/arch/$cputype/u.h), found while starting port/sbrk.c
+# (see the comment in the .c file for the full root cause: `unsigned
+# long uintptr` is 4 bytes on amd64/arm64, where pointers are 8, because
+# every compiler in this tree has SZ_LONG 4 regardless of arch).
+# Unlike every other check here, this one needs -I for <u.h> -- it is
+# testing those headers, not the compilers. Run on all three 64-bit
+# arches, not just the two that were broken: riscv64 was already correct
+# and is the control, which is the whole point of checking an invariant
+# rather than a fix.
+test:V: uintptr_width.check mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check mulconst_unsigned_char_host.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
 	awk '/align aut3/ { if ($NF % 4 != 0) { print "misaligned: " $0; bad=1 } } END { if (bad) exit 1 }' /tmp/mips_aut3_align.$pid.trace
 	rm -f /tmp/mips_aut3_align.$pid.trace
+
+INC=-I../../../include -I../../../include/ALL
+
+uintptr_width.check:V: uintptr_width.c arm64_regressions_start.s mulzero_start_amd64.s riscv64_ptr_width_start.s
+	7c $INC -I../../../include/arch/arm64 -Darm64 -o uintptr_width_arm64.7 -c uintptr_width.c
+	7a -o uintptr_width_arm64_start.7 -c arm64_regressions_start.s
+	7l -o uintptr_width_arm64.exe -E _main uintptr_width_arm64.7 uintptr_width_arm64_start.7
+	6c $INC -I../../../include/arch/amd64 -Damd64 -o uintptr_width_amd64.6 -c uintptr_width.c
+	6a -o uintptr_width_amd64_start.6 -c mulzero_start_amd64.s
+	6l -o uintptr_width_amd64.exe -E _main uintptr_width_amd64.6 uintptr_width_amd64_start.6
+	jc $INC -I../../../include/arch/riscv64 -Driscv64 -o uintptr_width_riscv64.j -c uintptr_width.c
+	ja -o uintptr_width_riscv64_start.j -c riscv64_ptr_width_start.s
+	jl -o uintptr_width_riscv64.exe -E _main uintptr_width_riscv64.j uintptr_width_riscv64_start.j
+	for (a in arm64 amd64 riscv64) {
+		st=`{ ../../../scripts/qemu-runner $a ./uintptr_width_$a.exe; echo $status }
+		if (~ $st 0)
+			echo 'ok: uintptr_width_'$a'.exe exit 0'
+		if not {
+			echo 'FAILED: uintptr_width_'$a'.exe (got '$st')'
+			exit failed
+		}
+	}
 
 riscv64_ptr_width.check:V: riscv64_ptr_width.c riscv64_ptr_width_start.s
 	jc -Driscv64 -c riscv64_ptr_width.c
