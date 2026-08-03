@@ -1,4 +1,5 @@
 
+// pad's define, clearer code IMHO
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2
