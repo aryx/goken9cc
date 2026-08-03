@@ -2,11 +2,6 @@
 #ifndef _BIO_H_
 #define _BIO_H_ 1
 
-// claude: replaces the old AUTOLIB(bio) weak-symbol trick (only ever
-// meaningful under a host-side p9l-style wrapper that this project
-// never built -- see mkfiles/mkfile.proto's BOOTLIBS comment) with the
-// pragma goken's own linkers actually act on, matching regexp.h's
-// "#pragma lib libregexp.a".
 #pragma lib "libbio.a"
 
 enum

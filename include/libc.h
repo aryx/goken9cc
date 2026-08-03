@@ -7,14 +7,9 @@
 // Principia Softwarica Core libraries book table of contents.
 //
 // require: this file assumes a per-arch <u.h> has been included first defining
-// the uint32/uint64/uintptr, jmp_ptr, va_list, and other arch-specific types.
+// the u32/s32/u64/s64/uintptr, jmp_ptr, va_list, and other arch-specific types.
 
-// claude: makes goken's own linkers (5l/6l/7l/8l/vl/il -- see their
-// ldobj()'s AHISTORY/addlib()) auto-link libc.a via -L$ROOT/arch/$objtype/lib,
-// the same mechanism include/regexp/regexp.h already uses for libregexp.a.
-// Silently ignored by gcc/clang (unknown #pragma), so boot-gcc/boot-clang
-// builds still need $BOOTLIBS (see mkfiles/boot-gcc/mkfile) for their
-// equivalent, lib9.a.
+// makes goken's own linkers (5l/6l/7l/8l/vl/il) auto-link libc.a
 #pragma	lib	"libc.a"
 //#pragma	src	"/sys/src/libc"
 
@@ -153,11 +148,6 @@
 // memory
 //----------------------------------------------------------------------------
 // malloc() is upper in foundations (but relies internally on sbrk())
-// claude: os/mem.h (brk/sbrk/end) was previously declared nowhere at all
-// -- the file existed but nothing included it, so every caller of brk()
-// or sbrk() compiled with no prototype in scope ("function args not
-// checked", visible now that warnings print by default). Same gap, and
-// same fix, as the os/dir.h one.
 #include "os/mem.h"
 
 //----------------------------------------------------------------------------
