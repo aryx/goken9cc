@@ -71,6 +71,17 @@ TEXT dup(SB), $0
 	SYSCALL
 	RET
 
+// claude: brk(void*) -- see svc_arm.s's comment: on this GOOS the kernel
+// call is already exactly include/os/mem.h's brk(), so port/sbrk.c needs
+// no bridge the way it does on linux (os/linux/brk.c) and darwin
+// (os/darwin/sbrk.c). vi implements BRK (machines/vi/syscall.c's
+// sysbrk_), so this runs under the emulator with no machines/ work.
+TEXT brk(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$BRK, R1
+	SYSCALL
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R1, 0(FP)
 	MOVW	$PREAD, R1

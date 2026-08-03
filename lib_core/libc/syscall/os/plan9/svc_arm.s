@@ -94,6 +94,26 @@ TEXT dup(SB), $0
 	SWI	$0
 	RET
 
+// claude: brk(void*) -- the memory primitive port/sbrk.c is built on.
+// Plan9 is the one GOOS where it needs no glue at all: the kernel call
+// is already both named and shaped like include/os/mem.h's brk()
+// (absolute new-break address in, 0 or -1 out), so port/sbrk.c links
+// straight against this. Compare os/linux/brk.c, which exists purely to
+// convert Linux's return-the-new-break-and-no-errno convention into
+// this one, and os/darwin/sbrk.c, which has no brk to call at all.
+//
+// Note it is brk here, not principia's brk_: that name only exists in
+// Plan9's own libc because 9sys/sbrk.c wants the plain `brk` symbol for
+// a wrapper it no longer needs once brk is already this shape.
+//
+// 5i implements BRK (machines/5i/syscall.c's sysbrk), so this runs under
+// the emulator with no machines/ work.
+TEXT brk(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$BRK, R0
+	SWI	$0
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R0, 0(FP)
 	MOVW	$PREAD, R0

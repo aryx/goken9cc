@@ -40,3 +40,12 @@
 #define SYS_access	33
 #define SYS_dup	41
 #define SYS_dup2	63
+/* claude: brk -- the raw kernel primitive port/sbrk.c is built on (it
+ * is sbrk, not brk, that the toolchain's own callers use; see
+ * include/os/mem.h and port/sbrk.c). Note Linux's brk(2) does NOT use
+ * the usual negative-errno convention: it returns the NEW break, and
+ * signals failure by returning the UNCHANGED old one. The public
+ * Plan9-shaped brk() (0/-1) is the shim in syscall_linux_386.h.
+ * From syscall_32.tbl ("45 i386 brk"); arm shares this number.
+ */
+#define SYS_brk	45

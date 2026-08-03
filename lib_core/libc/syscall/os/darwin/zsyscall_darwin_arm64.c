@@ -69,3 +69,8 @@ void exit(int code)
 	_syscall6(SYS_exit, (vlong)code, 0, 0, 0, 0, 0);
 }
 
+uintptr _sysmmap(void* addr, ulong len, int prot, int flags, int fd, vlong offset)
+{
+	return (uintptr)_syscall6v(SYS_mmap, (vlong)addr, (vlong)len, (vlong)prot, (vlong)flags, (vlong)fd, (vlong)offset);
+}
+

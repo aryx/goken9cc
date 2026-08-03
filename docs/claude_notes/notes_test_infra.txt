@@ -156,3 +156,43 @@ docs/claude_notes/notes_os_macos.txt) rather than assuming a single
 symptom is enough. When adding a new regression test, actually breaking
 the fix and watching the test fail is the bar to clear, not just
 "this test would probably fail if the bug came back."
+
+qemu-user is not the kernel: brk in particular
+------------------------------------------------
+
+Found while adding sbrk (Tier 1 of plan_syscalls.txt), and worth
+generalizing: qemu-user does not merely translate every syscall to the
+host. Some it *implements itself*, and for those the harness is a poor
+oracle -- not because of an emulation gap the way qemu-mips's ADD.D or
+qemu-arm's FPA FIX are (see notes_arch_mips.txt/notes_arch_arm.txt), but
+by design, because the guest's address space belongs to qemu.
+
+brk is one of them (linux-user's own do_brk). Measured, not assumed:
+
+  arch    _sysbrk((void*)-1)
+  386     returned 0xFFFFFFFF -- i.e. reported SUCCESS for a break at
+          the very top of the address space, which no real kernel grants
+  riscv   same
+  amd64   segfaulted inside qemu itself
+  arm64   same
+
+The practical consequences, both of which shaped how sbrk was written
+and tested:
+
+- Do not write a test asserting that an absurd brk/sbrk FAILS. Under
+  this harness that asserts qemu's behavior, not libc's, and it does not
+  even agree across arches. tests/c/hello_libc/mem.c says so in its own
+  comment and deliberately tests only the success path -- but tests it
+  hard (two blocks, checked for distinctness, non-overlap, writability,
+  and non-clobbering of each other), since that part IS meaningful.
+- Prefer guarding what libc can decide for itself over relying on the OS
+  to refuse. port/sbrk.c gained an explicit bl+n overflow check for
+  exactly this reason: without it, sbrk((ulong)-1) wraps to a low
+  address, brk() to a low address is a legal shrink that reports
+  success, and sbrk hands back memory it never obtained. That guard IS
+  deterministically testable (verified returning -1 on 386 and riscv),
+  precisely because it never consults the kernel.
+
+The general rule: before writing a test that asserts a syscall FAILS,
+check whether qemu implements that syscall itself. Success paths are
+generally trustworthy here; refusal paths are not.

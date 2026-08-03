@@ -163,6 +163,31 @@ PORTOFILES=\
 # explicitly.
 PORTPOSIXOFILES=`{if(~ $GOOS plan9 windows) echo -n; if not echo port/seek.$O port/remove.$O port/dup.$O}
 
+# claude: sbrk() and the per-GOOS brk() under it. Selected separately
+# from PORTPOSIXOFILES above because the split is a DIFFERENT one: those
+# files are "everywhere except plan9/windows", whereas port/sbrk.c is
+# wanted exactly where a movable program break exists -- linux and plan9
+# -- which is not the same set and not its complement either.
+#
+# port/sbrk.c is the portable bump-over-brk() half (see its own comment
+# for why sbrk, not brk, is the primitive the toolchain codes against).
+# It needs a brk() to call:
+#   plan9   the kernel's own BRK syscall is already exactly the right
+#           shape, so svc_$cputype.s supplies it directly, no glue.
+#   linux   brk(2) exists but returns the new break instead of 0/-1, so
+#           os/linux/brk.$O bridges it.
+#   darwin  there is no usable brk at all (SYS_break=17 is vestigial and
+#           fails on modern macOS), so port/sbrk.c is not built and
+#           os/darwin/sbrk.$O provides a wholly different mmap(MAP_ANON)
+#           -backed sbrk instead. Legitimate because sbrk's contract
+#           never promised successive blocks abut each other -- verified
+#           against all three in-tree callers (utilities/text/grep/sub.c,
+#           utilities/byte/dd.c, linkers/8lk/compat.c), none of which
+#           assume contiguity.
+#   windows no sbrk yet (see todo.org) -- nothing is selected, exactly
+#           like dup() there.
+SBRKOFILES=`{if(~ $GOOS linux) echo port/sbrk.$O os/linux/brk.$O; if not if(~ $GOOS plan9) echo port/sbrk.$O; if not if(~ $GOOS darwin) echo os/darwin/sbrk.$O; if not echo -n}
+
 # UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
 # Plan9-native equivalent at all, unlike strdup/seek/etc above, which
 # stay in PORTOFILES) -- mirrors include/APE/'s own split of "ugly,
@@ -235,7 +260,7 @@ ARCHOFILES=\
 	$RT0OFILE\
 	$ARCHEXTRAOFILES\
 
-OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
+OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
 
 HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 

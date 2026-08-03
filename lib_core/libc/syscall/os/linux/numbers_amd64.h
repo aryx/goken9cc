@@ -40,3 +40,8 @@
 #define SYS_access	21
 #define SYS_dup	32
 #define SYS_dup2	33
+/* claude: brk -- see numbers_386.h's comment for the return-convention
+ * story (the shim is in syscall_linux_amd64.h). From syscall_64.tbl
+ * ("12 common brk"), one of the many rows where amd64 renumbered.
+ */
+#define SYS_brk	12

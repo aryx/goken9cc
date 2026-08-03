@@ -39,3 +39,16 @@
 #define SYS_access	33
 #define SYS_dup	41
 #define SYS_dup2	90
+/* claude: mmap -- darwin's stand-in for brk, which every other GOOS here
+ * uses to back sbrk(). There is no usable brk on modern macOS at all
+ * (SYS_break=17 survives in the table but fails), so os/darwin/sbrk.c
+ * hands out a fresh MAP_ANON region per call instead of moving a break;
+ * see that file, and lib_core/libc/mkfile's SBRKOFILES for why
+ * port/sbrk.c is not built here. From GO/pkg/syscall/zsysnum_darwin_amd64.go
+ * ("SYS_MMAP = 197"), the same 2010-era snapshot the rest of this
+ * directory's numbers come from -- the BSD table is arch-independent, so
+ * it carries over to arm64 unchanged (unlike the stat rows, which do
+ * not; see docs/claude_notes/plan_syscalls.txt).
+ * munmap (73) is deliberately NOT here: nothing frees an sbrk region.
+ */
+#define SYS_mmap	197

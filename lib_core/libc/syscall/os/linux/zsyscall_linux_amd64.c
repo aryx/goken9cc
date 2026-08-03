@@ -69,3 +69,8 @@ void exit(int code)
 	_syscall6(SYS_exit, (vlong)code, 0, 0, 0, 0, 0);
 }
 
+uintptr _sysbrk(void* addr)
+{
+	return (uintptr)_syscall6v(SYS_brk, (vlong)addr, 0, 0, 0, 0, 0);
+}
+

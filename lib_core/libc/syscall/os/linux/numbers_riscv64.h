@@ -29,3 +29,16 @@
 #define SYS_read	63
 #define SYS_write	64
 #define SYS_exit	93
+/* claude: brk -- the raw kernel primitive port/sbrk.c is built on (it
+ * is sbrk, not brk, that the toolchain's own callers use; see
+ * include/os/mem.h and port/sbrk.c). Unlike open/unlink/mkdir/dup2/
+ * access above, brk has NO *at()-style replacement and was not dropped
+ * from the generic table -- it is the same call under the same name,
+ * just renumbered. Note Linux's brk(2) does not use the usual
+ * negative-errno convention: it returns the NEW break, and signals
+ * failure by returning the UNCHANGED old one; the public Plan9-shaped
+ * brk() (0/-1) is the shim in syscall_linux_riscv64.h. From
+ * include/uapi/asm-generic/unistd.h ("#define __NR_brk 214"), and
+ * common to rv32/rv64 (not one of the 32-vs-64 split rows).
+ */
+#define SYS_brk	214

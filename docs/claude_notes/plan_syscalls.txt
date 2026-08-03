@@ -95,6 +95,18 @@ question ("we handle 2,3,4,6 -- what about 1?") is ambiguous by table:
 Tier 1: sbrk/brk -- the only item actually blocking something
 ------------------------------------------------------------------------
 
+UPDATE: TIER 1 IS DONE, for linux (all 7 arches), plan9 (arm/mips) and
+darwin (built and linked, not executed -- no macOS host here). windows
+is the one gap left, same as dup's. The recommendation below to make
+sbrk() the portable primitive is what was actually implemented; the
+write-up, including why that layering is not merely a preference, lives
+in notes_libc_selfhost.txt's "sbrk (Tier 1)" section. Two things found
+along the way are recorded elsewhere rather than here: uintptr was 4
+bytes on amd64/arm64 (tests/c/regressions/uintptr_width.c), and qemu
+implements brk itself so its refusal behavior is not the kernel's
+(notes_test_infra.txt). The numbers below were all confirmed against
+the kernel tables before use and are correct as written.
+
 port/minimal_malloc.c says it in its own header comment: it is a 64MB
 `static char heap[]` bump allocator with a no-op free(), and the plan
 is to replace it with principia's pool.c. pool.c cannot be ported

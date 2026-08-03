@@ -37,3 +37,7 @@
 #define SYS_access	4033
 #define SYS_dup	4041
 #define SYS_dup2	4063
+/* claude: brk -- see numbers_386.h's comment; shim in
+ * syscall_linux_mips.h. From syscall_o32.tbl ("45 o32 brk") +4000.
+ */
+#define SYS_brk	4045

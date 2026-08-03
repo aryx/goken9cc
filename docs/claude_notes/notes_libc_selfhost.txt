@@ -1088,3 +1088,78 @@ directory reopen (which differs only in
 FILE_FLAG_BACKUP_SEMANTICS). Note pe.c is shared by 6l and 8l, so both
 must be rebuilt after editing it -- and tests/s/variants' golden
 pe_amd64.exe has to be regenerated, since .idata grows with the list.
+
+sbrk (Tier 1): why sbrk, not brk, is the portable primitive
+------------------------------------------------------------
+
+Tier 1 of plan_syscalls.txt, and the only item on that list that
+actually blocked something: port/minimal_malloc.c is a 64MB
+`static char heap[]` with a no-op free(), and principia's real pool.c
+cannot replace it until libc can grow the heap.
+
+The layering is the whole design, and it is worth stating plainly
+because it looks backwards -- brk is the syscall, sbrk the library
+function, yet sbrk is what the tree codes against:
+
+  brk(addr)   absolute: "put the end of the data segment exactly here"
+  sbrk(n)     relative: "grow by n, hand me a pointer to the new bytes"
+
+sbrk's contract never promised the new block ABUTS the previous one.
+That is precisely what lets it be backed by something other than a
+break. brk's contract (one monotonically-moving boundary in a single
+contiguous segment) cannot be honored by mmap without reserving an
+address range up front. Since there is no usable brk on modern macOS at
+all (SYS_break=17 survives in the BSD table but fails), exporting brk as
+the universal primitive would have forced darwin to fake a contiguous
+segment and then sit the real sbrk on top of that pretense -- two layers
+of lying instead of one honest per-GOOS branch.
+
+Confirmed all three in-tree callers treat each hunk independently and so
+depend on nothing stronger: utilities/text/grep/sub.c's mal(),
+utilities/byte/dd.c's ibuf/obuf, linkers/8lk/compat.c's mysbrk.
+
+So, per GOOS (selected in lib_core/libc/mkfile's SBRKOFILES by choosing
+FILES, not by #ifdef -- see CLAUDE.md):
+
+  plan9    port/sbrk.c over the kernel's own BRK syscall, which is
+           already exactly include/os/mem.h's brk() shape (0/-1). No
+           glue at all. 5i/vi already implemented BRK, so no machines/
+           work was needed either.
+  linux    port/sbrk.c over os/linux/brk.c, which exists solely to
+           bridge a return convention: Linux's brk(2) does NOT use
+           negative-errno. It returns the NEW break, and reports failure
+           by returning the UNCHANGED old one. The test is `< addr`, not
+           `!= addr`, because the kernel rounds up to a page and may
+           legitimately return more than requested.
+  darwin   no brk at all, so port/sbrk.c is not built; os/darwin/sbrk.c
+           hands out a fresh MAP_ANON region per call instead. NOTE
+           MAP_ANON is 0x1000 here, not Linux's 0x20.
+  windows  nothing yet (see todo.org), same as dup().
+
+os/linux/brk.c is arch-independent and lives in os/$GOOS/ rather than
+being copied into each of the seven syscall_linux_$cputype.h shims: only
+the syscall NUMBER differs per arch, and that already lives in
+numbers_$cputype.h. Same reasoning as os/linux/open.c.
+
+Two things that had to be got right in the raw wrappers, both instances
+of traps this file already documents elsewhere:
+
+- The decl's rettype is `uintptr`, and on the 64-bit arches it must go
+  through `_syscall6v`, not the default `_syscall6`. _syscall6 is
+  declared `long`-returning and `long` is 4 bytes on EVERY arch here, so
+  a returned ADDRESS truncates. This is _syscall6v's second use and the
+  first that is not about a 64-bit offset.
+- uintptr itself was 4 bytes on amd64 and arm64 (`typedef unsigned long`
+  in their u.h) until this work. Found precisely because sbrk is pointer
+  arithmetic through uintptr. See tests/c/regressions/uintptr_width.c;
+  riscv64 had already hit and fixed it, but its comment asserted the
+  other two were fine, which is what kept anyone from checking.
+
+Also found: include/os/mem.h (brk/sbrk/end) was included by NOTHING --
+the header existed but was never reachable, so every caller of brk() or
+sbrk() compiled with no prototype in scope. libc.h now includes it, the
+same gap and fix as the earlier os/dir.h one.
+
+On testing it, see notes_test_infra.txt's "qemu-user is not the kernel"
+section: the failure path is deliberately NOT asserted, because qemu
+implements brk itself and accepts what a real kernel refuses.

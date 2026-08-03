@@ -44,3 +44,13 @@
 //sys _sysdup2(int oldfd, int newfd) int = SYS_dup2
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit
+// brk: the raw kernel primitive -- see syscall_linux_386.decl's comment
+// for the return-convention story (os/linux/brk.c bridges it to
+// include/os/mem.h's Plan9-shaped 0/-1 brk(), and port/sbrk.c sits on
+// top of that). _syscall6v, not the default _syscall6, for the same
+// reason lseek above needs it: _syscall6 is declared `long`-returning,
+// and `long` is 4 bytes even on this 64-bit arch, so the returned
+// break address would be truncated to 32 bits before the (uintptr)
+// cast ever saw it. This is the second caller of _syscall6v, and the
+// first that is not about a 64-bit *offset*.
+//sys _sysbrk(void *addr) uintptr = SYS_brk:_syscall6v

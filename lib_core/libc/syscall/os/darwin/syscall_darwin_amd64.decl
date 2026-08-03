@@ -43,3 +43,11 @@
 //sys _sysdup2(int oldfd, int newfd) int = SYS_dup2
 //sys chdir(char *path) int = SYS_chdir
 //sys exit(int code) void = SYS_exit
+// mmap: the primitive os/darwin/sbrk.c is built on, since this GOOS has
+// no usable brk (see numbers_darwin_amd64.h). Exactly 6 arguments, which
+// is what _syscall6 already carries -- no new assembly needed.
+// _syscall6v, not the default _syscall6, because the RETURN value is an
+// address: _syscall6 is declared `long`-returning and `long` is 4 bytes
+// even on these 64-bit arches, so the mapping's address would be
+// truncated. Same reason lseek and linux's _sysbrk need it.
+//sys _sysmmap(void *addr, ulong len, int prot, int flags, int fd, vlong offset) uintptr = SYS_mmap:_syscall6v

@@ -35,3 +35,8 @@
 #define SYS_access	33
 #define SYS_dup	41
 #define SYS_dup2	63
+/* claude: brk -- see numbers_386.h's comment (same number here, from
+ * arch/arm/tools/syscall.tbl's "45 common brk"), and
+ * syscall_linux_arm.h's brk() for the return-convention shim.
+ */
+#define SYS_brk	45

@@ -973,6 +973,24 @@ pass length each time, safer
 
 *** libsyscall
 
+**** gap: no sbrk() on windows
+claude:
+Tier 1 of docs/claude_notes/plan_syscalls.txt (sbrk) landed for linux,
+plan9 and darwin, but not windows. Unlike the dup() gap below this one
+is not blocked on anything conceptual -- there is no break on Windows,
+but sbrk's contract does not require one (see notes_libc_selfhost.txt on
+why sbrk rather than brk is the portable primitive), so a
+VirtualAlloc(NULL, n, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE) per call
+would work exactly the way os/darwin/sbrk.c's mmap does.
+
+What makes it more than a five-line file: linkers/lk/pe.c's importfuncs[]
+is a hardcoded list (no relocation pass, so __imp_<name> must exist
+before instruction encoding), so adding VirtualAlloc means touching that
+and regenerating the PE golden -- shared by 6l and 8l. Deferred rather
+than bundled into the sbrk change for that reason. Until then
+lib_core/libc/mkfile's SBRKOFILES selects nothing for windows and
+tests/c/hello_libc/mem.c is not built there.
+
 **** gap: no dup() on windows (needs an fd -> HANDLE table first)
 claude:
 access/dup finished Tier 2 of docs/claude_notes/plan_syscalls.txt on
