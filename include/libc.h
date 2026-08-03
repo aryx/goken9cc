@@ -173,6 +173,10 @@
 //----------------------------------------------------------------------------
 // Concurrency
 //----------------------------------------------------------------------------
+// claude: Lock -- port/lock.c's own lock()/unlock()/canlock() need the
+// type declared, and str.h's String struct embeds one too (str.h has
+// its own include as well, now guarded against double-inclusion here).
+#include "concurrency/lock.h"
 
 //----------------------------------------------------------------------------
 // IPC
@@ -192,6 +196,10 @@
 //----------------------------------------------------------------------------
 #include "os/posix/errno.h"
 #include "os/err.h"
+// claude: error0/error1/errorneg1/errorn + OK_0/OK_1/ERROR_0/ERROR_1/
+// ERROR_NEG1 -- declared but never included anywhere before this;
+// touch.c/ls.c (error1) and rm.c/chgrp.c (ERROR_NEG1) all use it.
+#include "base/error.h"
 
 //----------------------------------------------------------------------------
 // Misc
