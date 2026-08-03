@@ -23,6 +23,30 @@ ACID=${ACID:-acid}
 FIVEI=${FIVEI:-5i}
 VI=${VI:-vi}
 
+# Resolve any tool given as a RELATIVE path to an absolute one, up
+# front. The iar test below cd's into a temp directory before invoking
+# $IAR, so a relative path would be resolved against /tmp/... and fail
+# with "command not found" -- while a bare command name (the defaults
+# above) must be left alone for $PATH to find.
+#
+# This directory's mkfile does pass relative paths ($TOP/linkers/ar/
+# o.out, TOP=../..). That was latent for a long time because rc's
+# Updenv() was a no-op, so "IAR=... bash smoke.sh" never actually
+# reached this script and the $PATH-installed tools were used instead --
+# which defeated the mkfile's stated intent of testing the freshly built
+# binaries rather than whatever `mk install` last left around. Fixing
+# rc exposed it. See tests/rc/env_export.sh.
+abspath() {
+    case "$1" in
+    */*) (cd "$(dirname "$1")" && printf '%s/%s\n' "$(pwd)" "$(basename "$1")") ;;
+    *)   printf '%s\n' "$1" ;;
+    esac
+}
+IAR=$(abspath "$IAR")
+ACID=$(abspath "$ACID")
+FIVEI=$(abspath "$FIVEI")
+VI=$(abspath "$VI")
+
 PASS=0
 FAIL=0
 

@@ -196,3 +196,46 @@ and tested:
 The general rule: before writing a test that asserts a syscall FAILS,
 check whether qemu implements that syscall itself. Success paths are
 generally trustworthy here; refusal paths are not.
+
+rc exported nothing, and what that hid
+------------------------------------------------
+
+rc/unix.c's Updenv() was an empty function, with mkenv() (the routine
+building the char** block execvp(3) needs) commented out beside it. So
+"VAR=val cmd", and every plain assignment, was visible only inside rc
+and vanished at the process boundary. Since mk runs every recipe through
+$MKSHELL -- this rc -- no mkfile in the tree could set a variable for
+the command it was about to run.
+
+The Plan9 half was always fine, and the asymmetry is the point:
+rc/plan9.c's Updenv() writes each changed variable to /env/<name>, a
+namespace the kernel genuinely shares with children, so nothing has to
+be rebuilt or handed over. A Unix environment is a flat char** snapshot
+copied at exec time, so the whole block must be regenerated and
+installed into the global `environ`. rc/processes.c's Execute() already
+called Updenv() before exec(), and BOOT/lib9's exec() is execvp(), so
+fixing Updenv() needed no call-site changes at all.
+
+What it hid, and the reusable lesson: tests/libmach/mkfile passes
+  IAR=$TOP/linkers/ar/o.out ... bash smoke.sh
+to test the FRESHLY BUILT binaries rather than whatever `mk install`
+last left on $PATH. Because the assignments never arrived, smoke.sh
+fell back to its own ${IAR:-iar} defaults and silently tested the
+INSTALLED tools instead -- passing, while not testing what it claimed
+to. Fixing rc turned that into a hard failure (exit 127), because those
+paths are relative and smoke.sh cd's into a temp directory before
+invoking them. Both halves are now fixed: smoke.sh resolves relative
+tool paths to absolute up front, and tests/5i and tests/vi (same
+VAR=val pattern, no cd, so never broken) now genuinely exercise their
+freshly built binaries too.
+
+So: a passing test that reads a tool path from the environment proves
+nothing about WHICH binary it ran. When a test is meant to exercise a
+just-built artifact, make it fail loudly if the artifact is missing
+rather than defaulting to $PATH -- a ${VAR:-default} fallback turns
+"the plumbing is broken" into "everything is fine".
+
+Also note bin/rc is a PROMOTED COPY (scripts/promote-mk.sh) and
+$MKSHELL points at it, not at ROOT/arch/$objtype/bin/rc. A rebuilt rc
+does not take effect for mk until promote-mk.sh has run -- the same
+install-vs-use gap notes_exec_pe.txt records for lk/pe.c and 6l.

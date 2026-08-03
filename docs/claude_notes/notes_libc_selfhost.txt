@@ -1302,10 +1302,10 @@ Two testing notes:
   match "PATHEXT=...". tests/c/hello_libc/env.c gates both directions,
   and was confirmed to catch it by dropping the '=' test and watching
   it fail.
-- env.c tests against $PATH rather than a variable the mkfile sets,
-  because "VAR=val cmd" in an mk recipe does NOT reach the child here:
-  rc/unix.c's Updenv() is a no-op (its POSIX environ-rebuilding half is
-  commented out, unlike rc/plan9.c's real one). Verified directly. That
-  is worth remembering for any future test that wants to control a
-  child's environment -- it cannot, until rc/unix.c's mkenv() is
-  uncommented and wired up.
+- env.c tests against $PATH rather than a variable the mkfile sets.
+  That was originally because "VAR=val cmd" in an mk recipe did NOT
+  reach the child: rc/unix.c's Updenv() was a no-op. THAT IS NOW FIXED
+  (see tests/rc/env_export.sh), so a mkfile CAN set a child's
+  environment again -- but env.c is deliberately left as it is, since
+  testing getenv() against something the harness supplies would couple
+  it to bin/rc being freshly promoted.
