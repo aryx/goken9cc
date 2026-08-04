@@ -1169,6 +1169,18 @@ look softfloat.c of 5l ? look 9front? more recent float instructions?
 
 *** arm64, 7a/7c/7l
 
+**** gap: 7l can't link a function whose address-taken stack locals push an offset past ~4095 bytes
+claude:
+"illegal combination DWORD NONE NONE LACON" -- found porting
+utilities/files/mv.c (two 4096-byte local char[] buffers plus a
+memcmp() call on one of them). Full repro, root-cause analysis
+(ARM64's 12-bit unsigned immediate limit on SP-relative address
+materialization, no register-indirect fallback in 7l's instruction
+selection for this case), and confirmation it's arm64/7l-specific (not
+reproduced on amd64/6l) are in docs/claude_notes/notes_arch_arm64.txt.
+Blocks utilities/files/mv.c specifically from linking on arm64 (amd64
+links and runs it correctly); not fixed as part of that work.
+
 **** add commits from 9front after initial import
 lots of fixes from cinap probably worth taking
 

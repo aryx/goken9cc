@@ -503,6 +503,52 @@ becomes the whole recipe's exit code -- exactly what tests/rc/
 if_no_else_status.sh already exists to catch, just not in this file.
 Needed an explicit `if not exit 0` to clear it.
 
+7l fails to link a function with ~4096+ bytes of stack-local arrays
+whose address is passed to a call ("illegal combination DWORD NONE NONE LACON")
+------------------------------------------------------------------------
+
+Found while porting utilities/files/mv.c against the self-hosted libc
+(unrelated task -- retrying it after unblocking cleanname()/EQ):
+compiles fine under 7c, but 7l fails with
+
+    __fmtunlock: illegal combination DWORD NONE NONE LACON
+    (0)	DWORD	,$toname-4096(SP)
+
+(the function name in the error is whatever symbol happens to be
+resolving nearby at that point in the link, not the actual offending
+one -- misleading, don't chase it literally). Minimized from mv.c's
+mv1() (two `char[4096]` locals, `toname`/`fromname`, and a `memcmp()`
+call taking `toname`'s address) down to a clean 8-line repro:
+
+    void
+    main(void)
+    {
+    	char toname[4096], fromname[4096];
+    	toname[0] = 'a';
+    	toname[1] = '\0';
+    	print("%d\n", memcmp(toname, "a", 1));
+    	exits(nil);
+    }
+
+A SINGLE 4096-byte local (no second buffer) does NOT trigger it --
+tried first, linked fine -- so this isn't simply "any 4096-byte
+array"; it's specifically about the STACK FRAME OFFSET at which the
+address-taken local ends up landing once other locals are stacked
+above/below it, consistent with ARM64's 12-bit unsigned immediate
+limit on the ADD-from-SP addressing mode 7l uses to materialize a
+stack-local's address (max encodable offset 4095) -- `toname` alone at
+a small offset stays under that; with `fromname` also present, the
+combined frame pushes `toname`'s own offset (-4096 in the repro, -4116
+in the real mv.c) just past it. 7l's instruction selection has no
+fallback (load the offset into a scratch register first, then add) for
+this specific "DWORD NONE NONE LACON" addressing-mode combination when
+computing the address of a stack local for a function-call argument.
+Not investigated further (which pass emits the un-encodable form, or
+what the correct 7l fix looks like) -- out of scope for the mv.c
+porting task that found it. Affects amd64 too? Not checked -- the
+repro above links fine on 6c/6l, so this looks arm64 (7l)-specific,
+not a general "large stack frame" gap in every backend.
+
 What's landed vs. what todo.org still lists as open
 ---------------------------------------------------------
 

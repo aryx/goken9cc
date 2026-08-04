@@ -10,8 +10,10 @@
 // misc
 //extern  double  charstod(int(*)(void*), void*);
 
-// modified in place, so type should really be void cleanname(INOUT char*);
-//extern  char*   cleanname(char*);
+// claude: cleanname() moved to os/path.h (its real home -- a Plan9
+// namespace/path concept, not misc math) and implemented there; this
+// file had a second, unrelated commented-out copy of the same
+// declaration.
 //extern  int     encodefmt(Fmt*);
 //
 //extern  int     getfields(char*, char**, int, int, char*);

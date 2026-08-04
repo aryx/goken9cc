@@ -165,6 +165,7 @@ PORTOFILES=\
 	port/rerrstr.$O\
 	port/werrstr.$O\
 	port/perror.$O\
+	port/cleanname.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
 # but must NOT be compiled for plan9 or windows at all -- selected here

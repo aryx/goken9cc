@@ -159,6 +159,9 @@
 //----------------------------------------------------------------------------
 // namespace
 //----------------------------------------------------------------------------
+// claude: was empty -- os/path.h existed but was never #include'd
+// anywhere, found while wiring cleanname() in for utilities/files/mv.c.
+#include "os/path.h"
 
 //----------------------------------------------------------------------------
 // process
