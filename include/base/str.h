@@ -14,6 +14,7 @@ extern  char*   strstr(char*, char*);
 extern  char*   strcat(char*, char*);
 extern  char*   strrchr(char*, int);
 extern  char*   strncpy(char*, char*, long);
+extern  int     cistrcmp(char*, char*);
 
 // less useful?
 //extern  char*   strecpy(char*, char*, char*);
@@ -26,7 +27,6 @@ extern  char*   strncpy(char*, char*, long);
 //extern  long    strcspn(char*, char*);
 //
 //extern  int     cistrncmp(char*, char*, int);
-//extern  int     cistrcmp(char*, char*);
 //extern  char*   cistrstr(char*, char*);
 //
 //extern  char*   strtok(char*, char*);
