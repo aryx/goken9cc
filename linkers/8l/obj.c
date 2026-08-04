@@ -824,11 +824,7 @@ zaddr(byte *p, Adr *a, Sym *h[])
     }
 
     // factorize!
-    while(nhunk < sizeof(Auto))
-        gethunk();
-    u = (Auto*)hunk;
-    nhunk -= sizeof(Auto);
-    hunk += sizeof(Auto);
+    u = malloc(sizeof(Auto));
 
     u->link = curauto;
     curauto = u;
@@ -1210,12 +1206,15 @@ loop:
     /*e: [[ldobj()]] if ANAME or ASIGNAME(x86) */
 
     //TODO: factorize
-    while(nhunk < sizeof(Prog))
-        gethunk();
-    p = (Prog*)hunk;
-    nhunk -= sizeof(Prog);
-    hunk += sizeof(Prog);
-
+    /* claude: mallocz (zeroed), not plain malloc: only as/line/back/from/to
+     * are set below; forwd/pc/width/ft/tt/mark/link/pcond are left
+     * implicitly zero here (link/pcond get filled in later, once this Prog
+     * is appended to the list; ft/tt are an oclass cache that must start
+     * "unset"; mark is read by later passes before ever being written by
+     * this one). The old bump allocator (gethunk) handed back zeroed
+     * memory; with the direct-malloc path this alloc must zero itself,
+     * same reasoning as 5l's ldobj() (see linkers/5l/obj.c). */
+    p = mallocz(sizeof(Prog), 1);
     p->as = o;
     p->line = bloc[2] | (bloc[3] << 8) | (bloc[4] << 16) | (bloc[5] << 24);
     p->back = 2;

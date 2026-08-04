@@ -28,43 +28,32 @@ errorexit(void)
 /*e: function [[errorexit]] */
 
 /*s: function [[gethunk]] */
-void
-gethunk(void)
-{
-    char *h;
-    long nh;
-
-    nh = NHUNK;
-    if(thunk >= 5L*NHUNK) {
-        nh = 5L*NHUNK;
-        if(thunk >= 25L*NHUNK)
-            nh = 25L*NHUNK;
-    }
-    /* claude: was sbrk(nh) in original Plan 9 code. Same fix as
-     * compilers/cc/utils.c:gethunk(). macOS sbrk() is deprecated and
-     * hard-capped (~4MB, then returns -1), so large links died here with
-     * "out of memory" (prefixed by the current text symbol via diag(),
-     * e.g. "_fmtrcpy: out of memory" when linking 8.jpg).
-     *
-     * We refill the arena with the real libc malloc(), now that the
-     * compat.c malloc->hunk wrapper is disabled (with it in place this
-     * recursed gethunk->malloc->gethunk forever). malloc() is uncapped on
-     * macOS/Linux/Plan 9. It returns nil (not (char*)-1) on failure, and —
-     * unlike sbrk's fresh kernel pages — does not zero its memory, so we
-     * memset() the chunk to uphold the zeroed-memory invariant that
-     * gethunk's callers (the inline hunk carving in obj.c) rely on.
-     */
-    /*old: h = sbrk(nh); */
-    h = malloc(nh);
-    if(h == nil) {
-        diag("out of memory");
-        errorexit();
-    }
-    memset(h, 0, nh);
-    hunk = h;
-    nhunk = nh;
-    thunk += nh;
-}
+/* claude: no longer called -- obj.c's Auto/Prog allocation now uses
+ * malloc()/mallocz() directly instead of carving from this hunk arena,
+ * matching linkers/5l/utils.c. Left commented out rather than deleted, to
+ * keep the syncweb chunk marker intact. */
+//void
+//gethunk(void)
+//{
+//    char *h;
+//    long nh;
+//
+//    nh = NHUNK;
+//    if(thunk >= 5L*NHUNK) {
+//        nh = 5L*NHUNK;
+//        if(thunk >= 25L*NHUNK)
+//            nh = 25L*NHUNK;
+//    }
+//    h = malloc(nh);
+//    if(h == nil) {
+//        diag("out of memory");
+//        errorexit();
+//    }
+//    memset(h, 0, nh);
+//    hunk = h;
+//    nhunk = nh;
+//    thunk += nh;
+//}
 /*e: function [[gethunk]] */
 
 #undef sym // ugly hack for x86

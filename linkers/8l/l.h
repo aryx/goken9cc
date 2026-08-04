@@ -391,7 +391,6 @@ extern	Prog*	firstp;
 extern	char	fnuxi8[8];
 extern	char	fnuxi4[4];
 extern	Sym*	hash[NHASH];
-extern	char*	hunk;
 extern	char	inuxi1[1];
 extern	char	inuxi2[2];
 extern	char	inuxi4[4];
@@ -402,7 +401,6 @@ extern	char	reg[D_NONE];
 extern	Prog*	lastp;
 extern	long	lcsize;
 extern	int	nerrors;
-extern	long	nhunk;
 extern	long	nsymbol;
 //@Scheck: used by TName, not useless
 extern	char*	noname;
@@ -468,7 +466,6 @@ void	export(void);
 
 
 void	follow(void);
-void	gethunk(void);
 long	ieeedtof(Ieee*);
 void	import(void);
 
