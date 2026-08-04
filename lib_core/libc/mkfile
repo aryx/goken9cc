@@ -119,6 +119,10 @@ PORTOFILES=\
 	port/fabs.$O\
 	port/frexp.$O\
 	port/strtod.$O\
+	port/strtol.$O\
+	port/strtoul.$O\
+	port/strtoll.$O\
+	port/strtoull.$O\
 	port/atol.$O\
 	port/abort.$O\
 	port/errno.$O\
