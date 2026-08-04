@@ -14,7 +14,7 @@
  * free() call sites (pass.c, obj.c, span.c) become real frees instead of
  * leaks. (The syncweb chunk markers are kept; only the code is disabled.)
  */
-#if 0
+
 /*s: function [[malloc]] */
 /*
  * fake malloc
@@ -52,7 +52,6 @@
 //    USED(v); USED(pc);
 //}
 /*e: function [[setmalloctag]] */
-#endif
 
 /*s: function [[fileexists]] */
 //old: now in libc
