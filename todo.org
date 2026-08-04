@@ -1155,6 +1155,48 @@ only treat it as a flag when a length-modifier-shaped verb -- d/x/o/b/
 i -- immediately follows) -- out of scope for what was meant to be a
 "simple, useful for utilities/files" pass.
 
+**** gap: most Plan9-shaped syscall wrappers return the raw negative errno on failure, not -1
+claude:
+Found via utilities/files/rm.c: `remove(f) != ERROR_NEG1` (ERROR_NEG1
+is literally `(-1)`) took the SUCCESS branch after `rm
+nonexistent-file`, silently exiting 0 with no error printed. Root
+cause: port/remove.c returned whatever _sysrmdir() gave back on
+failure -- the raw negative Linux errno (-2 for ENOENT, -13 for
+EACCES, ...), not -1. Real Plan9 syscalls always fail with EXACTLY -1
+(the failure detail is conveyed separately, via errstr()) -- every
+Plan9-shaped API in include/os/*.h (open(), remove(), create(), ...)
+is documented/expected to honor that same contract, and code ported
+verbatim from real Plan9 sources (rm.c, mv.c) checks failure with an
+exact `== -1`/`ERROR_NEG1` comparison specifically because of it, not
+just `< 0`.
+
+Fixed ONLY for remove() (port/remove.c) -- the one call this session's
+utilities/files work actually exercised with an exact -1 check
+(rm.c/mv.c both use it). The SAME gap almost certainly exists in every
+other os/$GOOS/*.c Plan9-shaped wrapper across every arch --
+os/linux/open.c's own open()/create() are a confirmed instance (traced
+while diagnosing remove(), not fixed: `return (fdt)_sysopen(...)`
+returns the raw negative errno directly, no -1 normalization at all).
+A full fix means auditing/normalizing every os/$GOOS/*.c file's
+Plan9-shaped entry points (not the raw syscall/ wrappers themselves,
+which should keep returning the real errno for anything that DOES
+want it, e.g. future errno-bridging work) -- out of scope for what
+was meant to be a small, targeted utilities/files fix.
+
+Directly connects to port/errstr.c's own already-documented gap ("no
+caller in this tree currently reports failures via werrstr()"): even
+after the -1 fix above, `rm nonexistent.txt` prints "rm:
+nonexistent.txt: " (empty reason -- errstr() has nothing to report)
+AND still exits 0 -- rm.c's own `exits(errbuf)` treats an empty
+errbuf as success, and errbuf only ever gets non-empty content from a
+real errstr() call, which is empty because nothing calls werrstr() at
+the syscall-failure site. Two gaps compounding into one visible
+symptom (wrong exit status), not two different bugs: fixing "syscalls
+call werrstr() on failure" (a real, separate, larger undertaking --
+would touch the same os/$GOOS/*.c files as the -1-normalization gap
+above, natural to do together) would fix both errbuf's content AND
+the exit status in one pass.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

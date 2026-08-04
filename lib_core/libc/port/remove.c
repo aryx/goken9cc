@@ -41,10 +41,31 @@
 extern int _sysunlink(char *path);
 extern int _sysrmdir(char *path);
 
+/* claude: normalizes failure to exactly -1 -- found needed by
+ * utilities/files/rm.c/mv.c, both of which check `remove(f) ==
+ * ERROR_NEG1`/`!= ERROR_NEG1` (ERROR_NEG1 is literally `(-1)`,
+ * include/base/error.h), matching genuine Plan9 syscall convention
+ * (every real Plan9 syscall fails with exactly -1, never a raw
+ * negative errno -- the failure detail is conveyed separately, via
+ * errstr()). _sysrmdir() (like every other raw syscall wrapper in
+ * this tree -- see os/linux/open.c's own open(), which has the exact
+ * same gap, not yet fixed) returns the raw negative Linux errno
+ * instead (e.g. -2 for ENOENT, -13 for EACCES), so `remove(f) !=
+ * ERROR_NEG1` silently took the "succeeded" branch on any failure
+ * whose errno wasn't literally 1 (EPERM) -- confirmed directly: `rm
+ * nonexistent-file` exited 0 with no error printed before this fix.
+ * A full fix belongs at the raw-syscall-wrapper layer, GOOS/arch-wide
+ * (every os/$GOOS/*.c file, not just this one) -- tracked in
+ * todo.org rather than attempted here; this is the minimal fix for
+ * remove() specifically, the one call this session's utilities
+ * actually depend on for an exact -1 check.
+ */
 int
 remove(char *path)
 {
 	if (_sysunlink(path) >= 0)
 		return 0;
-	return _sysrmdir(path);
+	if (_sysrmdir(path) >= 0)
+		return 0;
+	return -1;
 }
