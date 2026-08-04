@@ -188,7 +188,9 @@ asmb(void)
     else {
         /*s: [[asmb()]] if dynamic module and no symbol table generation */
         if(dlm){
-            seek(cout, HEADR+textsize+datsize, 0);
+            // claude: same rnd() fix as the H_ELF case above -- see there
+            // for why the unrounded HEADR+textsize+datsize is wrong.
+            seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
             asmdyn();
             cflush();
         }
