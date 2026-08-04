@@ -333,21 +333,21 @@ compar(NDir *a, NDir *b)
     }else{
         if(a->prefix && b->prefix){
             i = strcmp(a->prefix, b->prefix);
-            if(i == EQ)
+            if(i == ORD__EQ)
                 i = strcmp(ad->name, bd->name);
         }else if(a->prefix){
             i = strcmp(a->prefix, bd->name);
-            if(i == EQ)
-                i = SUP;  /* a is longer than b */
+            if(i == ORD__EQ)
+                i = ORD__SUP;  /* a is longer than b */
         }else if(b->prefix){
             i = strcmp(ad->name, b->prefix);
-            if(i == EQ)
-                i = INF; /* b is longer than a */
+            if(i == ORD__EQ)
+                i = ORD__INF; /* b is longer than a */
         }else
             i = strcmp(ad->name, bd->name);
     }
-    if(i == EQ)
-        i = (a<b? INF : SUP);
+    if(i == ORD__EQ)
+        i = (a<b? ORD__INF : ORD__SUP);
     if(rflag)
         i = -i;
     return i;
