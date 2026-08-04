@@ -303,6 +303,16 @@ since that GOOS's exits(char*) is a raw EXITS syscall bypassing the
 new atexitrun() hook entirely -- tracked in todo.org, not a syscall-
 number problem so not detailed here either.
 
+UPDATE: chmod/mkdir/touch/wc/mv/du/rm/cp all now compile, link, and
+run correctly too (strtol family, cleanname, cistrcmp, mallocz, the
+errstr/rerrstr/werrstr family, and a real renameat2(2) call for
+dirwstat()'s Dir.name rename support -- the one genuine NEW syscall
+this round, added uniformly across all 6 Linux arches; verified
+numbers against the kernel's own syscall_*.tbl/unistd.h, not memory).
+Full story, including two real bugs found but deliberately NOT fixed
+(a 7l arm64 backend bug and a tree-wide "-1 vs raw errno" convention
+gap), in notes_libc_selfhost.txt's own "Round 2" section.
+
 Tier 4: process control -- the actual self-hosting milestone
 ------------------------------------------------------------------------
 
