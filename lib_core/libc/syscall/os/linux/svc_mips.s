@@ -4,13 +4,6 @@
 // syscall/os/$OS/) are generated thin C functions calling this, so this
 // is the one place that ever needs hand-written assembly for this arch.
 //
-// note: real o32 Linux syscalls with a 5th/6th argument need those
-// passed on the caller's stack (not a plain register), a wrinkle
-// unique to mips among the archs handled so far. Not implemented here
-// since neither syscall declared in syscall_linux_mips.decl (write,
-// exit) needs more than 3 args -- if a future syscall does, this is
-// the place to add it.
-//
 // note on the FP offsets below: like arm64, only the *first* named
 // parameter (num) arrives in a register (R1) -- confirmed against
 // vc -S output, a compiler-generated callee only spills it to its home
@@ -22,12 +15,49 @@
 // FP+0 -- so a1 starts at FP+4, not FP+0 (confirmed against
 // tests/c/mini2/linux_mips.s's write() stub, which already relies on
 // this same offset for its own buf+4(FP)).
+//
+// claude: a5/a6 (the 5th/6th real syscall arguments -- renameat2's
+// `flags` is the first live user of a5, see numbers_mips.h's own
+// comment) do NOT go in a register at all: real o32 Linux syscalls
+// with more than 4 arguments read the extras off the CALLER's stack,
+// at $sp+16 and $sp+20 *at the moment of the SYSCALL trap* -- a kernel
+// convention with nothing to do with this compiler's own calling
+// convention for _syscall6 itself. This function has frame size $0
+// (no prologue stack adjustment), so R29 here IS the raw hardware SP
+// the kernel will read -- and it already holds a5/a6's OWN incoming
+// values at FP+20/FP+24 by coincidence of this compiler's ABI (every
+// argument after num is stack-passed, num's own wasted home slot at
+// FP+0 pushes everything else out by 4 bytes -- see above), but not at
+// the OFFSETS the kernel wants (+16/+20 relative to the same SP, not
+// +20/+24). So both still have to be read into a register and
+// re-stored at the kernel's own expected offset before SYSCALL, not
+// merely left where the caller happened to put them.
+//
+// Safe to do unconditionally, even for a syscall that uses none of the
+// six argument slots (e.g. fork()): scripts/mksyscall.sh always
+// generates a literal 7-argument call to _syscall6 (unused trailing
+// slots padded with 0, e.g. "_syscall6(SYS_fork, 0, 0, 0, 0, 0, 0)"),
+// so the caller always reserves the full 28-byte argument area this
+// needs, regardless of which real syscall is being made.
+//
+// Found (a5 dropped, silently) via docs/claude_notes/plan_syscalls.txt's
+// own Tier 4 process-control work, which cross-checked wait4's 4-arg
+// fit against this file and noticed _sysrenameat2 (Tier 3.5, added
+// earlier) already needed a 5th -- tracked in todo.org until fixed
+// here. a6 has no real caller yet (no six-argument mips syscall in
+// this tree), so its own half of this fix is unexercised by anything
+// beyond eyeballing the symmetry with a5's -- verify against a real
+// caller before trusting it blindly.
 TEXT _syscall6+0(SB), $0
 	MOVW	R1, R2
 	MOVW	a1+4(FP), R4
 	MOVW	a2+8(FP), R5
 	MOVW	a3+12(FP), R6
 	MOVW	a4+16(FP), R7
+	MOVW	a5+20(FP), R8
+	MOVW	R8, 16(R29)
+	MOVW	a6+24(FP), R9
+	MOVW	R9, 20(R29)
 	SYSCALL
 	// Real Linux/mips o32 syscall convention returns the result in
 	// $v0 (R2), same register the syscall number went in on -- but

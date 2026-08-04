@@ -1319,23 +1319,58 @@ a materially bigger feature than a libc syscall wrapper, closer in
 scope to the "5i/vi cannot serve plan9's synthetic device files" gap
 above than to a quick stub fix. Not attempted here.
 
-**** gap (found, not fixed): mips _sysrenameat2's 5th argument is silently dropped
+**** DONE: mips _sysrenameat2's 5th argument was silently dropped
 claude:
-Found while adding Tier 4 above (checking whether wait4's 4 raw
-arguments fit svc_mips.s's trampoline, which only wires a1..a4 into
-R4..R7 -- o32's 5th/6th syscall argument needs the caller's stack,
-never implemented). syscall_linux_mips.decl's _sysrenameat2 (added
-earlier for Tier 3.5's os/linux/dirwstat.c, docs/claude_notes/
-notes_libc_selfhost.txt's own "Round 2" section) declares FIVE
-arguments (olddirfd, oldpath, newdirfd, newpath, flags) -- one more
-than the trampoline actually carries. The 5th (flags) is silently
-dropped on mips only; every other arch is fine. The one caller
-(dirwstat()'s rename path) always passes flags=0, so this has not yet
-produced an observable bug, but would the moment a caller passes a
-real renameat2(2) flag (RENAME_NOREPLACE, RENAME_EXCHANGE) on mips.
-Not fixed here -- unrelated to process control, and the real fix
-(passing the 5th arg on the stack, mirroring what real o32 syscalls
-with >4 args do) touches svc_mips.s, out of scope for this pass.
+Found while adding Tier 4 (checking whether wait4's 4 raw arguments fit
+svc_mips.s's trampoline, which only wired a1..a4 into R4..R7 -- o32's
+5th/6th syscall argument needs the caller's stack, not a register).
+syscall_linux_mips.decl's _sysrenameat2 (added earlier for Tier 3.5's
+os/linux/dirwstat.c, docs/claude_notes/notes_libc_selfhost.txt's own
+"Round 2" section) declares FIVE arguments (olddirfd, oldpath,
+newdirfd, newpath, flags) -- one more than the trampoline carried. The
+5th (flags) was silently dropped on mips only; every other arch was
+fine. The one caller (dirwstat()'s rename path) always passes flags=0,
+so this had not produced an observable bug yet, but would the moment a
+caller passed a real renameat2(2) flag (RENAME_NOREPLACE,
+RENAME_EXCHANGE) on mips.
+
+Fixed in svc_mips.s's _syscall6: real o32 Linux reads a syscall's 5th/
+6th argument off the CALLER's stack at $sp+16/$sp+20 *at the moment of
+the trap* -- a kernel convention unrelated to this compiler's own
+calling convention for _syscall6 itself (which, coincidentally, also
+stack-passes a5/a6, just at the wrong offset relative to the same SP --
+FP+20/FP+24 instead of the kernel's FP+16/FP+20, because num's own
+unused home slot at FP+0 pushes everything else out by 4 bytes). So
+both still need reading into a register and re-storing at the offset
+the kernel actually reads, not merely left where the caller put them.
+Safe unconditionally for every existing mips syscall, even 0-arg ones
+like fork(): scripts/mksyscall.sh always generates a literal 7-argument
+call to _syscall6 (unused slots padded with 0), so the caller always
+reserves the full argument area this needs.
+
+Verified with a real kernel round-trip, not just re-reading the
+assembly: a throwaway test called _sysrenameat2 directly with
+RENAME_NOREPLACE=1 against an already-existing destination file --
+before the fix this would silently succeed (flags effectively 0/
+garbage), after the fix it correctly fails with -EEXIST (r=-17),
+confirming flags genuinely reaches the kernel now. dir.exe (exercises
+create/remove/chdir, i.e. the trampoline's more common <=4-arg paths)
+still passes unchanged, confirming the a5/a6 stack writes don't
+disturb the existing calls. a6's own half of the fix has no real
+6-argument mips syscall to exercise it yet -- verified only by
+symmetry with a5's, not by an actual kernel round-trip; flag this if
+one is ever added.
+
+Also regenerated tests/s/variants/expected/pe_amd64.exe (unrelated to
+this bug, but touched in the same session): linkers/lk/pe.c's
+importfuncs[] table is a fixed list always fully emitted into every PE
+binary 6l produces, so the earlier windows Tier 4 round's four new
+entries (CreatePipe, CreateProcessA, WaitForSingleObject,
+GetExitCodeProcess) shifted the import-table byte layout of ALL PE
+output, including this golden-diffed test's, which has nothing to do
+with process control itself. `mk test` was failing on the resulting
+128-byte mismatch until the golden was regenerated via the mkfile's
+own `mkgoldpe` rule and re-verified with `vgoldpe`.
 
 *** libc (or libos?) (relying on libsyscall)
 

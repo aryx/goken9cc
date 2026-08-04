@@ -399,15 +399,15 @@ tests/c/hello_libc/mkfile excludes fork.exe from that one arch's run
 the same way stat.exe/dirread.exe already are, for their own unrelated
 reason.
 
-Found along the way, NOT fixed (out of scope for process control):
+Found along the way, and since fixed in a later pass (see todo.org's
+own "DONE: mips _sysrenameat2's 5th argument was silently dropped"):
 syscall_linux_mips.decl's own _sysrenameat2 (added for Tier 3.5's
 dirwstat(), see that section) declares 5 arguments, but svc_mips.s's
-trampoline only ever wires 4 into registers (a1..a4 -> R4..R7) --
-confirmed by reading the assembly while checking wait4 fit inside that
-same limit. The 5th argument (renameat2's flags, always 0 in the one
-caller today) is silently dropped on mips, a latent, pre-existing bug
-this pass happened to notice, not one Tier 4 introduced. Tracked in
-todo.org rather than fixed here.
+trampoline only ever wired 4 into registers (a1..a4 -> R4..R7) --
+found by reading the assembly while checking wait4 fit inside that
+same limit, not introduced by Tier 4 itself. svc_mips.s now stores
+a5/a6 to the kernel's own expected $sp+16/$sp+20 before SYSCALL,
+verified with a real RENAME_NOREPLACE round-trip.
 
 UPDATE (round 2): darwin (amd64+arm64) and plan9 (arm+mips) are now
 DONE too, and windows is partially done. The single biggest surprise:
