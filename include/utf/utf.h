@@ -108,7 +108,11 @@ int utfnlen(const char* s, long n);
 // byte terminating a string is considered to be part of the string s.
 // (cf. strchr)
 
-/*const*/ char* utfrune(const char* s, Rune r);
+// claude: `char*, long` (not `const char*, Rune`) to match the actual
+// definition (utf/utfrune.c) -- same fix as utfrrune()'s own
+// declaration just below/above, and principia's own header declares
+// it the same plain way (include/core/libc.h).
+char* utfrune(char* s, long r);
 
 
 // utfrrune returns a pointer to the last occurrence of rune r in the

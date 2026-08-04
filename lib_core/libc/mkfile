@@ -91,18 +91,19 @@ FMTOFILES=\
 	fmt/vsnprint.$O\
 
 # what fmt/*.c actually calls (chartorune/fullrune/runetochar via
-# rune.c, utflen, utfnlen) plus utfrrune/utfecpy/isspacerune
-# (utilities/files/ls.c's xcleanname(), port/rerrstr.c, and wc.c
-# respectively -- see docs/claude_notes/notes_libc_selfhost.txt) --
-# not all of utf/, which also has the 1400+ line Unicode runetype
-# tables nothing here needs (isspacerune.c pulls just its own small
-# __isspacer table + rbsearch() out of that file rather than wiring
-# the whole thing in for one function).
+# rune.c, utflen, utfnlen) plus utfrrune/utfrune/utfecpy/isspacerune
+# (utilities/files/ls.c's xcleanname(), utilities/misc/unicode.c,
+# port/rerrstr.c, and wc.c respectively -- see docs/claude_notes/
+# notes_libc_selfhost.txt) -- not all of utf/, which also has the
+# 1400+ line Unicode runetype tables nothing here needs (isspacerune.c
+# pulls just its own small __isspacer table + rbsearch() out of that
+# file rather than wiring the whole thing in for one function).
 UTFOFILES=\
 	utf/rune.$O\
 	utf/utflen.$O\
 	utf/utfnlen.$O\
 	utf/utfrrune.$O\
+	utf/utfrune.$O\
 	utf/utfecpy.$O\
 	utf/isspacerune.$O\
 

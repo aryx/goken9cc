@@ -3,7 +3,9 @@
 #include <u.h>
 #include <libc.h>
 /*e: plan9 includes */
-#include    <ctype.h>
+// claude: dropped <ctype.h> -- doesn't exist in this tree; see
+// utilities/misc/file.c's identical fix for why (already reached via
+// libc.h's own str/ascii.h).
 #include    <bio.h>
 
 /*

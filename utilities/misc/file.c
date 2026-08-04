@@ -4,7 +4,11 @@
 #include <libc.h>
 /*e: plan9 includes */
 #include <bio.h>
-#include <ctype.h>
+// claude: dropped <ctype.h> -- doesn't exist in this tree (Unix-compat
+// leftover); the isalpha()/etc macros it wanted are already in
+// include/str/ascii.h, already reached via libc.h with no extra
+// include needed (same "orphaned/unnecessary include" shape as ls.c's
+// own dead #ifdef Unix fcall.h include).
 #include <mach.h>
 
 /*

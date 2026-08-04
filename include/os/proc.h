@@ -45,3 +45,13 @@ extern	int	waitpid(void);
 // in <unistd.h>
 extern	int	getpid(void);
 extern	int	getppid(void);
+
+// claude: process id type, matching os/file.h's own `typedef int fdt;`
+// convention -- declared (include/ALL/mach.h's attachproc/ctlproc/
+// procnotes) but never defined anywhere, a real gap found blocking
+// utilities/misc/file.c (Map* attachproc(pidt pid, Fhdr *fp) failed to
+// parse with "syntax error, last name: pid" -- the same 6c/7c
+// typedef-right-after-a-pointer-declaration bug ls.c's own `ord` hit,
+// see notes_libc_selfhost.txt, except here root-caused to pidt simply
+// never existing rather than just an unlucky compiler quirk).
+typedef int pidt;
