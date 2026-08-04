@@ -200,7 +200,7 @@ PORTOFILES=\
 # then -- so callers need no override of their own, unlike
 # SYSCALLOFILES=/OSEXTRAFILES= below, which windows must still pass
 # explicitly.
-PORTPOSIXOFILES=`{if(~ $GOOS plan9 windows) echo -n; if not echo port/seek.$O port/remove.$O port/dup.$O port/getenv.$O}
+PORTPOSIXOFILES=`{if(~ $GOOS plan9 windows) echo -n; if not echo port/seek.$O port/remove.$O port/dup.$O port/getenv.$O port/putenv.$O}
 
 # claude: sbrk() and the per-GOOS brk() under it. Selected separately
 # from PORTPOSIXOFILES above because the split is a DIFFERENT one: those
@@ -419,7 +419,14 @@ SYSCALLOFILES=\
 #            timeval; plan9 reads /dev/bintime for time but has a real
 #            SLEEP syscall needing no glue at all; windows converts the
 #            FILETIME epoch.
-OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O os/plan9/getwd.$O os/plan9/getpid.$O os/plan9/time.$O os/plan9/getenv.$O os/plan9/convM2D.$O os/plan9/convD2M.$O os/plan9/dirread.$O; if not if(~ $GOOS linux) echo os/linux/getwd.$O os/linux/time.$O; if not if(~ $GOOS darwin) echo os/darwin/getwd.$O os/darwin/time.$O; if not if(~ $GOOS windows) echo os/windows/getwd.$O os/windows/time.$O os/windows/getenv.$O; if not echo -n}
+# claude: os/plan9/putenv.c and os/windows/putenv.c added alongside
+# their own getenv.$O, same "Tier 6 environ() round" as
+# port/putenv.c's own addition to PORTPOSIXOFILES above -- see
+# docs/claude_notes/notes_libc_api_design.txt's "Environment
+# (getenv/putenv/environ)" entry. Both were declared in
+# include/os/env.h from the start but had no implementation anywhere
+# in this tree until now, on any GOOS.
+OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O os/plan9/getwd.$O os/plan9/getpid.$O os/plan9/time.$O os/plan9/getenv.$O os/plan9/putenv.$O os/plan9/convM2D.$O os/plan9/convD2M.$O os/plan9/dirread.$O; if not if(~ $GOOS linux) echo os/linux/getwd.$O os/linux/time.$O; if not if(~ $GOOS darwin) echo os/darwin/getwd.$O os/darwin/time.$O; if not if(~ $GOOS windows) echo os/windows/getwd.$O os/windows/time.$O os/windows/getenv.$O os/windows/putenv.$O; if not echo -n}
 
 # claude: dirfstat()/dirfwstat() (Tier 3, docs/claude_notes/plan_syscalls.txt).
 # Unlike every other OSFILES entry, struct-stat layout is genuinely

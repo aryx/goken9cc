@@ -106,6 +106,11 @@ static struct importfunc {
 	// it is not handed to the program on the stack, so it has to be
 	// asked for rather than walked to.
 	{ "GetEnvironmentVariableA", 0 },
+	// claude: and this one for putenv() (Tier 6's own "environ()" round,
+	// docs/claude_notes/notes_libc_api_design.txt) -- the write-side
+	// counterpart of GetEnvironmentVariableA above, backing
+	// os/windows/putenv.c.
+	{ "SetEnvironmentVariableA", 0 },
 	// claude: and these two for dirfstat()/dirfwstat() (Tier 3,
 	// docs/claude_notes/plan_syscalls.txt) -- GetFileInformationByHandle
 	// for the stat side (GetFileAttributesA above only returns the

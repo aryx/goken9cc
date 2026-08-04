@@ -2331,3 +2331,74 @@ the real fix for, a self-inflicted testing mistake caught by checking
 that file rather than assumed to be a new bug) and arm64 (no such
 flags needed there), produces a real, valid Mach-O 64-bit executable
 for both arches.
+
+environ()/putenv(), all 4 GOOS
+------------------------------------------------------------------------
+
+Not really a Tier of its own (the mk/rc self-hosting blocker
+plan_syscalls.txt's Tier 6 section flagged as the OTHER thing besides
+notification, "environment enumeration") -- see docs/claude_notes/
+notes_libc_api_design.txt's "Environment (getenv/putenv/environ)"
+entry for the design reasoning (getenv()/putenv() kept as the real
+API; a new environ() exposed as the portable enumeration primitive
+mk's own readenv()/exportenv() will eventually want, instead of
+building a Plan9-shaped virtual-/env abstraction for every other
+GOOS). This entry is the "what actually got built and verified" record.
+
+New: environ() (include/os/env.h) exposes port/getenv.c's own
+internal _mainargv walk, previously static -- a nil-terminated char**
+of "NAME=value" strings. putenv() (declared in os/env.h from the
+start, backed by zero code anywhere in this tree before now) got a
+real implementation on all 4 GOOS: port/putenv.c (linux+darwin,
+allocates a fresh array per call since the kernel-provided block has
+no slack to grow in place, repoints port/getenv.c's own new _environp
+global), os/plan9/putenv.c (ported as-is from principia's 9sys/
+putenv.c -- create()'s own truncate-on-exists semantics mean "add" and
+"replace" need no separate code path, unlike the POSIX-side version),
+os/windows/putenv.c over a new _winsetenv raw stub (winio_amd64.s,
+SetEnvironmentVariableA -- the write-side counterpart of the existing
+_wingetenv/GetEnvironmentVariableA, added to linkers/lk/pe.c's own
+importfuncs[] table).
+
+Verified for real, not just compiled: a getenv()/putenv()/environ()
+round-trip test (add a var, confirm the array grows by one and other
+vars are unaffected; replace a var, confirm the array does NOT grow)
+passes under qemu-user on linux/amd64 and linux/arm64. darwin/amd64
+and windows/amd64 are compile+link verified only (real Mach-O and PE
+binaries respectively), the established bar for both GOOS in this
+tree. plan9/arm builds AND links a real putenv()-calling test, but --
+found only by actually trying to RUN it under machines/5i, which
+nothing had done before for either getenv() OR putenv() -- /env access
+does not work under 5i/vi at all: sysopen()/syscreate() there just
+call the HOST's real open()/create() with the literal Plan9 path, and
+there is no real /env directory on the host filesystem for "/env/*"
+to resolve to. Confirmed pre-existing and not specific to the new
+putenv() code: a bare getenv("PATH") (untouched, already-existing
+code) also returns nil under 5i. Same category of gap as the
+already-documented notify()/noted() one above (a real VM-level
+limitation, a separate nontrivial emulator feature to fix, not libc
+glue) -- accepted and documented rather than chased further this
+round. Both os/plan9/getenv.c and os/plan9/putenv.c are therefore
+build-verified only on plan9, the same "kept buildable, not
+runtime-verified" treatment fork.exe/stat.exe/dirread.exe already have
+there.
+
+Also hit and fixed along the way: adding SetEnvironmentVariableA to
+linkers/lk/pe.c's own importfuncs[] table shifted the import-table
+byte layout of every PE binary 6l produces, including
+tests/s/variants' own golden-diffed pe_amd64.exe -- the exact same
+"new PE import shifts the golden" regression Tier 4's own windows
+round already hit and documented (four different new imports that
+time). Same fix: `mk pe_amd64.mkgoldpe` (tests/s/variants/mkfile's own
+regeneration rule) to refresh the golden, verified by re-running the
+full suite afterward, not by avoiding new PE imports going forward.
+linkers/6l itself also needed a real rebuild after editing pe.c (a
+shared lk/ source file compiled into the linker binary itself, not
+just a header) before any of this was even testable -- same
+"rebuild all consumers of shared lk files" lesson this file's own
+Tier 4 entry already has on record, now confirmed to apply to this
+kind of change too.
+
+mk/rc's own readenv()/exportenv() were deliberately NOT rewired to use
+these -- out of scope for this round by explicit direction, left for
+whenever mk/rc self-hosting is actually picked up.

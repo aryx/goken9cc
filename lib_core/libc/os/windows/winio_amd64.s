@@ -491,6 +491,29 @@ TEXT _wingetenv+0(SB), $0
 	MOVQ	DI, SP
 	RET				// DWORD: chars written, or required size, or 0
 
+// claude: ok = _winsetenv(name, value) -- SetEnvironmentVariableA(lpName,
+// lpValue). Backs os/windows/putenv.c, the write-side counterpart of
+// _wingetenv above. Two register arguments (RCX/RDX), so shadow space
+// only, same shape as _windelete. Unverified on a real Windows host,
+// like every _win* stub added without one available (see _wincreate's
+// own comment) -- the two-argument, shadow-space-only shape is
+// identical to several already-verified stubs above (_windelete,
+// _winchdir), so the ABI mechanics here carry the same confidence,
+// just not an actual run.
+TEXT _winsetenv+0(SB), $0
+	MOVQ	SP, DI			// save caller's SP
+	MOVQ	name+0(FP), CX		// 1st: lpName
+	MOVQ	value+8(FP), DX	// 2nd: lpValue
+
+	ANDQ	$-16, SP
+	SUBQ	$32, SP			// shadow space only, no stack args
+
+	MOVQ	__imp_SetEnvironmentVariableA(SB), AX
+	CALL	AX
+
+	MOVQ	DI, SP
+	RET				// BOOL
+
 // claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
 // ok = _wincreatepipe(rd, wr)
 //   CreatePipe(rd, wr, NULL, 0)

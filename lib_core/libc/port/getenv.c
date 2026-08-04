@@ -10,13 +10,13 @@
 #include <u.h>
 #include <libc.h>
 
-/* getenv() for the POSIX-shaped GOOSes (linux and darwin), which reach
- * the environment identically: it is NOT a syscall at all, it is memory
- * the kernel already laid on the initial stack. Immediately past argv's
- * terminating nil sits the environment, a nil-terminated array of
- * "NAME=value" strings. So this whole file needs no syscall layer and
- * lives in port/ rather than os/$GOOS/ -- the one call in this group
- * where linux and darwin genuinely agree.
+/* getenv()/environ() for the POSIX-shaped GOOSes (linux and darwin),
+ * which reach the environment identically: it is NOT a syscall at
+ * all, it is memory the kernel already laid on the initial stack.
+ * Immediately past argv's terminating nil sits the environment, a
+ * nil-terminated array of "NAME=value" strings. So this whole file
+ * needs no syscall layer and lives in port/ rather than os/$GOOS/ --
+ * the one call in this group where linux and darwin genuinely agree.
  *
  * They agree because it is the SysV ABI's process-startup contract, not
  * a Linux invention. plan9 and windows have neither that contract nor
@@ -28,17 +28,26 @@
 
 extern char **_mainargv;
 
-/* walk past argv's own nil to reach the environment. Recomputed per
- * call rather than cached: getenv is not hot (23 call sites across the
- * toolchain, all of them one-shot configuration lookups like $objtype
- * and $GOROOT), and a cache would need invalidating if putenv ever
- * grows a real implementation.
+/* claude: _environp is nil until the first putenv() call. Before
+ * that, environ() recomputes the array fresh from _mainargv every
+ * call rather than caching it -- getenv() alone is not hot (23 call
+ * sites across the toolchain, all one-shot configuration lookups like
+ * $objtype/$GOROOT), so there was never a reason to cache just for
+ * that. Once putenv() (port/putenv.c) allocates a real, growable
+ * array of its own, it stores it here and this becomes the answer
+ * from then on -- the kernel-provided block can't be grown or
+ * shrunk in place, so a mutation has to switch to a new one entirely,
+ * not edit the original.
  */
-static char**
+char **_environp;
+
+char**
 environ(void)
 {
 	char **p;
 
+	if(_environp != nil)
+		return _environp;
 	p = _mainargv;
 	if(p == nil)
 		return nil;

@@ -1648,6 +1648,45 @@ guess against the way Linux's own sigentry bug family was found and
 fixed. See notes_libc_selfhost.txt's "Tier 6: notification, darwin
 side" entry for the full story.
 
+**** DONE: environ()/putenv(), all 4 GOOS
+claude:
+docs/claude_notes/notes_libc_api_design.txt's "Environment (getenv/
+putenv/environ)" entry has the design reasoning (getenv()/putenv()
+kept as the real API instead of a Plan9-shaped virtual-/env
+abstraction; a new environ() exposed as the portable enumeration
+primitive); docs/claude_notes/notes_libc_selfhost.txt's "environ()/
+putenv(), all 4 GOOS" entry has the full build/verify write-up.
+
+environ() (include/os/env.h) exposes port/getenv.c's own previously-
+static _mainargv walk. putenv() -- declared since before this
+session but backed by zero code anywhere in this tree -- got a real
+implementation on linux+darwin (port/putenv.c), plan9 (os/plan9/
+putenv.c, ported from principia's own 9sys/putenv.c), and windows
+(os/windows/putenv.c over a new _winsetenv/SetEnvironmentVariableA
+stub, added to linkers/lk/pe.c's own importfuncs[] table).
+
+Verified for real (add/replace round-trip via getenv()/putenv()/
+environ()) under qemu-user on linux/amd64+arm64; compile+link only
+for darwin/amd64 and windows/amd64 (the established bar for both).
+plan9/arm builds and links, but a real run under machines/5i found
+/env access does not work under 5i/vi at all -- confirmed
+pre-existing (untouched getenv("PATH") also returns nil there), same
+category of gap as the notify()/noted() one, accepted and documented
+rather than fixed (extending 5i/vi to synthesize a real /env
+filesystem is a separate emulator feature).
+
+Also hit and fixed: the new PE import shifted tests/s/variants' own
+golden-diffed pe_amd64.exe, the exact same regression Tier 4's own
+windows round already hit -- fixed with `mk pe_amd64.mkgoldpe`, the
+same documented procedure, not by avoiding new PE imports. linkers/6l
+itself needed a real rebuild after editing the shared lk/pe.c source,
+same "rebuild all consumers of shared lk files" lesson already on
+record.
+
+mk/rc's own readenv()/exportenv() were deliberately NOT rewired to use
+any of this -- out of scope by explicit direction, left for whenever
+mk/rc self-hosting is actually picked up.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

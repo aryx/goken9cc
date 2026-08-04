@@ -65,16 +65,84 @@ E. Just relabeling, not a real compromise:
 
 F. Genuinely unresolved -- open questions on record elsewhere:
    - Notes vs. signals: see the "Notes vs. signals" section below.
-   - Environment: Plan9's environment is literally files under
-     /env/* (readable/writable/watchable, per-namespace); mk/rc's
-     readenv()/exportenv() is the API for it. getenv()/putenv()
-     already exist in os/env.h in plain POSIX shape (category A/B
-     candidate, not yet resolved which). plan_syscalls.txt's Tier 6
-     section flags this as "the same open question... probably wants
-     answering once for both, not twice" -- note its own cross-
-     reference there currently says "see Tier 7 below", a stale
-     pointer from before setjmp/longjmp took the Tier 7 slot; harmless
-     but worth knowing if it's ever read literally.
+
+RESOLVED since the above was first written: Environment (getenv/putenv/environ)
+------------------------------------------------------------------------
+
+Plan9's environment is literally files under /env/* (readable/
+writable/watchable, per-namespace, no in-memory array at all --
+os/plan9/getenv.c's own comment: "there is no environ array to walk").
+mk/rc's own readenv()/exportenv() enumerate it today via dirread() on
+/env directly (mk/Plan9.c) -- real code, but Plan9-only, not portable
+to any other GOOS mk might self-host on.
+
+The decision, when it actually came up: do NOT build a Plan9-shaped
+"enumerate a virtual /env directory" abstraction for the other GOOSes.
+getenv()/putenv() (already declared in os/env.h, plain POSIX shape)
+are a fine enough primitive on their own merits -- the only real gap
+was that nothing could enumerate every variable at once, which is what
+mk's own readenv()/exportenv() actually need dirread(/env) for. So the
+fix was narrower than a new abstraction: expose environ() (include/os/
+env.h), a nil-terminated char** of "NAME=value" strings -- port/
+getenv.c already computed exactly this walk internally (from
+_mainargv, past argv's own nil, matching every POSIX-shaped GOOS'
+process-startup contract) for getenv()'s own use, just never exposed
+it. A caller that wants "every variable" now gets a plain array to
+walk, no directory-listing/open-per-file dance needed the way Plan9's
+own /env forces even on Plan9 itself.
+
+putenv() got a REAL implementation for the first time anywhere in this
+tree alongside this (port/putenv.c, linux+darwin, sharing port/
+getenv.c's own "POSIX-shaped GOOSes reach the environment identically"
+placement) -- declared since before this session but never backed by
+any code. Can't mutate the kernel-provided block in place (no slack
+around it on the initial stack), so it allocates a fresh array each
+call and repoints port/getenv.c's own _environp at it, same "switch to
+a new block, don't edit the original" shape a real POSIX putenv()/
+setenv() has internally.
+
+UPDATE: plan9 and windows now have real putenv() implementations too
+(os/plan9/putenv.c, ported as-is from principia's own 9sys/putenv.c --
+create(path, OWRITE, perm) truncates an existing file exactly the way
+POSIX's OTRUNC would, so "add" and "replace" need no separate branch
+the way port/putenv.c's own POSIX-side implementation does; os/windows/
+putenv.c over a new _winsetenv/SetEnvironmentVariableA stub in
+winio_amd64.s, the write-side counterpart of the existing _wingetenv).
+Adding SetEnvironmentVariableA to linkers/lk/pe.c's own importfuncs[]
+table shifted the import-table byte layout of every PE binary 6l
+produces, INCLUDING tests/s/variants' own golden-diffed pe_amd64.exe --
+the exact same regression already on record in this file's own Tier 4
+windows-round entry for the same reason (four different new imports
+that round); fixed the same documented way, `mk pe_amd64.mkgoldpe` to
+regenerate the golden, not by avoiding new imports.
+
+Real, unplanned finding along the way, from actually trying to RUN the
+new os/plan9/putenv.c under machines/5i (not just build-checking it,
+which is all env.exe -- the existing test exercising getenv() this
+same way -- had ever gotten before): /env access does not work under
+5i/vi AT ALL, for read OR write. Confirmed pre-existing, not something
+this round introduced: a bare getenv("PATH") (untouched code) also
+returns nil there. Root cause: machines/5i/vi's own sysopen()/
+syscreate() just call the HOST's real open()/create() with the Plan9
+path string passed through literally (the same "calls the host's real
+syscall with the same path" design pipe.c's own comment already
+documents as deliberate for real files/pipes) -- but there is no real
+/env directory on the host filesystem for that to resolve to, unlike
+a genuine Plan9 kernel's in-kernel synthesized /env. Same category of
+gap as the notify()/noted() one already on record (a real VM-level
+limitation, not a libc bug) -- accepted and documented rather than
+fixed, extending 5i/vi to synthesize a real /env filesystem being a
+separate, nontrivial emulator feature, not something this round's
+scope covered. Both os/plan9/getenv.c (pre-existing) and os/plan9/
+putenv.c (new) are therefore build-verified only on plan9, same
+"kept buildable, not runtime-verified" treatment as fork.exe/stat.exe/
+dirread.exe already have there.
+
+mk/rc's own readenv()/exportenv() have NOT been rewired to use
+environ()/getenv()/putenv() instead of raw /env dirread() -- that was
+explicitly out of scope when this was implemented ("let's not modify
+mk for now, just add the API"), left for whenever mk/rc self-hosting
+actually gets picked up.
 
 G. No Unix analog exists at all -- not even attempted, and probably
    shouldn't be:

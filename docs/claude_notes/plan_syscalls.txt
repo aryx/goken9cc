@@ -559,6 +559,13 @@ Plan9-only family with linux/darwin callers routed to a different,
 GOOS-native mechanism instead? Not resolved here -- this is the same
 open question Tier 7 (mk/rc self-hosting) already raises for readenv()/
 exportenv(), and probably wants answering once for both, not twice
+
+UPDATE: the readenv()/exportenv() side of that open question is now
+partly answered -- see notes_libc_selfhost.txt's "environ()/putenv(),
+all 4 GOOS" entry. environ()/getenv()/putenv() (not a Plan9-shaped
+virtual-/env abstraction) is the API all 4 GOOS now have real
+implementations of; mk/Plan9.c's own readenv()/exportenv() have NOT
+been rewired to use them yet, deliberately out of scope for that round.
 (the user's own suggestion: a THIRD variant file per program --
 "goken.c" -- that reuses mk/Plan9.c's/rc/unix.c's already-working
 process-control code nearly verbatim, links against this libc same as
