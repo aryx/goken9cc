@@ -119,3 +119,8 @@ int _syswait4(int pid, void* status, int options, void* rusage)
 	return (int)_syscall6(SYS_wait4, (vlong)pid, (vlong)status, (vlong)options, (vlong)rusage, 0, 0);
 }
 
+int _syskill(int pid, int sig, int posix)
+{
+	return (int)_syscall6(SYS_kill, (vlong)pid, (vlong)sig, (vlong)posix, 0, 0, 0);
+}
+

@@ -153,11 +153,15 @@ table and postnote()-via-kill() shape, but did not anticipate that
 installing the dispatcher as sa.handler would need a per-arch bridging
 trampoline at all (sigentry) -- found only once real per-arch testing
 started, not something the design pass below could have caught by
-reasoning alone. darwin is still just a proposal, not implemented, and
-a real, separately-shaped sigaction ABI besides (BSD/XNU, not a
-close cousin of Linux's the way this proposal's Linux-side reasoning
-turned out to still mostly hold). See plan_syscalls.txt's Tier 6
-section for the tracked status.
+reasoning alone. darwin's postnote() (kill()-based, no sigaction
+involved) is ALSO now done -- but notify()/noted() there is not a
+"not implemented yet" gap the way this proposal originally framed it;
+see notes_libc_selfhost.txt's "Tier 6: notification, darwin side"
+entry for why it turned out to be a genuinely unresolved DESIGN
+question (XNU's real sigaction ABI, not a close cousin of Linux's the
+way this proposal's Linux-side reasoning turned out to still mostly
+hold), not just an implementation this session ran out of time for.
+See plan_syscalls.txt's Tier 6 section for the tracked status.
 Recorded here because the reasoning is the reusable part.
 
 The friction is structural, not just naming: Plan9 notes are free text

@@ -131,3 +131,10 @@
 #define SYS_wait4	7
 #define SYS_pipe	42
 #define SYS_execve	59
+
+/* claude: Tier 6 notification -- see numbers_amd64.h's fuller comment
+ * for the postnote()-only scope and why notify()/noted() are
+ * deliberately not attempted here. kill=37, same 3-arg BSD signature,
+ * arch-independent BSD table so this arch shares the number.
+ */
+#define SYS_kill	37

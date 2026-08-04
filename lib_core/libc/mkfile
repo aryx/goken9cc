@@ -343,21 +343,24 @@ PROCOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS linux darwin) echo 
 # "declare everywhere" convention PROCOFILES's own rfork/Waitmsg
 # already use), so it's compiled for every GOOS that has, or will
 # have, a real notify()/noted() -- plan9 (real syscalls, svc_$cputype.s
-# above) and now linux too (os/linux/notify.c: sigaction()-based,
-# modeled on plan9port's own BOOT/lib9/notify.c, see the design doc's
-# "Notes vs. signals" section). darwin is left in unresolved-until-
-# linked, same treatment PROCOFILES's own riscv carve-out already
-# uses -- atnotify.$O compiles clean there today, only fails
-# predictably for whatever program is the first to actually call
-# atnotify() on that GOOS, since darwin's own notify()/noted() (a
-# genuinely different, BSD-shaped sigaction ABI, not just a linux
-# recompile) is not implemented yet, unverifiable locally without a
-# macOS host anyway (same status as every other darwin round in this
-# tree). postnote() is separate per GOOS: os/plan9/postnote.c (a write()
-# to /proc/PID/note) for plan9, os/linux/notify.c's own kill()-based
-# one bundled in for linux. windows gets nothing: no notify-shaped
-# primitive planned there.
-NOTIFYOFILES=`{if(~ $GOOS linux) echo port/atnotify.$O os/linux/notify.$O; if not if(~ $GOOS darwin) echo port/atnotify.$O; if not if(~ $GOOS plan9) echo port/atnotify.$O os/plan9/postnote.$O; if not echo -n}
+# above) and linux (os/linux/notify.c: sigaction()-based, modeled on
+# plan9port's own BOOT/lib9/notify.c, see the design doc's "Notes vs.
+# signals" section). darwin's own notify()/noted() is a real,
+# documented gap, not just "unverified without hardware" like the rest
+# of this tree's darwin work -- os/darwin/postnote.c's own header
+# comment has the full story (XNU's raw sigaction(2) needs a userspace
+# sa_tramp trampoline whose modern requirement is genuinely ambiguous
+# from public sources, and there is no qemu-user Darwin emulation to
+# fall back on the way every Linux arch had for this tier) -- so
+# atnotify.$O is left in unresolved-until-linked there, same treatment
+# PROCOFILES's own riscv carve-out already uses. postnote() itself
+# needs none of that (just kill(2), confidently sourced) and IS
+# implemented for darwin, same as plan9/linux: os/plan9/postnote.c (a
+# write() to /proc/PID/note) for plan9, os/linux/notify.c's own
+# kill()-based one bundled in for linux, os/darwin/postnote.c (a real
+# 3-argument BSD kill(2), unlike either) for darwin. windows gets
+# nothing: no notify-shaped primitive planned there.
+NOTIFYOFILES=`{if(~ $GOOS linux) echo port/atnotify.$O os/linux/notify.$O; if not if(~ $GOOS darwin) echo port/atnotify.$O os/darwin/postnote.$O; if not if(~ $GOOS plan9) echo port/atnotify.$O os/plan9/postnote.$O; if not echo -n}
 
 # claude: sigrestore.$O (arch/$cputype/sigrestore.s, Tier 6) holds
 # sigentry -- the trampoline os/linux/notify.c installs as

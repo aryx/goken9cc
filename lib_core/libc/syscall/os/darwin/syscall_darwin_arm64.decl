@@ -61,3 +61,7 @@
 // assembly needed for these two" story).
 //sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
 //sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+
+// Tier 6 notification, postnote() only -- see
+// syscall_darwin_amd64.decl's identical comment.
+//sys _syskill(int pid, int sig, int posix) int = SYS_kill

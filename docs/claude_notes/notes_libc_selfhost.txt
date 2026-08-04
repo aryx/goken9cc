@@ -2272,3 +2272,62 @@ rt_sigaction() have no __ARCH_WANT_TIME32_SYSCALLS-style gate).
 tests/c/hello_libc's full `mk test` (all 7 arches via its own
 clean-before-each-arch ARCHS loop, plus the plan9 arm/mips leg) and
 tests/s/variants's `mk test` both pass with these files in the tree.
+
+Tier 6: notification, darwin side (postnote() only)
+------------------------------------------------------------------------
+
+Scoped deliberately narrower than the Plan9/Linux rounds above, by
+explicit user choice when the scoping question came up: postnote()
+ONLY, not the full notify()/noted()/atnotify() story. New: os/darwin/
+postnote.c (same curated 6-signal table as os/linux/notify.c, same
+numbers -- confirmed identical across GOOS for this set via this
+project's own vendored 2010 Go snapshot's zerrors_darwin_amd64.go, not
+assumed) and a real 3-argument BSD kill() (numbers_amd64.h/
+numbers_arm64.h's own SYS_kill=37 -- `int kill(int pid, int signum,
+int posix)`, confirmed against that same Go snapshot's
+zsysnum_darwin_amd64.go and syscall_darwin.go, whose own real runtime
+Kill() wrapper always passes posix=1, which this file does too).
+
+notify()/noted() (installing the actual signal HANDLER, i.e. raw
+sigaction(2) itself) are deliberately NOT implemented, and this is a
+genuinely different KIND of gap than every other unverified-without-
+hardware darwin round already in this tree (Tier 4's own darwin fork/
+pipe work, for instance, was a confident implementation just lacking a
+machine to run it on). Here the DESIGN itself is not confidently
+resolved from public sources: XNU's raw sigaction(2) takes a
+`struct __sigaction` (a handler union, an sa_tramp function pointer
+XNU's own kernel calls with 5 arguments, sa_mask, sa_flags -- not the
+plain handler-shaped struct every other GOOS in this tree gets away
+with), and a newer SA_USERTRAMP flag ("do not bounce off kernel's
+sigtramp") implies the DEFAULT behavior lets the kernel supply its own
+trampoline -- but whether that means a real user-supplied sa_tramp is
+still required in practice, only needed for compatibility, or version-
+dependent, could not be resolved from apple-oss-distributions' public
+XNU/Libc/libplatform source in this session (no sigtramp assembly
+found in the obvious places -- libplatform's own src/ tree has no
+signal-related directory, Libc's i386/gen dirs have no sigtramp file
+either). Unlike Linux, there is also no qemu-user Darwin/XNU emulation
+available to empirically test a guess against the way every one of
+that tier's real per-arch findings (the sigentry bug family) was
+actually confirmed, not just reasoned about. Given all of that,
+writing a guessed trampoline would be shipping code nobody -- not this
+session, not a future one without real macOS access -- could tell was
+right or wrong. Left as a real, documented gap instead: port/
+atnotify.c still compiles clean for darwin (unresolved-until-linked,
+same treatment lib_core/libc/mkfile's own NOTIFYOFILES comment already
+gives it), ready to receive a real notify()/noted() the day either a
+real macOS host or Apple's actual sigtramp reference becomes
+available.
+
+Verified: compile+link only (the same bar every other darwin round in
+this tree already uses, and the only bar actually achievable here) --
+a real postnote()-calling test program, built against a FRESH libc.a
+for both amd64 (with the -z/RT0OFILE overrides
+tests/c/hello_libc/mkfile's own test_macos_amd64 target requires --
+missing them the first time round produced the exact same
+"doasm: notfound ... fmtalloc" PIE-relocation failure
+docs/claude_notes/notes_exec_macho.txt already documents and explains
+the real fix for, a self-inflicted testing mistake caught by checking
+that file rather than assumed to be a new bug) and arm64 (no such
+flags needed there), produces a real, valid Mach-O 64-bit executable
+for both arches.

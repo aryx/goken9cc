@@ -76,3 +76,8 @@
 // lib_core/libc/mkfile's PROCOFILES).
 //sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
 //sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+
+// Tier 6 notification, postnote() only -- see numbers_amd64.h's own
+// comment for why notify()/noted() are not attempted here. A real
+// 3-argument BSD kill, unlike every other GOOS in this tree.
+//sys _syskill(int pid, int sig, int posix) int = SYS_kill

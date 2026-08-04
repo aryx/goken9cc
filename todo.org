@@ -1632,11 +1632,21 @@ tests/c/hello_libc/notify.c, run for real (not just compiled) on all
 7 arches including riscv32 (no carve-out needed here, unlike Tier 4's
 own fork/wait4).
 
-darwin side NOT started: a real, separately-shaped sigaction ABI
-(BSD/XNU, different struct and syscall numbers from Linux's), and
-unverifiable locally without a macOS host regardless -- same status
-as every other darwin round in this project, deferred rather than
-scope-crept into this round.
+darwin side: postnote() only, DONE and compile+link verified for real
+(amd64 and arm64, real Mach-O binaries -- amd64 needed the -z/
+RT0OFILE build overrides tests/c/hello_libc/mkfile's own
+test_macos_amd64 target already requires, missed on the first attempt
+and self-corrected by reading docs/claude_notes/notes_exec_macho.txt
+rather than assumed broken). notify()/noted() deliberately not
+attempted: unlike every other "no macOS host" darwin gap in this
+project, this one is a genuinely unresolved DESIGN question, not just
+an unverified implementation -- XNU's raw sigaction(2) needs a
+userspace sa_tramp trampoline whose modern necessity could not be
+confidently resolved from public apple-oss-distributions source in
+this session, and there is no qemu-user Darwin emulation to test a
+guess against the way Linux's own sigentry bug family was found and
+fixed. See notes_libc_selfhost.txt's "Tier 6: notification, darwin
+side" entry for the full story.
 
 *** libc (or libos?) (relying on libsyscall)
 

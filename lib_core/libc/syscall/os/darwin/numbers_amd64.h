@@ -121,3 +121,34 @@
 #define SYS_wait4	7
 #define SYS_pipe	42
 #define SYS_execve	59
+
+/* claude: Tier 6 notification (docs/claude_notes/plan_syscalls.txt) --
+ * postnote() ONLY, not the full tier. kill=37 confirmed against this
+ * project's own vendored 2010 Go snapshot (zsysnum_darwin_amd64.go:
+ * "SYS_KILL = 37 // { int kill(int pid, int signum, int posix); }"),
+ * a real BSD 3-argument kill unlike Linux's plain 2-argument one --
+ * the third `posix` argument is a legacy BSD-vs-POSIX-semantics
+ * switch; the same snapshot's own syscall_darwin.go shows the real Go
+ * runtime always passes 1 (`func Kill(pid, signum int) { return
+ * kill(pid, signum, 1) }`), which os/darwin/postnote.c does too.
+ * Signal numbers for this tier's curated set (HUP=1/INT=2/QUIT=3/
+ * PIPE=13/ALRM=14/TERM=15, zerrors_darwin_amd64.go) are numerically
+ * identical to Linux's non-mips arches -- same classic-BSD heritage,
+ * confirmed rather than assumed given how much this project's own
+ * mips work already diverged from that assumption elsewhere.
+ *
+ * notify()/noted() (real signal HANDLER installation, i.e. sigaction
+ * itself) are deliberately NOT implemented here -- see os/darwin/
+ * postnote.c's own header comment for why: XNU's raw sigaction(2)
+ * needs a real userspace sa_tramp trampoline (struct __sigaction, not
+ * the plain struct sigaction glibc-alike shape every other GOOS in
+ * this tree gets away with), and public sources leave genuine
+ * ambiguity about whether that trampoline is still mandatory on
+ * modern XNU (a newer SA_USERTRAMP flag suggests the kernel can
+ * supply its own instead) or version-dependent -- unlike every other
+ * gap in this tree, this is not just "unverified without hardware",
+ * it is "the design itself isn't confidently resolved from public
+ * sources available here". Left as a real, documented gap rather than
+ * shipped as unverifiable guessed trampoline assembly.
+ */
+#define SYS_kill	37

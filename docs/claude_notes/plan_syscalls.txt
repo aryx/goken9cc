@@ -492,10 +492,17 @@ sigaction()/kill() as real raw syscalls, and a genuinely per-arch
 than any other tier in this file, found only by testing each arch
 individually rather than assumed uniform).
 
-darwin side NOT started -- a real, separately-shaped sigaction ABI
-(BSD/XNU, different struct and syscall numbers from Linux's), and
-unverifiable locally without a macOS host regardless (same status as
-every other darwin round in this project).
+darwin side: postnote() ONLY, DONE and compile+link verified (both
+amd64 and arm64, real Mach-O binaries). notify()/noted() (installing
+the actual signal handler) deliberately NOT attempted -- see
+notes_libc_selfhost.txt's "Tier 6: notification, darwin side" entry
+for why this is a different KIND of gap than every other darwin round
+in this project: not just "unverified without hardware" (postnote()
+IS build+link verified despite that), but a real, unresolved design
+question (XNU's raw sigaction(2) needs a userspace sa_tramp
+trampoline whose modern necessity is genuinely ambiguous from public
+sources, and there is no qemu-user Darwin emulation to fall back on
+the way every Linux arch had for this tier).
 
 Surfaced building a real, build-verified survey of what utilities/,
 mk/, and rc/ still need to self-host (not guessed from headers --
