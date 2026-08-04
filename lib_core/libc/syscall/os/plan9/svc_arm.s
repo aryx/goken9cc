@@ -249,3 +249,22 @@ TEXT pipe(SB), $0
 	MOVW	$PIPE, R0
 	SWI	$0
 	RET
+
+// claude: Tier 6 notification (docs/claude_notes/plan_syscalls.txt).
+// notify(void(*)(void*,char*))/noted(int) are the two real syscalls
+// this tier needs (sys.h: NOTIFY=25, NOTED=26) -- same one-line-stub
+// shape as rfork/exec/await/pipe above, since both already match
+// include/os/plan9/note.h's own signature with nothing to translate.
+// postnote() is NOT a syscall (os/plan9/postnote.c: a plain write() to
+// /proc/PID/note), so it doesn't belong here.
+TEXT notify(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$NOTIFY, R0
+	SWI	$0
+	RET
+
+TEXT noted(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$NOTED, R0
+	SWI	$0
+	RET

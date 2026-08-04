@@ -2070,3 +2070,62 @@ Full regression coverage after the fix: tests/c/hello_libc's
 `mk test` (all 7 Linux arches via its own clean-before-each-arch ARCHS
 loop, plus the plan9 arm/mips leg) and tests/s/variants's `mk test`
 both pass with these files in the tree.
+
+Tier 6: notification, Plan9 side (arm/mips)
+------------------------------------------------------------------------
+
+Design pointer, same convention as above: plan_syscalls.txt's own
+Tier 6 section and notes_libc_api_design.txt's "Notes vs. signals"
+section have the full reasoning (why notify()/noted() stay Plan9-only
+for now, why atnotify()/postnote() are the layer every real caller
+uses). This entry is just what actually got built for the Plan9 half.
+
+New: syscall/os/plan9/svc_{arm,mips}.s each get two more one-line raw
+stubs (notify/noted, sys.h's NOTIFY=25/NOTED=26), the same shape as
+the existing rfork/exec/await/pipe stubs -- both already match
+include/os/plan9/note.h's own signature with nothing to translate.
+port/atnotify.c (the NFN-slot dispatch chain, ported near-verbatim
+from principia -- confirmed identical in shape to plan9port's own
+BOOT/lib9/atnotify.c too, three independent sources agreeing) is
+GOOS-independent portable C, so it's compiled for every GOOS that has
+or will have a working notify()/noted() -- currently just plan9, but
+left in the linux/darwin OFILES list too (unresolved-until-linked,
+same "compiles clean, only fails predictably if actually called"
+treatment PROCOFILES's own riscv carve-out already established) since
+nothing about atnotify.c itself needs a working notify() to compile.
+os/plan9/postnote.c (a plain write() to /proc/PID/note or .../notepg,
+NOT a raw syscall -- ported from principia's 9sys/postnote.c) is
+plan9-only; no linux/darwin equivalent exists yet, since that needs
+kill() first, part of the not-yet-started other half of this tier.
+include/os/plan9/note.h itself was already fully written but never
+#include'd from libc.h at all (the same "declared, never wired in"
+shape os/path.h/os/ipc.h's own comments already document elsewhere in
+this file) -- now wired in for every GOOS uniformly.
+
+Verification status: BUILD-verified only, not runtime-verified.
+tests/c/hello_libc's full `mk test` (all 7 Linux arches, both plan9
+arches) and tests/s/variants's `mk test` both pass with these files in
+the tree, and a real end-to-end test program (atnotify() a handler,
+postnote() to self twice with different note strings, check the
+handler actually ran and returned control) compiles and links clean
+for both arm and mips plan9. But running that test under machines/5i
+and machines/vi found those emulators do NOT actually deliver notes:
+sysnotify() (both machines/{5i,vi}/syscall.c) just stashes the handler
+pointer into a global (nofunc) and returns -- nothing in the
+interpreter's main loop ever checks for a pending note and calls it.
+sysnoted() in both is an unconditional stub (`Bprint(...,"No system
+call %s\n",...); exits(0)`) that would abort the whole emulated
+program if a real handler ever DID get invoked and called noted().
+Same category of gap as Tier 4's own "machines/5i/vi don't actually
+serve RFORK/EXEC/AWAIT" entry -- accepted rather than fixed this
+round (extending the interpreter to really deliver notes is a
+separate, nontrivial VM feature: checking for a pending note at each
+step or syscall boundary, saving/restoring register state around the
+handler call, giving noted() real NCONT/NDFLT semantics instead of
+aborting -- not libc glue, a genuinely separate body of work). The
+libc-side code itself matches the real Plan9 kernel ABI exactly (same
+syscall numbers, same raw-stub shape as every other already-verified
+Plan9 syscall in this tree), so this is a real, pre-existing emulator
+limitation being surfaced, not new code being left unverified out of
+laziness -- same distinction Tier 4's fork.exe/stat.exe/dirread.exe
+entries already draw.

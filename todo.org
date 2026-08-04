@@ -1585,6 +1585,37 @@ nil rather than crashing, and that a subsequent valid compile still
 works afterward), and with utilities/text/misc/sed.exe (amd64)
 performing a real `s/../../` substitution end to end.
 
+**** DONE (Plan9 side only): Tier 6 notification (notify/noted/atnotify/postnote)
+claude:
+docs/claude_notes/plan_syscalls.txt's own Tier 6 section and
+docs/claude_notes/notes_libc_selfhost.txt's matching "Tier 6:
+notification, Plan9 side (arm/mips)" section have the full write-up;
+docs/claude_notes/notes_libc_api_design.txt's "Notes vs. signals"
+section has the design reasoning behind the split. Two new raw syscall
+stubs per plan9 arch (syscall/os/plan9/svc_{arm,mips}.s: notify/noted,
+same one-line shape as rfork/exec/await/pipe), a new GOOS-independent
+port/atnotify.c (the NFN-slot dispatch chain, ported from principia
+and confirmed identical in shape to plan9port's own BOOT/lib9/
+atnotify.c too), a new plan9-only os/plan9/postnote.c (write() to
+/proc/PID/note, not a syscall), and include/os/plan9/note.h finally
+#include'd from libc.h after being fully written but orphaned.
+
+Build-verified only, not runtime-verified: a real end-to-end test
+(register a handler, postnote() to self, check it actually ran)
+compiles and links clean for both plan9 arches, but machines/5i and
+machines/vi turned out not to actually deliver notes at all --
+sysnotify() just stashes the handler pointer without ever calling it,
+sysnoted() is an unconditional abort stub. Pre-existing emulator gap,
+same category as Tier 4's own "5i/vi don't actually serve RFORK/EXEC/
+AWAIT" entry -- accepted rather than fixed (extending the interpreter
+to really deliver notes is a separate VM feature, not libc glue).
+
+Linux/darwin side NOT started: needs sigaction()/kill() as real
+syscalls first (currently zero prior work anywhere in this tree -- no
+numbers, no .decl entries, no trampoline), a genuinely separate body
+of work from the notify glue itself, deferred rather than scope-crept
+into this round.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

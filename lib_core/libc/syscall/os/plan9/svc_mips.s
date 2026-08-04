@@ -177,3 +177,18 @@ TEXT pipe(SB), $0
 	MOVW	$PIPE, R1
 	SYSCALL
 	RET
+
+// claude: Tier 6 notification -- see svc_arm.s's identical comment.
+// notify()/noted() are two more one-line stubs; postnote() is not a
+// syscall (os/plan9/postnote.c).
+TEXT notify(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$NOTIFY, R1
+	SYSCALL
+	RET
+
+TEXT noted(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$NOTED, R1
+	SYSCALL
+	RET

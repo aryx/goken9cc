@@ -336,6 +336,26 @@ EXITSOFILES=`{if(~ $GOOS plan9) echo os/plan9/_exits.$O; if not echo port/exits.
 # mk/Posix.c's Exit() while self-hosting mk.
 PROCOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS linux darwin) echo port/fork.$O port/exec.$O port/execl.$O port/wait.$O port/waitpid.$O port/pipe.$O; if not if(~ $GOOS plan9) echo os/plan9/fork.$O port/execl.$O os/plan9/wait.$O port/waitpid.$O; if not if(~ $GOOS windows) echo os/windows/exec.$O port/execl.$O os/windows/pipe.$O; if not echo -n}
 
+# claude: Tier 6 notification (docs/claude_notes/plan_syscalls.txt,
+# docs/claude_notes/notes_libc_api_design.txt's "Notes vs. signals").
+# port/atnotify.c is pure portable C built only on notify()/noted()
+# (both declared in include/os/plan9/note.h for every GOOS -- same
+# "declare everywhere" convention PROCOFILES's own rfork/Waitmsg
+# already use), so it's compiled for every GOOS that has, or will
+# have, a real notify()/noted() -- plan9 (real syscalls, svc_$cputype.s
+# above) and linux/darwin (declared but NOT YET implemented: needs
+# sigaction()/kill() as real syscalls first, a genuinely separate body
+# of work, see the design doc). Left in for linux/darwin anyway,
+# unresolved-until-linked same as PROCOFILES's own riscv carve-out
+# above -- atnotify.$O compiles clean today, only fails predictably
+# for whatever program is the first to actually call atnotify() there.
+# postnote() is plan9-only here (os/plan9/postnote.c, a plain write()
+# to /proc/PID/note) -- its linux/darwin equivalent (kill()-based) is
+# part of that same not-yet-done sigaction()/kill() work, so no
+# linux/darwin postnote.$O entry exists to be silently unresolved yet.
+# windows gets nothing: no notify-shaped primitive planned there.
+NOTIFYOFILES=`{if(~ $GOOS linux darwin) echo port/atnotify.$O; if not if(~ $GOOS plan9) echo port/atnotify.$O os/plan9/postnote.$O; if not echo -n}
+
 # UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
 # Plan9-native equivalent at all, unlike strdup/seek/etc above, which
 # stay in PORTOFILES) -- mirrors include/APE/'s own split of "ugly,
@@ -463,7 +483,7 @@ ARCHOFILES=\
 	$RT0OFILE\
 	$ARCHEXTRAOFILES\
 
-OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $EXITSOFILES $PROCOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
+OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $EXITSOFILES $PROCOFILES $NOTIFYOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
 
 HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 

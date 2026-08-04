@@ -143,9 +143,14 @@ corroborating a specific category:
 Notes vs. signals: a possible middle ground
 ------------------------------------------------------------------------
 
-Proposal, NOT implemented -- forward-looking, see plan_syscalls.txt's
-Tier 6 section for the actual tracked open question and implementation
-status. Recorded here because the reasoning is the reusable part.
+UPDATE: the Plan9 half of this (notify()/noted() as real syscalls,
+atnotify()/postnote() built on top) is now DONE -- see
+notes_libc_selfhost.txt's "Tier 6: notification, Plan9 side (arm/mips)"
+entry. The proposal below, for the Linux/darwin half specifically, is
+still just that -- a proposal, NOT implemented, blocked on
+sigaction()/kill() not existing as real syscalls anywhere in this tree
+yet. See plan_syscalls.txt's Tier 6 section for the tracked status.
+Recorded here because the reasoning is the reusable part.
 
 The friction is structural, not just naming: Plan9 notes are free text
 ("sys: trap: fault read addr=0x0", "alarm", "hangup", or literally

@@ -169,6 +169,21 @@
 #include "os/proc.h"
 #include "flag/cli.h"
 
+// claude: was empty -- os/plan9/note.h existed (declaring noted/notify/
+// postnote/atnotify) but was never #include'd anywhere, the same
+// "declared, never wired in" gap os/path.h/os/ipc.h's own comments
+// already flagged and fixed elsewhere. Declared for every GOOS (same
+// "declare everywhere, implement per-GOOS" convention os/proc.h's own
+// rfork/Waitmsg/await already use) -- Tier 6 notification
+// (docs/claude_notes/plan_syscalls.txt): Plan9 (arm/mips) has a real
+// implementation as of this commit; Linux/darwin do not yet (needs
+// sigaction()/kill() as real syscalls first, see
+// docs/claude_notes/notes_libc_api_design.txt's "Notes vs. signals"
+// section), so atnotify()/postnote()/noted() are link-time-only gaps
+// there for now, same treatment Tier 4's own darwin/windows rounds
+// gave partially-done process control.
+#include "os/plan9/note.h"
+
 //----------------------------------------------------------------------------
 // memory
 //----------------------------------------------------------------------------
