@@ -10,7 +10,10 @@
 #include <u.h>
 #include <libc.h>
 /*e: plan9 includes */
-#include <ctype.h>
+/* claude: no <ctype.h> -- see utilities/compare/misc/cmp.c's identical
+ * comment (isascii()/isdigit() below already come from libc.h's own
+ * str/ascii.h).
+ */
 //#include <fcall.h>      /* for %M */
 #include <str.h>
 

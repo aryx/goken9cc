@@ -106,6 +106,8 @@ UTFOFILES=\
 	utf/utfrune.$O\
 	utf/utfecpy.$O\
 	utf/isspacerune.$O\
+	utf/runestrchr.$O\
+	utf/runestrlen.$O\
 
 MATHOFILES=\
 	math/nan.$O\
@@ -171,6 +173,8 @@ PORTOFILES=\
 	port/cistrcmp.$O\
 	port/mallocz.$O\
 	port/tokenize.$O\
+	port/strncmp.$O\
+	port/readn.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
 # but must NOT be compiled for plan9 or windows at all -- selected here
@@ -323,7 +327,14 @@ EXITSOFILES=`{if(~ $GOOS plan9) echo os/plan9/_exits.$O; if not echo port/exits.
 # does -- riscv is excluded from tests/c/hello_libc/fork.exe for the
 # same reason), but would leave a libc.a that link-fails confusingly
 # for the first real riscv caller instead of failing predictably here.
-PROCOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS linux darwin) echo port/fork.$O port/exec.$O port/execl.$O port/wait.$O port/pipe.$O; if not if(~ $GOOS plan9) echo os/plan9/fork.$O port/execl.$O os/plan9/wait.$O; if not if(~ $GOOS windows) echo os/windows/exec.$O port/execl.$O os/windows/pipe.$O; if not echo -n}
+# claude: port/waitpid.$O added to both the linux/darwin and plan9
+# branches below (not windows, which has no wait() to build it on) --
+# unlike principia's own 9sys/waitpid.c (which reimplements await()'s
+# text-parsing separately from wait()), this one is built directly on
+# the portable wait() each branch already provides, so the exact same
+# file works for both without a GOOS split of its own. Found blocking
+# mk/Posix.c's Exit() while self-hosting mk.
+PROCOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS linux darwin) echo port/fork.$O port/exec.$O port/execl.$O port/wait.$O port/waitpid.$O port/pipe.$O; if not if(~ $GOOS plan9) echo os/plan9/fork.$O port/execl.$O os/plan9/wait.$O port/waitpid.$O; if not if(~ $GOOS windows) echo os/windows/exec.$O port/execl.$O os/windows/pipe.$O; if not echo -n}
 
 # UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
 # Plan9-native equivalent at all, unlike strdup/seek/etc above, which

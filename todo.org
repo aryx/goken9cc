@@ -969,6 +969,185 @@ pass length each time, safer
 
 ** mk/rc
 
+*** DONE (mostly): self-hosting utilities/ with goken's own compiler+libc
+claude:
+The build infrastructure was already designed for this (mkfiles/amd64/
+mkfile's own header comment: "used by tests/ and, once self-hosting is
+viable, as CC/AS/LD for the top-level build too" -- $BOOTLIBS empty for
+any non-boot objtype was always the intended mechanism) but had never
+actually been exercised: every utilities/*/mkfile still only ever got
+built via objtype=boot-gcc/boot-clang (gcc + BOOT/lib9). Trying
+`mk objtype=amd64 cputype=amd64` in each utilities/ subdirectory
+instead (goken's own 6c/6l + lib_core/libc/libbio/libstring/libregexp,
+all confirmed to already self-host cleanly) surfaced a small, well-
+scoped set of real gaps, all now fixed:
+
+- waitpid() -- was declared (include/os/proc.h) but never implemented
+  on any GOOS (nothing needed it in the Tier 4 process-control round).
+  utilities/calc/misc/dc.c and utilities/pipe/*.c both need it. Unlike
+  principia's own 9sys/
+  waitpid.c (which reimplements await()'s parsing separately from
+  wait()), the new port/waitpid.c is built directly on the portable
+  wait() every GOOS already provides, so one file works for linux/
+  darwin/plan9 alike with no GOOS split of its own.
+- strncmp() -- declared (commented out) in include/base/str.h, never
+  implemented. Blocked lib_strings/libstring/s_rdinstack.c and several
+  utilities/. Ported as-is from principia's port/strncmp.c.
+- runestrlen()/runestrchr() -- both files ALREADY EXISTED in
+  lib_core/libc/utf/ (presumably from an earlier partial port) but
+  were never wired into lib_core/libc/mkfile's UTFOFILES, the same
+  "written but never wired in" shape utfrrune() hit earlier
+  (notes_libc_selfhost.txt). Just added to UTFOFILES.
+- readn() -- declared (commented out) in include/os/file.h, never
+  implemented. Blocked utilities/archive/tar/tar.c. Ported as-is from
+  principia's port/readn.c.
+- u8int/u16int/u32int/u64int -- classic Plan9 fixed-width type names,
+  distinct from (and never aliased to) this tree's own u8/u16/u32/u64
+  in every include/arch/$cputype/u.h. tar.c uses the *int spelling
+  directly; without the typedef, 6c silently treated "(u32int)EXPR" as
+  a call to a nonexistent function named u32int (an implicit-function-
+  call misparse of an unknown identifier followed by a parenthesized
+  expression) rather than a type error -- surfaced as a LINK-time
+  "undefined: u32int", not a compile error, so easy to misdiagnose as
+  something else. Added the four aliases to all 7 arch u.h files.
+- stray `#include <ctype.h>` in utilities/compare/misc/cmp.c and
+  utilities/archive/tar/tar.c -- a POSIX header this include path
+  doesn't provide (only BOOT's own -I search path happened to reach a
+  real one). Both files only used isascii()/isdigit(), already
+  available via libc.h's own str/ascii.h -- removed the include.
+- a real, previously-undiscovered `mk` quirk: `VAR=$UNASSIGNED`
+  collapses to ONE stray empty list element for VAR, unlike a bare
+  `$UNASSIGNED` referenced directly in a recipe (which correctly
+  vanishes to zero words -- the same deferred-to-rc trick
+  mkfiles/mkfile.proto's own CFLAGS_EXTRA comment already documents).
+  This broke every leaf mkfile whose ENTIRE LDLIBS was `$BOOTLIBS`
+  alone (utilities/time/mkfile -- date.c -- was the first one hit:
+  "6l ... : cannot open : No such file or directory"). Confirmed with
+  a minimal reproduction (a throwaway mkfile) before fixing, and
+  confirmed multi-word assignments like "LDLIBS=-lbio -lstring
+  $BOOTLIBS" do NOT trigger it -- only the bare, single-reference
+  case. Fixed at the root: mkfiles/mkone and mkfiles/mkmany now
+  reference $BOOTLIBS directly in their own $LD recipe line (a direct,
+  never-assigned reference, so it correctly vanishes for self-hosted
+  objtypes and still resolves for boot-gcc/boot-clang), and the
+  handful of leaf mkfiles whose LDLIBS was ONLY $BOOTLIBS (utilities/
+  time, utilities/text/awk, compilers/pcc, typesetting/{eqn,pic,grap,
+  troff}, tests/lib9) had that now-redundant line removed. Every OTHER
+  leaf mkfile (the "-lbio -lstring $BOOTLIBS" shape) was left
+  unchanged -- harmless, if slightly redundant, double-linking against
+  -l9/-lm for boot builds only, not worth touching ~50 more files for.
+  mkfile.proto's own BOOTLIBS= was also changed from an explicit empty
+  assignment to fully unassigned (matching CFLAGS_EXTRA's existing
+  pattern) -- confirmed beneficial and non-regressing for the common
+  multi-word case, even though it alone doesn't fix the bare-assignment
+  case above.
+
+Verified per-fix by actually running the built binaries under
+qemu-runner (not just linking): cat/wc/mkdir/rm real file operations,
+tar cf/xf round-tripping a real file. Full tests/c/hello_libc and
+tests/s/variants regression suites re-run clean after all of the
+above (no host-libc/toolchain-shared-file changes went untested).
+
+What's built and running now, self-hosted (goken's own 6c/6l against
+lib_core/libc, not gcc+BOOT/lib9): utilities/files/{cat,touch,mkdir,
+rm,chgrp,mtime,wc,du}, utilities/pipe/{xargs,p,mc}, utilities/compare/
+misc/{cmp,comm}, utilities/calc/misc/{dc,bc}, utilities/misc/
+{basename,unicode}, utilities/time/date, utilities/archive/tar/tar
+(archive creation verified; see below for one known-bad path).
+
+Still open, deliberately not attempted this round:
+- utilities/pipe/tee.c and tail.c need atnotify() (Plan9's
+  notification system) -- not implemented on any POSIX-shaped GOOS at
+  all yet. Would need a real signal()-to-note translation layer on
+  linux/darwin, a materially bigger task than this round's other
+  fixes, and the SAME kind of design question mk/rc's own Plan9.c-vs-
+  Posix.c notification story below needs answered anyway -- better
+  solved once, for both, not twice.
+- utilities/archive/tar/tar.c's own archive-header checksum write path
+  produced a real, reproducible "bad archive header checksum" on
+  extraction (`tar cf` a file, `tar xf` it back: "expected 3o got
+  3993o"). The suspiciously tiny "expected" value strongly suggests
+  this is a re-sighting of the ALREADY-DOCUMENTED "bare %u-as-flag"
+  fmt.c bug elsewhere in this file (a `%...o`-shaped checksum format
+  most likely hitting the exact same verb-dispatch-hijack already
+  described in this file's own "%u`-as-flag idiom mis-parses" entry
+  above) rather than a new bug in tar.c itself -- not confirmed by
+  isolating fmt.c specifically, and not fixed here, since that gap is
+  already flagged as needing either a tree-wide %u audit or a more
+  surgical dofmt.c fix, out of scope for a self-hosting survey pass.
+- utilities/text/awk/*.c was NOT attempted -- utilities/mkfile's own
+  SRC_VIEWS comment already marks it "TODO: awk must be relpized after
+  the removal use of APE in it", a pre-existing, explicitly-deferred
+  gap in the project itself, not rediscovered here.
+- utilities/files/{ls,mv,cp,chmod} are explicitly excluded from
+  utilities/files/mkfile's own TARG list already ("we skip ls, mv...
+  breaking current usage", "TODO: mv ls chmod") for reasons predating
+  this pass -- not re-investigated under objtype=amd64 specifically;
+  worth revisiting given how much else in this same file just started
+  working, but genuinely untested, not "confirmed still broken".
+- utilities/{byte,archive/gzip,archive/zip,calc/hoc,text/misc,
+  typesetting/*} and the rest of utilities/misc/{file,iconv,strings}
+  were not surveyed at all this round (time/scope), only the
+  directories that came up while chasing the specific errors above.
+
+*** TODO: self-host mk and rc themselves
+claude:
+Real design work, not mechanical porting like utilities/ above turned
+out to be. mk/mkfile currently only ever builds mk/Posix.c ("Posix.$O
+below not Plan9.$O!"), which wants genuinely POSIX-shaped primitives
+this libc does not have and was never asked to have: `int wait(int*)`
+(conflicts with our own Plan9-shaped `Waitmsg* wait(void)` -- the file
+even says so itself, "#define NOPLAN9DEFINES // to avoid conflict for
+wait(), waitpid() signatures"), dup2(), kill(), signal(), a real
+`environ` global (port/getenv.c's own _mainargv-based walk only
+answers single-name lookups, not "give me everything"), tmpnam(),
+utime(). rc/unix.c likely wants a similar but not identical set (its
+own mkfile note: "-lstring is needed just for one function in
+processes.c (for `{...})", and rc/processes.c uses
+rfork(RFFDG|RFPROC|RFNOTEG), a richer rfork() invocation than
+port/fork.c's own fixed RFPROC|RFFDG|RFREND -- not reducible to a
+simple fork() call the way pcc.c's usage was).
+
+mk/Plan9.c, by contrast, is ALREADY almost entirely compatible with
+this libc as it stands today: rfork(RFPROC|RFFDG|RFENVG), fork(),
+pipe(), execl(), dup(in[0], STDIN) (matches our dup(oldfd,newfd)
+exactly, not POSIX dup2), Waitmsg* wait(), dirstat()/dirwstat()/
+nulldir()/access()/create() -- all already implemented and working.
+The ONLY genuinely Plan9-specific pieces are readenv()/exportenv()
+(open("/env",OREAD)+dirread(), meaningless on a GOOS without /env) and
+atnotify()/postnote()/notify() (same gap as utilities/pipe/tee.c's
+atnotify need above) plus waitpid() (now implemented, see the DONE
+entry above -- mk/Plan9.c's own Exit() already calls it).
+
+This suggests the right shape for self-hosting mk (and by extension
+rc, which needs the same rfork/notify story) on Linux is NOT "make
+Posix.c work against this libc" (would require growing the libc
+toward genuine POSIX compatibility -- dup2/kill/signal/environ/tmpnam/
+utime -- duplicating machinery Plan9.c's own rfork/fork/pipe/dup/wait
+usage already gets for free) but rather a THIRD variant file (e.g.
+mk/GokenLinux.c) that reuses Plan9.c's process-control code nearly
+verbatim and only replaces its two genuinely Plan9-specific pieces:
+readenv()/exportenv() via environ-walking (needs libc to expose
+something like port/getenv.c's environ() -- currently file-static --
+as a real enumerable-environment primitive, not just single-name
+getenv()) and catchnotes()/expunge() via signal()/kill() (needs both
+implemented -- a smaller, more self-contained POSIX-compat addition
+than the full Posix.c wishlist, and arguably useful on its own
+regardless of mk).
+
+Not started. Real open questions before writing code: does
+port/getenv.c's environ() get promoted to a public, non-static
+primitive (and under what name, given Plan9 has no "environ" concept
+at all to name it after)? Does signal()/kill() belong in libc as
+genuine POSIX-compat additions (a first for this tree, which has
+avoided POSIX signals entirely so far in favor of Plan9's own
+note-based model), or does catchnotes() get a Linux-specific atnotify-
+over-signal shim instead, keeping libc's own public API Plan9-shaped
+throughout? Whichever way mk goes, rc/processes.c's own richer
+rfork(RFFDG|RFPROC|RFNOTEG) needs checking against what real
+rfork(2)/our rfork() can actually honor before assuming it just works
+by analogy to mk's simpler case.
+
 ** libs
 
 *** libsyscall

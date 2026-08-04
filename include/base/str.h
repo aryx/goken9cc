@@ -19,7 +19,11 @@ extern  int     cistrcmp(char*, char*);
 // less useful?
 //extern  char*   strecpy(char*, char*, char*);
 //extern  char*   strncat(char*, char*, long);
-//extern  int     strncmp(char*, char*, long);
+// claude: needed by lib_strings/libstring/s_rdinstack.c and
+// utilities/pipe/*.c -- port/strncmp.c, ported from principia's
+// lib_core/libc/port/strncmp.c. Found self-hosting utilities/ with
+// goken's own compiler+libc instead of the host bootstrap gcc+lib9.
+extern  int     strncmp(char*, char*, long);
 //
 //extern  char*   strpbrk(char*, char*);
 //

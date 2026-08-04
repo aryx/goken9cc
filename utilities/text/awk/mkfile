@@ -1,9 +1,12 @@
 TOP=../../..
 <$TOP/mkfiles/$objtype/mkfile
 
-# $BOOTLIBS just for chartorune
-# -lm just for a few math functions
-LDLIBS=$BOOTLIBS
+# $BOOTLIBS (chartorune, a few math functions) is referenced directly
+# in each recipe below instead of folded into LDLIBS=$BOOTLIBS here --
+# see utilities/time/mkfile's identical comment for why: that
+# assignment shape hits a real mk quirk (a stray empty argument
+# reaching $LD) once BOOTLIBS is itself unassigned, i.e. for any
+# self-hosted (non-boot) objtype.
 
 #TODO: has some segfault hence the _buggy suffix
 TARG=awk_buggy
@@ -30,7 +33,7 @@ proctab.c: y.tab.h maketab.c $O.maketab
 
 #TODO: replace by an ed script, like mkenam but mkproctab here
 $O.maketab: maketab.$O
-	   $LD $LDFLAGS -o $target $prereq $LDLIBS
+	   $LD $LDFLAGS -o $target $prereq $LDLIBS $BOOTLIBS
 
 maketab.$O: maketab.c
 	    $CC $CFLAGS $CFLAGS_EXTRA maketab.c

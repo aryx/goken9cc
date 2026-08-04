@@ -71,6 +71,10 @@ extern	vlong	seek(fdt, vlong, int);
 //extern	long	pwritev(fdt, IOchunk*, int, vlong);
 //extern	long	readv(fdt, IOchunk*, int);
 //extern	long	writev(fdt, IOchunk*, int);
-//extern	long	readn(fdt, void*, long);
+// claude: needed by utilities/archive/tar/tar.c (short-read-looping
+// wrapper over read()) -- port/readn.c, ported from principia's
+// lib_core/libc/port/readn.c. Found self-hosting tar.c with goken's
+// own compiler+libc instead of the host bootstrap gcc+lib9.
+extern	long	readn(fdt, void*, long);
 
 // extern	int	fdflush(int);

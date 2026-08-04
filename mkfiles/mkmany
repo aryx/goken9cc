@@ -12,8 +12,10 @@ BINS=${TARG:%=$BIN/%}
 all:V: $PROGS
 
 
+# claude: $BOOTLIBS appended directly here -- see mkfiles/mkone's
+# identical comment and todo.org's own entry for why.
 $O.%:	%.$O $OFILES $LIB
-	$LD $LDFLAGS -o $target $prereq $LDLIBS
+	$LD $LDFLAGS -o $target $prereq $LDLIBS $BOOTLIBS
 
 %.$O:	$HFILES		# don't combine with following %.$O rules
 %.$O:	%.c

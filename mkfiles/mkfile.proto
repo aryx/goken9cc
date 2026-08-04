@@ -30,10 +30,20 @@ LDFLAGS=-L$ROOT/arch/$objtype/lib $SANITIZE
 # Plan9-style calls) and the host's libm (goken's own libc.a already bakes
 # in its own math/, see lib_core/libc/port/{sin,pow,sqrt,...}.c, and
 # lib9.a's role is replaced by libc.h's own "#pragma lib libc.a" -- see
-# mkfiles/boot-gcc/mkfile). Empty here; set to "-l9 -lm" only by
-# boot-gcc/boot-clang. Leaf mkfiles reference $BOOTLIBS instead of
-# hardcoding -l9/-lm so the same LDLIBS line works self-hosted too.
-BOOTLIBS=
+# mkfiles/boot-gcc/mkfile). Set to "-l9 -lm" only by boot-gcc/boot-clang.
+# Leaf mkfiles reference $BOOTLIBS instead of hardcoding -l9/-lm so the
+# same LDLIBS line works self-hosted too.
+#
+# claude: deliberately NOT assigned here (even to empty), same
+# "eagerly-substituted one-element empty-string list" pitfall
+# CFLAGS_EXTRA's own comment already documents (mkfiles/$objtype/mkfile,
+# e.g. amd64's): a leaf mkfile whose LDLIBS is JUST "$BOOTLIBS" (e.g.
+# utilities/time/mkfile) would otherwise pass a single stray empty
+# argument to $LD for every non-boot objtype, which 6l/8l/etc. then try
+# to open as a file ("??none??: cannot open : No such file or
+# directory") -- found self-hosting utilities/time/date.c. An
+# unassigned variable lets rc correctly expand it to zero words instead.
+#BOOTLIBS=
 
 LEX=lex
 #alt: bison but not always super compatible. apparently on my Linux /bin/yacc

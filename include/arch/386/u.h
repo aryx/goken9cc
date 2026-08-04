@@ -13,6 +13,17 @@ typedef unsigned int u32;
 typedef signed long long s64;
 typedef unsigned long long u64;
 
+/* claude: classic Plan9 fixed-width aliases (u8int/u16int/u32int/u64int),
+ * distinct from the u8/u16/u32/u64 names this file already defines --
+ * some ported Plan9 sources (e.g. utilities/archive/tar/tar.c) use the
+ * *int-suffixed spelling directly. Found self-hosting tar.c with
+ * goken's own compiler+libc.
+ */
+typedef u8 u8int;
+typedef u16 u16int;
+typedef u32 u32int;
+typedef u64 u64int;
+
 typedef float float32;
 typedef double float64;
 

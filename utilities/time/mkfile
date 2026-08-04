@@ -1,7 +1,10 @@
 TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
-LDLIBS=$BOOTLIBS
+# claude: no LDLIBS=$BOOTLIBS here -- mkfiles/mkmany's own recipe
+# appends $BOOTLIBS directly now (see its comment), since assigning
+# LDLIBS from ONLY $BOOTLIBS hit a real mk quirk (a stray empty
+# argument reaching $LD) found self-hosting date.c.
 
 #TODO: cal
 TARG=date

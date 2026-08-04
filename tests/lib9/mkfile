@@ -2,7 +2,8 @@ TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
 TARG=mtime_float
-LDLIBS=$BOOTLIBS
+# claude: no LDLIBS=$BOOTLIBS here -- see utilities/time/mkfile's
+# identical comment (mkfiles/mkone now appends $BOOTLIBS directly).
 
 OFILES=mtime_float.$O
 

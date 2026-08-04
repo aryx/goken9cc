@@ -3,7 +3,12 @@
 #include <u.h>
 #include <libc.h>
 /*e: plan9 includes */
-#include <ctype.h>
+/* claude: no <ctype.h> -- POSIX header this include path doesn't
+ * provide; isascii()/isdigit() below already come from libc.h's own
+ * str/ascii.h. Found self-hosting this file with goken's own
+ * compiler+libc instead of the host bootstrap gcc+lib9 (whose -I
+ * search path happens to reach a real ctype.h).
+ */
 
 /*s: constant [[BUF]](cmp.c) */
 #define     BUF     65536
