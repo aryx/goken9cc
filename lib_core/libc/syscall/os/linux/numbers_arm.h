@@ -86,3 +86,13 @@
 // renameat2(2) -- see numbers_amd64.h's own comment for why this,
 // not plain rename/renameat, is used uniformly across all 6 arches.
 #define SYS_renameat2	382
+/* claude: Tier 4 process control -- see numbers_386.h's fuller comment.
+ * Confirmed against arch/arm/tools/syscall.tbl, which agrees with i386's
+ * legacy numbering here too: "2 common fork sys_fork", "11 common
+ * execve sys_execve", "42 common pipe sys_pipe", "114 common wait4
+ * sys_wait4".
+ */
+#define SYS_fork	2
+#define SYS_execve	11
+#define SYS_wait4	114
+#define SYS_pipe	42

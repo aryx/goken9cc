@@ -85,3 +85,12 @@
 //sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
 // renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
 //sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2
+// Tier 4 process control -- see syscall_linux_386.decl's identical
+// comment on why these stay _sys-prefixed. This file's own vlong
+// syscallarg (lib_core/libc/mkfile's generation rule) already casts
+// _sysexecve's path/argv/envp pointers correctly, same as every other
+// pointer-taking entry above.
+//sys _sysfork(void) int = SYS_fork
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+//sys _syspipe(int *fd) int = SYS_pipe

@@ -1,0 +1,5 @@
+fork+wait ok
+child alive
+fork+exec+wait ok
+hello from child
+pipe+fork+wait ok

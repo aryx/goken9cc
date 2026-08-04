@@ -71,3 +71,9 @@
 //sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
 // renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
 //sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2
+// Tier 4 process control -- see syscall_linux_arm64.decl's identical
+// comment (this arch shares the same generic-ABI shape).
+//sys _sysrawclone(int flags, void *stack, void *ptid, void *ctid, void *tls) int = SYS_clone
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+//sys _sysrawpipe2(int *fd, int flags) int = SYS_pipe2

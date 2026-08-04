@@ -82,3 +82,15 @@
 // renameat2(2) -- same generic-ABI number as arm64 (see
 // numbers_arm64.h's comment).
 #define SYS_renameat2	276
+/* claude: Tier 4 process control -- same generic-ABI numbers as arm64
+ * (see numbers_arm64.h's fuller comment): clone=220, execve=221,
+ * wait4=260, pipe2=59. wait4's time32-vs-64 gate is open here too
+ * (__BITS_PER_LONG==64 on rv64, unlike rv32 -- see numbers_riscv.h,
+ * which is why THIS file is not simply reused there the way it is for
+ * the read/write/openat/close/exit "common" rows). syscall_linux_
+ * riscv64.h's own fork()/pipe() shims mirror arm64's.
+ */
+#define SYS_clone	220
+#define SYS_execve	221
+#define SYS_wait4	260
+#define SYS_pipe2	59

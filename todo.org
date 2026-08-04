@@ -1211,6 +1211,55 @@ would touch the same os/$GOOS/*.c files as the -1-normalization gap
 above, natural to do together) would fix both errbuf's content AND
 the exit status in one pass.
 
+**** DONE: Tier 4 process control (fork/exec/execl/wait/pipe) for linux
+claude:
+docs/claude_notes/plan_syscalls.txt's own Tier 4 section has the full
+write-up (design, why fork()/pipe() route through port/*.c instead of
+being decl-generated straight to their public name, the arm64/riscv64
+clone/pipe2 shims, the mips wait4-arg-count check). Landed for all 6
+non-rv32 Linux arches, verified end to end via the new
+tests/c/hello_libc/fork.c under qemu-user on every one of them, not
+just compiled. What's left:
+- darwin: no syscall/os/darwin/ backing at all yet for
+  _sysfork/_sysexecve/_syswait4/_syspipe -- deferred deliberately (the
+  plan doc's own Tier 4 gotchas already flagged Darwin's raw fork(2)
+  needing extra care, child pid in a second return register).
+- plan9: RFORK/EXEC/AWAIT/PIPE are native Plan9-shaped syscalls
+  already (no POSIX-shape bridge needed) -- unimplemented, but a
+  smaller, different-shaped task than the linux/darwin port/*.c files.
+- windows: no raw-syscall layer at all (same reason it's excluded from
+  PORTPOSIXOFILES already).
+- riscv32: deliberately excluded, not silently skipped -- no wait4(2)
+  on that arch at all (numbers_riscv.h's own comment), only waitid
+  (different struct shape). PROCOFILES/fork.exe both carve it out
+  explicitly.
+- kill() was NOT added -- numbers_*.h record the syscall number for
+  when it's needed, but no port/kill.c exists yet; nothing in this
+  round's scope called for it.
+- rc/processes.c's rfork(RFFDG|RFPROC|RFNOTEG) (the real rc shell,
+  not pcc) is a substantially bigger undertaking than plain fork() --
+  BOOT/lib9/rfork.c's own "pipe dance" for RFNOWAIT gives a sense of
+  the scope -- and was out of scope for this round, which targeted
+  compilers/pcc/pcc.c's simpler fork()/exec()/wait()/pipe() needs.
+
+**** gap (found, not fixed): mips _sysrenameat2's 5th argument is silently dropped
+claude:
+Found while adding Tier 4 above (checking whether wait4's 4 raw
+arguments fit svc_mips.s's trampoline, which only wires a1..a4 into
+R4..R7 -- o32's 5th/6th syscall argument needs the caller's stack,
+never implemented). syscall_linux_mips.decl's _sysrenameat2 (added
+earlier for Tier 3.5's os/linux/dirwstat.c, docs/claude_notes/
+notes_libc_selfhost.txt's own "Round 2" section) declares FIVE
+arguments (olddirfd, oldpath, newdirfd, newpath, flags) -- one more
+than the trampoline actually carries. The 5th (flags) is silently
+dropped on mips only; every other arch is fine. The one caller
+(dirwstat()'s rename path) always passes flags=0, so this has not yet
+produced an observable bug, but would the moment a caller passes a
+real renameat2(2) flag (RENAME_NOREPLACE, RENAME_EXCHANGE) on mips.
+Not fixed here -- unrelated to process control, and the real fix
+(passing the 5th arg on the stack, mirroring what real o32 syscalls
+with >4 args do) touches svc_mips.s, out of scope for this pass.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

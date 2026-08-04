@@ -100,3 +100,37 @@ int _sysdup2(int oldfd, int newfd)
 {
 	return dup3(oldfd, newfd, 0);
 }
+
+/* claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+ * Same story one more time: this ABI dropped legacy fork() and pipe()
+ * along with open()/unlink()/dup2() above, so _sysfork()/_syspipe()
+ * (the raw names port/fork.c and port/pipe.c call) are hand-written
+ * bridges over the *at()-style substitutes generated from
+ * syscall_linux_arm64.decl, exactly like _sysopen() over openat().
+ *
+ * SIGCHLD=17 (asm-generic/signal.h, arch-uniform on every Linux arch
+ * except mips, which does not need this shim at all -- see
+ * syscall_linux_mips.h). clone(SIGCHLD,0,0,0,0) is the standard
+ * fork-equivalent construction (musl and Go's runtime both build fork
+ * this same way on arm64): flags=SIGCHLD alone (no CLONE_VM, no
+ * CLONE_FILES, ...) asks the kernel for a plain fork-shaped child that
+ * signals the parent with SIGCHLD on exit, and stack=0 tells the
+ * kernel to give the child a COPY of the parent's own stack rather
+ * than a caller-supplied one -- copy-on-write makes that safe, and is
+ * exactly the semantics fork() promises.
+ */
+#define SIGCHLD 17
+
+extern int _sysrawclone(int flags, void *stack, void *ptid, void *ctid, void *tls);
+
+int _sysfork(void)
+{
+	return _sysrawclone(SIGCHLD, 0, 0, 0, 0);
+}
+
+extern int _sysrawpipe2(int *fd, int flags);
+
+int _syspipe(int *fd)
+{
+	return _sysrawpipe2(fd, 0);
+}

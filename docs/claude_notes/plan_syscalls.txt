@@ -316,6 +316,99 @@ gap), in notes_libc_selfhost.txt's own "Round 2" section.
 Tier 4: process control -- the actual self-hosting milestone
 ------------------------------------------------------------------------
 
+UPDATE: fork()/exec()/execl()/wait()/pipe() are DONE for linux, all 6
+arches this file otherwise treats as "done" (386/amd64/arm/arm64/mips/
+riscv64) -- rv32 stays a deliberate gap, see below. Darwin/plan9/windows
+are unchanged (still not started); kill() also stays unimplemented
+(number recorded in numbers_*.h but no caller needed it this round, so
+no port/kill.c was added -- avoid the temptation to assume it exists).
+
+The design that shipped matches this section's own table almost
+exactly, with one addition the table doesn't show: every raw syscall
+stays _sys-prefixed (_sysfork, _sysexecve, _syswait4, _syspipe) and is
+bridged to its public Plan9-shaped name by a NEW port/*.c file (fork.c,
+exec.c, execl.c, wait.c, pipe.c) rather than decl-generated straight to
+the public name the way getpid()/chdir()/access() are. Reason: fork()
+and pipe() need their raw -errno failure result normalized to Plan9's
+exact -1 (see port/fork.c's own comment) -- compilers/pcc/pcc.c's own
+`switch(fork()){case -1: ...}` is an exact-match switch that a raw
+-errno would silently miss, landing in the wrong (parent) branch
+instead of reporting failure. This is the same class of bug
+todo.org's own "-1 vs raw errno" gap already names elsewhere in this
+tree; Tier 4 deliberately does not add a new instance of it.
+
+arm64/riscv64 needed real substitution shims, not just decl entries:
+fork() is clone(SIGCHLD,0,0,0,0) (this ABI dropped plain fork(), same
+story as its already-missing open()/dup2()) and pipe() is pipe2(fd,0)
+(this ABI dropped plain pipe() too) -- both hand-written in
+syscall_linux_{arm64,riscv64}.h, exactly parallel to that file's
+existing _sysopen()-over-openat() shim. mips needed the SAME pipe2
+substitution but for a different reason: numbers_mips.h's own comment
+explains why o32's real sys_pipe (sysm_pipe) can't go through the
+generic _syscall6 trampoline at all -- it returns the two fds directly
+in $v0/$v1, not through the pointer argument. wait4 is exactly 4 raw
+args (pid, status, options, rusage) on every arch, which matters on
+mips specifically: that is the most args svc_mips.s's trampoline can
+carry in registers before a syscall would need its 5th/6th argument
+passed on the stack (not implemented) -- confirmed by reading the
+assembly, not assumed, before writing the .decl entry.
+
+exec()'s envp comes from port/mainargs.c's _mainargv (the same source
+port/getenv.c already reads) via a small file-static walk duplicated
+in port/exec.c rather than shared -- four lines, not worth a new
+cross-file API surface for. execl() is a plain two-pass variadic-argv
+builder over exec(), copied in spirit from BOOT/lib9/execl.c.
+wait()'s Waitmsg construction is a smaller version of BOOT/lib9/
+await.c's own _wait(): same WIFEXITED/WEXITSTATUS-into-w->msg
+conversion (a nonzero exit becomes msg="42"-shaped, matching
+port/exits.c's own already-lossy msg-to-0/1 collapse -- the original
+exits(char*) STRING can never survive a real Unix exit(2) boundary,
+same limitation BOOT/lib9 already has), but without BOOT's full
+SIGxxx-name table (this tree has no <signal.h> equivalent at all --
+WTERMSIG's raw number is used directly instead) and without filling
+Waitmsg.time[] from rusage (passed nil; no caller reads it yet).
+
+Verified END TO END, not just compiled: tests/c/hello_libc/fork.c
+(new) exercises all three real shapes compilers/pcc/pcc.c needs --
+fork()+wait(), fork()+exec()+wait(), and pipe()+fork()+wait() -- and
+was run for real under qemu-user for all 6 arches (native execution
+for the two the dev host can run directly, qemu-user for the rest),
+matching byte-for-byte against fork_expected.txt every time, including
+the exec() half genuinely re-exec'ing the running binary (proof
+_sysexecve's argv/envp marshaling is correct, not merely that the
+syscall didn't fault) and the pipe() half reading back exactly what a
+forked child wrote to confirm the two fds are really connected. Also
+functioned as a real bug-finder, the way earlier tiers' tests did: an
+off-by-one in the TEST itself (writing a string literal's length
+including its trailing NUL byte, not just the visible characters) was
+caught by an exact cmp mismatch on the first amd64 run, not silently
+passed -- see the fix in git history, not repeated here since it was a
+test bug, not a libc one.
+
+riscv32 (numbers_riscv.h) is a deliberate, documented gap, not
+silently skipped: clone/execve are unconditional there too and would
+work, but wait4 is gated exactly like stat's fstat/newfstatat was
+(`#if defined(__ARCH_WANT_TIME32_SYSCALLS) || __BITS_PER_LONG != 32`,
+which riscv never satisfies at 32 bits) -- only waitid (a different,
+siginfo_t-shaped struct) is available, and rather than ship fork/exec
+without a matching wait, this whole tier was left out for rv32 as one
+gap. lib_core/libc/mkfile's PROCOFILES excludes $cputype riscv up
+front for exactly this reason (checked first, same style as
+STATOFILES's own riscv carve-out), and
+tests/c/hello_libc/mkfile excludes fork.exe from that one arch's run
+the same way stat.exe/dirread.exe already are, for their own unrelated
+reason.
+
+Found along the way, NOT fixed (out of scope for process control):
+syscall_linux_mips.decl's own _sysrenameat2 (added for Tier 3.5's
+dirwstat(), see that section) declares 5 arguments, but svc_mips.s's
+trampoline only ever wires 4 into registers (a1..a4 -> R4..R7) --
+confirmed by reading the assembly while checking wait4 fit inside that
+same limit. The 5th argument (renameat2's flags, always 0 in the one
+caller today) is silently dropped on mips, a latent, pre-existing bug
+this pass happened to notice, not one Tier 4 introduced. Tracked in
+todo.org rather than fixed here.
+
 This is what pcc (the compiler driver) and mk need to spawn
 subprocesses, i.e. the point where the toolchain can drive itself.
 Reference implementations again already exist in BOOT/lib9/:

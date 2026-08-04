@@ -93,3 +93,14 @@
 //sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
 // renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
 //sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2
+// Tier 4 process control (docs/claude_notes/plan_syscalls.txt). All
+// four are _sys-prefixed raw shapes, not public names -- unlike
+// getpid/chdir/access above, fork()/exec()/wait()/pipe() each need a
+// port/*.c bridge (port/fork.c, port/exec.c, port/wait.c, port/pipe.c)
+// to normalize the raw negative-errno failure result into Plan9's
+// exact -1 contract (see port/fork.c's own comment for why this
+// specifically matters for fork, not just tidiness).
+//sys _sysfork(void) int = SYS_fork
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+//sys _syspipe(int *fd) int = SYS_pipe

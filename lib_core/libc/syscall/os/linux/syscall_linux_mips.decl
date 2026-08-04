@@ -4,8 +4,12 @@
 // zsyscall_linux_mips.c. Every wrapper just calls the one generic
 // _syscall6 trampoline (lib_core/libc/syscall/os/linux/svc_mips.s), so
 // adding a syscall here is the only step needed -- no new assembly
-// (as long as it needs no more than 3 args -- see that file's note on
-// o32's stack-passed 5th/6th syscall argument).
+// (as long as it needs no more than 4 args -- see that file's note on
+// o32's stack-passed 5th/6th syscall argument. claude: this file's
+// own _sysrenameat2 below already needs 5 -- its 5th argument, flags,
+// is silently dropped on this arch today, a real pre-existing gap
+// found while adding Tier 4 below and left unfixed here since it's
+// unrelated to process control; see todo.org).
 
 //sys write(int fd, void *buf, long n) long = SYS_write
 //sys read(int fd, void *buf, long n) long = SYS_read
@@ -77,3 +81,17 @@
 //sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
 // renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
 //sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2
+// Tier 4 process control -- see syscall_linux_386.decl's identical
+// comment on why fork/execve/wait4 stay _sys-prefixed. wait4 here is
+// exactly 4 args (pid, status, options, rusage), the most this arch's
+// svc_mips.s can carry in registers -- see this file's own header note.
+//
+// No _syspipe here: numbers_mips.h's own comment explains why o32's
+// sys_pipe (sysm_pipe) can't go through the generic trampoline at all
+// (return value in $v0/$v1, not through a pointer) -- _sysrawpipe2
+// (SYS_pipe2, normal pointer+flags shape) is the raw call instead, and
+// syscall_linux_mips.h's own pipe() shim wraps it with flags=0.
+//sys _sysfork(void) int = SYS_fork
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+//sys _sysrawpipe2(int *fd, int flags) int = SYS_pipe2

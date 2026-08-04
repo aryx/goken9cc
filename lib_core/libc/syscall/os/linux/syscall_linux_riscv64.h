@@ -77,3 +77,23 @@ int _sysdup2(int oldfd, int newfd)
 {
 	return dup3(oldfd, newfd, 0);
 }
+
+/* claude: Tier 4 process control -- see syscall_linux_arm64.h's
+ * identical comment (this arch shares the same generic-ABI shape, and
+ * the same SIGCHLD=17 construction for clone-as-fork).
+ */
+#define SIGCHLD 17
+
+extern int _sysrawclone(int flags, void *stack, void *ptid, void *ctid, void *tls);
+
+int _sysfork(void)
+{
+	return _sysrawclone(SIGCHLD, 0, 0, 0, 0);
+}
+
+extern int _sysrawpipe2(int *fd, int flags);
+
+int _syspipe(int *fd)
+{
+	return _sysrawpipe2(fd, 0);
+}

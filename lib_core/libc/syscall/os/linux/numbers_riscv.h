@@ -112,3 +112,25 @@
  * result (see lib_core/libc/mkfile's STATOFILES), so dirfstat/dirfwstat
  * are unavailable on this one arch until statx support is written.
  */
+/* claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt)
+ * is left out of this round for this one arch, worth recording
+ * precisely since fork and wait land on opposite sides of the same
+ * time32/64 split that already bit stat above. clone=220 and
+ * execve=221 are unconditional in scripts/syscall.tbl ("common"), so
+ * fork (via clone(SIGCHLD,...), same as arm64/riscv64) and exec would
+ * work fine here. wait4, however, is gated exactly like stat's
+ * fstat/newfstatat:
+ *
+ *   260  time32  wait4  sys_wait4  compat_sys_wait4
+ *   260  64      wait4  sys_wait4
+ *
+ * and asm-generic/unistd.h's own guard on __NR_wait4 is
+ * `#if defined(__ARCH_WANT_TIME32_SYSCALLS) || __BITS_PER_LONG != 32`
+ * -- the exact condition this file's own clock_gettime/nanosleep
+ * comment above already established riscv never defines. So rv32 has
+ * no wait4 at all, only waitid (95, unconditional) -- a different
+ * struct (siginfo_t, not a plain int status + rusage), needing its own
+ * decode logic, not a drop-in. Rather than build fork/exec alone
+ * without wait to pair them, this whole tier is deferred here as one
+ * gap, same "documented, not silently dropped" treatment as stat's.
+ */

@@ -124,3 +124,23 @@ long _sysrenameat2(int olddirfd, void* oldpath, int newdirfd, void* newpath, uin
 	return (long)_syscall6(SYS_renameat2, (vlong)olddirfd, (vlong)oldpath, (vlong)newdirfd, (vlong)newpath, (vlong)flags, 0);
 }
 
+int _sysfork(void)
+{
+	return (int)_syscall6(SYS_fork, 0, 0, 0, 0, 0, 0);
+}
+
+int _sysexecve(void* path, void* argv, void* envp)
+{
+	return (int)_syscall6(SYS_execve, (vlong)path, (vlong)argv, (vlong)envp, 0, 0, 0);
+}
+
+int _syswait4(int pid, void* status, int options, void* rusage)
+{
+	return (int)_syscall6(SYS_wait4, (vlong)pid, (vlong)status, (vlong)options, (vlong)rusage, 0, 0);
+}
+
+int _syspipe(int* fd)
+{
+	return (int)_syscall6(SYS_pipe, (vlong)fd, 0, 0, 0, 0, 0);
+}
+

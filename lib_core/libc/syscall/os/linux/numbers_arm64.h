@@ -97,3 +97,23 @@
 // all 6 arches instead of legacy rename/renameat -- see
 // numbers_amd64.h's own comment.
 #define SYS_renameat2	276
+/* claude: Tier 4 process control -- see numbers_386.h's fuller comment
+ * on the port/*.c normalization these route through. Unlike the
+ * legacy-numbered arches, this "generic" ABI dropped plain fork() and
+ * pipe() the same way it already dropped open()/unlink()/dup2() above
+ * -- confirmed against this host's own /usr/include/asm-generic/
+ * unistd.h: no __NR_fork or __NR_pipe at all, only clone=220 and
+ * pipe2=59 (both already gated by nothing -- unconditional, unlike the
+ * time32-gated calls in numbers_riscv.h). execve=221 and wait4=260
+ * did survive under their usual names/shapes. wait4 itself IS gated
+ * (`#if defined(__ARCH_WANT_TIME32_SYSCALLS) || __BITS_PER_LONG != 32`)
+ * but arm64 is 64-bit (__BITS_PER_LONG==64) so the gate is always open
+ * here -- riscv32 is the one arch in this family where it is NOT (see
+ * numbers_riscv.h). syscall_linux_arm64.h's own fork()/pipe() shims
+ * (over _sysclone(SIGCHLD,...)/pipe2(...,0)) bridge the two dropped
+ * calls, exactly like its existing _sysopen()-over-openat() shim above.
+ */
+#define SYS_clone	220
+#define SYS_execve	221
+#define SYS_wait4	260
+#define SYS_pipe2	59

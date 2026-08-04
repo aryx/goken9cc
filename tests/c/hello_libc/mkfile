@@ -20,17 +20,22 @@ all:V: hello.exe io.exe dir.exe fd.exe mem.exe proc.exe args.exe env.exe ctime.e
 clean:V:
 	rm -f *.[5678ijv] *.exe hello_macos_arm64.exe hello_macos_amd64.exe io_macos_arm64.exe io_macos_amd64.exe dir_macos_arm64.exe dir_macos_amd64.exe fd_macos_arm64.exe fd_macos_amd64.exe mem_macos_arm64.exe mem_macos_amd64.exe proc_macos_arm64.exe proc_macos_amd64.exe args_macos_arm64.exe args_macos_amd64.exe stat_macos_arm64.exe stat_macos_amd64.exe dir_tmp.txt stat_tmp.txt
 	rm -rf dir_tmp_d dirread_tmp_d
-# claude: stat.exe/dirread.exe are deliberately NOT in all:V: above --
-# unlike every other binary here, neither can be built for every arch in
-# $ARCHS below: riscv (rv32) has no lib_core/libc/os/linux/stat_riscv.c
-# at all (see numbers_riscv.h's own comment -- that arch has no fstat
-# syscall, needs statx, not yet implemented, and dirread() needs fstat
-# too), so linking either there would fail where every other test here
-# still succeeds. dirread.exe additionally has NO darwin/windows build
-# rule at all (todo.org's own gap entry -- dirread() isn't implemented
-# for either GOOS yet), unlike stat.exe which at least compiles there.
-# Wired into test_one/test:V:/test_plan9 individually below instead,
-# with riscv skipped in the ARCHS loop specifically.
+# claude: stat.exe/dirread.exe/fork.exe are deliberately NOT in all:V:
+# above -- unlike every other binary here, none of the three can be
+# built for every arch in $ARCHS below: riscv (rv32) has no
+# lib_core/libc/os/linux/stat_riscv.c at all (see numbers_riscv.h's own
+# comment -- that arch has no fstat syscall, needs statx, not yet
+# implemented, and dirread() needs fstat too), so linking either there
+# would fail where every other test here still succeeds. dirread.exe
+# additionally has NO darwin/windows build rule at all (todo.org's own
+# gap entry -- dirread() isn't implemented for either GOOS yet), unlike
+# stat.exe which at least compiles there. fork.exe joins this same
+# riscv-only exclusion for an unrelated reason -- numbers_riscv.h's own
+# Tier 4 comment: rv32 has no wait4(2) at all (64-bit-only in
+# scripts/syscall.tbl), so Tier 4 process control was deliberately left
+# out entirely for that one arch, same "documented gap" treatment as
+# stat's. Wired into test_one/test:V:/test_plan9 individually below
+# instead, with riscv skipped in the ARCHS loop specifically.
 test_one:V:
 	mk 'objtype='$cputype all
 	$TOP/scripts/qemu-runner $cputype ./hello.exe | cmp /dev/stdin expected.txt
@@ -45,9 +50,10 @@ test_one:V:
 	$TOP/scripts/qemu-runner $cputype ./atexit.exe | cmp /dev/stdin atexit_expected.txt
 	$TOP/scripts/qemu-runner $cputype ./utfmisc.exe | cmp /dev/stdin utfmisc_expected.txt
 	if(! ~ $cputype riscv){
-		mk 'objtype='$cputype stat.exe dirread.exe
+		mk 'objtype='$cputype stat.exe dirread.exe fork.exe
 		$TOP/scripts/qemu-runner $cputype ./stat.exe | cmp /dev/stdin stat_expected.txt
 		$TOP/scripts/qemu-runner $cputype ./dirread.exe | cmp /dev/stdin dirread_expected.txt
+		$TOP/scripts/qemu-runner $cputype ./fork.exe | cmp /dev/stdin fork_expected.txt
 	}
 
 # unlike tests/c/mini2's own ARCHS loop (a self-contained per-test stub,
@@ -79,9 +85,10 @@ test:V:
 		$TOP/scripts/qemu-runner $arch ./atexit.exe | cmp /dev/stdin atexit_expected.txt
 		$TOP/scripts/qemu-runner $arch ./utfmisc.exe | cmp /dev/stdin utfmisc_expected.txt
 		if(! ~ $arch riscv){
-			mk 'objtype='$arch 'cputype='$arch stat.exe dirread.exe
+			mk 'objtype='$arch 'cputype='$arch stat.exe dirread.exe fork.exe
 			$TOP/scripts/qemu-runner $arch ./stat.exe | cmp /dev/stdin stat_expected.txt
 			$TOP/scripts/qemu-runner $arch ./dirread.exe | cmp /dev/stdin dirread_expected.txt
+			$TOP/scripts/qemu-runner $arch ./fork.exe | cmp /dev/stdin fork_expected.txt
 		}
 	}
 	mk test_plan9
@@ -230,6 +237,16 @@ stat.exe: stat.c
 dirread.exe: dirread.c
 	$CC $CFLAGS -D$objtype -c dirread.c
 	$LD $LDFLAGS -H7 -o $target -E _main dirread.$O -lc
+
+# claude: fork.c: fork/exec/wait/pipe (Tier 4 process control). NOT
+# built for every $cputype -- see all:V:'s own comment on why riscv is
+# excluded (a different reason than stat.exe's: no wait4 on rv32, not
+# no fstat). No darwin/windows/plan9 rule either: Tier 4 is linux-only
+# so far (lib_core/libc/mkfile's own PROCOFILES comment). Same
+# -H7/-D$objtype story as hello.exe above.
+fork.exe: fork.c
+	$CC $CFLAGS -D$objtype -c fork.c
+	$LD $LDFLAGS -H7 -o $target -E _main fork.$O -lc
 
 # claude: Plan9 (GOOS=plan9)/arm+mips, run under 5i/vi -- see the
 # test:V: rule's own comment above for why 5c/5l/vc/vl are invoked

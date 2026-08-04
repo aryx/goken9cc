@@ -89,3 +89,16 @@
 // renameat behind __ARCH_WANT_RENAMEAT, which they don't define --
 // same reasoning as their already-openat-only/unlinkat-only story).
 #define SYS_renameat2	316
+/* claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+ * Confirmed against a local checkout of arch/x86/entry/syscalls/
+ * syscall_64.tbl: "57 common fork sys_fork", "59 64 execve sys_execve"
+ * (64 here means "only under the native 64-bit ABI, not x32" -- this
+ * project never targets x32, so that is not a caveat that affects us),
+ * "61 common wait4 sys_wait4", "22 common pipe sys_pipe". See
+ * numbers_386.h's comment for why these route through port/*.c rather
+ * than straight to their public name.
+ */
+#define SYS_fork	57
+#define SYS_execve	59
+#define SYS_wait4	61
+#define SYS_pipe	22

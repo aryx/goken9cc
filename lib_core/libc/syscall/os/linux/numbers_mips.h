@@ -96,3 +96,23 @@
 // renameat2(2) -- see numbers_amd64.h's own comment for why this,
 // not plain rename/renameat, is used uniformly across all 6 arches.
 #define SYS_renameat2	4351
+/* claude: Tier 4 process control -- see numbers_386.h's fuller comment
+ * on fork/execve/wait4, all of which keep the legacy 386/arm numbering
+ * plus this file's +4000 o32 offset, confirmed against
+ * arch/mips/kernel/syscalls/syscall_o32.tbl: "2 o32 fork __sys_fork",
+ * "11 o32 execve sys_execve", "114 o32 wait4 sys_wait4".
+ *
+ * pipe is NOT included above with them: o32's `42 o32 pipe sysm_pipe`
+ * is the one syscall in this whole file that does not fit the generic
+ * _syscall6 trampoline's "arguments in, one value back in $v0" shape --
+ * sysm_pipe returns the two fds directly in $v0/$v1 rather than
+ * through the pointer argument every other arch's sys_pipe writes to
+ * (same wrinkle plan_syscalls.txt's Tier 4 section already flagged).
+ * SYS_pipe2 (sys_pipe2, normal pointer+flags shape, confirmed at "328
+ * o32 pipe2 sys_pipe2" -> +4000 = 4328) is the substitute
+ * syscall_linux_mips.h's own pipe() shim calls with flags=0 instead.
+ */
+#define SYS_fork	4002
+#define SYS_execve	4011
+#define SYS_wait4	4114
+#define SYS_pipe2	4328

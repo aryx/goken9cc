@@ -197,7 +197,12 @@
 //----------------------------------------------------------------------------
 // IPC
 //----------------------------------------------------------------------------
-// pipe()
+// claude: was empty -- os/ipc.h existed (declaring pipe()) but was never
+// #include'd anywhere, the same kind of gap os/path.h's own comment
+// above already flagged and fixed for cleanname(). Found wiring
+// port/pipe.c in for Tier 4 process control
+// (docs/claude_notes/plan_syscalls.txt).
+#include "os/ipc.h"
 
 //----------------------------------------------------------------------------
 // Network (/net wrappers)

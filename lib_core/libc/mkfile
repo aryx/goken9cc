@@ -245,6 +245,40 @@ SBRKOFILES=`{if(~ $GOOS linux) echo port/sbrk.$O os/linux/brk.$O; if not if(~ $G
 # os/$GOOS/ copies.
 EXITSOFILES=`{if(~ $GOOS plan9) echo os/plan9/_exits.$O; if not echo port/exits.$O}
 
+# claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt) --
+# fork()/exec()/execl()/wait()/pipe(), the primitives compilers/pcc/pcc.c
+# actually needs to fork+exec+wait for a subcommand (its own doexec()/
+# dopipe()), i.e. the actual self-hosting milestone the plan doc names
+# this tier for.
+#
+# linux only so far, its own group rather than folded into
+# PORTPOSIXOFILES above: that variable is "every POSIX-shaped GOOS
+# except plan9/windows" (darwin included), but this one genuinely isn't
+# ready for darwin yet -- there is no syscall/os/darwin/ backing for
+# _sysfork()/_sysexecve()/_syswait4()/_syspipe() at all yet, and Darwin's
+# raw fork(2) needs extra care besides (the child pid comes back in a
+# second return register, unlike every Linux arch here -- see the plan
+# doc's own Tier 4 gotchas). Compiling these for darwin today would just
+# fail to link. plan9 doesn't want this group either, for the opposite
+# reason sbrk's plan9 case doesn't want brk.c: Plan9's own
+# RFORK/EXEC/AWAIT/PIPE syscalls are already exactly Plan9-shaped (no
+# POSIX-shape bridge needed), so when that arrives it'll be its own
+# os/plan9/*.c files, not these port/ ones. windows has no raw-syscall
+# layer at all, same reason it's excluded from PORTPOSIXOFILES.
+#
+# $cputype riscv (rv32) is excluded up front too, same "checked first
+# regardless of GOOS" style as STATOFILES's own riscv carve-out below:
+# numbers_riscv.h's own Tier 4 comment explains why -- rv32 has no
+# wait4(2) at all (64-bit-only in scripts/syscall.tbl), so none of
+# _sysfork()/_sysexecve()/_syswait4()/_syspipe() were given a riscv
+# backing this round. Leaving PROCOFILES non-empty for it would still
+# `mk install` cleanly today (an unresolved symbol inside a .a archive
+# member is silent until something actually links it in, and nothing
+# does -- riscv is excluded from tests/c/hello_libc/fork.exe for the
+# same reason), but would leave a libc.a that link-fails confusingly
+# for the first real riscv caller instead of failing predictably here.
+PROCOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS linux) echo port/fork.$O port/exec.$O port/execl.$O port/wait.$O port/pipe.$O; if not echo -n}
+
 # UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
 # Plan9-native equivalent at all, unlike strdup/seek/etc above, which
 # stay in PORTOFILES) -- mirrors include/APE/'s own split of "ugly,
@@ -372,7 +406,7 @@ ARCHOFILES=\
 	$RT0OFILE\
 	$ARCHEXTRAOFILES\
 
-OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $EXITSOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
+OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $EXITSOFILES $PROCOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
 
 HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 

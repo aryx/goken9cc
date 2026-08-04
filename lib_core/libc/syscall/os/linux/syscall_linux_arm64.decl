@@ -84,3 +84,14 @@
 //sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
 // renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
 //sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2
+// Tier 4 process control -- see syscall_linux_386.decl's comment on why
+// execve/wait4 stay _sys-prefixed. No legacy fork() or pipe() on this
+// ABI (numbers_arm64.h) -- _sysrawclone/_sysrawpipe2 are generated here
+// from the *at()-style substitutes (clone, pipe2), exactly like
+// openat()/unlinkat() above, and syscall_linux_arm64.h hand-adds the
+// fork()/pipe() shims over them the same way it already does
+// _sysopen() over openat().
+//sys _sysrawclone(int flags, void *stack, void *ptid, void *ctid, void *tls) int = SYS_clone
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+//sys _sysrawpipe2(int *fd, int flags) int = SYS_pipe2

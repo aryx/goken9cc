@@ -99,3 +99,20 @@
 // renameat2(2) -- see numbers_amd64.h's own comment for why this,
 // not plain rename/renameat, is used uniformly across all 6 arches.
 #define SYS_renameat2	353
+/* claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+ * Confirmed against a local checkout of the kernel source
+ * (arch/x86/entry/syscalls/syscall_32.tbl) rather than transcribed from
+ * the plan doc's own table: "2 i386 fork sys_fork", "11 i386 execve
+ * sys_execve", "42 i386 pipe sys_pipe", "114 i386 wait4 sys_wait4".
+ * fork/execve/wait4/pipe all reach the public Plan9-shaped
+ * name through a port/*.c bridge (port/fork.c, port/exec.c, port/wait.c,
+ * port/pipe.c) rather than being decl-generated straight to it, unlike
+ * getpid/chdir/access above -- fork()/exec()/wait() all need the raw
+ * negative-errno result normalized to Plan9's exact -1 on failure (see
+ * port/fork.c's own comment for why this matters for a real caller,
+ * compilers/pcc/pcc.c's `switch(fork()){case -1: ...}`).
+ */
+#define SYS_fork	2
+#define SYS_execve	11
+#define SYS_wait4	114
+#define SYS_pipe	42

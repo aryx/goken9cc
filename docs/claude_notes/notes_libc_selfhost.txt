@@ -1924,3 +1924,27 @@ them (chmod/mkdir/touch/wc/mv/du/rm/cp), arguably a stronger signal
 than a synthetic unit test for exactly the "make real utilities work"
 goal this whole area of work serves. Worth reconsidering if any of
 these functions grow other callers later.
+
+Tier 4: process control (fork/exec/execl/wait/pipe), linux
+------------------------------------------------------------------------
+
+The full design (why fork()/exec()/wait()/pipe() route through new
+port/*.c bridges instead of being decl-generated straight to their
+public name like getpid(), the arm64/riscv64 clone/pipe2 substitution
+shims, why mips needed the same pipe2 substitution for an unrelated
+reason, and the riscv32/mips-renameat2 gaps found along the way) lives
+in docs/claude_notes/plan_syscalls.txt's own Tier 4 section, not
+repeated here -- this entry is just the pointer this file's other
+Tier sections leave for each other.
+
+Verified end to end via a new tests/c/hello_libc/fork.c, run for real
+under qemu-user (not just compiled) on all 6 non-rv32 Linux arches:
+fork()+wait(), fork()+exec()+wait() (the exec() half genuinely
+re-execs the running binary itself, proof _sysexecve's argv/envp
+marshaling works, not merely that the syscall didn't fault), and
+pipe()+fork()+wait() (the parent reads back exactly what the forked
+child wrote, proving the two fds are really connected). This is the
+first tier whose test also caught a bug in ITSELF, not the libc under
+test: an off-by-one writing a string literal's length including its
+trailing NUL byte into the pipe, caught by an exact `cmp` mismatch on
+the very first amd64 run rather than silently passing.
