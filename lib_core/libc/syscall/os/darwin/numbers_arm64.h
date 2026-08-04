@@ -103,3 +103,31 @@
 #define SYS_fstat64	339
 #define SYS_fchmod	124
 #define SYS_ftruncate	201
+/* claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+ * Confirmed against a local checkout of XNU's own bsd/kern/
+ * syscalls.master (apple-oss-distributions/xnu, not the 2010 Go
+ * snapshot this file otherwise leans on -- same primary-source
+ * discipline as the stat family's own re-verification above):
+ *
+ *   2   AUE_FORK    { int fork(void) NO_SYSCALL_STUB; }
+ *   7   AUE_WAIT4   { int wait4(int pid, user_addr_t status,
+ *                                int options, user_addr_t rusage)
+ *                                NO_SYSCALL_STUB; }
+ *   42  AUE_PIPE    { int pipe(void); }
+ *   59  AUE_EXECVE  { int execve(char *fname, char **argp, char **envp); }
+ *
+ * NO_SYSCALL_STUB on fork/wait4 means libSystem exports no automatic
+ * wrapper for either -- Apple's own Libsyscall hand-writes custom
+ * assembly for both, which is the same conclusion the classic-BSD
+ * dual-register-return convention already implied (see
+ * syscall_darwin_arm64.h's own fork()/pipe() trampoline comments): a
+ * plain _syscall6-style stub cannot express either correctly.
+ * pipe(void) takes NO ARGUMENTS AT ALL -- not even the pointer POSIX's
+ * own pipe(2) prototype suggests -- confirming both fds really do come
+ * back purely through registers, with nothing else to pass in.
+ * Arch-independent BSD table, so amd64 shares all four numbers.
+ */
+#define SYS_fork	2
+#define SYS_wait4	7
+#define SYS_pipe	42
+#define SYS_execve	59

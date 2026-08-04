@@ -64,3 +64,15 @@
 //sys _sysfstat(int fd, void *buf) int = SYS_fstat64
 //sys _sysfchmod(int fd, int mode) int = SYS_fchmod
 //sys _sysftruncate(int fd, vlong length) int = SYS_ftruncate
+// Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+// _sysexecve/_syswait4 are ordinary argument-in-registers,
+// result-in-one-register syscalls (unlike fork/pipe, see
+// numbers_amd64.h's own comment on why those two need dedicated asm
+// in svc_amd64.s instead), so they need no new assembly at all -- same
+// as every other entry in this file. Named and shaped identically to
+// linux's own _sysexecve/_syswait4 (syscall_linux_amd64.decl), which
+// is what lets port/exec.c and port/wait.c -- the Plan9-shaped bridges
+// every GOOS shares -- be built unchanged for darwin too (see
+// lib_core/libc/mkfile's PROCOFILES).
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4

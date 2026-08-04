@@ -110,7 +110,7 @@ test:V:
 test_plan9:V:
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm' 'cputype=arm' 'GOOS=plan9' install }
-	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe fd_plan9_arm.exe mem_plan9_arm.exe proc_plan9_arm.exe env_plan9_arm.exe args_plan9_arm.exe stat_plan9_arm.exe dirread_plan9_arm.exe ctime_plan9_arm.exe atexit_plan9_arm.exe utfmisc_plan9_arm.exe
+	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe fd_plan9_arm.exe mem_plan9_arm.exe proc_plan9_arm.exe env_plan9_arm.exe args_plan9_arm.exe stat_plan9_arm.exe dirread_plan9_arm.exe ctime_plan9_arm.exe atexit_plan9_arm.exe utfmisc_plan9_arm.exe fork_plan9_arm.exe pipe_plan9_arm.exe
 	printf ':c\n$q\n' | 5i ./hello_plan9_arm.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | 5i ./io_plan9_arm.exe | sed -n 2,4p | cmp /dev/stdin io_expected.txt
 	printf ':c\n$q\n' | 5i ./dir_plan9_arm.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
@@ -119,9 +119,10 @@ test_plan9:V:
 	printf ':c\n$q\n' | 5i ./args_plan9_arm.exe one two three | sed -n 2,5p | cmp /dev/stdin args_expected.txt
 	printf ':c\n$q\n' | 5i ./ctime_plan9_arm.exe | sed -n 2p | cmp /dev/stdin ctime_expected.txt
 	printf ':c\n$q\n' | 5i ./utfmisc_plan9_arm.exe | sed -n 2p | cmp /dev/stdin utfmisc_expected.txt
+	printf ':c\n$q\n' | 5i ./pipe_plan9_arm.exe | sed -n 2,3p | cmp /dev/stdin pipe_expected.txt
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=mips' 'cputype=mips' 'GOOS=plan9' install }
-	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe fd_plan9_mips.exe mem_plan9_mips.exe proc_plan9_mips.exe env_plan9_mips.exe args_plan9_mips.exe stat_plan9_mips.exe dirread_plan9_mips.exe ctime_plan9_mips.exe atexit_plan9_mips.exe utfmisc_plan9_mips.exe
+	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe fd_plan9_mips.exe mem_plan9_mips.exe proc_plan9_mips.exe env_plan9_mips.exe args_plan9_mips.exe stat_plan9_mips.exe dirread_plan9_mips.exe ctime_plan9_mips.exe atexit_plan9_mips.exe utfmisc_plan9_mips.exe fork_plan9_mips.exe pipe_plan9_mips.exe
 	printf ':c\n$q\n' | vi ./hello_plan9_mips.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | vi ./io_plan9_mips.exe | sed -n 2,4p | cmp /dev/stdin io_expected.txt
 	printf ':c\n$q\n' | vi ./dir_plan9_mips.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
@@ -130,6 +131,7 @@ test_plan9:V:
 	printf ':c\n$q\n' | vi ./args_plan9_mips.exe one two three | sed -n 2,5p | cmp /dev/stdin args_expected.txt
 	printf ':c\n$q\n' | vi ./ctime_plan9_mips.exe | sed -n 2p | cmp /dev/stdin ctime_expected.txt
 	printf ':c\n$q\n' | vi ./utfmisc_plan9_mips.exe | sed -n 2p | cmp /dev/stdin utfmisc_expected.txt
+	printf ':c\n$q\n' | vi ./pipe_plan9_mips.exe | sed -n 2,3p | cmp /dev/stdin pipe_expected.txt
 
 # -H7 (ELF) is explicit, not left to 6l/7l/8l's own default: those
 # three (unlike vl/il/jl, which always default to ELF regardless of
@@ -372,6 +374,45 @@ stat_plan9_mips.exe: stat.c
 	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o stat_plan9_mips.v -c stat.c
 	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main stat_plan9_mips.v -lc
 
+# claude: fork.c on plan9 -- built, not run, same "kept buildable, not
+# yet runnable end to end" shape as stat.c just above, but a THIRD
+# distinct emulator gap: RFORK/EXEC/AWAIT are all still TODO stubs in
+# both machines/5i/syscall_posix.c and machines/vi/syscall.c (the
+# former prints "No system call Rfork"/"Await" and exits(0) the whole
+# emulator cleanly rather than crashing, so at least this doesn't hit
+# the REGARG/REGRET aliasing segfault stat.c's version did; the latter
+# refuses any rfork() call carrying RFPROC outright). See todo.org.
+# fork.c's own re-exec-itself design (see its header comment) would
+# need EXEC to work too, which is equally unimplemented. Building this
+# anyway is still worth it: it is the one real end-to-end proof that
+# os/plan9/fork.c, os/plan9/wait.c, port/tokenize.c and the new
+# svc_$cputype.s stubs all compile and link correctly together, the
+# same value stat_plan9_arm.exe/dirread_plan9_arm.exe already provide
+# for Tier 3.
+fork_plan9_arm.exe: fork.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o fork_plan9_arm.5 -c fork.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main fork_plan9_arm.5 -lc
+
+fork_plan9_mips.exe: fork.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o fork_plan9_mips.v -c fork.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main fork_plan9_mips.v -lc
+
+# claude: pipe.c on plan9 -- UNLIKE fork.c/stat.c/dirread.c above, this
+# one is expected to actually RUN and pass: PIPE (unlike RFORK/EXEC/
+# AWAIT/FSTAT/STAT) genuinely IS implemented in both emulators --
+# machines/5i/syscall_posix.c's and machines/vi/syscall.c's own
+# syspipe() just calls the host's real pipe() and copies the two fds
+# back into guest memory. See pipe.c's own header comment for why it
+# tests pipe() without needing fork() at all (a same-process write-then
+# -read loopback, like io.c's read/write test).
+pipe_plan9_arm.exe: pipe.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o pipe_plan9_arm.5 -c pipe.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main pipe_plan9_arm.5 -lc
+
+pipe_plan9_mips.exe: pipe.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o pipe_plan9_mips.v -c pipe.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main pipe_plan9_mips.v -lc
+
 # claude: dirread.c on plan9 -- built, not run, same reason as stat.c
 # just above (5i/vi don't serve FSTAT, which dirread() needs per entry
 # just as dirfstat() does) plus its own prerequisite: dirread() first
@@ -452,7 +493,7 @@ utfmisc_plan9_mips.exe: utfmisc.c
 # stale bits. See docs/claude_notes/notes_libc_selfhost.txt.
 test_macos_arm64:V:
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm64' 'cputype=arm64' 'GOOS=darwin' 'RT0OFILE=arch/arm64/rt0_darwin.7' install }
-	mk -a 'objtype=arm64' hello_macos_arm64.exe io_macos_arm64.exe dir_macos_arm64.exe fd_macos_arm64.exe mem_macos_arm64.exe args_macos_arm64.exe stat_macos_arm64.exe ctime_macos_arm64.exe atexit_macos_arm64.exe utfmisc_macos_arm64.exe
+	mk -a 'objtype=arm64' hello_macos_arm64.exe io_macos_arm64.exe dir_macos_arm64.exe fd_macos_arm64.exe mem_macos_arm64.exe args_macos_arm64.exe stat_macos_arm64.exe ctime_macos_arm64.exe atexit_macos_arm64.exe utfmisc_macos_arm64.exe fork_macos_arm64.exe
 	./hello_macos_arm64.exe | cmp /dev/stdin expected.txt
 	./io_macos_arm64.exe | cmp /dev/stdin io_expected.txt
 	./dir_macos_arm64.exe | cmp /dev/stdin dir_expected.txt
@@ -463,6 +504,7 @@ test_macos_arm64:V:
 	./ctime_macos_arm64.exe | cmp /dev/stdin ctime_expected.txt
 	./atexit_macos_arm64.exe | cmp /dev/stdin atexit_expected.txt
 	./utfmisc_macos_arm64.exe | cmp /dev/stdin utfmisc_expected.txt
+	./fork_macos_arm64.exe | cmp /dev/stdin fork_expected.txt
 
 hello_macos_arm64.exe: hello.c
 	$CC $CFLAGS -Darm64 -c hello.c
@@ -516,6 +558,20 @@ stat_macos_arm64.exe: stat.c
 	$LD $LDFLAGS -H6 -o $target -E _main stat.7 -lc
 	$TOP/scripts/macos-codesign $target
 
+# claude: fork.c on macOS/arm64 (Tier 4 process control, docs/
+# claude_notes/plan_syscalls.txt) -- built (and link-checked: this is
+# the one real proof that port/fork.c/exec.c/execl.c/wait.c/pipe.c
+# actually RESOLVE against darwin's new _sysfork/_sysexecve/_syswait4/
+# _syspipe, not just that libc.a itself compiles -- an unresolved
+# symbol inside a .a archive member stays silent until something
+# actually links it in), not run: same as every other *_macos_arm64.exe
+# here, this host has no macOS to execute it on at all, so this is
+# already as far as any of them get in this environment.
+fork_macos_arm64.exe: fork.c
+	$CC $CFLAGS -Darm64 -c fork.c
+	$LD $LDFLAGS -H6 -o $target -E _main fork.7 -lc
+	$TOP/scripts/macos-codesign $target
+
 ctime_macos_arm64.exe: ctime.c
 	$CC $CFLAGS -Darm64 -c ctime.c
 	$LD $LDFLAGS -H6 -o $target -E _main ctime.7 -lc
@@ -566,7 +622,7 @@ utfmisc_macos_arm64.exe: utfmisc.c
 # translation) as well as real Intel Macs.
 test_macos_amd64:V:
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=darwin' 'CFLAGS_EXTRA=-z' 'RT0OFILE=arch/amd64/rt0_darwin.6' install }
-	mk -a 'objtype=amd64' hello_macos_amd64.exe io_macos_amd64.exe dir_macos_amd64.exe fd_macos_amd64.exe mem_macos_amd64.exe stat_macos_amd64.exe ctime_macos_amd64.exe atexit_macos_amd64.exe utfmisc_macos_amd64.exe
+	mk -a 'objtype=amd64' hello_macos_amd64.exe io_macos_amd64.exe dir_macos_amd64.exe fd_macos_amd64.exe mem_macos_amd64.exe stat_macos_amd64.exe ctime_macos_amd64.exe atexit_macos_amd64.exe utfmisc_macos_amd64.exe fork_macos_amd64.exe
 	./hello_macos_amd64.exe | cmp /dev/stdin expected.txt
 	./io_macos_amd64.exe | cmp /dev/stdin io_expected.txt
 	./dir_macos_amd64.exe | cmp /dev/stdin dir_expected.txt
@@ -576,6 +632,7 @@ test_macos_amd64:V:
 	./ctime_macos_amd64.exe | cmp /dev/stdin ctime_expected.txt
 	./atexit_macos_amd64.exe | cmp /dev/stdin atexit_expected.txt
 	./utfmisc_macos_amd64.exe | cmp /dev/stdin utfmisc_expected.txt
+	./fork_macos_amd64.exe | cmp /dev/stdin fork_expected.txt
 
 io_macos_amd64.exe: io.c
 	$CC $CFLAGS -z -Damd64 -c io.c
@@ -600,6 +657,13 @@ stat_macos_amd64.exe: stat.c
 	$CC $CFLAGS -z -Damd64 -c stat.c
 	$LD $LDFLAGS -s -H6 -o $target -E _main stat.6 -lc
 	$TOP/scripts/macos-codesign $target
+	$TOP/scripts/macos-codesign $target
+
+# claude: fork.c on macOS/amd64 -- see fork_macos_arm64.exe's identical
+# comment (built and link-checked, not run).
+fork_macos_amd64.exe: fork.c
+	$CC $CFLAGS -z -Damd64 -c fork.c
+	$LD $LDFLAGS -s -H6 -o $target -E _main fork.6 -lc
 	$TOP/scripts/macos-codesign $target
 
 ctime_macos_amd64.exe: ctime.c
@@ -644,7 +708,7 @@ hello_macos_amd64.exe: hello.c
 test_windows:V:
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=windows' 'OSEXTRAFILES=os/windows/winio_amd64.6' 'SYSCALLOFILES=' install }
-	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe dir_windows_amd64.exe mem_windows_amd64.exe proc_windows_amd64.exe env_windows_amd64.exe ctime_windows_amd64.exe atexit_windows_amd64.exe utfmisc_windows_amd64.exe
+	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe dir_windows_amd64.exe mem_windows_amd64.exe proc_windows_amd64.exe env_windows_amd64.exe ctime_windows_amd64.exe atexit_windows_amd64.exe utfmisc_windows_amd64.exe pipe_windows_amd64.exe
 	./hello_windows_amd64.exe | cmp /dev/stdin expected.txt
 	./io_windows_amd64.exe | cmp /dev/stdin io_expected.txt
 	./dir_windows_amd64.exe | cmp /dev/stdin dir_expected.txt
@@ -654,6 +718,23 @@ test_windows:V:
 	./ctime_windows_amd64.exe | cmp /dev/stdin ctime_expected.txt
 	./atexit_windows_amd64.exe | cmp /dev/stdin atexit_expected.txt
 	./utfmisc_windows_amd64.exe | cmp /dev/stdin utfmisc_expected.txt
+	./pipe_windows_amd64.exe | cmp /dev/stdin pipe_expected.txt
+
+# claude: pipe.c on windows (Tier 4 process control, docs/claude_notes/
+# plan_syscalls.txt) -- CreatePipe is a real, faithful Win32 primitive
+# with no design compromise needed (unlike exec(), see os/windows/
+# exec.c's own comment), and pipe.c's same-process write-then-read
+# loopback (no fork() needed -- see that file's own header comment,
+# written with plan9/5i-vi in mind but equally true here) needs nothing
+# exec()-shaped to exercise, so this is wired into the actual run-and-
+# assert list above rather than left build-only. fork.exe is
+# deliberately NOT added anywhere in this windows target: it calls
+# fork(), which does not exist as a symbol on this GOOS at all (see
+# lib_core/libc/mkfile's PROCOFILES comment) -- linking it would fail,
+# correctly.
+pipe_windows_amd64.exe: pipe.c
+	$CC $CFLAGS -Damd64 -Dwindows -c pipe.c
+	$LD $LDFLAGS -H 10 -o $target -E _main pipe.6 -lc
 
 hello_windows_amd64.exe: hello.c
 	$CC $CFLAGS -Damd64 -Dwindows -c hello.c

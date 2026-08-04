@@ -148,3 +148,32 @@ seekerr:
 	MOVW	R1, 0(R2)
 	MOVW	R1, 4(R2)
 	RET
+
+// claude: Tier 4 process control -- see svc_arm.s's identical comment.
+// rfork/exec/await/pipe are already exactly Plan9's own public API
+// shape, so these are four more one-line stubs like open/close/create/
+// remove/chdir/dup/brk above; fork()/wait() (built on top of these,
+// not raw syscalls) live in os/plan9/{fork,wait}.c instead.
+TEXT rfork(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$RFORK, R1
+	SYSCALL
+	RET
+
+TEXT exec(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$EXEC, R1
+	SYSCALL
+	RET
+
+TEXT await(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$AWAIT, R1
+	SYSCALL
+	RET
+
+TEXT pipe(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$PIPE, R1
+	SYSCALL
+	RET

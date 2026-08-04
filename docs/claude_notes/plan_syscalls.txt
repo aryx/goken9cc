@@ -409,6 +409,72 @@ caller today) is silently dropped on mips, a latent, pre-existing bug
 this pass happened to notice, not one Tier 4 introduced. Tracked in
 todo.org rather than fixed here.
 
+UPDATE (round 2): darwin (amd64+arm64) and plan9 (arm+mips) are now
+DONE too, and windows is partially done. The single biggest surprise:
+port/fork.c/exec.c/execl.c/wait.c/pipe.c (the five files round 1 wrote
+for linux) turned out to be REUSABLE UNCHANGED for darwin -- they only
+ever call raw _sysfork()/_sysexecve()/_syswait4()/_syspipe() names,
+never anything linux-specific, so once syscall/os/darwin/ supplies
+those four names the same C source just works. _sysexecve/_syswait4
+are ordinary decl-generated wrappers there (same numbers as this
+section's own table below, confirmed against a local darwin-xnu
+source checkout's bsd/kern/syscalls.master rather than re-guessed).
+_sysfork/_syspipe needed real hand-written asm in svc_{amd64,arm64}.s:
+that same syscalls.master marks both fork(2) and wait4(2)
+NO_SYSCALL_STUB (no automatic libSystem wrapper -- Apple's own libc
+hand-writes custom assembly for them too, confirming the dual-register
+convention below is real, not a hedge), and pipe(2)'s own prototype in
+that file is `{ int pipe(void); }` -- genuinely zero arguments, proving
+both fds really do come back purely through registers. Compile+link
+checked (a real fork.c consumer resolves against the new symbols, not
+just that libc.a itself builds) but UNVERIFIED ON REAL HARDWARE -- no
+macOS host here, same status as the rest of os/darwin/.
+
+plan9 needed real new code (os/plan9/fork.c, os/plan9/wait.c,
+port/tokenize.c), but all three are plain ports of principia-
+softwarica's own real reference implementation (9sys/fork.c,
+9sys/wait.c, port/tokenize.c) rather than derived from scratch --
+fork() is literally rfork(RFPROC|RFFDG|RFREND), and wait() parses
+await(2)'s "pid utime stime rtime msg" text response via tokenize().
+rfork/exec/await/pipe themselves are raw asm stubs needing no C bridge
+at all (same story as open/dup/brk already have on this GOOS -- the
+raw syscall IS the public API shape). VERIFIED END TO END, not just
+compiled, for pipe() specifically: machines/5i's and machines/vi's own
+syspipe() genuinely call the host's real pipe() (unlike sysrfork()/
+sysexec()/sysawait(), all still TODO stubs in both emulators -- see
+todo.org's own gap entry) -- confirmed via a new tests/c/hello_libc/
+pipe.c run under both emulators, byte-for-byte. fork.exe itself is
+still built (proving the whole chain compiles+links) but not run, same
+"kept buildable" treatment Tier 3's stat.exe/dirread.exe got before
+their own emulator gap was found and partially fixed.
+
+windows got pipe() for real (CreatePipe, a faithful primitive with no
+compromise -- verified: links, and is the one Tier-4 windows piece
+actually wired into test_windows's run+assert list) and exec()/execl()
+as a deliberately DIFFERENT design, not a port of anything: CreateProcessA
++ a blocking WaitForSingleObject + GetExitCodeProcess + this process's
+own exit(). That is the only way to keep exec()'s "never returns on
+success" contract honest without a real fork() -- CreateProcessA spawns
+a genuinely separate process, so the sole way this process can behave
+as if it "became" that command is to wait for it and adopt its exit
+code, mirroring what MSVCRT's own real _execve() does for the same
+reason. fork() and wait() are NOT approximated here, they are simply
+absent: there is no address-space-duplication primitive on Windows at
+all (Cygwin's own fork() needs a whole-system fixed-load-address
+scheme plus ReadProcessMemory/WriteProcessMemory to clone one, a
+fundamentally bigger project than a libc syscall wrapper), and a
+standalone wait() has nothing left to wait for once exec() already
+waited internally, inside the SAME process, before ever returning to
+its own caller. compilers/pcc/pcc.c's actual fork()+exec()+wait()
+pattern therefore still cannot run end to end on windows -- a
+permanent, architecture-shaped gap, not a TODO. One process-adjacent
+lesson worth keeping: linkers/lk/pe.c's importfuncs[] is compiled
+separately into BOTH 6l and 8l (not a shared library), so adding the
+new CreatePipe/CreateProcessA/WaitForSingleObject/GetExitCodeProcess
+imports needed both linkers rebuilt before a windows link would
+actually resolve them -- caught by linking a real consumer, not
+assumed from the diff.
+
 This is what pcc (the compiler driver) and mk need to spawn
 subprocesses, i.e. the point where the toolchain can drive itself.
 Reference implementations again already exist in BOOT/lib9/:

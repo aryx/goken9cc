@@ -170,6 +170,7 @@ PORTOFILES=\
 	port/cleanname.$O\
 	port/cistrcmp.$O\
 	port/mallocz.$O\
+	port/tokenize.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
 # but must NOT be compiled for plan9 or windows at all -- selected here
@@ -251,20 +252,65 @@ EXITSOFILES=`{if(~ $GOOS plan9) echo os/plan9/_exits.$O; if not echo port/exits.
 # dopipe()), i.e. the actual self-hosting milestone the plan doc names
 # this tier for.
 #
-# linux only so far, its own group rather than folded into
-# PORTPOSIXOFILES above: that variable is "every POSIX-shaped GOOS
-# except plan9/windows" (darwin included), but this one genuinely isn't
-# ready for darwin yet -- there is no syscall/os/darwin/ backing for
-# _sysfork()/_sysexecve()/_syswait4()/_syspipe() at all yet, and Darwin's
-# raw fork(2) needs extra care besides (the child pid comes back in a
-# second return register, unlike every Linux arch here -- see the plan
-# doc's own Tier 4 gotchas). Compiling these for darwin today would just
-# fail to link. plan9 doesn't want this group either, for the opposite
-# reason sbrk's plan9 case doesn't want brk.c: Plan9's own
-# RFORK/EXEC/AWAIT/PIPE syscalls are already exactly Plan9-shaped (no
-# POSIX-shape bridge needed), so when that arrives it'll be its own
-# os/plan9/*.c files, not these port/ ones. windows has no raw-syscall
-# layer at all, same reason it's excluded from PORTPOSIXOFILES.
+# all four GOOSes now, split four ways below rather than folded into
+# PORTPOSIXOFILES above (that variable is "every POSIX-shaped GOOS
+# except plan9/windows" -- close, but not quite the right split: linux
+# and darwin genuinely share the SAME five files here, unlike
+# PORTPOSIXOFILES's own members, which are all GOOS-independent
+# already; and unlike PORTPOSIXOFILES, windows now DOES want a branch
+# here, just a different one -- see below).
+#
+# linux and darwin share port/fork.c/exec.c/execl.c/wait.c/pipe.c
+# UNCHANGED -- every one of those five files only ever calls a raw
+# _sysfork()/_sysexecve()/_syswait4()/_syspipe() name (plus portable
+# libc calls: malloc/free/va_list/_mainargv), never anything
+# GOOS-specific, so the SAME C source works once syscall/os/darwin/
+# supplies those four raw primitives under those exact names --
+# _sysexecve/_syswait4 decl-generated normally (syscall_darwin_$cputype.decl),
+# _sysfork/_syspipe as dedicated hand-written asm in svc_$cputype.s
+# (XNU's classic BSD dual-register return convention -- isChild in a
+# second register for fork, both fds in two registers for pipe, neither
+# expressible through the generic _syscall6 trampoline's single `long`
+# result -- see numbers_darwin_amd64.h's own citation of
+# bsd/kern/syscalls.master, where both are marked NO_SYSCALL_STUB,
+# meaning even Apple's own libSystem needs custom assembly for them).
+# Unverified on real hardware -- no macOS host here, same epistemic
+# status as the rest of os/darwin/ (see docs/claude_notes/
+# notes_libc_selfhost.txt).
+#
+# plan9's own branch is genuinely different in SHAPE from linux/darwin's,
+# not just its file list: RFORK/EXEC/AWAIT/PIPE (svc_$cputype.s) are
+# already exactly Plan9-shaped (no POSIX-shape bridge needed, same
+# story as open/dup/brk above), so exec() and pipe() need no C file at
+# all here -- only fork() (built on rfork(), os/plan9/fork.c) and
+# wait() (built on await(), os/plan9/wait.c, a genuinely different
+# algorithm from port/wait.c's int-status decode -- Plan9's await(2)
+# hands back a TEXT message, not a packed int) need one. execl.c is the
+# one file plan9 actually SHARES with linux/darwin: it's pure portable
+# C (only calls the portable exec() name, malloc/free, va_list), so it
+# costs nothing to build for all three rather than copy it into
+# os/plan9/ too.
+#
+# windows's own branch is different in KIND, not just shape: there is
+# no execve(2)/fork(2)/wait4(2) analog at all, and no raw-syscall layer
+# to bridge one through even if there were (same reason it's excluded
+# from PORTPOSIXOFILES). os/windows/pipe.c (CreatePipe) is a real,
+# faithful primitive with no compromise needed. os/windows/exec.c is a
+# deliberately different design, not a bridge: CreateProcessA + a
+# blocking WaitForSingleObject + GetExitCodeProcess + this process's own
+# exit() -- see that file's own comment for why collapsing fork+exec+
+# wait into that one call is the only way to keep exec()'s "never
+# returns on success" contract honest without a real fork(). fork() and
+# wait() are NOT approximated or stubbed here: fork() would need a
+# Cygwin-style whole-system fixed-load-address scheme plus
+# ReadProcessMemory/WriteProcessMemory address-space cloning to work at
+# all (a different, much larger engineering project than a libc syscall
+# wrapper), and wait() has nothing left to do once exec() already
+# waited internally, in the same process, before this ever returns.
+# compilers/pcc/pcc.c's actual `switch(fork()){case 0: exec(...)}`
+# pattern therefore still cannot work end to end on windows -- see
+# todo.org's own gap entry. execl.c is shared with linux/darwin/plan9
+# for the same reason it already is there: pure portable C.
 #
 # $cputype riscv (rv32) is excluded up front too, same "checked first
 # regardless of GOOS" style as STATOFILES's own riscv carve-out below:
@@ -277,7 +323,7 @@ EXITSOFILES=`{if(~ $GOOS plan9) echo os/plan9/_exits.$O; if not echo port/exits.
 # does -- riscv is excluded from tests/c/hello_libc/fork.exe for the
 # same reason), but would leave a libc.a that link-fails confusingly
 # for the first real riscv caller instead of failing predictably here.
-PROCOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS linux) echo port/fork.$O port/exec.$O port/execl.$O port/wait.$O port/pipe.$O; if not echo -n}
+PROCOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS linux darwin) echo port/fork.$O port/exec.$O port/execl.$O port/wait.$O port/pipe.$O; if not if(~ $GOOS plan9) echo os/plan9/fork.$O port/execl.$O os/plan9/wait.$O; if not if(~ $GOOS windows) echo os/windows/exec.$O port/execl.$O os/windows/pipe.$O; if not echo -n}
 
 # UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
 # Plan9-native equivalent at all, unlike strdup/seek/etc above, which

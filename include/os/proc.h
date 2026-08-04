@@ -15,6 +15,25 @@ extern  int     atexit(void(*)(void));
 
 // Plan 9 specific (move in os/plan9/proc.h?)
 extern	int	rfork(int);
+// claude: rfork(2)'s flag bits (Tier 4 process control, docs/claude_notes/
+// plan_syscalls.txt). Ported from principia's include/core/syscall.h
+// "enum Rfork_flags" (the authoritative real-Plan9 values, not
+// guessed) -- os/plan9/fork.c's fork() is built directly on RFPROC|
+// RFFDG|RFREND, the same combination principia's own 9sys/fork.c uses.
+enum {
+	RFNAMEG  = (1<<0),
+	RFENVG   = (1<<1),
+	RFFDG    = (1<<2),
+	RFNOTEG  = (1<<3),
+	RFPROC   = (1<<4),
+	RFMEM    = (1<<5),
+	RFNOWAIT = (1<<6),
+	RFCNAMEG = (1<<10),
+	RFCENVG  = (1<<11),
+	RFCFDG   = (1<<12),
+	RFREND   = (1<<13),
+	RFNOMNT  = (1<<14),
+};
 // in <unistd.h>
 extern	int	fork(void);
 

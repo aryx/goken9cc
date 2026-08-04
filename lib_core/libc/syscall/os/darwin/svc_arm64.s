@@ -1,3 +1,5 @@
+#include "numbers_arm64.h"
+
 // The only raw syscall entry point for darwin/arm64: loads up to 6 args
 // into the registers XNU's SVC handler expects and traps. Every
 // OS/arch's syscall wrappers (see syscall/os/$OS/) are generated thin C
@@ -59,4 +61,46 @@ TEXT _syscall6v+0(SB), $0
 	BCC	okv
 	NEG	R0, R0
 okv:
+	RETURN
+
+// claude: Tier 4 process control -- see svc_amd64.s's identical
+// comment on why fork()/pipe() need dedicated asm here instead of the
+// generic _syscall6 trampoline (XNU's classic BSD dual-register return
+// convention -- isChild in X1 for fork, the write fd in X1 for pipe;
+// both marked NO_SYSCALL_STUB in bsd/kern/syscalls.master, confirming
+// even Apple's own libSystem hand-writes custom assembly for both).
+// Same register story as _syscall6's own num-in-R0 above: the first
+// (and here, only) argument always arrives unspilled in R0 -- fork()
+// takes no arguments at all, and pipe's single fd* argument is exactly
+// that first-argument case, so it must be saved to a callee-safe
+// register (R2) before SVC overwrites R0 with the kernel's own result.
+TEXT _sysfork+0(SB), $0
+	MOV	$SYS_fork, R16
+	SVC	$0x80
+	BCC	forkok
+	NEG	R0, R0
+	RETURN
+forkok:
+	CBZ	R1, forkdone
+	MOV	$0, R0
+forkdone:
+	RETURN
+
+// pipe(2) ("{ int pipe(void); }" in syscalls.master -- genuinely zero
+// arguments): on success R0 holds the READ fd and R1 holds the WRITE
+// fd, both via registers, nothing written to memory by the kernel at
+// all. _syspipe(int *fd) (the name port/pipe.c calls, same as every
+// other GOOS) takes the ordinary pointer argument and writes the two
+// registers through it here.
+TEXT _syspipe+0(SB), $0
+	MOV	R0, R2
+	MOV	$SYS_pipe, R16
+	SVC	$0x80
+	BCC	pipeok
+	NEG	R0, R0
+	RETURN
+pipeok:
+	MOVW	R0, 0(R2)
+	MOVW	R1, 4(R2)
+	MOV	$0, R0
 	RETURN

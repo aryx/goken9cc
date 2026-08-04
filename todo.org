@@ -1211,36 +1211,113 @@ would touch the same os/$GOOS/*.c files as the -1-normalization gap
 above, natural to do together) would fix both errbuf's content AND
 the exit status in one pass.
 
-**** DONE: Tier 4 process control (fork/exec/execl/wait/pipe) for linux
+**** DONE: Tier 4 process control (fork/exec/execl/wait/pipe) for linux/darwin/plan9, partial windows
 claude:
 docs/claude_notes/plan_syscalls.txt's own Tier 4 section has the full
-write-up (design, why fork()/pipe() route through port/*.c instead of
-being decl-generated straight to their public name, the arm64/riscv64
-clone/pipe2 shims, the mips wait4-arg-count check). Landed for all 6
-non-rv32 Linux arches, verified end to end via the new
+write-up. Landed in two rounds:
+
+Round 1 (linux): all 6 non-rv32 arches, verified end to end via
 tests/c/hello_libc/fork.c under qemu-user on every one of them, not
-just compiled. What's left:
-- darwin: no syscall/os/darwin/ backing at all yet for
-  _sysfork/_sysexecve/_syswait4/_syspipe -- deferred deliberately (the
-  plan doc's own Tier 4 gotchas already flagged Darwin's raw fork(2)
-  needing extra care, child pid in a second return register).
-- plan9: RFORK/EXEC/AWAIT/PIPE are native Plan9-shaped syscalls
-  already (no POSIX-shape bridge needed) -- unimplemented, but a
-  smaller, different-shaped task than the linux/darwin port/*.c files.
-- windows: no raw-syscall layer at all (same reason it's excluded from
-  PORTPOSIXOFILES already).
+just compiled. Design: fork()/pipe() route through port/*.c instead of
+being decl-generated straight to their public name (the arm64/riscv64
+clone/pipe2 shims, the mips wait4-arg-count check).
+
+Round 2 (darwin/plan9/windows), same session as the mips renameat2 gap
+below:
+- darwin (amd64+arm64): port/fork.c/exec.c/execl.c/wait.c/pipe.c
+  turned out to be REUSABLE UNCHANGED from linux -- they only ever call
+  raw _sysfork()/_sysexecve()/_syswait4()/_syspipe() names, never
+  anything GOOS-specific. _sysexecve/_syswait4 are ordinary
+  decl-generated wrappers; _sysfork/_syspipe needed dedicated
+  hand-written asm in svc_{amd64,arm64}.s for XNU's classic BSD
+  dual-register return convention (isChild in a 2nd register for fork,
+  both fds in two registers for pipe -- confirmed against a local
+  darwin-xnu source checkout's bsd/kern/syscalls.master, where both are
+  marked NO_SYSCALL_STUB). Compile+link checked (a real fork.c consumer
+  actually resolves against the new symbols, not just that libc.a
+  itself builds) but UNVERIFIED ON REAL HARDWARE -- no macOS host here,
+  same status as the rest of os/darwin/.
+- plan9 (arm+mips): ported from principia-softwarica's real reference
+  implementation (9sys/fork.c: rfork(RFPROC|RFFDG|RFREND); 9sys/wait.c:
+  await()+tokenize()-parsed Waitmsg, port/tokenize.c also ported).
+  rfork/exec/await/pipe are raw asm stubs (already exactly Plan9-shaped,
+  no C bridge needed, like open/dup/brk). VERIFIED END TO END for
+  pipe() specifically -- machines/5i/vi's own syspipe() genuinely calls
+  the host's real pipe() -- via a new tests/c/hello_libc/pipe.c, run
+  under both emulators. fork()/exec()/wait() do NOT work under either
+  emulator (see the new gap entry below) -- fork.exe is built (proving
+  the whole libc-side chain compiles+links) but not run, same "kept
+  buildable" treatment as stat.exe/dirread.exe before their own
+  emulator gap was found.
+- windows: pipe() implemented for real via CreatePipe (verified: links
+  and, unlike exec(), actually wired into test_windows's run+assert
+  list since it needs no fork()). exec()/execl() implemented as
+  CreateProcessA + WaitForSingleObject + GetExitCodeProcess + exit() --
+  the only way to keep exec()'s "never returns on success" contract
+  honest without a real fork(). fork() and wait() are DELIBERATELY
+  UNIMPLEMENTED, not approximated: there is no address-space-cloning
+  primitive on Windows at all (Cygwin's own fork() needs a whole-system
+  fixed-load-address scheme plus ReadProcessMemory/WriteProcessMemory,
+  a fundamentally bigger project), and wait() has nothing left to wait
+  for once exec() already waited internally in the same process. This
+  means compilers/pcc/pcc.c's actual `switch(fork()){case 0:
+  exec(...)}` pattern still cannot work end to end on windows -- a
+  real, known, permanent-shaped gap, not a TODO. Two new linkers/lk/pe.c
+  imports (CreatePipe; CreateProcessA/WaitForSingleObject/
+  GetExitCodeProcess) needed 6l AND 8l rebuilt (both compile
+  ../lk/pe.c, see the "rebuild all consumers of shared lk files" lesson
+  already in this file's memory) before the new symbols would actually
+  resolve -- caught by trying to link a real consumer, not assumed.
+
+Still open in both rounds:
 - riscv32: deliberately excluded, not silently skipped -- no wait4(2)
   on that arch at all (numbers_riscv.h's own comment), only waitid
   (different struct shape). PROCOFILES/fork.exe both carve it out
   explicitly.
-- kill() was NOT added -- numbers_*.h record the syscall number for
-  when it's needed, but no port/kill.c exists yet; nothing in this
-  round's scope called for it.
-- rc/processes.c's rfork(RFFDG|RFPROC|RFNOTEG) (the real rc shell,
-  not pcc) is a substantially bigger undertaking than plain fork() --
+- kill() was NOT added on any GOOS -- numbers_*.h record the syscall
+  number where convenient, but no port/kill.c exists anywhere; nothing
+  in this area's scope has called for it yet.
+- rc/processes.c's rfork(RFFDG|RFPROC|RFNOTEG) (the real rc shell, not
+  pcc) is a substantially bigger undertaking than plain fork() --
   BOOT/lib9/rfork.c's own "pipe dance" for RFNOWAIT gives a sense of
-  the scope -- and was out of scope for this round, which targeted
+  the scope -- and stays out of scope; both rounds targeted
   compilers/pcc/pcc.c's simpler fork()/exec()/wait()/pipe() needs.
+
+**** gap: machines/5i/vi don't actually serve RFORK/EXEC/AWAIT (still TODO stubs)
+claude:
+Found while verifying Tier 4's plan9 port (see the DONE entry above).
+Same "kept compiled, not yet runnable end to end" shape as the earlier
+FSTAT/STAT gap, but for process control instead of the stat family --
+and unlike that one, nothing here needed a code fix, both emulators
+already fail predictably rather than crashing:
+
+- machines/5i/syscall_posix.c's sysrfork()/sysexec()/sysawait() are all
+  bare `Bprint(bout, "No system call %s\n", ...); exits(0);` stubs.
+  Confirmed by actually running fork_plan9_arm.exe under 5i: it prints
+  "No system call Rfork" and exits cleanly, not the REGARG/REGRET
+  aliasing segfault FSTAT/STAT used to hit (these three read
+  reg.r[REGARG] as their very FIRST statement, before anything in the
+  same function reassigns reg.r[REGRET] -- the same register, but not
+  yet clobbered at that point -- so the bug class that hit sysstat()/
+  sysfstat() genuinely does not apply here).
+- machines/vi/syscall.c's sysexec()/sysawait() are the same bare
+  "No system call"+exits(0) stub. sysrfork() is more real -- it reads
+  the flags argument and, for any call WITHOUT RFPROC, actually forwards
+  to the host's own rfork() (BOOT/lib9's p9rfork() emulation this tool
+  is itself built against) -- but our own fork() always passes
+  RFPROC|RFFDG|RFREND, so it always hits the `if(flag & RFPROC)`
+  refusal branch ("rfork: cannot create process, rfork(0x...)"; exits(0))
+  instead. Confirmed by actually running fork_plan9_mips.exe under vi.
+
+PIPE is NOT part of this gap -- both emulators' syspipe() genuinely
+works (calls the host's real pipe()), confirmed by the new
+tests/c/hello_libc/pipe.c passing under both 5i and vi.
+
+Real fix needs the emulators themselves to support spawning a second
+guest "process" (RFPROC) and swapping in a new program image (EXEC) --
+a materially bigger feature than a libc syscall wrapper, closer in
+scope to the "5i/vi cannot serve plan9's synthetic device files" gap
+above than to a quick stub fix. Not attempted here.
 
 **** gap (found, not fixed): mips _sysrenameat2's 5th argument is silently dropped
 claude:

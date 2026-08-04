@@ -214,3 +214,38 @@ TEXT seek(SB), $0
 	MOVW	R0, 4(R1)
 seekdone:
 	RET
+
+// claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+// rfork(int)/exec(char*,char*[])/await(char*,int)/pipe(int*) are
+// already exactly the shape include/os/proc.h and include/os/ipc.h
+// declare -- unlike every Linux/Darwin arch, which needs a port/*.c or
+// os/$GOOS/*.c bridge to bond a raw syscall onto Plan9's own API shape,
+// here the raw syscall ALREADY IS that public API, the same story as
+// open/close/create/remove/chdir/dup/brk above. So these are four more
+// one-line stubs, no different in kind from those -- fork()/wait() are
+// the two functions actually built on top of these (os/plan9/fork.c,
+// os/plan9/wait.c), not raw syscalls themselves, so they don't belong
+// in this file.
+TEXT rfork(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$RFORK, R0
+	SWI	$0
+	RET
+
+TEXT exec(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$EXEC, R0
+	SWI	$0
+	RET
+
+TEXT await(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$AWAIT, R0
+	SWI	$0
+	RET
+
+TEXT pipe(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$PIPE, R0
+	SWI	$0
+	RET

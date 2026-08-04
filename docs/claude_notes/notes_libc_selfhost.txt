@@ -1948,3 +1948,46 @@ first tier whose test also caught a bug in ITSELF, not the libc under
 test: an off-by-one writing a string literal's length including its
 trailing NUL byte into the pipe, caught by an exact `cmp` mismatch on
 the very first amd64 run rather than silently passing.
+
+Tier 4 round 2: darwin, plan9, windows (partial)
+------------------------------------------------------------------------
+
+Same pointer-not-repeat convention as the entry above: the full design
+(darwin's fork/pipe dual-register-return asm, plan9's principia-ported
+fork.c/wait.c/tokenize.c, windows's CreateProcessA-based exec(), and
+exactly what's still missing on each) lives in plan_syscalls.txt's own
+Tier 4 UPDATE section, not repeated here.
+
+Two verification notes worth keeping close to the toolchain-mechanics
+side of this file specifically, since they're less about syscalls and
+more about this project's own build system:
+
+- linkers/lk/pe.c is compiled separately into BOTH linkers/6l and
+  linkers/8l (grep OFILES in both mkfiles -- it is source shared by
+  #include-style file reference, not a linked library), so adding the
+  new CreatePipe/CreateProcessA/WaitForSingleObject/GetExitCodeProcess
+  entries to its importfuncs[] table did nothing for an actual windows
+  link until both linkers were rebuilt. Caught by trying to link a real
+  pipe()+exec()-calling test program against a freshly built windows
+  libc.a and hitting "unresolved import" before the rebuild, a clean
+  link after -- the same "rebuild all consumers of shared lk files"
+  lesson this project has hit before, now confirmed to apply to a
+  process-control-shaped change too, not just the file-syscall one that
+  originally surfaced it.
+- lib_core/libc's local object files are named by extension only
+  (fork.6, exec.6, pipe.6, ...), the same name regardless of which GOOS
+  produced them. Switching GOOS (e.g. linux -> windows -> back to
+  linux) without removing the PREVIOUS GOOS's leftover .6/.7/.v/... files
+  first can leave a later `mk install` silently relinking against
+  stale, wrong-GOOS objects if their mtime happens to look up to date --
+  hit firsthand switching from a windows build back to linux and seeing
+  __imp_VirtualAlloc/__imp_CreateProcessA (windows-only symbols)
+  surface in a LINUX link. `rm -f libc.a` alone does not fix this (it
+  only removes the archive, not the individual stale object files still
+  sitting in port/, os/windows/, ...) -- the actual fix was `rm -f
+  os/windows/*.6` before rebuilding for linux. Same root cause as the
+  existing "mksyslib local libc.a needs clean between archs" lesson,
+  now confirmed to bite across GOOS switches too, not just cputype
+  ones -- `mk clean` in lib_core/libc did not reliably clear these
+  either in this session, so an explicit `rm` was the actual fix, not
+  merely the documented-as-sufficient one.

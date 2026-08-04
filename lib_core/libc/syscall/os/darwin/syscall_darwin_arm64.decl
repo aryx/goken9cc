@@ -56,3 +56,8 @@
 //sys _sysfstat(int fd, void *buf) int = SYS_fstat64
 //sys _sysfchmod(int fd, int mode) int = SYS_fchmod
 //sys _sysftruncate(int fd, vlong length) int = SYS_ftruncate
+// Tier 4 process control -- see syscall_darwin_amd64.decl's identical
+// comment (this arch shares the same numbers and the same "no new
+// assembly needed for these two" story).
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4

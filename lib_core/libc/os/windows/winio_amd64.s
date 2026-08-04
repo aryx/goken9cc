@@ -490,3 +490,124 @@ TEXT _wingetenv+0(SB), $0
 
 	MOVQ	DI, SP
 	RET				// DWORD: chars written, or required size, or 0
+
+// claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+// ok = _wincreatepipe(rd, wr)
+//   CreatePipe(rd, wr, NULL, 0)
+// A real, faithful Win32 primitive -- unlike fork()/wait() below, this
+// one needs no design compromise: rd/wr are OUT HANDLE* pointers
+// (os/windows/pipe.c supplies real storage for both), lpPipeAttributes
+// = NULL (not inheritable by default -- os/windows/exec.c's
+// bInheritHandles=TRUE on the child process is the actual inheritance
+// mechanism, not this flag) and nSize = 0 asks for the default OS
+// buffer size. Four register arguments, so shadow space only.
+TEXT _wincreatepipe+0(SB), $0
+	MOVQ	SP, R15
+	MOVQ	rd+0(FP), SI		// 1st: hReadPipe*
+	MOVQ	wr+8(FP), DI		// 2nd: hWritePipe*
+
+	ANDQ	$-16, SP
+	SUBQ	$32, SP			// shadow space only, no stack args
+
+	MOVQ	SI, CX
+	MOVQ	DI, DX
+	MOVQ	$0, R8			// 3rd: lpPipeAttributes = NULL
+	MOVQ	$0, R9			// 4th: nSize = 0 (default)
+	MOVQ	__imp_CreatePipe(SB), AX
+	CALL	AX
+
+	MOVQ	R15, SP
+	RET				// BOOL result in AX
+
+// claude: ok = _wincreateprocess(app, cmdline, startupinfo, procinfo)
+//   CreateProcessA(app, cmdline, NULL, NULL, TRUE, 0, NULL, NULL,
+//                  startupinfo, procinfo)
+// Backs exec()/execl() (os/windows/exec.c) -- the closest Win32 gets to
+// fork()+exec() in one call, which is exactly why this project's
+// Windows exec() is built directly on it instead of trying to fake a
+// real fork() first (see exec.c's own comment on why fork() itself
+// stays unimplemented here).
+//
+// This stub only takes the 4 arguments that actually vary per call;
+// the other 6 CreateProcessA wants are hardcoded here rather than
+// threaded through as C parameters, since none of them ever needs to
+// differ for this project's one caller:
+//   lpProcessAttributes/lpThreadAttributes = NULL (default security)
+//   bInheritHandles = TRUE (the child must inherit this process's
+//     stdin/stdout/stderr -- the same fd inheritance real fork()+exec()
+//     gives for free, and what makes compilers/pcc/pcc.c's dopipe()
+//     dup-onto-0/1-before-exec pattern meaningful at all)
+//   dwCreationFlags = 0 (no special creation behavior)
+//   lpEnvironment = NULL (inherit this process's environment)
+//   lpCurrentDirectory = NULL (inherit this process's cwd)
+// startupinfo/procinfo are raw pointers to caller-allocated,
+// caller-zeroed STARTUPINFOA/PROCESS_INFORMATION buffers -- os/windows/
+// exec.c builds and sizes both (see that file's own comment on their
+// derived, unverified byte sizes); this stub never looks inside either,
+// matching every other _winXxx stub's "raw layer stays struct-free"
+// split. First 4 args register-passed (RCX/RDX/R8/R9), remaining 6 on
+// the stack -- the largest argument list any stub in this file needs.
+TEXT _wincreateprocess+0(SB), $0
+	MOVQ	SP, R15
+	MOVQ	app+0(FP), SI
+	MOVQ	cmdline+8(FP), DI
+	MOVQ	startupinfo+16(FP), BX
+	MOVQ	procinfo+24(FP), R11
+
+	ANDQ	$-16, SP
+	SUBQ	$80, SP			// 32 shadow + 6 stack args (48), 16-aligned
+
+	MOVQ	SI, CX			// 1st: lpApplicationName
+	MOVQ	DI, DX			// 2nd: lpCommandLine
+	MOVQ	$0, R8			// 3rd: lpProcessAttributes = NULL
+	MOVQ	$0, R9			// 4th: lpThreadAttributes = NULL
+	MOVQ	$1, 32(SP)		// 5th: bInheritHandles = TRUE
+	MOVQ	$0, 40(SP)		// 6th: dwCreationFlags = 0
+	MOVQ	$0, 48(SP)		// 7th: lpEnvironment = NULL
+	MOVQ	$0, 56(SP)		// 8th: lpCurrentDirectory = NULL
+	MOVQ	BX, 64(SP)		// 9th: lpStartupInfo
+	MOVQ	R11, 72(SP)		// 10th: lpProcessInformation
+	MOVQ	__imp_CreateProcessA(SB), AX
+	CALL	AX
+
+	MOVQ	R15, SP
+	RET				// BOOL result in AX
+
+// claude: r = _winwaitprocess(handle)
+//   WaitForSingleObject(handle, INFINITE)
+// Backs exec()'s internal wait -- blocks until the just-spawned child
+// exits, since there is no separate wait() call for a caller to make
+// afterward (see exec.c's own comment on why). dwMilliseconds is
+// hardcoded to INFINITE (0xFFFFFFFF): exec() is meant to behave like
+// the process it replaced, and a real exec() never times out waiting
+// for itself to finish either.
+TEXT _winwaitprocess+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	handle+0(FP), CX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	$0xFFFFFFFF, DX	// dwMilliseconds = INFINITE
+	MOVQ	__imp_WaitForSingleObject(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// DWORD wait result (WAIT_OBJECT_0 == 0 on success) in AX
+
+// claude: ok = _wingetexitcode(handle, code)
+//   GetExitCodeProcess(handle, code)
+// The last piece exec() needs: once _winwaitprocess above confirms the
+// child is done, this reads its real exit code through the pointer, so
+// exec()'s own final exit(status) can propagate it -- otherwise the
+// calling process's exit status would always be 0 regardless of
+// whether the spawned command actually succeeded.
+TEXT _wingetexitcode+0(SB), $0
+	MOVQ	SP, R15
+	MOVQ	handle+0(FP), SI
+	MOVQ	code+8(FP), DI
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	SI, CX
+	MOVQ	DI, DX
+	MOVQ	__imp_GetExitCodeProcess(SB), AX
+	CALL	AX
+	MOVQ	R15, SP
+	RET				// BOOL result in AX

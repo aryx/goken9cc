@@ -114,6 +114,19 @@ static struct importfunc {
 	// winio_amd64.s's own comments on these two stubs.
 	{ "GetFileInformationByHandle", 0 },
 	{ "SetEndOfFile", 0 },
+	// claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+	// CreatePipe for pipe() -- a real, faithful Win32 primitive, unlike
+	// fork()/wait() below (see os/windows/pipe.c's own comment).
+	{ "CreatePipe", 0 },
+	// claude: and these three for exec()/execl() -- implemented as
+	// CreateProcessA + WaitForSingleObject + GetExitCodeProcess + exit(),
+	// the only way to keep exec()'s "never returns on success" contract
+	// honest without a real fork() (see os/windows/exec.c's own comment
+	// on why a standalone wait() has nothing left to do once exec()
+	// waits internally).
+	{ "CreateProcessA", 0 },
+	{ "WaitForSingleObject", 0 },
+	{ "GetExitCodeProcess", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

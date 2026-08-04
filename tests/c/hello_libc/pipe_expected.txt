@@ -1,0 +1,2 @@
+hello pipe
+pipe ok

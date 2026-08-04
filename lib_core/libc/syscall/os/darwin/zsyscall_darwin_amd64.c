@@ -109,3 +109,13 @@ int _sysftruncate(int fd, vlong length)
 	return (int)_syscall6(SYS_ftruncate, (vlong)fd, (vlong)length, 0, 0, 0, 0);
 }
 
+int _sysexecve(void* path, void* argv, void* envp)
+{
+	return (int)_syscall6(SYS_execve, (vlong)path, (vlong)argv, (vlong)envp, 0, 0, 0);
+}
+
+int _syswait4(int pid, void* status, int options, void* rusage)
+{
+	return (int)_syscall6(SYS_wait4, (vlong)pid, (vlong)status, (vlong)options, (vlong)rusage, 0, 0);
+}
+

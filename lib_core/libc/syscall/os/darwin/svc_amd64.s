@@ -1,3 +1,5 @@
+#include "numbers_amd64.h"
+
 // The only raw syscall entry point for darwin/amd64: loads up to 6 args
 // into the registers XNU's SYSCALL handler expects, adds the 0x2000000
 // "BSD class" prefix Darwin's amd64 syscall convention bakes into the
@@ -74,4 +76,56 @@ TEXT _syscall6v+0(SB), $0
 	JCC	okv
 	NEGQ	AX
 okv:
+	RET
+
+// claude: Tier 4 process control (docs/claude_notes/plan_syscalls.txt).
+// fork()/pipe() cannot go through _syscall6 above at all, even though
+// both are otherwise argument-light: XNU's raw fork(2) and pipe(2) use
+// the classic BSD dual-register return convention, which a single
+// `long` result can't express. Confirmed both need this (not merely
+// suspected) by numbers_amd64.h's own citation of bsd/kern/
+// syscalls.master: both are marked NO_SYSCALL_STUB, meaning even
+// Apple's own libSystem hand-writes custom assembly for them instead
+// of the generic per-syscall stub every other BSD call gets.
+//
+// fork(2): on success BOTH parent and child come back with AX holding
+// the PARENT's pid; DX distinguishes them (0 in the parent, nonzero --
+// in practice 1 -- in the child). The public POSIX/Plan9 contract (0
+// in the child, the child's real pid in the parent) only holds once
+// this stub zeroes AX itself when DX is nonzero. port/fork.c (the one
+// Plan9-shaped bridge every GOOS shares) calls this exactly like any
+// other _sysfork() and never sees DX at all.
+TEXT _sysfork+0(SB), $0
+	MOVQ	$(0x2000000+SYS_fork), AX
+	SYSCALL
+	JCC	forkok
+	NEGQ	AX
+	RET
+forkok:
+	CMPQ	DX, $0
+	JEQ	forkdone
+	XORQ	AX, AX
+forkdone:
+	RET
+
+// pipe(2) ("{ int pipe(void); }" in syscalls.master -- genuinely zero
+// arguments, not even the pointer POSIX's own prototype implies): on
+// success AX holds the READ fd and DX holds the WRITE fd, both via
+// registers, nothing written to memory by the kernel at all.
+// _syspipe(int *fd) (the name port/pipe.c calls, same as every other
+// GOOS) takes the ordinary pointer argument and writes the two
+// registers through it here -- the one place in this file that turns
+// a register-pair kernel result into the normal pointer-out shape
+// every caller above this layer expects.
+TEXT _syspipe+0(SB), $0
+	MOVQ	fd+0(FP), CX
+	MOVQ	$(0x2000000+SYS_pipe), AX
+	SYSCALL
+	JCC	pipeok
+	NEGQ	AX
+	RET
+pipeok:
+	MOVL	AX, 0(CX)
+	MOVL	DX, 4(CX)
+	XORQ	AX, AX
 	RET

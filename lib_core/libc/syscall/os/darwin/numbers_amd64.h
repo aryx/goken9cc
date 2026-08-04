@@ -112,3 +112,12 @@
 #define SYS_fstat64	339
 #define SYS_fchmod	124
 #define SYS_ftruncate	201
+/* claude: Tier 4 process control -- see numbers_arm64.h's identical
+ * comment (confirmed against the same XNU syscalls.master, and the
+ * arch-independent BSD table means this arch shares all four numbers
+ * with arm64's).
+ */
+#define SYS_fork	2
+#define SYS_wait4	7
+#define SYS_pipe	42
+#define SYS_execve	59

@@ -30,5 +30,12 @@ extern  int     cistrcmp(char*, char*);
 //extern  char*   cistrstr(char*, char*);
 //
 //extern  char*   strtok(char*, char*);
-//extern  int     tokenize(char*, char**, int);
+// claude: needed by os/plan9/wait.c (Tier 4 process control, docs/
+// claude_notes/plan_syscalls.txt) to split await()'s "pid utime stime
+// rtime msg" text into fields -- port/tokenize.c, ported from
+// principia's lib_core/libc/port/tokenize.c. gettokens() (same file,
+// same shape minus '\''-quoting) came along with it but has no caller
+// in this tree yet.
+extern  int     tokenize(char*, char**, int);
+extern  int     gettokens(char*, char**, int, char*);
 
