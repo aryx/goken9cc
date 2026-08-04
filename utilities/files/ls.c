@@ -121,7 +121,7 @@ main(int argc, char *argv[])
 
     //XXX: doquote = needsrcquote;
     quotefmtinstall();
-    //XXX: fmtinstall('M', dirmodefmt);
+    fmtinstall('M', dirmodefmt);
 
     /*s: [[main]](ls.c) if [[lflag]] */
     if(lflag)

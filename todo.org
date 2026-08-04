@@ -1078,27 +1078,49 @@ linux; darwin/windows os/$GOOS/ get no dirread.c at all, so anything
 that needs one fails to link there -- same shape of gap as riscv32's
 missing stat file.
 
-**** gap: utfrrune() not wired into lib_core/libc/mkfile's OFILES
+**** DONE: utfrrune() wiring, plus strrchr()/strncpy()/dirmodefmt() -- ls.c now works
 claude:
 Found while retrying utilities/files/ls.c after this session's ctime()
 work (docs/claude_notes/notes_libc_selfhost.txt) let it compile: ls.c's
-xcleanname() calls utfrrune() (include/utf/utf.h),
-which IS implemented (lib_core/libc/utf/utfrrune.c exists already,
-pre-dating this session) but was never added to PORTOFILES/UTFOFILES in
-lib_core/libc/mkfile, so it's simply absent from libc.a. Small, almost
-certainly a one-line mkfile fix -- not done here since it surfaced
-outside this session's actual task (ctime()), not because it's hard.
+xcleanname() calls utfrrune() (include/utf/utf.h), implemented
+(lib_core/libc/utf/utfrrune.c) but never added to UTFOFILES, and using
+a Go-era const/Rune signature calling a nonexistent strrchr(). All
+fixed (utfrrune.c replaced with a plain copy of principia's port/
+utfrrune.c per this session's own instruction, strrchr.c/strncpy.c
+added as plain copies of principia's, dirmodefmt.c likewise for the
+%M fmt verb ls -l needs) -- see notes_libc_selfhost.txt's own
+"utfrrune()/strrchr()/strncpy()/atexit()/dirmodefmt()" section for the
+full story, including a real vararg-desync segfault dirmodefmt's
+absence caused. ls.c now compiles, links, and runs correctly,
+including -l.
 
-**** gap: atexit() declared (include/os/proc.h) but not implemented anywhere
+**** DONE: atexit() -- was declared (include/os/proc.h) but not implemented
 claude:
-Also found via ls.c: Binit() (ls.c's Biobuf setup) reaches
+Found via ls.c: Binit() (ls.c's Biobuf setup) reaches
 lib_core/libbio/binit.c's install(), which calls atexit() -- grepped
-for a definition the same way gmtime()/ctime() were checked before this
-session's work on them, and found none. Real, standalone work (a
-registered-callback list plus a call from every _exits()/exit() path,
-per-GOOS since each has its own of those), not a wiring gap like
-utfrrune() above -- likely the next thing blocking ls.c after the
-mkfile fix.
+for a definition the same way gmtime()/ctime() were checked earlier
+this session, and found none. Implemented (port/atexit.c, a plain
+copy of principia's lib_core/libc/port/atexit.c's onex[]/atexit(),
+minus its own exits() -- see port/exits.c's updated header comment for
+why: this tree already had its own exits(), collapsed onto exit(int)
+per-GOOS, so atexit.c exposes atexitrun() as the seam instead of
+redefining exits() a second time).
+
+**** gap: atexit() callbacks never run on plan9 (exits() is a raw syscall there)
+claude:
+Found by actually running tests/c/hello_libc/atexit.exe under 5i, not
+assumed: os/plan9/_exits.$O IS this GOOS's exits(char*) (a raw EXITS
+syscall trampoline, lib_core/libc/mkfile's EXITSOFILES), so it never
+calls port/atexit.c's atexitrun() the way port/exits.c's exits() does
+on every other GOOS -- atexit()-registered callbacks are simply
+inert on plan9, not blocked by an emulator gap the way stat.exe/
+dirread.exe's FSTAT gap is. tests/c/hello_libc/mkfile's
+atexit_plan9_{arm,mips}.exe targets are build-only (not run) for this
+reason, matching stat.exe/proc.exe/env.exe's own precedent. Real fix
+needs os/plan9/_exits.s (or a thin _exits.c wrapper) to call
+atexitrun() before the EXITS syscall, mirroring real Plan9's own
+lib9/atexit.c (which defines exits() itself, calling onex[] directly,
+sidestepping this split entirely -- see port/atexit.c's own comment).
 
 *** libc (or libos?) (relying on libsyscall)
 

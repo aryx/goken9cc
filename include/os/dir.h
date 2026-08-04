@@ -74,6 +74,11 @@ extern	long	dirread(int, Dir**);
 extern	void	nulldir(Dir*);
 extern	long	dirreadall(int, Dir**);
 
+// require: <fmt/fmt.h> (already included earlier by libc.h) for Fmt.
+// %M fmtinstall() handler formatting a Dir.mode as "drwxrwxrwx" --
+// utilities/files/ls.c's -l flag is the reference caller.
+extern	int	dirmodefmt(Fmt*);
+
 
 // in <unistd.h>
 extern	int	access(char*, int); // ???

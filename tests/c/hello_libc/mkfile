@@ -11,7 +11,7 @@ TOP=../../..
 # three share this one hello.c; only the libc.a underneath and the
 # link/run step differ (see lib_core/libc/mkfile's own GOOS story).
 
-all:V: hello.exe io.exe dir.exe fd.exe mem.exe proc.exe args.exe env.exe ctime.exe
+all:V: hello.exe io.exe dir.exe fd.exe mem.exe proc.exe args.exe env.exe ctime.exe atexit.exe utfmisc.exe
 # claude: dir_tmp.txt and the dir_tmp_d/ directory are created by dir.c
 # and removed by it again, so they are only ever left behind if that
 # test died in between -- cleaned up here rather than left to confuse
@@ -42,6 +42,8 @@ test_one:V:
 	$TOP/scripts/qemu-runner $cputype ./env.exe | cmp /dev/stdin env_expected.txt
 	$TOP/scripts/qemu-runner $cputype ./args.exe one two three | cmp /dev/stdin args_expected.txt
 	$TOP/scripts/qemu-runner $cputype ./ctime.exe | cmp /dev/stdin ctime_expected.txt
+	$TOP/scripts/qemu-runner $cputype ./atexit.exe | cmp /dev/stdin atexit_expected.txt
+	$TOP/scripts/qemu-runner $cputype ./utfmisc.exe | cmp /dev/stdin utfmisc_expected.txt
 	if(! ~ $cputype riscv){
 		mk 'objtype='$cputype stat.exe dirread.exe
 		$TOP/scripts/qemu-runner $cputype ./stat.exe | cmp /dev/stdin stat_expected.txt
@@ -74,6 +76,8 @@ test:V:
 		$TOP/scripts/qemu-runner $arch ./env.exe | cmp /dev/stdin env_expected.txt
 		$TOP/scripts/qemu-runner $arch ./args.exe one two three | cmp /dev/stdin args_expected.txt
 		$TOP/scripts/qemu-runner $arch ./ctime.exe | cmp /dev/stdin ctime_expected.txt
+		$TOP/scripts/qemu-runner $arch ./atexit.exe | cmp /dev/stdin atexit_expected.txt
+		$TOP/scripts/qemu-runner $arch ./utfmisc.exe | cmp /dev/stdin utfmisc_expected.txt
 		if(! ~ $arch riscv){
 			mk 'objtype='$arch 'cputype='$arch stat.exe dirread.exe
 			$TOP/scripts/qemu-runner $arch ./stat.exe | cmp /dev/stdin stat_expected.txt
@@ -99,7 +103,7 @@ test:V:
 test_plan9:V:
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm' 'cputype=arm' 'GOOS=plan9' install }
-	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe fd_plan9_arm.exe mem_plan9_arm.exe proc_plan9_arm.exe env_plan9_arm.exe args_plan9_arm.exe stat_plan9_arm.exe dirread_plan9_arm.exe ctime_plan9_arm.exe
+	mk 'objtype=arm' hello_plan9_arm.exe io_plan9_arm.exe dir_plan9_arm.exe fd_plan9_arm.exe mem_plan9_arm.exe proc_plan9_arm.exe env_plan9_arm.exe args_plan9_arm.exe stat_plan9_arm.exe dirread_plan9_arm.exe ctime_plan9_arm.exe atexit_plan9_arm.exe utfmisc_plan9_arm.exe
 	printf ':c\n$q\n' | 5i ./hello_plan9_arm.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | 5i ./io_plan9_arm.exe | sed -n 2,4p | cmp /dev/stdin io_expected.txt
 	printf ':c\n$q\n' | 5i ./dir_plan9_arm.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
@@ -107,9 +111,10 @@ test_plan9:V:
 	printf ':c\n$q\n' | 5i ./mem_plan9_arm.exe | sed -n 2p | cmp /dev/stdin mem_expected.txt
 	printf ':c\n$q\n' | 5i ./args_plan9_arm.exe one two three | sed -n 2,5p | cmp /dev/stdin args_expected.txt
 	printf ':c\n$q\n' | 5i ./ctime_plan9_arm.exe | sed -n 2p | cmp /dev/stdin ctime_expected.txt
+	printf ':c\n$q\n' | 5i ./utfmisc_plan9_arm.exe | sed -n 2p | cmp /dev/stdin utfmisc_expected.txt
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=mips' 'cputype=mips' 'GOOS=plan9' install }
-	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe fd_plan9_mips.exe mem_plan9_mips.exe proc_plan9_mips.exe env_plan9_mips.exe args_plan9_mips.exe stat_plan9_mips.exe dirread_plan9_mips.exe ctime_plan9_mips.exe
+	mk 'objtype=mips' hello_plan9_mips.exe io_plan9_mips.exe dir_plan9_mips.exe fd_plan9_mips.exe mem_plan9_mips.exe proc_plan9_mips.exe env_plan9_mips.exe args_plan9_mips.exe stat_plan9_mips.exe dirread_plan9_mips.exe ctime_plan9_mips.exe atexit_plan9_mips.exe utfmisc_plan9_mips.exe
 	printf ':c\n$q\n' | vi ./hello_plan9_mips.exe | sed -n 2p | cmp /dev/stdin expected.txt
 	printf ':c\n$q\n' | vi ./io_plan9_mips.exe | sed -n 2,4p | cmp /dev/stdin io_expected.txt
 	printf ':c\n$q\n' | vi ./dir_plan9_mips.exe | sed -n 2,5p | cmp /dev/stdin dir_expected.txt
@@ -117,6 +122,7 @@ test_plan9:V:
 	printf ':c\n$q\n' | vi ./mem_plan9_mips.exe | sed -n 2p | cmp /dev/stdin mem_expected.txt
 	printf ':c\n$q\n' | vi ./args_plan9_mips.exe one two three | sed -n 2,5p | cmp /dev/stdin args_expected.txt
 	printf ':c\n$q\n' | vi ./ctime_plan9_mips.exe | sed -n 2p | cmp /dev/stdin ctime_expected.txt
+	printf ':c\n$q\n' | vi ./utfmisc_plan9_mips.exe | sed -n 2p | cmp /dev/stdin utfmisc_expected.txt
 
 # -H7 (ELF) is explicit, not left to 6l/7l/8l's own default: those
 # three (unlike vl/il/jl, which always default to ELF regardless of
@@ -195,6 +201,21 @@ env.exe: env.c
 ctime.exe: ctime.c
 	$CC $CFLAGS -D$objtype -c ctime.c
 	$LD $LDFLAGS -H7 -o $target -E _main ctime.$O -lc
+
+# claude: atexit.c: atexit()/exits()'s atexitrun() hook (port/atexit.c,
+# port/exits.c). Portable everywhere exits() itself is (every GOOS
+# except plan9's own raw EXITS syscall -- see port/exits.c's comment),
+# same -H7/-D$objtype story as hello.exe above.
+atexit.exe: atexit.c
+	$CC $CFLAGS -D$objtype -c atexit.c
+	$LD $LDFLAGS -H7 -o $target -E _main atexit.$O -lc
+
+# claude: utfmisc.c: strrchr()/strncpy()/utfrrune()/dirmodefmt() -- the
+# small ls.c gaps found alongside atexit.c above. Same -H7/-D$objtype
+# story as hello.exe above.
+utfmisc.exe: utfmisc.c
+	$CC $CFLAGS -D$objtype -c utfmisc.c
+	$LD $LDFLAGS -H7 -o $target -E _main utfmisc.$O -lc
 
 # claude: stat.c: dirstat/dirfstat/dirwstat/dirfwstat (Tier 3). NOT
 # built for every $cputype -- see all:V:'s own comment on why riscv is
@@ -365,6 +386,32 @@ ctime_plan9_mips.exe: ctime.c
 	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o ctime_plan9_mips.v -c ctime.c
 	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main ctime_plan9_mips.v -lc
 
+# claude: atexit.c on plan9 -- built, not run, same "kept buildable, not
+# yet runnable end to end" shape as proc.c/env.c/stat.c above, but a
+# DIFFERENT gap: os/plan9/_exits.$O IS exits(char*) here, a raw EXITS
+# syscall trampoline with no atexitrun() call in it at all (see
+# lib_core/libc/mkfile's EXITSOFILES and port/exits.c's own header
+# comment) -- so atexit()-registered callbacks are simply never run on
+# this GOOS, not blocked by a missing emulator feature. Found by
+# actually running this test under 5i: it printed nothing before
+# "exits(0)" where "atexit ok" was expected, not a crash or wrong
+# value. Tracked in todo.org.
+atexit_plan9_arm.exe: atexit.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o atexit_plan9_arm.5 -c atexit.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main atexit_plan9_arm.5 -lc
+
+atexit_plan9_mips.exe: atexit.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o atexit_plan9_mips.v -c atexit.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main atexit_plan9_mips.v -lc
+
+utfmisc_plan9_arm.exe: utfmisc.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o utfmisc_plan9_arm.5 -c utfmisc.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main utfmisc_plan9_arm.5 -lc
+
+utfmisc_plan9_mips.exe: utfmisc.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o utfmisc_plan9_mips.v -c utfmisc.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main utfmisc_plan9_mips.v -lc
+
 # macOS-native (no qemu -- Mach-O only runs on real macOS, see
 # tests/s/mini/mkfile's test_macos_arm64 for the same pattern): first
 # rebuild+reinstall the darwin/arm64 libc.a lib_core/libc/mkfile
@@ -388,7 +435,7 @@ ctime_plan9_mips.exe: ctime.c
 # stale bits. See docs/claude_notes/notes_libc_selfhost.txt.
 test_macos_arm64:V:
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm64' 'cputype=arm64' 'GOOS=darwin' 'RT0OFILE=arch/arm64/rt0_darwin.7' install }
-	mk -a 'objtype=arm64' hello_macos_arm64.exe io_macos_arm64.exe dir_macos_arm64.exe fd_macos_arm64.exe mem_macos_arm64.exe args_macos_arm64.exe stat_macos_arm64.exe ctime_macos_arm64.exe
+	mk -a 'objtype=arm64' hello_macos_arm64.exe io_macos_arm64.exe dir_macos_arm64.exe fd_macos_arm64.exe mem_macos_arm64.exe args_macos_arm64.exe stat_macos_arm64.exe ctime_macos_arm64.exe atexit_macos_arm64.exe utfmisc_macos_arm64.exe
 	./hello_macos_arm64.exe | cmp /dev/stdin expected.txt
 	./io_macos_arm64.exe | cmp /dev/stdin io_expected.txt
 	./dir_macos_arm64.exe | cmp /dev/stdin dir_expected.txt
@@ -397,6 +444,8 @@ test_macos_arm64:V:
 	./args_macos_arm64.exe one two three | cmp /dev/stdin args_expected.txt
 	./stat_macos_arm64.exe | cmp /dev/stdin stat_expected.txt
 	./ctime_macos_arm64.exe | cmp /dev/stdin ctime_expected.txt
+	./atexit_macos_arm64.exe | cmp /dev/stdin atexit_expected.txt
+	./utfmisc_macos_arm64.exe | cmp /dev/stdin utfmisc_expected.txt
 
 hello_macos_arm64.exe: hello.c
 	$CC $CFLAGS -Darm64 -c hello.c
@@ -455,6 +504,16 @@ ctime_macos_arm64.exe: ctime.c
 	$LD $LDFLAGS -H6 -o $target -E _main ctime.7 -lc
 	$TOP/scripts/macos-codesign $target
 
+atexit_macos_arm64.exe: atexit.c
+	$CC $CFLAGS -Darm64 -c atexit.c
+	$LD $LDFLAGS -H6 -o $target -E _main atexit.7 -lc
+	$TOP/scripts/macos-codesign $target
+
+utfmisc_macos_arm64.exe: utfmisc.c
+	$CC $CFLAGS -Darm64 -c utfmisc.c
+	$LD $LDFLAGS -H6 -o $target -E _main utfmisc.7 -lc
+	$TOP/scripts/macos-codesign $target
+
 # macOS/amd64: same story as arm64 above, plus one extra wrinkle 6c
 # needs that 7c doesn't. 6l -H6 always produces a PIE image, but plain
 # 6c happily folds a symbol's address into an instruction as an
@@ -490,7 +549,7 @@ ctime_macos_arm64.exe: ctime.c
 # translation) as well as real Intel Macs.
 test_macos_amd64:V:
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=darwin' 'CFLAGS_EXTRA=-z' 'RT0OFILE=arch/amd64/rt0_darwin.6' install }
-	mk -a 'objtype=amd64' hello_macos_amd64.exe io_macos_amd64.exe dir_macos_amd64.exe fd_macos_amd64.exe mem_macos_amd64.exe stat_macos_amd64.exe ctime_macos_amd64.exe
+	mk -a 'objtype=amd64' hello_macos_amd64.exe io_macos_amd64.exe dir_macos_amd64.exe fd_macos_amd64.exe mem_macos_amd64.exe stat_macos_amd64.exe ctime_macos_amd64.exe atexit_macos_amd64.exe utfmisc_macos_amd64.exe
 	./hello_macos_amd64.exe | cmp /dev/stdin expected.txt
 	./io_macos_amd64.exe | cmp /dev/stdin io_expected.txt
 	./dir_macos_amd64.exe | cmp /dev/stdin dir_expected.txt
@@ -498,6 +557,8 @@ test_macos_amd64:V:
 	./mem_macos_amd64.exe | cmp /dev/stdin mem_expected.txt
 	./stat_macos_amd64.exe | cmp /dev/stdin stat_expected.txt
 	./ctime_macos_amd64.exe | cmp /dev/stdin ctime_expected.txt
+	./atexit_macos_amd64.exe | cmp /dev/stdin atexit_expected.txt
+	./utfmisc_macos_amd64.exe | cmp /dev/stdin utfmisc_expected.txt
 
 io_macos_amd64.exe: io.c
 	$CC $CFLAGS -z -Damd64 -c io.c
@@ -529,6 +590,16 @@ ctime_macos_amd64.exe: ctime.c
 	$LD $LDFLAGS -s -H6 -o $target -E _main ctime.6 -lc
 	$TOP/scripts/macos-codesign $target
 
+atexit_macos_amd64.exe: atexit.c
+	$CC $CFLAGS -z -Damd64 -c atexit.c
+	$LD $LDFLAGS -s -H6 -o $target -E _main atexit.6 -lc
+	$TOP/scripts/macos-codesign $target
+
+utfmisc_macos_amd64.exe: utfmisc.c
+	$CC $CFLAGS -z -Damd64 -c utfmisc.c
+	$LD $LDFLAGS -s -H6 -o $target -E _main utfmisc.6 -lc
+	$TOP/scripts/macos-codesign $target
+
 hello_macos_amd64.exe: hello.c
 	$CC $CFLAGS -z -Damd64 -c hello.c
 	$LD $LDFLAGS -s -H6 -o $target -E _main hello.6 -lc
@@ -556,7 +627,7 @@ hello_macos_amd64.exe: hello.c
 test_windows:V:
 	mk clean
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=windows' 'OSEXTRAFILES=os/windows/winio_amd64.6' 'SYSCALLOFILES=' install }
-	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe dir_windows_amd64.exe mem_windows_amd64.exe proc_windows_amd64.exe env_windows_amd64.exe ctime_windows_amd64.exe
+	mk -a 'objtype=amd64' hello_windows_amd64.exe io_windows_amd64.exe dir_windows_amd64.exe mem_windows_amd64.exe proc_windows_amd64.exe env_windows_amd64.exe ctime_windows_amd64.exe atexit_windows_amd64.exe utfmisc_windows_amd64.exe
 	./hello_windows_amd64.exe | cmp /dev/stdin expected.txt
 	./io_windows_amd64.exe | cmp /dev/stdin io_expected.txt
 	./dir_windows_amd64.exe | cmp /dev/stdin dir_expected.txt
@@ -564,6 +635,8 @@ test_windows:V:
 	./proc_windows_amd64.exe | cmp /dev/stdin proc_expected.txt
 	./env_windows_amd64.exe | cmp /dev/stdin env_expected.txt
 	./ctime_windows_amd64.exe | cmp /dev/stdin ctime_expected.txt
+	./atexit_windows_amd64.exe | cmp /dev/stdin atexit_expected.txt
+	./utfmisc_windows_amd64.exe | cmp /dev/stdin utfmisc_expected.txt
 
 hello_windows_amd64.exe: hello.c
 	$CC $CFLAGS -Damd64 -Dwindows -c hello.c
@@ -605,3 +678,11 @@ env_windows_amd64.exe: env.c
 ctime_windows_amd64.exe: ctime.c
 	$CC $CFLAGS -Damd64 -Dwindows -c ctime.c
 	$LD $LDFLAGS -H 10 -o $target -E _main ctime.6 -lc
+
+atexit_windows_amd64.exe: atexit.c
+	$CC $CFLAGS -Damd64 -Dwindows -c atexit.c
+	$LD $LDFLAGS -H 10 -o $target -E _main atexit.6 -lc
+
+utfmisc_windows_amd64.exe: utfmisc.c
+	$CC $CFLAGS -Damd64 -Dwindows -c utfmisc.c
+	$LD $LDFLAGS -H 10 -o $target -E _main utfmisc.6 -lc

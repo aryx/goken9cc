@@ -90,13 +90,16 @@ FMTOFILES=\
 	fmt/vsmprint.$O\
 	fmt/vsnprint.$O\
 
-# only what fmt/*.c actually calls (chartorune/fullrune/runetochar via
-# rune.c, utflen, utfnlen) -- not all of utf/, which also has the
-# 1400+ line Unicode runetype tables nothing here needs.
+# what fmt/*.c actually calls (chartorune/fullrune/runetochar via
+# rune.c, utflen, utfnlen) plus utfrrune (utilities/files/ls.c's
+# xcleanname(), added once that turned out to need it -- see
+# docs/claude_notes/notes_libc_selfhost.txt) -- not all of utf/, which
+# also has the 1400+ line Unicode runetype tables nothing here needs.
 UTFOFILES=\
 	utf/rune.$O\
 	utf/utflen.$O\
 	utf/utfnlen.$O\
+	utf/utfrrune.$O\
 
 MATHOFILES=\
 	math/nan.$O\
@@ -108,6 +111,7 @@ PORTOFILES=\
 	port/memcmp.$O\
 	port/strcmp.$O\
 	port/strchr.$O\
+	port/strrchr.$O\
 	port/memccpy.$O\
 	port/strlen.$O\
 	port/strcpy.$O\
@@ -145,6 +149,9 @@ PORTOFILES=\
 	port/dirwstat.$O\
 	port/ctime.$O\
 	port/tm2sec.$O\
+	port/atexit.$O\
+	port/strncpy.$O\
+	port/dirmodefmt.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
 # but must NOT be compiled for plan9 or windows at all -- selected here

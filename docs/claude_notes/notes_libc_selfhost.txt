@@ -1654,3 +1654,82 @@ under 5i/vi due to real emulator gaps -- see those targets' own mkfile
 comments), since ctime()'s only OS dependency (the /env/timezone
 read attempt) degrades gracefully there the same way it does on every
 non-plan9 GOOS.
+
+utfrrune()/strrchr()/strncpy()/atexit()/dirmodefmt() -- finishing ls.c
+------------------------------------------------------------------------
+
+Retried utilities/files/ls.c right after the ctime() work above landed
+(user explicitly asked to keep going on it). It now compiled cleanly
+(0 errors) but did not link -- two, then a cascading few more, gaps,
+each found by actually trying to link/run, not by re-reading ls.c:
+
+  - utfrrune() (ls.c's xcleanname() calls it): the file EXISTED
+    (lib_core/libc/utf/utfrrune.c, Go-era) but was never added to
+    UTFOFILES, so simply missing from libc.a. While wiring it in, its
+    signature turned out to use `const char*`/`Rune` (matching Go-code
+    style, not this compiler's proven-shaky const support, see ls.c's
+    own earlier `ord`-after-a-pointer 6c bug) and called strrchr(),
+    which didn't exist anywhere -- so per this session's user
+    instruction ("take principia code as is when possible, with a
+    plain copy of the original file"), the Go-era body was replaced
+    wholesale with a plain copy of principia's lib_core/libc/port/
+    utfrrune.c (`char*`/`long`, no const) -- kept at its existing
+    utf/ path (this tree's own Go-era directory split), not moved to
+    port/ the way principia has it. include/utf/utf.h's own
+    declaration had the same const/Rune mismatch and was fixed to
+    match (principia's include/core/libc.h declares it the same plain
+    way too, confirmed before assuming this was safe).
+  - strrchr() itself: didn't exist at all (include/base/str.h had it
+    commented out). Plain copy of principia's lib_core/libc/port/
+    strrchr.c (built on strchr(), already present).
+  - atexit(): declared (include/os/proc.h) but nowhere implemented --
+    found via Binit() (ls.c's Biobuf setup) reaching lib_core/libbio/
+    binit.c's install(), which calls it. principia's lib_core/libc/
+    port/atexit.c defines BOTH atexit() (an onex[] table of (callback,
+    pid) pairs) AND exits() itself (looping onex[] then calling
+    _exits()) -- but this tree already has its own port/exits.c,
+    per-GOOS-collapsed onto exit(int), predating this session and
+    with its own header comment already flagging "if an atexit-driven
+    cleanup layer is ever added...". Reconciled by taking atexit.c's
+    atexit()/onex[] table as a plain copy but NOT its exits() (would
+    have been a duplicate-symbol conflict) -- instead exposing a
+    non-static atexitrun() helper that port/exits.c's own exits() now
+    calls before exit(), matching the exact "exits() runs atexit
+    handlers, _exits() doesn't" split include/os/proc.h's comment
+    already promised. Verified the LIFO-order semantics (most-recently-
+    registered callback runs first) directly with a throwaway 2/3-
+    callback repro before trusting the real test.
+    GAP: plan9's own exits(char*) is a raw EXITS syscall trampoline
+    (os/plan9/_exits.$O), which never calls atexitrun() at all -- found
+    by actually running tests/c/hello_libc/atexit.exe under 5i (it
+    printed nothing before "exits(0)" where "atexit ok" was expected,
+    not a crash), not assumed from reading the mkfile. atexit()-
+    registered callbacks are therefore inert on plan9 specifically;
+    todo.org tracks it, and the plan9 build targets are build-only
+    (not run), matching stat.exe/proc.exe/env.exe's own precedent.
+  - dirmodefmt(): the %M fmtinstall() verb ls.c's format() uses for
+    `-l` (`"%M %C ..."`) didn't exist at all -- its installer call was
+    commented out in ls.c (`//XXX: fmtinstall('M', dirmodefmt);`),
+    presumably because the function never existed to install. Wiring
+    it in (uncommenting that line) without first ADDING dirmodefmt()
+    was tried and produced a real crash, not a link error: an
+    unrecognized fmt verb doesn't consume its vararg, so every
+    argument after %M (including %*q's char* pointers) read one slot
+    stale, and `ls -l` segfaulted on the resulting garbage pointer --
+    confirmed by an actual qemu run before diagnosing, not assumed
+    from reading format(). Fixed with a plain copy of principia's
+    lib_core/libc/9sys/dirmodefmt.c (dropping its #include <fcall.h>:
+    this tree already defines DMDIR/DMAPPEND/DMAUTH/DMEXCL in
+    include/os/dir.h, no separate fcall.h exists here), which itself
+    needed strncpy() (also missing entirely -- plain copy of
+    principia's lib_core/libc/port/strncpy.c) for its rwx() helper.
+
+Verified end to end: ls.c now compiles, links, AND RUNS correctly
+against the self-hosted amd64 libc.a -- plain `ls`, `ls <dir>`, and
+`ls -l <dir>` all produce correct output (including real ctime()-based
+timestamps and a correctly-formatted "-rw-rw-r--"-style mode string),
+checked by actually running the binary under qemu-user against a real
+throwaway fixture directory, not just by a clean link. tests/c/
+hello_libc/atexit.c and utfmisc.c pass under the full 7-arch `mk test`
++ `mk test_plan9` (utfmisc.exe genuinely runs there; atexit.exe is
+build-only, per the plan9 gap above).

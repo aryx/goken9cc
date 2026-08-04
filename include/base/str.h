@@ -12,13 +12,13 @@ extern  char*   strchr(char*, int);
 extern  char*   strdup(char*);
 extern  char*   strstr(char*, char*);
 extern  char*   strcat(char*, char*);
+extern  char*   strrchr(char*, int);
+extern  char*   strncpy(char*, char*, long);
 
 // less useful?
 //extern  char*   strecpy(char*, char*, char*);
 //extern  char*   strncat(char*, char*, long);
-//extern  char*   strncpy(char*, char*, long);
 //extern  int     strncmp(char*, char*, long);
-//extern  char*   strrchr(char*, int);
 //
 //extern  char*   strpbrk(char*, char*);
 //

@@ -286,11 +286,22 @@ port/tm2sec.c, pure C plus one best-effort open() of a Plan9-shaped
 config file). Full story in notes_libc_selfhost.txt's own "gmtime/
 localtime/asctime/ctime/tm2sec" section, not repeated here since none
 of this tier system's per-arch syscall-number tables apply to it.
-ls.c now compiles cleanly but does not yet link: utfrrune() (declared,
-implemented, but never added to PORTOFILES) and atexit() (declared in
-include/os/proc.h, still entirely unimplemented, reached via
-lib_core/libbio/binit.c's install()) are both needed too -- tracked in
-todo.org, not fixed as part of this.
+UPDATE: ls.c now compiles, links, AND RUNS correctly (plain ls, ls
+<dir>, and ls -l all verified against a real qemu run) -- utfrrune()
+(was implemented but never wired into UTFOFILES, and used a Go-era
+const/Rune signature this compiler can't be trusted with), strrchr()
+and strncpy() (didn't exist at all), atexit() (declared in
+include/os/proc.h, didn't exist -- port/atexit.c, port/exits.c's new
+atexitrun() seam), and dirmodefmt() (the %M fmtinstall() verb ls -l
+needs, whose absence caused a real vararg-desync segfault, not a link
+error) are all now implemented, mostly as plain copies of principia's
+own port/9sys files per this session's own "prefer principia code
+as-is" instruction. Full story in notes_libc_selfhost.txt's own
+"utfrrune()/strrchr()/strncpy()/atexit()/dirmodefmt()" section. One
+remaining real gap: atexit()-registered callbacks never run on plan9,
+since that GOOS's exits(char*) is a raw EXITS syscall bypassing the
+new atexitrun() hook entirely -- tracked in todo.org, not a syscall-
+number problem so not detailed here either.
 
 Tier 4: process control -- the actual self-hosting milestone
 ------------------------------------------------------------------------
