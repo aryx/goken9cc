@@ -116,3 +116,35 @@
 #define SYS_execve	11
 #define SYS_wait4	114
 #define SYS_pipe	42
+
+/* claude: Tier 6 notification -- see numbers_amd64.h's fuller comment
+ * for the Ksigaction/handler-shape design story. Confirmed against
+ * arch/x86/entry/syscalls/syscall_32.tbl: "37 i386 kill sys_kill",
+ * "173 i386 rt_sigreturn sys_rt_sigreturn", "174 i386 rt_sigaction
+ * sys_rt_sigaction". 32-bit arch, so flags/mask are 4 bytes native --
+ * BUT the kernel's sigset_t here is _NSIG_WORDS=2 (_NSIG=64,
+ * BITS_PER_LONG=32), i.e. 8 bytes total across two words, same as
+ * every other 32-bit non-mips arch (numbers_arm.h, numbers_riscv.h) --
+ * NOT a single 4-byte word. Getting this wrong (e.g. a bare `uint
+ * mask`) would misdeclare the struct 4 bytes short and, worse, pass
+ * the wrong sigsetsize to the syscall (checked by the kernel against
+ * its own sizeof(sigset_t), always 8 here regardless of word size).
+ */
+typedef struct Ksigaction Ksigaction;
+struct Ksigaction {
+	void	(*handler)(int);
+	uint	flags;
+	void	(*restorer)(void);
+	uint	mask[2];
+};
+#define SYS_kill	37
+#define SYS_rt_sigaction	174
+/* claude: SA_RESTORER_VAL/__NR_rt_sigreturn are real, correct facts
+ * about this arch's kernel ABI, but os/linux/notify.c does NOT
+ * actually use them on 386 -- tested and found to reliably SEGFAULT
+ * on resume when it does (arch/386/sigrestore.s's own comment has the
+ * full story). Left defined anyway as accurate reference facts, not
+ * dead code masquerading as a bug: notify.c's own `#ifdef amd64`
+ * guard around SA_RESTORER usage is the actual, deliberate gate. */
+#define SA_RESTORER_VAL	0x04000000
+#define __NR_rt_sigreturn	173

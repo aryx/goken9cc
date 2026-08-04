@@ -96,3 +96,10 @@
 //sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
 //sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
 //sys _sysrawpipe2(int *fd, int flags) int = SYS_pipe2
+
+// Tier 6 notification -- see syscall_linux_amd64.decl's identical
+// comment. numbers_mips.h's own Ksigaction is where this arch's very
+// different struct shape (flags-first, no restorer field, 16-byte
+// mask) lives -- this raw wrapper is unchanged from every other arch's.
+//sys _syskill(int pid, int sig) int = SYS_kill
+//sys _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize) int = SYS_rt_sigaction

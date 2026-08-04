@@ -102,3 +102,46 @@
 #define SYS_execve	59
 #define SYS_wait4	61
 #define SYS_pipe	22
+
+/* claude: Tier 6 notification (docs/claude_notes/plan_syscalls.txt,
+ * docs/claude_notes/notes_libc_api_design.txt's "Notes vs. signals").
+ * Confirmed against a real checkout of arch/x86/entry/syscalls/
+ * syscall_64.tbl ("13 common rt_sigaction sys_rt_sigaction", "15
+ * common rt_sigreturn sys_rt_sigreturn", "62 common kill sys_kill").
+ *
+ * Ksigaction is the raw kernel-ABI struct rt_sigaction(2) actually
+ * reads/writes -- NOT glibc's struct sigaction (different layout).
+ * Deliberately the SIMPLE (non-SA_SIGINFO) handler shape, `void
+ * (*)(int)`, matching plan9port's own BOOT/lib9/notify.c (confirmed
+ * real, working precedent, not guessed) -- os/linux/notify.c's own
+ * dispatcher only ever needs the signal NUMBER (to look up a note
+ * string), never siginfo_t/ucontext_t, so there is nothing to gain
+ * from the 3-argument form and a real category of struct-layout
+ * mistakes to lose by using it.
+ *
+ * Field widths matter more here than in most raw structs in this
+ * tree: this compiler's own `long`/`ulong` are ALWAYS 4 bytes even on
+ * 64-bit arches (see numbers_amd64.h's sibling files' own comments,
+ * and os/linux/stat_amd64.c's identical warning for Kstat) -- but the
+ * real kernel struct's sa_flags/sa_mask fields are the ARCH's native
+ * word width, 8 bytes here. So flags/mask are uvlong, matching
+ * Kstat's own explicit-width discipline, not the bare ulong that
+ * would silently misalign restorer/mask by 4 bytes each. mask is a
+ * SINGLE uvlong (not an array): amd64's kernel sigset_t is
+ * _NSIG_WORDS=1 (_NSIG=64, BITS_PER_LONG=64) -- confirmed empirically
+ * on this project's own arm64 host (identical generic-ABI sigset
+ * story, see numbers_arm64.h) and cross-checked against mips's very
+ * different _NSIG=128/_NSIG_WORDS=4 story (numbers_mips.h) to make
+ * sure this isn't just assumed uniform across every arch.
+ */
+typedef struct Ksigaction Ksigaction;
+struct Ksigaction {
+	void	(*handler)(int);
+	uvlong	flags;
+	void	(*restorer)(void);
+	uvlong	mask;
+};
+#define SYS_kill	62
+#define SYS_rt_sigaction	13
+#define SA_RESTORER_VAL	0x04000000
+#define __NR_rt_sigreturn	15

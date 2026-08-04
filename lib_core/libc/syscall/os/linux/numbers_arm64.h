@@ -117,3 +117,38 @@
 #define SYS_execve	221
 #define SYS_wait4	260
 #define SYS_pipe2	59
+
+/* claude: Tier 6 notification -- see numbers_amd64.h's fuller comment
+ * for the Ksigaction/handler-shape design story (arm64's own
+ * flags/mask widths and 1-word sigset_t are the identical 64-bit
+ * story amd64's own comment already covers). kill=129,
+ * rt_sigreturn=139, rt_sigaction=134: the "generic" ABI numbers (this
+ * arch's own asm-generic/unistd.h, no per-arch override -- same story
+ * numbers_riscv64.h's own comment already tells for openat/getdents64
+ * above). EMPIRICALLY VERIFIED NATIVELY (this project's own dev host
+ * is real arm64 Linux): a probe program built with the host's real
+ * gcc registered a handler via exactly this struct shape and these
+ * numbers, sent itself SIGALRM via a raw kill(2) syscall, and observed
+ * the handler run -- confirming both the numbers and, unlike every
+ * other Linux arch here, that this arch's kernel supplies its own
+ * default restorer even with NO SA_RESTORER/restorer set at all (a
+ * real, positively-confirmed fact, not merely "didn't test it"). This
+ * libc's own arch/arm64/sigrestore.s still supplies an explicit one
+ * anyway, the portable/standards-compliant choice, not relying on
+ * that leniency.
+ */
+typedef struct Ksigaction Ksigaction;
+struct Ksigaction {
+	void	(*handler)(int);
+	uvlong	flags;
+	void	(*restorer)(void);
+	uvlong	mask;
+};
+#define SYS_kill	129
+#define SYS_rt_sigaction	134
+/* claude: unused by os/linux/notify.c on this arch -- see
+ * numbers_arm.h's identical comment (tested WITHOUT SA_RESTORER, the
+ * kernel's own default worked fine -- matches the native-host finding
+ * a few lines up too). Kept as accurate reference facts. */
+#define SA_RESTORER_VAL	0x04000000
+#define __NR_rt_sigreturn	139

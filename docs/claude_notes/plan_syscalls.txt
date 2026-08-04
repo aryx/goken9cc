@@ -482,9 +482,20 @@ Plan9 side DONE (arm/mips) -- see notes_libc_selfhost.txt's matching
 Tier 6 entry for what was built and its verification status (build-
 verified only, not runtime-verified: machines/5i/vi don't actually
 deliver notes, a pre-existing emulator gap, same category as Tier 4's
-own fork/exec/wait one). Linux/darwin side NOT started -- still needs
-sigaction()/kill() as real syscalls first (see below), a genuinely
-separate body of work from the notify glue itself.
+own fork/exec/wait one).
+
+Linux side DONE too, all 7 arches, runtime-verified under qemu-user
+via a real tests/c/hello_libc/notify.c (see notes_libc_selfhost.txt's
+"Tier 6: notification, Linux side" entry for the full story --
+sigaction()/kill() as real raw syscalls, and a genuinely per-arch
+"sigentry" bridging trampoline whose necessity and shape varied more
+than any other tier in this file, found only by testing each arch
+individually rather than assumed uniform).
+
+darwin side NOT started -- a real, separately-shaped sigaction ABI
+(BSD/XNU, different struct and syscall numbers from Linux's), and
+unverifiable locally without a macOS host regardless (same status as
+every other darwin round in this project).
 
 Surfaced building a real, build-verified survey of what utilities/,
 mk/, and rc/ still need to self-host (not guessed from headers --

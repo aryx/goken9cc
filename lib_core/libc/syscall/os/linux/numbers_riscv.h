@@ -134,3 +134,32 @@
  * without wait to pair them, this whole tier is deferred here as one
  * gap, same "documented, not silently dropped" treatment as stat's.
  */
+
+/* claude: Tier 6 notification -- see numbers_amd64.h's fuller comment
+ * for the Ksigaction/handler-shape design story, numbers_386.h's for
+ * the 8-byte/2-word sigset_t story. Unlike Tier 4's fork/wait4 above,
+ * none of kill/rt_sigaction/rt_sigreturn are gated behind
+ * __ARCH_WANT_TIME32_SYSCALLS or any other rv32-specific guard in
+ * asm-generic/unistd.h, so this tier needs no riscv32 carve-out at
+ * all: kill=129, rt_sigaction=134, rt_sigreturn=139, the same generic-
+ * ABI numbers as arm64/riscv64 (numbers_arm64.h, numbers_riscv64.h)
+ * regardless of this arch's own 32-bit word size -- rv32 uses the
+ * SAME asm-generic/signal.h 64-signal/_NSIG_WORDS convention those do
+ * too, NOT mips's own diverged 128-signal one (numbers_mips.h) despite
+ * also being a 32-bit arch, so mask is 2 words here (8 bytes total),
+ * not 4.
+ */
+typedef struct Ksigaction Ksigaction;
+struct Ksigaction {
+	void	(*handler)(int);
+	uint	flags;
+	void	(*restorer)(void);
+	uint	mask[2];
+};
+#define SYS_kill	129
+#define SYS_rt_sigaction	134
+/* claude: unused by os/linux/notify.c on this arch -- see
+ * numbers_arm.h's identical comment (tested WITHOUT SA_RESTORER, the
+ * kernel's own default worked fine). Kept as accurate reference facts. */
+#define SA_RESTORER_VAL	0x04000000
+#define __NR_rt_sigreturn	139

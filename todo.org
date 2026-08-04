@@ -1585,7 +1585,7 @@ nil rather than crashing, and that a subsequent valid compile still
 works afterward), and with utilities/text/misc/sed.exe (amd64)
 performing a real `s/../../` substitution end to end.
 
-**** DONE (Plan9 side only): Tier 6 notification (notify/noted/atnotify/postnote)
+**** DONE: Tier 6 notification (notify/noted/atnotify/postnote), Plan9 + Linux
 claude:
 docs/claude_notes/plan_syscalls.txt's own Tier 6 section and
 docs/claude_notes/notes_libc_selfhost.txt's matching "Tier 6:
@@ -1610,11 +1610,33 @@ same category as Tier 4's own "5i/vi don't actually serve RFORK/EXEC/
 AWAIT" entry -- accepted rather than fixed (extending the interpreter
 to really deliver notes is a separate VM feature, not libc glue).
 
-Linux/darwin side NOT started: needs sigaction()/kill() as real
-syscalls first (currently zero prior work anywhere in this tree -- no
-numbers, no .decl entries, no trampoline), a genuinely separate body
-of work from the notify glue itself, deferred rather than scope-crept
-into this round.
+Linux side now DONE too, all 7 arches -- see notes_libc_selfhost.txt's
+"Tier 6: notification, Linux side, all 7 arches" entry for the full
+write-up. rt_sigaction/kill added as real raw syscalls per arch
+(numbers confirmed against real kernel source, mips diverging in
+three independent ways: numbers, a 128-signal/16-byte sigset, and a
+different, restorer-less struct shape). The real surprise of this
+round: installing the dispatcher as sa.handler needed a per-arch
+bridging trampoline (sigentry) whose necessity AND shape varied by
+arch for different reasons -- amd64/mips/riscv/riscv64 have a genuine
+kernel-ABI-register vs. this-compiler's-own-calling-convention
+mismatch; 386 needs bridging for an unrelated reason (a bare JMP to
+an external symbol doesn't work as a raw signal-handler entry point,
+confirmed by testing, not assumed); arm/arm64 need no bridging at
+all. SA_RESTORER is a separate, independently-arch-specific axis:
+only amd64 actually needs one; 386 specifically CRASHES if you add
+one back. None of this was assumed uniform from one arch's fix --
+found via isolated per-arch probes under each arch's own qemu-user
+emulator, iterated until each one actually worked. Verified via a new
+tests/c/hello_libc/notify.c, run for real (not just compiled) on all
+7 arches including riscv32 (no carve-out needed here, unlike Tier 4's
+own fork/wait4).
+
+darwin side NOT started: a real, separately-shaped sigaction ABI
+(BSD/XNU, different struct and syscall numbers from Linux's), and
+unverifiable locally without a macOS host regardless -- same status
+as every other darwin round in this project, deferred rather than
+scope-crept into this round.
 
 *** libc (or libos?) (relying on libsyscall)
 

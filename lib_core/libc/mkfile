@@ -343,18 +343,36 @@ PROCOFILES=`{if(~ $cputype riscv) echo -n; if not if(~ $GOOS linux darwin) echo 
 # "declare everywhere" convention PROCOFILES's own rfork/Waitmsg
 # already use), so it's compiled for every GOOS that has, or will
 # have, a real notify()/noted() -- plan9 (real syscalls, svc_$cputype.s
-# above) and linux/darwin (declared but NOT YET implemented: needs
-# sigaction()/kill() as real syscalls first, a genuinely separate body
-# of work, see the design doc). Left in for linux/darwin anyway,
-# unresolved-until-linked same as PROCOFILES's own riscv carve-out
-# above -- atnotify.$O compiles clean today, only fails predictably
-# for whatever program is the first to actually call atnotify() there.
-# postnote() is plan9-only here (os/plan9/postnote.c, a plain write()
-# to /proc/PID/note) -- its linux/darwin equivalent (kill()-based) is
-# part of that same not-yet-done sigaction()/kill() work, so no
-# linux/darwin postnote.$O entry exists to be silently unresolved yet.
-# windows gets nothing: no notify-shaped primitive planned there.
-NOTIFYOFILES=`{if(~ $GOOS linux darwin) echo port/atnotify.$O; if not if(~ $GOOS plan9) echo port/atnotify.$O os/plan9/postnote.$O; if not echo -n}
+# above) and now linux too (os/linux/notify.c: sigaction()-based,
+# modeled on plan9port's own BOOT/lib9/notify.c, see the design doc's
+# "Notes vs. signals" section). darwin is left in unresolved-until-
+# linked, same treatment PROCOFILES's own riscv carve-out already
+# uses -- atnotify.$O compiles clean there today, only fails
+# predictably for whatever program is the first to actually call
+# atnotify() on that GOOS, since darwin's own notify()/noted() (a
+# genuinely different, BSD-shaped sigaction ABI, not just a linux
+# recompile) is not implemented yet, unverifiable locally without a
+# macOS host anyway (same status as every other darwin round in this
+# tree). postnote() is separate per GOOS: os/plan9/postnote.c (a write()
+# to /proc/PID/note) for plan9, os/linux/notify.c's own kill()-based
+# one bundled in for linux. windows gets nothing: no notify-shaped
+# primitive planned there.
+NOTIFYOFILES=`{if(~ $GOOS linux) echo port/atnotify.$O os/linux/notify.$O; if not if(~ $GOOS darwin) echo port/atnotify.$O; if not if(~ $GOOS plan9) echo port/atnotify.$O os/plan9/postnote.$O; if not echo -n}
+
+# claude: sigrestore.$O (arch/$cputype/sigrestore.s, Tier 6) holds
+# sigentry -- the trampoline os/linux/notify.c installs as
+# Ksigaction.handler on every arch, even the ones (386/arm/arm64)
+# where it turns out to be a trivial tail-jump -- so unlike an earlier
+# version of this comment assumed, mips is NOT excluded: it still
+# needs sigentry (a real register-bridging one, since this compiler's
+# own first-argument convention for mips uses R1, not the kernel's
+# real $a0/R4 -- see arch/mips/sigrestore.s's own comment), even
+# though that arch's kernel ABI has no sa_restorer FIELD at all
+# (numbers_mips.h's own comment: "SA_RESTORER... was removed" from
+# mips entirely) and so never needs the OTHER half (a real
+# rt_sigreturn trampoline) any file here provides. Linux-only overall
+# (this file has no reason to exist on plan9/darwin/windows).
+SIGRESTOREOFILES=`{if(~ $GOOS linux) echo arch/$cputype/sigrestore.$O; if not echo -n}
 
 # UNIX/POSIX-compat implementation code (fopen/fgets/fclose -- no
 # Plan9-native equivalent at all, unlike strdup/seek/etc above, which
@@ -483,7 +501,7 @@ ARCHOFILES=\
 	$RT0OFILE\
 	$ARCHEXTRAOFILES\
 
-OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $EXITSOFILES $PROCOFILES $NOTIFYOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
+OFILES=$FMTOFILES $UTFOFILES $MATHOFILES $PORTOFILES $PORTPOSIXOFILES $SBRKOFILES $EXITSOFILES $PROCOFILES $NOTIFYOFILES $SIGRESTOREOFILES $APEOFILES $SYSCALLOFILES $OSFILES $ARCHOFILES
 
 HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 

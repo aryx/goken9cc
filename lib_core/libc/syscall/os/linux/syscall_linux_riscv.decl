@@ -61,3 +61,11 @@
 // declares the one shape it needs.
 //sys _sysclockgettime(int clockid, void *ts) int = SYS_clock_gettime
 //sys _sysclocknanosleep(int clockid, int flags, void *req, void *rem) int = SYS_clock_nanosleep
+
+// Tier 6 notification -- see syscall_linux_amd64.decl's identical
+// comment. Unlike Tier 4's fork/wait4 (this file has no _sysfork/
+// _syswait4 lines above, that whole tier deferred for rv32 -- see
+// numbers_riscv.h's own comment), kill/rt_sigaction need no riscv32
+// carve-out at all.
+//sys _syskill(int pid, int sig) int = SYS_kill
+//sys _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize) int = SYS_rt_sigaction

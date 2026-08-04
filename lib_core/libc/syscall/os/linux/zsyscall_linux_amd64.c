@@ -144,3 +144,13 @@ int _syspipe(int* fd)
 	return (int)_syscall6(SYS_pipe, (vlong)fd, 0, 0, 0, 0, 0);
 }
 
+int _syskill(int pid, int sig)
+{
+	return (int)_syscall6(SYS_kill, (vlong)pid, (vlong)sig, 0, 0, 0, 0);
+}
+
+int _sysrtsigaction(int sig, void* act, void* oact, long sigsetsize)
+{
+	return (int)_syscall6(SYS_rt_sigaction, (vlong)sig, (vlong)act, (vlong)oact, (vlong)sigsetsize, 0, 0);
+}
+

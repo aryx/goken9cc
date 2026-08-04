@@ -2129,3 +2129,146 @@ Plan9 syscall in this tree), so this is a real, pre-existing emulator
 limitation being surfaced, not new code being left unverified out of
 laziness -- same distinction Tier 4's fork.exe/stat.exe/dirread.exe
 entries already draw.
+
+Tier 6: notification, Linux side, all 7 arches
+------------------------------------------------------------------------
+
+Design pointer, same convention as above: plan_syscalls.txt's own
+Tier 6 section and notes_libc_api_design.txt's "Notes vs. signals"
+section have the reasoning behind the split (raw notify() stays
+Plan9-only; atnotify()/postnote()/noted() get a real cross-GOOS
+implementation since that's the layer every real caller uses).
+
+New: rt_sigaction/rt_sigreturn/kill added as real raw syscalls to
+every syscall/os/linux/numbers_$cputype.h (numbers confirmed against
+real kernel source per arch, not guessed -- see each file's own
+comment) and syscall_linux_$cputype.decl (_sysrtsigaction/_syskill,
+mksyscall.sh-generated). A new Ksigaction struct per arch (the raw
+kernel-ABI struct rt_sigaction(2) actually reads/writes, distinct
+from glibc's own struct sigaction) -- confirmed against real kernel
+source and cross-checked against musl's own arch/i386 restore.s and
+generic ksigaction.h where questions came up (see numbers_386.h's own
+comment). mips diverges further than any other arch here in three
+independently confirmed ways: different syscall numbers (as usual),
+double the signal range (_NSIG=128 not 64, so a 16-byte/4-word mask
+instead of everyone else's 8-byte/2-word one) and a fundamentally
+different struct (flags-first field order, no sa_restorer field at
+all -- the kernel source's own comment says SA_RESTORER support "was
+removed" from mips entirely). A new os/linux/notify.c (shared across
+every arch) gives notify()/noted()/postnote() their real
+implementation: a curated 6-signal table (SIGHUP/SIGINT/SIGQUIT/
+SIGALRM/SIGTERM/SIGPIPE -- deliberately excludes SIGUSR1/SIGUSR2, not
+because they're hard, but because their NUMBERS differ on mips
+(16/17) unlike every other signal in the table, which are numerically
+identical across all 7 arches including mips; also excludes fault
+signals SIGSEGV/SIGBUS/SIGILL/SIGFPE and job-control ones, matching
+plan9port's own BOOT/lib9/notify.c's documented exclusions for the
+same signals), a per-notification jmp_buf standing in for noted()'s
+"tell the kernel what to do next" contract (built for real now that
+Tier 7's setjmp/longjmp exists), and postnote() via kill()/-pid kill()
+for PNPROC/PNGROUP (a direct, non-lossy translation -- unlike the
+note-string side, which fails honestly on an unrecognized string
+rather than guessing a fallback signal).
+
+The real story of this round, though, is sigentry (arch/$cputype/
+sigrestore.s per arch) -- found empirically, not designed in from the
+start, and the single biggest surprise of this whole tier. A first
+version installed signotify (a plain C function taking one int)
+DIRECTLY as sa.handler, on the reasonable-looking assumption that a
+C function receiving one int argument needs no special treatment. On
+amd64 the handler always observed sig=1 regardless of which signal
+was actually sent. Root cause: the KERNEL invokes a signal handler
+using the real hardware/OS ABI (sig in EDI/RDI on amd64, a fixed,
+non-negotiable convention) -- but this compiler's OWN C calling
+convention is stack-based even on amd64 (confirmed against
+arch/amd64/rt0.s's own comment on cdecl-shaped argument passing), so
+signotify's own prologue was reading `sig` from a stack slot the
+kernel never wrote anything into. Verified per arch via an isolated
+single-signal probe (goken's own compiler, run under that arch's own
+qemu-user emulator, iterated until it actually worked, not stopped at
+"assembles/compiles clean" -- the same discipline this tier's Plan9
+round and Tier 7's setjmp round both already used), NOT assumed
+uniform from the amd64 fix, which was fortunate: the answer varies by
+arch in ways that would have been wrong to guess.
+- amd64/mips/riscv/riscv64: real argument-register mismatch, same
+  shape as the amd64 bug above -- each needed sigentry to read sig
+  from the real kernel ABI register (RDI/R4("$a0")/a0/a0) and re-stage
+  it wherever THIS compiler's own first-argument convention expects
+  it for a plain call (a stack slot on amd64; R1 on mips and R8 on
+  riscv/riscv64, both confirmed against those arches' own rt0.s
+  `MOVW ..., R1|R8 // argc` lines feeding main() -- the SAME register
+  their own _syscall6 raw-stub trampolines already use for `num`, now
+  confirmed to also be this compiler's real first-argument convention
+  for a normal C function call, not just a raw-stub-only quirk).
+  riscv/riscv64 additionally need to manually save/restore R1 (the
+  link register) around the internal JAL, since -- unlike mips/arm/
+  arm64 -- this arch's assembler does NOT auto-save it across a JAL in
+  a non-leaf block (the same fact Tier 7's own setjmp work already
+  established for riscv).
+- 386: a DIFFERENT bug entirely, found only after the first "fix"
+  (matching amd64's SA_RESTORER-based trampoline) made things WORSE,
+  not better -- a real lesson in not pattern-matching a new arch's fix
+  onto a previous one's. 386's kernel ABI happens to pass sig on the
+  stack at the exact offset this compiler's own convention already
+  expects (cdecl has no register-passed args at all), so a plain
+  direct install of signotify actually read `sig` correctly. But a
+  naive trivial trampoline (`JMP signotify(SB)`) segfaults on entry,
+  confirmed in isolation: unlike a same-file `JMP label` (a local
+  PC-relative branch, e.g. arch/386/rt0.s's own `JMP loop`), jumping to
+  ANOTHER compilation unit's external symbol this way does not work as
+  a raw kernel-invoked entry point. The real fix needed a CALL-based
+  staging trampoline like amd64's, for this unrelated reason.
+- arm/arm64: the only arches where installing signotify directly
+  actually works end to end, zero bridging needed -- confirmed via the
+  same isolated-probe methodology, not assumed from "R0/X0 already
+  looked like the right register" reasoning. Both still get a trivial
+  one-instruction tail-branch sigentry anyway, purely so
+  os/linux/notify.c's own installsig() never needs a per-arch branch.
+
+SA_RESTORER turned out to be a SEPARATE axis, independently
+arch-specific and not correlated with whether sigentry does real
+bridging work: only amd64 actually needs one (confirmed: omitting it
+leaves the handler running but the process never correctly resumes).
+mips has no such kernel field at all. Every other arch (386, arm,
+arm64, riscv, riscv64) was tested WITHOUT one and returned cleanly --
+for 386 specifically, ADDING SA_RESTORER back in (with the
+argument-bridging fix already in place) was tested too and reliably
+SEGFAULTS on resume, a real, separately confirmed regression, not
+"didn't bother trying it". Root cause of that specific crash not fully
+chased down (suspected i386 rt_sigframe layout mismatch, found via
+qemu-i386 strace showing the kernel falls back to its own legacy
+sigreturn(2) path when SA_RESTORER is omitted, which works correctly
+here); the working/broken split itself was reproduced multiple times
+across separate isolated tests, not a fluke.
+
+Debugging methodology worth keeping for the next raw-ABI-boundary bug
+in this tree: `qemu-$arch -strace ./binary` (not just running the
+binary) was what actually distinguished "crashes during signal
+delivery" from "crashes on resume after rt_sigreturn" from "crashes
+because the wrong syscall number reached the kernel" -- three
+completely different bug shapes that look identical from the outside
+(a bare segfault) but needed different fixes. Standard `print()`-based
+debug tracing was actively misleading here and cost real time before
+being caught: bio's buffered stdout can lose output entirely when the
+process dies abruptly (segfault, no clean exit to flush on), making a
+print() placed at the very top of a function look like it never ran
+when it actually did -- switching to raw `write(2, ..., n)` (an
+unbuffered syscall) for temporary debug output was what actually
+worked. Isolating a suspected bug to the smallest possible standalone
+probe (one signal, one handler, no atnotify()/dispatch-chain
+complexity) before touching the real shared notify.c was what made
+each per-arch bug tractable at all, given how different the four
+distinct root causes above turned out to be.
+
+Verified end to end via a new tests/c/hello_libc/notify.c (atnotify()
+a handler, postnote() to self twice with different note strings,
+check the handler actually ran each time and noted(NCONT) really
+resumed execution rather than the process merely surviving, then
+confirm an unrecognized note string makes postnote() fail rather than
+crash or silently succeed) -- run for real under qemu-user (not just
+compiled) on all 7 arches, including riscv32 (unlike Tier 4's own
+fork/wait4, this tier needs no riscv32 carve-out at all: kill()/
+rt_sigaction() have no __ARCH_WANT_TIME32_SYSCALLS-style gate).
+tests/c/hello_libc's full `mk test` (all 7 arches via its own
+clean-before-each-arch ARCHS loop, plus the plan9 arm/mips leg) and
+tests/s/variants's `mk test` both pass with these files in the tree.

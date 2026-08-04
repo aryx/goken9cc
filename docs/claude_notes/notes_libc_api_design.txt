@@ -143,13 +143,21 @@ corroborating a specific category:
 Notes vs. signals: a possible middle ground
 ------------------------------------------------------------------------
 
-UPDATE: the Plan9 half of this (notify()/noted() as real syscalls,
-atnotify()/postnote() built on top) is now DONE -- see
-notes_libc_selfhost.txt's "Tier 6: notification, Plan9 side (arm/mips)"
-entry. The proposal below, for the Linux/darwin half specifically, is
-still just that -- a proposal, NOT implemented, blocked on
-sigaction()/kill() not existing as real syscalls anywhere in this tree
-yet. See plan_syscalls.txt's Tier 6 section for the tracked status.
+UPDATE: both the Plan9 half (notify()/noted() as real syscalls,
+atnotify()/postnote() built on top) and the Linux half (sigaction()/
+kill()-based) of this are now DONE -- see notes_libc_selfhost.txt's
+"Tier 6: notification, Plan9 side (arm/mips)" and "...Linux side, all
+7 arches" entries. The proposal below undersold the Linux side's real
+complexity in one respect: it correctly predicted the signal<->string
+table and postnote()-via-kill() shape, but did not anticipate that
+installing the dispatcher as sa.handler would need a per-arch bridging
+trampoline at all (sigentry) -- found only once real per-arch testing
+started, not something the design pass below could have caught by
+reasoning alone. darwin is still just a proposal, not implemented, and
+a real, separately-shaped sigaction ABI besides (BSD/XNU, not a
+close cousin of Linux's the way this proposal's Linux-side reasoning
+turned out to still mostly hold). See plan_syscalls.txt's Tier 6
+section for the tracked status.
 Recorded here because the reasoning is the reusable part.
 
 The friction is structural, not just naming: Plan9 notes are free text

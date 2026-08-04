@@ -76,3 +76,8 @@
 //sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
 //sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
 //sys _syspipe(int *fd) int = SYS_pipe
+
+// Tier 6 notification -- see syscall_linux_amd64.decl's identical
+// comment.
+//sys _syskill(int pid, int sig) int = SYS_kill
+//sys _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize) int = SYS_rt_sigaction

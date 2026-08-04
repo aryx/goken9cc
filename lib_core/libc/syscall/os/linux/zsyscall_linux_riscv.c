@@ -89,3 +89,13 @@ int _sysclocknanosleep(int clockid, int flags, void* req, void* rem)
 	return (int)_syscall6(SYS_clock_nanosleep, (long)clockid, (long)flags, (long)req, (long)rem, 0, 0);
 }
 
+int _syskill(int pid, int sig)
+{
+	return (int)_syscall6(SYS_kill, (long)pid, (long)sig, 0, 0, 0, 0);
+}
+
+int _sysrtsigaction(int sig, void* act, void* oact, long sigsetsize)
+{
+	return (int)_syscall6(SYS_rt_sigaction, (long)sig, (long)act, (long)oact, (long)sigsetsize, 0, 0);
+}
+

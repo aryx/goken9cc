@@ -96,3 +96,33 @@
 #define SYS_execve	11
 #define SYS_wait4	114
 #define SYS_pipe	42
+
+/* claude: Tier 6 notification -- see numbers_amd64.h's fuller comment
+ * for the Ksigaction/handler-shape design story, numbers_386.h's for
+ * the 8-byte/2-word sigset_t story (identical here: kill=37,
+ * rt_sigreturn=173, rt_sigaction=174, same numbers as 386 -- this is
+ * one of the rows the legacy 32-bit arches happen to agree on, unlike
+ * most of the syscall table). EMPIRICALLY VERIFIED, not just read off
+ * a header: a probe program built with a real cross gcc and run under
+ * qemu-arm actually registered a handler via this struct shape and
+ * numbers, sent itself SIGALRM via kill(2), and observed the handler
+ * run -- both with and without an explicit SA_RESTORER/restorer
+ * (qemu-user accepted either; this libc's own arch/arm/sigrestore.s
+ * supplies one regardless, the portable/standards-compliant choice).
+ */
+typedef struct Ksigaction Ksigaction;
+struct Ksigaction {
+	void	(*handler)(int);
+	uint	flags;
+	void	(*restorer)(void);
+	uint	mask[2];
+};
+#define SYS_kill	37
+#define SYS_rt_sigaction	174
+/* claude: unused by os/linux/notify.c on this arch -- tested WITHOUT
+ * SA_RESTORER and the kernel's own default return mechanism worked
+ * fine (unlike 386, where omitting it is not just unneeded but
+ * REQUIRED -- see numbers_386.h's own comment for that distinction).
+ * Kept as accurate reference facts. */
+#define SA_RESTORER_VAL	0x04000000
+#define __NR_rt_sigreturn	173

@@ -116,3 +116,47 @@
 #define SYS_execve	4011
 #define SYS_wait4	4114
 #define SYS_pipe2	4328
+
+/* claude: Tier 6 notification -- see numbers_amd64.h's fuller comment
+ * for the general design (Ksigaction, simple non-SA_SIGINFO handler
+ * shape). MIPS o32 diverges further than any other arch here, in
+ * three independently confirmed ways (arch/mips/kernel/syscalls/
+ * syscall_o32.tbl and arch/mips/include/uapi/asm/signal.h, real
+ * kernel source, not guessed -- this arch has burned this project
+ * before: sysm_pipe's register-pair return, the renameat2 5th-arg
+ * drop, both docs/claude_notes/notes_libc_selfhost.txt entries):
+ *
+ * 1. Numbers: kill=4037 (+4000 legacy base, same as every other o32
+ *    syscall here), rt_sigaction=4194, rt_sigreturn=4193.
+ * 2. Signal range: MIPS's _NSIG is 128, not 64 like every other arch
+ *    in this tree (arch/mips/include/uapi/asm/signal.h: "SIGRTMIN as
+ *    32... SIGRTMAX as _NSIG", 96 realtime signals instead of the
+ *    usual 32) -- so the kernel sigset_t here is _NSIG_WORDS=4 (128 /
+ *    32-bit word), 16 bytes, not the 8-byte/2-word shape numbers_386.h/
+ *    numbers_arm.h/numbers_riscv.h share despite also being 32-bit.
+ * 3. Struct shape: MIPS's own struct sigaction is `{sa_flags;
+ *    sa_handler; sa_mask;}` -- flags FIRST, unlike every other arch's
+ *    handler-first layout -- and has NO sa_restorer field at all: the
+ *    kernel source's own comment says SA_RESTORER support "was
+ *    removed" from MIPS entirely (only O32 ever used it, no libc did),
+ *    so the kernel unconditionally supplies its own return mechanism.
+ *    SA_SIGINFO's value is also different here: 0x00000008, not the
+ *    0x00000004 every other arch in this tree uses.
+ *
+ * Net effect: os/linux/notify.c needs exactly one narrow `#ifdef mips`
+ * (matching existing precedent for this, e.g. os/linux/open.c's own
+ * O_CREAT/O_EXCL split) around the handful of lines that build/install
+ * the Ksigaction, since this arch has no restorer field to fill in and
+ * a differently-shaped mask array -- everything else (the note-string
+ * table, the setjmp/longjmp-based noted() dispatch, postnote()) is
+ * unchanged.
+ */
+typedef struct Ksigaction Ksigaction;
+struct Ksigaction {
+	uint	flags;
+	void	(*handler)(int);
+	uint	mask[4];
+};
+#define SYS_kill	4037
+#define SYS_rt_sigaction	4194
+#define __NR_rt_sigreturn	4193

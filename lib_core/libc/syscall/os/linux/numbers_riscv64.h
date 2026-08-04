@@ -94,3 +94,28 @@
 #define SYS_execve	221
 #define SYS_wait4	260
 #define SYS_pipe2	59
+
+/* claude: Tier 6 notification -- see numbers_amd64.h's fuller comment
+ * for the Ksigaction/handler-shape design story (identical 64-bit
+ * flags/mask widths and 1-word sigset_t). kill=129, rt_sigreturn=139,
+ * rt_sigaction=134: the generic-ABI numbers, same as arm64
+ * (numbers_arm64.h) and riscv32 (numbers_riscv.h) -- confirmed via
+ * this project's own arm64 dev host's asm-generic/unistd.h, which
+ * riscv64's own arch/riscv/include/uapi/asm/unistd.h defers to
+ * entirely for this row (no per-arch override, same story
+ * numbers_riscv.h's own comment already establishes for rv32).
+ */
+typedef struct Ksigaction Ksigaction;
+struct Ksigaction {
+	void	(*handler)(int);
+	uvlong	flags;
+	void	(*restorer)(void);
+	uvlong	mask;
+};
+#define SYS_kill	129
+#define SYS_rt_sigaction	134
+/* claude: unused by os/linux/notify.c on this arch -- see
+ * numbers_arm.h's identical comment (tested WITHOUT SA_RESTORER, the
+ * kernel's own default worked fine). Kept as accurate reference facts. */
+#define SA_RESTORER_VAL	0x04000000
+#define __NR_rt_sigreturn	139

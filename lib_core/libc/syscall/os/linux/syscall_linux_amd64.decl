@@ -94,3 +94,14 @@
 //sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
 //sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
 //sys _syspipe(int *fd) int = SYS_pipe
+
+// Tier 6 notification (docs/claude_notes/plan_syscalls.txt). kill()
+// needs no glue (Plan9's postnote() PNPROC/PNGROUP already map
+// directly onto kill(pid,.)/kill(-pid,.), see os/linux/notify.c) so it
+// generates straight to its public name. _sysrtsigaction takes act/
+// oact as void* -- like _sysopen's path argument, the raw layer stays
+// free of struct definitions; numbers_amd64.h's own Ksigaction is
+// where the real struct lives, and os/linux/notify.c is the one place
+// that constructs it.
+//sys _syskill(int pid, int sig) int = SYS_kill
+//sys _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize) int = SYS_rt_sigaction
