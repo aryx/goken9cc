@@ -1568,3 +1568,89 @@ minimal repro before fixing:
     up to this point and no further within this session -- the ctime()
     gap is the actual, honest stopping point, not a workaround-able
     quirk like the ones above.
+    UPDATE: fixed in a later session, see "gmtime/localtime/asctime/
+    ctime/tm2sec" section below. ls.c now compiles cleanly (0 errors),
+    but does NOT yet link -- two more, unrelated gaps surfaced by
+    actually trying: utfrrune() (used by ls.c's xcleanname() path) is
+    declared in include/utf/utf.h and implemented in
+    lib_core/libc/utf/utfrrune.c, but that file was never added to
+    PORTOFILES/UTFOFILES, so it's simply not compiled into libc.a;
+    and Binit() (ls.c's own Biobuf setup) reaches
+    lib_core/libbio/binit.c's install(), which calls atexit() --
+    declared in include/os/proc.h but, like ctime() before this
+    session, never implemented anywhere. Neither is in scope for the
+    ctime() work itself (grepped first to confirm before writing this
+    down, not assumed) -- tracked in todo.org instead of fixed here.
+
+gmtime()/localtime()/asctime()/ctime()/tm2sec() -- the date/time stack
+------------------------------------------------------------------------
+
+Investigated by grepping/finding for gmtime/localtime/tm2sec/asctime/
+ctime across lib_core/ before writing anything: ALL FIVE were entirely
+unimplemented, despite gmtime()/localtime()/tm2sec() being declared as
+if already available in include/os/time.h (only asctime()/ctime()
+were commented out) -- a materially bigger gap than "just ctime()"
+looked like from the header alone.
+
+Found a ready reference before writing anything from scratch (the same
+discipline dirread() followed): principia-softwarica's
+lib_core/libc/9sys/ctime.c (gmtime/localtime/asctime/ctime) and
+lib_core/libc/9sys/tm2sec.c (tm2sec) -- both textbook, decades-old
+Plan9 libc code, ported near-verbatim into two new portable files,
+port/ctime.c and port/tm2sec.c (lib_core/libc/mkfile's PORTOFILES),
+matching the original's own split into two translation units (each
+with its own private copy of a `timezone` struct + readtimezone()/
+rd_name()/rd_long(), rather than a shared internal header neither
+original file had).
+
+Why port/, not os/$GOOS/: unlike dirfstat() (Tier 3), nothing here is a
+raw syscall -- it's pure calendar arithmetic plus one best-effort
+open()+read()+close() of a Plan9-shaped "/env/timezone" config file
+(TZ name/offset/DST-pairs, plain text). On every GOOS other than
+plan9 that file simply doesn't exist: open() fails, readtimezone()
+falls through to its error label, and localtime() becomes a GMT-only
+alias for gmtime() -- graceful degradation, not a "too Plan9-specific"
+API-shape call the way dirfstat()'s design had to weigh (see
+plan_syscalls.txt) -- just an optional config file no non-plan9 caller
+ever needs to provide.
+
+Two real findings while writing tests/c/hello_libc/ctime.c (fixed
+expected strings, not the port itself -- the ported code matched
+Plan9's real behavior in both cases):
+
+  - ct_numb() (port/ctime.c) SPACE-pads a single-digit day of month
+    ("Jan  1", two spaces) -- the classic ctime(3) format, not
+    zero-padded ("Jan 01"). A first guess of "Jan 01" for ctime(0) was
+    written into the test, then disproved by an actual qemu run
+    ("ctime(0): wrong string: Thu Jan  1 00:00:00 GMT 1970") before
+    being corrected -- caught by running the test, not by re-reading
+    the ported code more carefully.
+  - Pre-1970 (negative tim) is NOT correctly handled by this exact
+    algorithm, and is NOT this port's own regression: gmtime()'s
+    `hms = (ulong)tim % 86400L; day = (ulong)tim / 86400L;` mixes a
+    ulong-cast dividend with a plain `long` (signed) divisor. The usual
+    arithmetic conversions promote the whole expression to unsigned
+    (confirmed directly against this project's own 6c, not assumed
+    from the C standard: a 3-line repro of exactly this expression with
+    tim=-86400 printed hms=23296, day=49709, not the small negative
+    values the very next line's `if(hms<0){hms+=86400;day-=1;}`
+    fix-up is written to expect) -- so that fix-up is dead code, and
+    gmtime(-86400) lands in the year 2106 instead of 1969. This is
+    upstream Plan9 libc's own long-standing behavior, faithfully
+    reproduced from principia's ctime.c byte-for-byte in the algorithm
+    that matters -- Plan9 systems don't see pre-1970 clock values in
+    practice, so it likely was never exercised there either.
+    tests/c/hello_libc/ctime.c documents this and deliberately does
+    NOT test a negative epoch's exact ctime() string (round-tripping
+    tm2sec(gmtime(t)) for t>=0 is tested instead).
+
+Verified: tests/c/hello_libc/ctime.c (gmtime(0)'s exact fields incl.
+wday=4/Thursday and yday=0; three ctime() strings incl. the 2000s
+"20YY" asctime() branch; three tm2sec(gmtime(t))==t round-trips) passes
+under a full `mk test` (all 7 Linux arches via qemu) AND `mk test_plan9`
+(arm/5i, mips/vi) -- the latter actually RUNS end-to-end and passes
+(unlike stat.exe/dirread.exe/proc.exe/env.exe, which are build-only
+under 5i/vi due to real emulator gaps -- see those targets' own mkfile
+comments), since ctime()'s only OS dependency (the /env/timezone
+read attempt) degrades gracefully there the same way it does on every
+non-plan9 GOOS.

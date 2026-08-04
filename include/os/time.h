@@ -25,9 +25,10 @@ extern  double  cputime(void);
 
 extern  long    tm2sec(Tm*);
 
+extern  char*   asctime(Tm*);
+extern  char*   ctime(long);
+
 // less useful?
-//extern  char*   asctime(Tm*);
-//extern  char*   ctime(long);
 //extern  long    times(long*);
 //
 //extern  void    cycles(uvlong*);    /* 64-bit value of the cycle counter if there is one, 0 if there isn't */

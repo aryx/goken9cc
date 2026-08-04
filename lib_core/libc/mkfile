@@ -143,6 +143,8 @@ PORTOFILES=\
 	port/nulldir.$O\
 	port/dirstat.$O\
 	port/dirwstat.$O\
+	port/ctime.$O\
+	port/tm2sec.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
 # but must NOT be compiled for plan9 or windows at all -- selected here

@@ -1078,6 +1078,28 @@ linux; darwin/windows os/$GOOS/ get no dirread.c at all, so anything
 that needs one fails to link there -- same shape of gap as riscv32's
 missing stat file.
 
+**** gap: utfrrune() not wired into lib_core/libc/mkfile's OFILES
+claude:
+Found while retrying utilities/files/ls.c after this session's ctime()
+work (docs/claude_notes/notes_libc_selfhost.txt) let it compile: ls.c's
+xcleanname() calls utfrrune() (include/utf/utf.h),
+which IS implemented (lib_core/libc/utf/utfrrune.c exists already,
+pre-dating this session) but was never added to PORTOFILES/UTFOFILES in
+lib_core/libc/mkfile, so it's simply absent from libc.a. Small, almost
+certainly a one-line mkfile fix -- not done here since it surfaced
+outside this session's actual task (ctime()), not because it's hard.
+
+**** gap: atexit() declared (include/os/proc.h) but not implemented anywhere
+claude:
+Also found via ls.c: Binit() (ls.c's Biobuf setup) reaches
+lib_core/libbio/binit.c's install(), which calls atexit() -- grepped
+for a definition the same way gmtime()/ctime() were checked before this
+session's work on them, and found none. Real, standalone work (a
+registered-callback list plus a call from every _exits()/exit() path,
+per-GOOS since each has its own of those), not a wiring gap like
+utfrrune() above -- likely the next thing blocking ls.c after the
+mkfile fix.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch
