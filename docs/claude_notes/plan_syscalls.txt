@@ -546,6 +546,13 @@ boot-clang) echo Posix.$O; if not echo goken.$O`-shaped selection
 lib_core/libc/mkfile's own $GOOS-conditional OFILES groups already use
 throughout -- not just adding the new file, but wiring it in.
 
+See docs/claude_notes/notes_libc_api_design.txt's own "Notes vs.
+signals" section for a fuller possible-middle-ground writeup (split
+notify() itself, left Plan9-only, from atnotify()/postnote()/noted(),
+proposed as a real cross-GOOS layer) -- not implemented, just the
+design reasoning banked for whenever this tier's Linux/darwin half
+gets picked up.
+
 Tier 7: setjmp/longjmp -- unblocks utilities/byte self-hosting, a libregexp-wide dependency
 ------------------------------------------------------------------------
 

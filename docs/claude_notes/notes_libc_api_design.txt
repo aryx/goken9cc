@@ -1,0 +1,294 @@
+libc.h API design philosophy: Plan9-clean primitives vs POSIX-compat doors
+============================================================================
+
+claude: Not tied to one syscall tier the way plan_syscalls.txt/
+notes_libc_selfhost.txt are -- this is the recurring *design* question
+that comes up every time a Plan9-clean primitive (goken's libc.h is
+modeled on Plan9's, which the project considers the cleanest OS API
+out there) meets an OS that doesn't have the same clean shape natively
+(Linux, macOS, Windows). Read this before deciding whether a new gap
+needs a POSIX-habit door built alongside the clean primitive, needs
+the clean primitive refused/kept Plan9-only, or needs something in
+between. Grown out of a survey done while scoping Tier 6 (notify/
+noted/atnotify/postnote, see plan_syscalls.txt) -- that section's own
+open design question is what prompted writing this down as a reusable
+framework instead of a one-off aside.
+
+The categories, from actual precedent already in the tree
+------------------------------------------------------------------------
+
+Every real case so far falls into one of these. They are not equally
+desirable -- A and B are the ones that actually preserve the clean
+API's primacy while still letting POSIX-habituated callers in; C/D/E
+are "no real compromise was needed here"; F/G are open or refused.
+
+A. General Plan9 primitive kept, POSIX-habit convenience wrapper added
+   on top, both fully live:
+   - rfork(int) (general, flag-based) stays; fork(void) is a one-line
+     wrapper: rfork(RFPROC|RFFDG|RFREND). See os/plan9/fork.c.
+   - wait(void) returning a rich Waitmsg (pid + time + free-text msg)
+     stays; waitpid(void) is the dumbed-down POSIX-habit door in.
+   - exits(char*)/_exits(char*) stay; exit(int) sits right alongside
+     with no steering comment at all -- the most permissive instance
+     of this pattern in the tree.
+
+B. Unix door kept, but explicitly discouraged in favor of the clean
+   Plan9 one:
+   - brk(void*) is declared, but os/mem.h says outright: "Do not use
+     brk() because it is not portable and does not really work on
+     macOS and Windows. Use sbrk() instead." Every internal caller
+     (malloc) is steered to sbrk(). This is the one direct textual
+     precedent for "provide it, but steer people off it."
+
+C. Unix door deliberately refused -- no compat API was built because
+   nothing real needed one:
+   - os/stat.h explicitly does NOT expose Plan9's raw wire-format
+     stat(char*,uchar*,int)/fstat portably. Comment: that byte-buffer
+     shape "is only meaningful on Plan9, where the kernel's own
+     FSTAT/FWSTAT syscalls genuinely speak it." Every actual caller in
+     this tree (linkers/ar/ar.c, debuggers/acid/) only ever wants the
+     Dir* struct dirstat()/dirfstat() already return.
+
+D. Unix concept present, but scoped narrowly to one internal need,
+   never elevated to a general program-facing API:
+   - errno/ERANGE/strerror exist ONLY because fmt/fltfmt.c and
+     fmt/strtod.c need ERANGE internally when a parsed float
+     overflows. os/posix/errno.h says so explicitly. Unlike exit(),
+     nobody decided errno deserved first-class status alongside
+     errstr()/werrstr()/rerrstr() -- it is not a general compat API,
+     just a leak-proofed internal detail.
+
+E. Just relabeling, not a real compromise:
+   - create()/remove() are creat()/unlink() under Plan9 spelling --
+     identical semantics, no dual API needed, no design decision to
+     make.
+
+F. Genuinely unresolved -- open questions on record elsewhere:
+   - Notes vs. signals: see the "Notes vs. signals" section below.
+   - Environment: Plan9's environment is literally files under
+     /env/* (readable/writable/watchable, per-namespace); mk/rc's
+     readenv()/exportenv() is the API for it. getenv()/putenv()
+     already exist in os/env.h in plain POSIX shape (category A/B
+     candidate, not yet resolved which). plan_syscalls.txt's Tier 6
+     section flags this as "the same open question... probably wants
+     answering once for both, not twice" -- note its own cross-
+     reference there currently says "see Tier 7 below", a stale
+     pointer from before setjmp/longjmp took the Tier 7 slot; harmless
+     but worth knowing if it's ever read literally.
+
+G. No Unix analog exists at all -- not even attempted, and probably
+   shouldn't be:
+   - os/plan9/namespace.h: bind()/mount()/unmount(), Plan9's
+     per-process private namespaces. Linux's mount namespaces are a
+     completely different (global, privileged) mechanism -- there is
+     no lossy-but-usable translation the way notes->signals at least
+     partially has one. Left untouched, correctly.
+   - os/plan9/segment.h: segattach()/segbrk()/segdetach() -- Plan9
+     segment-based memory, loosely mmap()-shaped but not surveyed or
+     attempted. Same category of future problem as notes/signals, not
+     designed yet.
+
+BOOT/lib9/: a general precedent source for this whole category of decisions
+------------------------------------------------------------------------
+
+Worth checking BEFORE designing any future Plan9-vs-Unix gap, not just
+notify/signals: BOOT/lib9/ (plan9port's own Plan9-on-Unix compat
+library, vendored here as this project's host-bootstrap reference C
+library -- the same status the "reference implementations already
+exist in BOOT/lib9/" line already carries in plan_syscalls.txt's Tier
+4 section) is a decades-proven, load-bearing answer to almost every
+category above, for real programs on real Unix systems. Three examples
+beyond notify.c/atnotify.c (already covered below), each refining or
+corroborating a specific category:
+
+- errstr.c (category D): lib9's errstr()/werrstr()/rerrstr() bridge to
+  REAL Unix errno, not just an internal-only detail -- a sentinel value
+  (EPLAN9) marks errno when a caller has explicitly set a Plan9-style
+  string via werrstr(); rerrstr() falls back to strerror(errno) only
+  when that sentinel ISN'T set, i.e. when a raw Unix syscall failure
+  is what actually happened. This is the real target design goken's
+  own errstr() doesn't implement yet -- and lib_core/libc/port/
+  errstr.c's own header comment already says exactly why, independent
+  of this survey: "NOT bridged from POSIX errno/strerror()... nothing
+  in this tree's syscall layer ever actually sets the global errno on
+  a failed call... bridging from it here would silently return an
+  empty string on every real syscall failure anyway... a real,
+  separate gap... tracked in todo.org". So this isn't a missed
+  precedent, it's a correctly-deferred one -- lib9's errstr.c is the
+  ready reference the day the syscall layer starts populating errno.
+
+- rfork.c (category A, cautionary): the inverse direction from what
+  might be assumed. lib9 does NOT get to keep the general primitive on
+  the "hard" platform the way this project's own fork()-wraps-rfork()
+  does -- it emulates the GENERAL p9rfork() on top of plain fork()/
+  wait4()/pipe()/setpgid(), including a genuinely gnarly double-fork-
+  plus-pipe-handshake ("pipe dance", the file's own name for it) just
+  to emulate RFNOWAIT, and still outright refuses true RFPROC-without-
+  RFFDG (shared-memory rfork): "cannot use rfork for shared memory --
+  use libthread". Read as validation, not just parallel precedent: it
+  shows that attempting a full general-primitive emulation on the
+  platform that lacks it natively is real, messy work with real limits
+  -- reinforcing that this project's existing shape (rfork() stays the
+  simple, real thing on Plan9; fork() is the only thing Unix gets, no
+  attempt to emulate general rfork() flags there) is the safer choice,
+  not just the lazier one.
+
+- dirstat.c (category C): builds a Dir* from native lstat()/stat() via
+  an internal marshaling helper (_p9dir()) -- independent corroboration
+  that goken's own already-settled dirstat()/dirfstat() design (Dir*
+  built directly from each GOOS's native stat data, no raw wire-format
+  stat() exposed) is the same shape plan9port itself converged on, not
+  a goken-specific choice.
+
+Notes vs. signals: a possible middle ground
+------------------------------------------------------------------------
+
+Proposal, NOT implemented -- forward-looking, see plan_syscalls.txt's
+Tier 6 section for the actual tracked open question and implementation
+status. Recorded here because the reasoning is the reusable part.
+
+The friction is structural, not just naming: Plan9 notes are free text
+("sys: trap: fault read addr=0x0", "alarm", "hangup", or literally
+anything a program invents via postnote()); Unix signals are a closed
+set of ~30 integers. This is lossier than fork->rfork ever was --
+there is no total mapping in either direction. noted(NCONT/NDFLT/
+NSAVE/NRSTR) also lets a handler tell the kernel exactly what to do
+with the *saved fault state*; only NCONT/NDFLT have a clean POSIX
+shape (return normally / restore default and re-raise). NSAVE/NRSTR
+(park the fault state, resume it later) has no real POSIX equivalent.
+
+The useful fact, from actually surveying real callers rather than
+guessing: nothing in this tree calls raw notify() directly, and
+nothing calls noted(NSAVE) or noted(NRSTR). Every real blocker
+(mk/Plan9.c, utilities/pipe/tee.c, utilities/text/misc/ed.c) goes
+through atnotify()/postnote()/noted(NCONT)/noted(NDFLT) only.
+
+That splits the problem cleanly along the category-A/B line above:
+
+- notify() itself (raw handler, Ureg*, kernel-delivered) -- keep
+  Plan9-implemented-only for now, undiminished. See the precedent
+  section below for why this is a SCOPE decision (nothing in this
+  tree calls it directly), not a technical one -- it turns out to be
+  buildable.
+- atnotify()/postnote()/noted() are Plan9's OWN higher-level
+  convenience layer on top of notify() -- principia's port/atnotify.c
+  is already a portable NFN-slot dispatch table, not kernel magic.
+  Category A/B territory, and the layer every real caller actually
+  uses -- same shape as fork() being a convenience wrapper over the
+  fully general rfork().
+
+Real precedent: BOOT/lib9's own notify.c/await.c
+------------------------------------------------------------------------
+
+notify()/atnotify() specifically (see the general BOOT/lib9/ section
+above): lib9's notify.c/atnotify.c already solve this exact problem,
+in the exact library this project already treats as authoritative
+reference elsewhere. Worth reading before designing this tier's real
+implementation, not just the summary below. Two corrections to the
+proposal above, both found by actually reading it rather than
+re-deriving from first principles:
+
+1. lib9 implements raw notify() directly on Unix -- it does NOT stop
+   at atnotify(). BOOT/lib9/notify.c's signotify() is the sigaction
+   handler for every signal in a curated table; it calls the single
+   registered notifyf(nil, notestring) exactly like a Plan9 kernel
+   would, then uses a per-notification jmp_buf (Jmp/_notejmpbuf, swap-
+   able by a thread library) so that noted(v) -- called from deep
+   inside notifyf, exactly like Plan9's own callback-then-tell-the-
+   kernel-what-next contract -- can p9longjmp() straight back into
+   signotify()'s own 3-way switch: case 0 is the fresh call, case 1 is
+   noted(NDFLT) (apply the signal's default disposition and re-raise
+   or _exit), case 2 is noted(NCONT) (just return from the handler).
+   This is a genuinely elegant real answer to "how does noted() give
+   the kernel an instruction" on a platform with no such kernel
+   concept -- adopt this jmp_buf shape directly rather than re-
+   inventing a weaker one (setjmp/longjmp already exists in this tree
+   as of the Tier 7 work, so this is now buildable here too).
+   atnotify() (BOOT/lib9/atnotify.c) is then EXACTLY principia's own
+   NFN-slot dispatch table, calling notify(notifier) once and getting
+   the chain for free -- confirms the port/atnotify.c-is-shareable
+   assumption above is correct, not just plausible.
+
+2. The void* argument notifyf receives is simply passed as nil on
+   Unix (signotify() calls `(*notifyf)(nil, ...)`) -- nothing tries to
+   synthesize a Ureg* from ucontext_t. So "notify() is hard to shim
+   because of the Ureg* argument" was an overstated objection: nobody
+   downstream (in lib9 OR in this tree's own atnotify()/tee.c/ed.c
+   callers, which never touch the void*) needs it filled with anything
+   real. The actual reason to leave notify() Plan9-only for now is
+   simply that nothing in THIS tree calls it directly yet, not that it
+   can't be done -- lib9's notify.c is a ready-to-adapt reference the
+   moment something does.
+
+The real, production-tested signal<->note-string table lives in
+BOOT/lib9/await.c (~line 15-57, `_p9sigstr()`/`_p9strsig()`), not
+invented here -- worth transcribing the shape rather than the exact
+copy, since it will need retuning for goken's own signal availability
+per GOOS (`#ifdef SIGEMT`/`SIGWINCH`/`SIGINFO` guards for BSD/macOS-
+only signals already show in the original):
+
+  SIGHUP->"hangup"      SIGINT->"interrupt"   SIGQUIT->"quit"
+  SIGALRM->"alarm"      SIGTERM->"kill"       SIGKILL->"sys: kill"
+  SIGILL->"sys: illegal instruction"      SIGTRAP->"sys: breakpoint"
+  SIGABRT->"sys: abort"    SIGFPE->"sys: fp: trap"
+  SIGBUS->"sys: bus error" SIGSEGV->"sys: segmentation violation"
+  SIGPIPE->"sys: write on closed pipe"
+  ...and a dozen more (SIGURG/STOP/TSTP/CONT/CHLD/TTIN/TTOU/IO/XCPU/
+  XFSZ/VTALRM/PROF/WINCH/INFO/USR1/USR2), all "sys: ..."-prefixed.
+  Unmapped signal numbers fall back to a generated "sys: signal %d"
+  string; unmapped note strings make _p9strsig() return 0 (no signal).
+
+Two corrections to what was speculated in the first draft of this
+proposal: no fault-address detail (si_addr) is folded into the
+SIGSEGV/SIGBUS strings the way a real Plan9 kernel note would --
+lib9 keeps it to a fixed generic string per signal, and there is no
+real precedent for going further than that, so don't. And SIGTERM and
+SIGKILL map to two DIFFERENT strings ("kill" vs "sys: kill") -- easy
+to collapse into one by accident when transcribing, don't.
+
+notify.c also implements noteenable()/notedisable()/notifyon()/
+notifyoff() (sigprocmask()/sigaction()-based selective signal
+masking) -- goken's own include/os/plan9/note.h already has these
+commented out at the bottom, apparently anticipating exactly this.
+Not needed for any current blocker (mk/tee/ed don't call them) --
+resurrect only if a real caller shows up, same "don't build a door
+nobody's knocking on" discipline as category C/D above.
+
+Revised concrete plan, if/when this gets built:
+1. port/atnotify.c ported once (from principia, per the existing
+   Tier 6 plan), shared UNCHANGED across every GOOS -- confirmed
+   shareable by lib9's own atnotify.c being effectively the same file.
+2. Linux/darwin delivery glue modeled directly on BOOT/lib9/notify.c:
+   sigaction() over a curated signal table, a per-notification
+   jmp_buf (this tree's own setjmp/longjmp, Tier 7) standing in for
+   lib9's p9jmp_buf, noted(v) implemented as
+   `longjmp(jb, v==NCONT ? 2 : 1)`, notifyf always called with nil for
+   the void* argument.
+3. The signal<->string table above, adapted (not copied verbatim) for
+   goken's own per-GOOS signal availability.
+4. postnote(PNPROC/PNGROUP, pid, msg) -> reverse-lookup msg in the
+   same table -> kill(pid, sig) / kill(-pid, sig). This direction is
+   NOT lossy -- PNPROC/PNGROUP already ARE kill(pid,.)/kill(-pgid,.),
+   a direct translation, not a compromise.
+5. Document the one real, un-fixable limitation: an arbitrary/uncommon
+   note string (anything postnote() sends that isn't in the table) has
+   no signal to map to. lib9 doesn't solve this either -- Plan9's
+   free-text notes are strictly richer than Unix's closed signal set,
+   and no shim erases that, only bounds it to the common cases real
+   code actually exercises.
+
+This keeps callers (tee.c, ed.c, a future self-hosted mk) writing the
+exact same atnotify()/postnote()/noted() calls on every GOOS, does not
+need a goken.c-style whole-file swap for this particular piece -- the
+Plan9-vs-Unix difference is small enough to isolate into just the
+delivery-glue layer, the same way darwin's fork.c/exec.c/wait.c/pipe.c
+turned out reusable unchanged from linux and only the raw syscall stub
+needed per-OS asm (see notes_libc_selfhost.txt's Tier 4 round 2 entry)
+-- and, per the precedent above, would extend cleanly to a real
+notify() implementation later without redesigning anything, since
+that's the one piece BOOT/lib9/notify.c proves out already.
+
+If a design session ever happens for this, doing the /env-vs-environ
+question (category F above) in the same pass is worth considering --
+same shape of problem, real callers already waiting (mk/rc), likely a
+per-GOOS glue file rather than a goken.c-sized rewrite either way.
