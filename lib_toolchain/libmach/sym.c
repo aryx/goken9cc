@@ -114,7 +114,12 @@ syminit(fdt fd, Fhdr *fp)
 			svalsz = 4;
 			if(Bread(&b, &l, 4) != 4)
 				return symerrmsg(4, "symbol");
-			p->value = (u32int)beswal(l);
+			// claude: was `u32int` -- the old Plan9 naming this
+			// project's own include/core/types.h explicitly
+			// moved away from (see its own comment), never
+			// migrated here. `uint32` is the current name for
+			// the same type.
+			p->value = (uint32)beswal(l);
 		}
 		if(Bread(&b, &p->type, sizeof(p->type)) != sizeof(p->type))
 			return symerrmsg(sizeof(p->value), "symbol");

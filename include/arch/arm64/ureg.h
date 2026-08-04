@@ -1,41 +1,41 @@
 
 struct Ureg {
-	u64int	r0;
-	u64int	r1;
-	u64int	r2;
-	u64int	r3;
-	u64int	r4;
-	u64int	r5;
-	u64int	r6;
-	u64int	r7;
-	u64int	r8;
-	u64int	r9;
-	u64int	r10;
-	u64int	r11;
-	u64int	r12;
-	u64int	r13;
-	u64int	r14;
-	u64int	r15;
-	u64int	r16;
-	u64int	r17;
-	u64int	r18;
-	u64int	r19;
-	u64int	r20;
-	u64int	r21;
-	u64int	r22;
-	u64int	r23;
-	u64int	r24;
-	u64int	r25;
-	u64int	r26;
-	u64int	r27;
-	u64int	r28;	/* sb */
-	u64int	r29;
+	uint64	r0;
+	uint64	r1;
+	uint64	r2;
+	uint64	r3;
+	uint64	r4;
+	uint64	r5;
+	uint64	r6;
+	uint64	r7;
+	uint64	r8;
+	uint64	r9;
+	uint64	r10;
+	uint64	r11;
+	uint64	r12;
+	uint64	r13;
+	uint64	r14;
+	uint64	r15;
+	uint64	r16;
+	uint64	r17;
+	uint64	r18;
+	uint64	r19;
+	uint64	r20;
+	uint64	r21;
+	uint64	r22;
+	uint64	r23;
+	uint64	r24;
+	uint64	r25;
+	uint64	r26;
+	uint64	r27;
+	uint64	r28;	/* sb */
+	uint64	r29;
 	union {
-		u64int	r30;
-		u64int	link;
+		uint64	r30;
+		uint64	link;
 	};
-	u64int	sp;
-	u64int	pc;	/* interrupted addr */
-	u64int	psr;
-	u64int	type;	/* of exception */
+	uint64	sp;
+	uint64	pc;	/* interrupted addr */
+	uint64	psr;
+	uint64	type;	/* of exception */
 };

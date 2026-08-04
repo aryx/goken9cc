@@ -3,6 +3,13 @@
 #include <bio.h>
 #include "mach.h"
 
+// claude: get4()'s 3rd arg is uint32* (include/arch/mach.h); every
+// call site below originally cast to `(long*)` instead, which this
+// compiler still flags as an "argument prototype mismatch" (a real,
+// fatal error here, not a warning) since long/uint32 differ in
+// signedness -- fixed to `(uint32*)`, same as 5db.c's own identical
+// gap.
+
 /*
  * i386-specific debugger interface
  */
@@ -119,7 +126,7 @@ i386trace(Map *map, uvlong pc, uvlong sp, uvlong link, Tracer trace)
 			sp += f.value-mach->szaddr;
 		}
 
-		if (get4(map, sp, (long *) &pc) < 0)
+		if (get4(map, sp, (uint32*)&pc) < 0)
 			break;
 
 		if(pc == 0)
@@ -153,7 +160,7 @@ i386frame(Map *map, uvlong addr, uvlong pc, uvlong sp, uvlong link)
 		if (s.value == addr)
 			return sp;
 
-		if (get4(map, sp, (long *)&pc) < 0)
+		if (get4(map, sp, (uint32*)&pc) < 0)
 			break;
 		sp += mach->szaddr;
 	}
@@ -1795,9 +1802,9 @@ i386foll(Map *map, uvlong pc, Rgetter rget, uvlong *foll)
 	case RET:		/* RETURN or LEAVE */
 	case Iw:		/* RETURN */
 		if (strcmp(op->proto, "LEAVE") == 0) {
-			if (get4(map, (*rget)(map, "BP"), (long*)&l) < 0)
+			if (get4(map, (*rget)(map, "BP"), (uint32*)&l) < 0)
 				return -1;
-		} else if (get4(map, (*rget)(map, mach->sp), (long*)&l) < 0)
+		} else if (get4(map, (*rget)(map, mach->sp), (uint32*)&l) < 0)
 			return -1;
 		foll[0] = l;
 		return 1;
@@ -1818,12 +1825,12 @@ i386foll(Map *map, uvlong pc, Rgetter rget, uvlong *foll)
 			/* calculate the effective address */
 		addr = i.disp;
 		if (i.base >= 0) {
-			if (get4(map, (*rget)(map, reg[i.base]), (long*)&l) < 0)
+			if (get4(map, (*rget)(map, reg[i.base]), (uint32*)&l) < 0)
 				return -1;
 			addr += l;
 		}
 		if (i.index >= 0) {
-			if (get4(map, (*rget)(map, reg[i.index]), (long*)&l) < 0)
+			if (get4(map, (*rget)(map, reg[i.index]), (uint32*)&l) < 0)
 				return -1;
 			addr += l*(1<<i.ss);
 		}
@@ -1833,7 +1840,7 @@ i386foll(Map *map, uvlong pc, Rgetter rget, uvlong *foll)
 		foll[0] = s<<4;
 		addr += 2;
 		if (i.asize == 'L') {
-			if (get4(map, addr, (long*)&l) < 0)	/* disp32 */
+			if (get4(map, addr, (uint32*)&l) < 0)	/* disp32 */
 				return -1;
 			foll[0] += l;
 		} else {					/* disp16 */

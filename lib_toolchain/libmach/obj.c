@@ -299,7 +299,10 @@ nextar(Biobuf *bp, int offset, char *buf)
 	for(i=0; i<sizeof(a.name) && i<SARNAME && a.name[i] != ' '; i++)
 		buf[i] = a.name[i];
 	buf[i] = 0;
-	arsize = atol(a.size);
+	// claude: a.size is `byte[10]` (include/objexec/ar.h's struct
+	// ar_hdr), atol() wants `char*` -- explicit cast, both are 1-byte
+	// types differing only in signedness.
+	arsize = atol((char*)a.size);
 	if (arsize&1)
 		arsize++;
 	return arsize + SAR_HDR;

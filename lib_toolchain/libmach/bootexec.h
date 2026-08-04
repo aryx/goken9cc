@@ -29,28 +29,11 @@ union{
 };
 
 
-struct i386exec
-{
-/* UNUSED
-	struct	i386coff{
-		uint32	isectmagic;
-		uint32	itime;
-		uint32	isyms;
-		uint32	insyms;
-		uint32	iflags;
-	};
-	struct	i386hdr{
-		uint32	imagic;
-		uint32	itextsize;
-		uint32	idatasize;
-		uint32	ibsssize;
-		uint32	ientry;
-		uint32	itextstart;
-		uint32	idatastart;
-	};
-	struct coffsect	itexts;
-	struct coffsect idatas;
-	struct coffsect ibsss;
-	struct coffsect icomments;
-*/
-};
+// claude: struct i386exec used to live here -- every one of its own
+// fields was already commented out "UNUSED" by the original author,
+// leaving an empty `struct i386exec { };` body that this compiler
+// can't parse ("syntax error, last name: i386exec": empty structs
+// aren't legal in this C89-ish dialect) and that's referenced nowhere
+// else in libmach (grepped, not assumed) -- deleted rather than kept
+// as a stub, per this project's "don't add backwards-compat hacks for
+// things confirmed unused" convention.

@@ -11,24 +11,30 @@ int
 ctlproc(int pid, char *msg)
 {
 	sysfatal("ctlproc unimplemented in Linux");
+	return -1; // claude: unreachable (sysfatal calls exits()), but this
+	           // compiler requires an explicit return at the end of
+	           // every non-void function regardless.
 }
 
 char*
 proctextfile(int pid)
 {
 	sysfatal("proctextfile unimplemented in Linux");
+	return nil; // claude: unreachable, see ctlproc()'s own comment.
 }
 
 char*
 procstatus(int pid)
 {
 	sysfatal("procstatus unimplemented in Linux");
+	return nil; // claude: unreachable, see ctlproc()'s own comment.
 }
 
 Map*
 attachproc(int pid, Fhdr *fp)
 {
 	sysfatal("attachproc unimplemented in Linux");
+	return nil; // claude: unreachable, see ctlproc()'s own comment.
 }
 
 void
@@ -41,4 +47,5 @@ int
 procthreadpids(int pid, int *p, int np)
 {
 	sysfatal("procthreadpids unimplemented in Linux");
+	return -1; // claude: unreachable, see ctlproc()'s own comment.
 }

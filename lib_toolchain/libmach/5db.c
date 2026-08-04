@@ -195,7 +195,10 @@ decode(Map *map, ulong pc, Instr *i)
 {
 	long w;
 
-	if(get4(map, pc, &w) < 0) {
+	// claude: get4()'s 3rd arg is uint32* (include/arch/mach.h); w is
+	// `long` (a 4-byte signed type, same width, different signedness)
+	// -- explicit cast, same fix as the other get4() call sites below.
+	if(get4(map, pc, (uint32*)&w) < 0) {
 		werrstr("can't read instruction: %r");
 		return -1;
 	}
@@ -662,7 +665,7 @@ armfmovm(Map *map, Rgetter rget, Instr *i, ulong pc)
 		return pc+4;
 
 	addr = armmaddr(map, rget, i) + nbits(i->w & BITS(0,15));
-	if(get4(map, addr, (long*)&v) < 0) {
+	if(get4(map, addr, (uint32*)&v) < 0) {
 		werrstr("can't read addr: %r");
 		return -1;
 	}
@@ -691,7 +694,7 @@ armfmov(Map *map, Rgetter rget, Instr *i, ulong pc)
 	 /* LDR */
 	/* BUG: Needs LDH/B, too */
 	if(((i->w>>26)&0x3) == 1) {
-		if(get4(map, armaddr(map, rget, i), (long*)&v) < 0) {
+		if(get4(map, armaddr(map, rget, i), (uint32*)&v) < 0) {
 			werrstr("can't read instruction: %r");
 			return pc+4;
 		}
@@ -899,7 +902,7 @@ format(char *mnemonic, Instr *i, char *f)
 			fmt = "#%lx(R%d)";
 			if (i->rn == 15) {
 				/* convert load of offset(PC) to a load immediate */
-				if (get4(i->map, i->addr+i->imm+8, &i->imm) > 0)
+				if (get4(i->map, i->addr+i->imm+8, (uint32*)&i->imm) > 0)
 				{
 					g = 1;
 					fmt = "";
@@ -910,7 +913,7 @@ format(char *mnemonic, Instr *i, char *f)
 				if (i->rd == 11) {
 					ulong nxti;
 
-					if (get4(i->map, i->addr+4, (long*)&nxti) > 0) {
+					if (get4(i->map, i->addr+4, (uint32*)&nxti) > 0) {
 						if ((nxti & 0x0e0f0fff) == 0x060c000b) {
 							i->imm += mach->sb;
 							g = 1;

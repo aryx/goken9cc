@@ -1,33 +1,33 @@
 
 struct Ureg {
-	u64int	ax;
-	u64int	bx;
-	u64int	cx;
-	u64int	dx;
-	u64int	si;
-	u64int	di;
-	u64int	bp;
+	uint64	ax;
+	uint64	bx;
+	uint64	cx;
+	uint64	dx;
+	uint64	si;
+	uint64	di;
+	uint64	bp;
 
-	u64int	r8;
-	u64int	r9;
-	u64int	r10;
-	u64int	r11;
-	u64int	r12;
-	u64int	r13;
-	u64int	r14;
-	u64int	r15;
+	uint64	r8;
+	uint64	r9;
+	uint64	r10;
+	uint64	r11;
+	uint64	r12;
+	uint64	r13;
+	uint64	r14;
+	uint64	r15;
 
-	u16int	ds;
-	u16int	es;
-	u16int	fs;
-	u16int	gs;
+	uint16	ds;
+	uint16	es;
+	uint16	fs;
+	uint16	gs;
 
-	u64int	trap; // trap type
-	u64int	ecode;		/* error code (or zero) */
+	uint64	trap; // trap type
+	uint64	ecode;		/* error code (or zero) */
 
-	u64int	pc;		/* pc */
-	u64int	cs;		/* old context */
-	u64int	flags;		/* old flags */
-	u64int	sp;		/* sp */
-	u64int	ss;		/* old stack segment */
+	uint64	pc;		/* pc */
+	uint64	cs;		/* old context */
+	uint64	flags;		/* old flags */
+	uint64	sp;		/* sp */
+	uint64	ss;		/* old stack segment */
 };

@@ -7,6 +7,12 @@
 #include	"elf.h"
 #include	"macho.h"
 
+// claude: `u32int` casts below were `u32int` -- the old Plan9 naming
+// this project's own include/core/types.h explicitly moved away from
+// (see its own comment); `uint32` is the current name for the same
+// type. Same fix as sym.c's own (uint32)beswal(l) -- see that file's
+// comment for the fuller story of how this was found.
+
 /*
  *	All a.out header types.  The dummy entry allows canonical
  *	processing of the union as a sequence of int32s
@@ -279,13 +285,13 @@ commonboot(Fhdr *fp)
 	switch(fp->type) {				/* boot image */
 	case FI386:
 		fp->type = FI386B;
-		fp->txtaddr = (u32int)fp->entry;
+		fp->txtaddr = (uint32)fp->entry;
 		fp->name = "386 plan 9 boot image";
 		fp->dataddr = _round(fp->txtaddr+fp->txtsz, mach->pgsize);
 		break;
 	case FARM:
 		fp->type = FARMB;
-		fp->txtaddr = (u32int)fp->entry;
+		fp->txtaddr = (uint32)fp->entry;
 		fp->name = "ARM plan 9 boot image";
 		fp->dataddr = _round(fp->txtaddr+fp->txtsz, mach->pgsize);
 		return;
@@ -378,15 +384,15 @@ abort();
 	switch(hp->e.exechdr.amagic) {
 	default:
 	case 0407:	/* some kind of mips */
-		settext(fp, (u32int)hp->e.mentry, (u32int)hp->e.text_start,
+		settext(fp, (uint32)hp->e.mentry, (uint32)hp->e.text_start,
 			hp->e.tsize, sizeof(struct mipsexec)+4);
-		setdata(fp, (u32int)hp->e.data_start, hp->e.dsize,
+		setdata(fp, (uint32)hp->e.data_start, hp->e.dsize,
 			fp->txtoff+hp->e.tsize, hp->e.bsize);
 		break;
 	case 0413:	/* some kind of mips */
-		settext(fp, (u32int)hp->e.mentry, (u32int)hp->e.text_start,
+		settext(fp, (uint32)hp->e.mentry, (uint32)hp->e.text_start,
 			hp->e.tsize, 0);
-		setdata(fp, (u32int)hp->e.data_start, hp->e.dsize,
+		setdata(fp, (uint32)hp->e.data_start, hp->e.dsize,
 			hp->e.tsize, hp->e.bsize);
 		break;
 	}
