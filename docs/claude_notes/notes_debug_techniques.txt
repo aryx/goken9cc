@@ -644,6 +644,59 @@ reasoning about the ABI on paper:
     principles -- treat any first attempt at these offsets as a
     hypothesis to verify live, not a formula to trust.
 
+claude: the same "register delivery from the OS does not imply the
+*compiler's* multi-argument convention is register-based too" trap
+resurfaced later, in darwin/arm64's own rt0_darwin.s (2026-08). dyld's
+LC_MAIN hands argc/argv to _main in R0/R1, and R0 (argc) happens to
+already match 7c's own register-passed first argument -- which reads
+as "no bridging needed at all" if you stop there. But 7c still expects
+argv (main's *second* parameter) on the stack, same as every other
+arch above; dyld putting it in R1 doesn't change that. The original
+file stored R1 into a global for getenv()'s benefit and called main()
+with nothing written to the outgoing-argument slot, leaving it to read
+whatever garbage the auto-inserted non-leaf prologue (see above) left
+behind -- usually harmless-looking, occasionally a small integer
+dereferenced as a pointer (`ldr x1,[x1]` with x1=0x8, EXC_BAD_ACCESS).
+Fix mirrored linux/arm64's own rt0.s next to it verbatim (`SUB
+$32,RSP,RSP; MOV R1,16(RSP)` before `BL main`) rather than re-deriving
+the offset. Lesson: when a NEW GOOS's rt0 bridge looks like it needs
+*less* work than an existing one because the OS's calling convention
+happens to overlap with the compiler's first-argument register, check
+every OTHER argument the compiler expects independently -- the
+overlap on argument #1 is a coincidence specific to that one slot, not
+evidence the rest of the bridge is unnecessary.
+
+A sibling technique for the same "no disassembler, verify the ABI fact
+live" problem, but for a *struct layout* (a raw kernel-filled buffer)
+rather than a calling convention: write two throwaway programs against
+the exact same live resource (here, `fstat()` on the same fd) -- one
+using goken's own toolchain calling the raw syscall directly, one
+compiled with the host's real compiler (clang/gcc) calling the OS's
+own libc wrapper -- memset both destination buffers to a sentinel
+(0xAA) first so untouched bytes are visually obvious, dump both as raw
+hex (`write(1, buf, sizeof(buf))` piped to `xxd`, not a field-by-field
+print that could itself be wrong), and diff programmatically (a few
+lines of Python comparing byte-for-byte and reporting the first
+differing offset) rather than eyeballing two hex dumps side by side --
+manual hex comparison across 144 bytes produced a wrong conclusion
+here on the first pass, self-corrected only once the diff was made
+mechanical. This found that the real macOS arm64 raw `fstat` trap
+number (189) actually returns the OLD/legacy narrow stat struct, not
+the modern unified one a same-numbered syscall was assumed to return
+"because arm64 postdates the stat64 unification" -- an assumption that
+turned out to be simply wrong for this real (not qemu'd) host, and
+would never have been caught without a live, real-hardware byte
+comparison (nothing about it was visible from source or from reasoning
+about the ABI on paper). The actual fix was trap 339 (`SYS_fstat64`,
+same number as amd64 already used), confirmed byte-identical to the
+reference. When both the compiler-computed struct offsets (verified
+separately by printing pointer-subtraction "offsetof" results, since
+this C dialect has no `offsetof()` macro) and the struct DEFINITION
+match the real host's, but the bytes still land wrong, the remaining
+suspect is the syscall number/ABI itself, not the struct -- don't
+re-check the struct a third time once it's already been confirmed
+twice.
+
 How to verify live when the toolchain's own binaries aren't
 disassembler-readable: this project's linkers produce ELF/Mach-O files
 that `file` recognizes but `objdump -d` and `gdb`'s own symbol loader
@@ -675,6 +728,26 @@ both reject outright ("file format not recognized") -- there is no
      12, 16, ...) this way rather than trying to compute the right one
      by hand, since the auto-push amount above is exactly the kind of
      fact this technique exists to pin down instead of assume.
+  3. When the bug only reproduces as one command inside a live,
+     multi-command repro script (see "a bug that only reproduces
+     inside a live repro script" below for how to first recognize this
+     shape at all) -- not standalone -- wrap just the failing command
+     in lldb *in place*, without extracting it from the script: `lldb
+     -b -s batchfile.txt -- ./binary args...` as that one line, where
+     batchfile.txt is a plain newline-separated command list (`run`,
+     `bt all`, `register read`, `quit`). This preserves the exact
+     process ancestry/fd/env state that the repro depends on while
+     still getting a live `EXC_BAD_ACCESS` backtrace and register dump
+     out of a linker output lldb cannot load symbols for -- the same
+     "no disassembler" constraint as above, solved the same way (live
+     inspection over static). Two rc-specific gotchas hit doing this:
+     passing multiple lldb `-o "command words"` flags inline breaks on
+     rc's quoting (a stray `"` ended up inside lldb's own argv) -- use
+     `-s batchfile.txt` instead, never inline `-o`; and rc's redirection
+     syntax is `>[2=1] file`, not `2>&1 file` -- getting this wrong
+     silently added an *extra* argv entry (the redirect target itself)
+     to the target program instead of erroring, which is worth knowing
+     before mis-reading the resulting argc as a clue.
 
 One tooling trap met while doing this: `ia` (the riscv/riscv64
 assembler, riscv64 via its `ja`/`jc`/`jl` aliases) reliably crashes
@@ -709,6 +782,37 @@ apart before suspecting the toolchain:
   few attempts) or building under a name/path not previously
   quarantined this session; do not attempt to disable or bypass the
   security tool itself.
+
+A bug that only reproduces inside a live repro script -- and looks
+like, but is NOT, the Falcon-quarantine gotcha above: `mk test_macos`
+(tests/c/hello_libc's target, 2026-08) reliably hit "Memory fault"
+running its 6th distinct freshly-built binary in the recipe, every
+single run, but the exact same binary always ran fine invoked by hand
+moments later. The surface symptom (a fresh binary crashing inside an
+automated script, fine standalone) is identical to the Falcon race
+above, and it's tempting to stop there -- but that race is
+*probabilistic* and *timing-based* ("usually works within a few
+attempts"), while this reproduced 100% of attempts, at exactly the
+same position, unaffected by inserting real delays. Two cheap checks
+tell them apart before assuming either:
+  1. Swap WHICH binary sits at the failing position (reorder the
+     recipe's commands) and rerun. If the crash follows the position
+     rather than the binary (here: whatever ran 6th crashed,
+     regardless of which of the 7 test binaries that was), the bug is
+     structural/deterministic, not file-specific flakiness.
+  2. Insert real `sleep`s (0.05s, then 1s) between each command and
+     rerun. A genuine AV-scan-timing race should shrink or disappear
+     as the delay grows; if the failure persists identically even with
+     1-second gaps, timing is not the variable and the AV-quarantine
+     explanation is ruled out.
+Both checks pointed away from Falcon here and toward a real,
+deterministic bug (see the rt0_darwin.s argv-bridge finding above,
+found via lldb per technique 3 two sections up) -- reading undefined
+stack memory that happens to differ (predictably, on this host) by
+how many prior processes the parent shell has forked, not by wall-clock
+time. Moral: "crashes only via the build script, fine standalone" is
+not, by itself, enough to diagnose the Falcon race -- run both checks
+above first.
 
 Bisecting a "mere presence of an unrelated call corrupts something else" bug
 ------------------------------------------------------------------------------
