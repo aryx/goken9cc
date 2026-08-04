@@ -91,3 +91,9 @@
  * /usr/include/asm-generic/unistd.h: getdents64=61.
  */
 #define SYS_getdents64	61
+
+// renameat2(2) -- unconditionally in the generic unistd.h (no
+// __ARCH_WANT_* guard, unlike plain renameat), used uniformly across
+// all 6 arches instead of legacy rename/renameat -- see
+// numbers_amd64.h's own comment.
+#define SYS_renameat2	276

@@ -114,3 +114,8 @@ long _sysgetdents64(int fd, void* buf, uint count)
 	return (long)_syscall6(SYS_getdents64, (long)fd, (long)buf, (long)count, 0, 0, 0);
 }
 
+long _sysrenameat2(int olddirfd, void* oldpath, int newdirfd, void* newpath, uint flags)
+{
+	return (long)_syscall6(SYS_renameat2, (long)olddirfd, (long)oldpath, (long)newdirfd, (long)newpath, (long)flags, 0);
+}
+

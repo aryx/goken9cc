@@ -80,3 +80,12 @@
  */
 #define SYS_openat	257
 #define SYS_getdents64	217
+// renameat2(2) (Linux 3.15+, arch/x86/entry/syscalls/syscall_64.tbl) --
+// used uniformly across all 6 arches instead of the older plain
+// rename(2)/renameat(2) (both also available on this arch) so
+// os/linux/dirwstat.c needs no per-arch fallback: renameat2 is the
+// only rename-family syscall confirmed present on every arch here,
+// arm64/riscv64 included (their generic unistd.h only gates legacy
+// renameat behind __ARCH_WANT_RENAMEAT, which they don't define --
+// same reasoning as their already-openat-only/unlinkat-only story).
+#define SYS_renameat2	316

@@ -93,3 +93,6 @@
  */
 #define SYS_openat	4288
 #define SYS_getdents64	4219
+// renameat2(2) -- see numbers_amd64.h's own comment for why this,
+// not plain rename/renameat, is used uniformly across all 6 arches.
+#define SYS_renameat2	4351

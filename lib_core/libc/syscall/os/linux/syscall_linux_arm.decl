@@ -68,3 +68,5 @@
 // identical comment on the openat naming.
 //sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
 //sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
+// renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
+//sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2

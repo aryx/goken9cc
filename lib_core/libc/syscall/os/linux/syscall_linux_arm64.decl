@@ -82,3 +82,5 @@
 // dirread's other raw call (Tier 3.5) -- openat() itself already
 // exists above (this arch's own _sysopen bridge).
 //sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
+// renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
+//sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2

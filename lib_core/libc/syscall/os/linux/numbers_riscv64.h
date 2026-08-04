@@ -78,3 +78,7 @@
  * number as arm64, getdents64=61 (see numbers_arm64.h's comment).
  */
 #define SYS_getdents64	61
+
+// renameat2(2) -- same generic-ABI number as arm64 (see
+// numbers_arm64.h's comment).
+#define SYS_renameat2	276

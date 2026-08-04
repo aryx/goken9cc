@@ -11,18 +11,25 @@
 #include <libc.h>
 
 /* dirwstat() by path, built portably on top of dirfwstat() by fd --
- * the write-side mirror of port/dirstat.c, same rationale.
+ * the write-side mirror of port/dirstat.c, same rationale. Used for
+ * plan9, darwin, and windows -- linux has its own os/linux/
+ * dirwstat.c instead (lib_core/libc/mkfile's DIRWSTATOFILES), see
+ * that file's header comment for why.
  *
  * Known, accepted gap, same scope as BOOT/lib9/dirwstat.c (the
  * gcc-built reference this tree is meant to stop depending on, whose
  * own comment admits as much -- "BUG handle more"): renaming via
- * Dir.name is not implemented, only mode/mtime/length (see
- * os/$GOOS/stat.c's dirfwstat()). And opening ORDWR to reach a
- * per-fd chmod/truncate/utime means a currently-unwritable file (say
- * mode 0444) can't have its mode CHANGED via this path -- chmod(1)-
- * style "make a read-only file writable" needs a real path-based
- * chmod(2), which this does not call. No caller in this tree hits
- * either gap yet.
+ * Dir.name is not implemented here, only mode/mtime/length (see
+ * os/$GOOS/stat.c's dirfwstat()) -- NOT a gap on plan9 specifically,
+ * whose dirfwstat() already renames natively through the wire
+ * protocol (os/plan9/stat.c's own comment), so this simple wrapper is
+ * genuinely enough there; darwin/windows still have the gap, same as
+ * before utilities/files/mv.c's rename path exposed it for linux.
+ * And opening ORDWR to reach a per-fd chmod/truncate/utime means a
+ * currently-unwritable file (say mode 0444) can't have its mode
+ * CHANGED via this path -- chmod(1)-style "make a read-only file
+ * writable" needs a real path-based chmod(2), which this does not
+ * call. No caller in this tree hits that second gap yet.
  */
 int
 dirwstat(char *name, Dir *d)
