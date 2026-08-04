@@ -16,3 +16,8 @@ AS=ja
 AR=iar
 
 CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/riscv64
+
+# see mkfiles/386/mkfile's own ARCHEXTRAOFILES comment. No vlop.$O
+# entry needed here (64-bit-native, no software vlong emulation), but
+# setjmp.s is still needed on every arch, this one included.
+ARCHEXTRAOFILES=arch/riscv64/setjmp.$O

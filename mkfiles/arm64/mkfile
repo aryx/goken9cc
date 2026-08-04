@@ -11,3 +11,9 @@ CC=7c
 LD=7l
 AS=7a
 AR=iar
+
+# see mkfiles/386/mkfile's own ARCHEXTRAOFILES comment. No vlop/div/
+# getcallerpc entry needed here (64-bit-native, no software vlong
+# emulation -- see lib_core/libc/mkfile's own CFLAGS comment), but
+# setjmp.s is still needed on every arch, this one included.
+ARCHEXTRAOFILES=arch/arm64/setjmp.$O

@@ -24,4 +24,4 @@ CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/386 -Dcputype386
 # fallback for this arch, expecting a real implementation instead --
 # see lib_core/libc/arch/386/getcallerpc.s and lib_core/libc/mkfile's
 # own ARCHEXTRAOFILES comment for why this is set here, not there.
-ARCHEXTRAOFILES=arch/386/getcallerpc.$O arch/386/vlop.$O
+ARCHEXTRAOFILES=arch/386/getcallerpc.$O arch/386/vlop.$O arch/386/setjmp.$O

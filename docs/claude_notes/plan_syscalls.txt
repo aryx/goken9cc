@@ -549,6 +549,14 @@ throughout -- not just adding the new file, but wiring it in.
 Tier 7: setjmp/longjmp -- unblocks utilities/byte self-hosting, a libregexp-wide dependency
 ------------------------------------------------------------------------
 
+DONE, all 7 arches -- see docs/claude_notes/notes_libc_selfhost.txt's
+own "Tier 7: setjmp/longjmp, all 7 arches" section for what was
+verified, the real arm64 bug found and fixed, and the (unrelated,
+setjmp-adjacent) libregexp.a mixed-arch-archive corruption also caught
+along the way. The design reasoning below is kept as-is since it's
+still the accurate account of WHY this tier looked the way it did
+going in.
+
 Different in KIND from every other tier here: not a syscall at all,
 pure userspace register save/restore, needed because
 lib_strings/libregexp/regcomp.c's own error-unwind path

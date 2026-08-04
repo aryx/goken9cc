@@ -18,4 +18,4 @@ CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/riscv
 # lib_core/libc/arch/riscv/vlop.s. Set here rather than in
 # lib_core/libc/mkfile for the same reason 386's/arm's are -- see
 # mkfiles/386/mkfile's own ARCHEXTRAOFILES comment.
-ARCHEXTRAOFILES=arch/riscv/vlop.$O
+ARCHEXTRAOFILES=arch/riscv/vlop.$O arch/riscv/setjmp.$O

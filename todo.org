@@ -1551,6 +1551,40 @@ with process control itself. `mk test` was failing on the resulting
 128-byte mismatch until the golden was regenerated via the mkfile's
 own `mkgoldpe` rule and re-verified with `vgoldpe`.
 
+**** DONE: setjmp/longjmp for all 7 arches (386/amd64/arm/arm64/mips/riscv/riscv64)
+claude:
+docs/claude_notes/plan_syscalls.txt's own Tier 7 section and
+docs/claude_notes/notes_libc_selfhost.txt's matching "Tier 7:
+setjmp/longjmp, all 7 arches" section have the full write-up. New
+lib_core/libc/arch/$cputype/setjmp.s per arch, wired into each
+mkfiles/$objtype/mkfile's ARCHEXTRAOFILES (arm64/riscv64 needed a new
+ARCHEXTRAOFILES line, having had none before). Verified per arch under
+qemu-user with a real nested-frame round-trip plus the ANSI
+`longjmp(j,0)`-must-return-1 edge case, not just a clean assemble.
+
+One real bug found and fixed: arm64's setjmp() stored SP straight into
+the jmp_buf (`MOV RSP, 0(R0)`), which assembles to a store with the
+value register encoded as 31 -- AArch64 hardwires 31 to XZR in a
+store's value field, not SP, so it silently stored zero; longjmp()
+later restored that zero into the real SP and segfaulted. Every other
+arch's setjmp passed immediately; only arm64 needed `7l -a` disassembly
+to root-cause. Fixed by routing the save through an intermediate
+register, matching the already-correct restore-direction line.
+
+Also caught, unrelated to setjmp itself but only reachable once it
+existed: lib_strings/libregexp's regcomp.c (the actual motivating
+caller) segfaulted on first real use after linking against a
+freshly-built-but-not-`mk clean`ed libregexp.a -- same mixed-arch
+archive corruption this file's Tier 4 entries already document for
+libc.a, just hit on libregexp.a for the first time since nothing could
+link against it before setjmp existed. `mk clean` before `install` for
+both libraries fixed it. Verified end to end with a harness that
+deliberately drives regcomp.c's rcerror()->regerror()->longjmp()
+error-unwind path with a malformed pattern (confirms regcomp() returns
+nil rather than crashing, and that a subsequent valid compile still
+works afterward), and with utilities/text/misc/sed.exe (amd64)
+performing a real `s/../../` substitution end to end.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

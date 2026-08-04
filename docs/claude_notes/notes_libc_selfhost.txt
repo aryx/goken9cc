@@ -1991,3 +1991,82 @@ more about this project's own build system:
   ones -- `mk clean` in lib_core/libc did not reliably clear these
   either in this session, so an explicit `rm` was the actual fix, not
   merely the documented-as-sufficient one.
+
+Tier 7: setjmp/longjmp, all 7 arches
+------------------------------------------------------------------------
+
+Full design pointer, same convention as above: why include/core/exn.h's
+old `typedef int jmp_buf` was hopelessly undersized, why jmp_buf has to
+be an array-of-1-struct typedef (so `setjmp(regkaboom)` -- no `&` --
+still passes a pointer, matching lib_strings/libregexp/regcomp.c's own
+usage), and the "no callee-saved registers across a call" property this
+compiler's own codegen gives for free (every backend reloads locals
+from the frame after any call, so setjmp/longjmp only need SP+PC/LR/RA,
+never general registers) all live in plan_syscalls.txt's own Tier 7
+section, not repeated here.
+
+New: lib_core/libc/arch/{386,amd64,arm,arm64,mips,riscv,riscv64}/setjmp.s,
+one hand-written pair per arch (5 of the 7 written from scratch; 386
+and arm ported in spirit from principia's own 386/setjmp.s and
+arm/setjmp.s references, which this project's other 5 arches don't
+have). Each wired into its mkfiles/$objtype/mkfile's ARCHEXTRAOFILES
+(arm64 and riscv64 had no ARCHEXTRAOFILES line at all before this --
+first 64-bit-native arches to need one, since neither carries a
+vlop.$O/div.$O software-vlong-emulation entry the way the 32-bit arches
+do).
+
+Verified per-arch via a real nested-call-frame round-trip test (stack
+padding between the setjmp() and longjmp() call sites, so a
+naive/incomplete save can't accidentally pass by luck) AND the ANSI
+`longjmp(j, 0)` -> must-return-1 edge case, both run for real under
+each arch's qemu-user emulator -- not just "it assembled/linked".
+Compiling clean is not enough evidence on this arch's own toolchain;
+see the arm64 bug below, which did exactly that and still crashed.
+
+The one real bug found, arm64: `setjmp()`'s original save-direction
+line was `MOV RSP, 0(R0)` -- storing the real SP straight into the
+jmp_buf. This assembles to a plain STR with the *value* register field
+encoded as 31, and on AArch64 encoding-31 in a store's value field is
+hardwired to XZR (the zero register), not SP -- SP only reads as
+register 31 unambiguously in specific ADD/SUB-immediate forms (the
+"mov to/from sp" idiom real ARM64 code always uses instead of a direct
+store). So the instruction silently stored zero. longjmp() later wrote
+that corrupted zero back into the real hardware SP, segfaulting on the
+next stack access. every OTHER arch's setjmp passed this same test
+immediately; only arm64 crashed, which is what made this a "go
+disassemble it" bug rather than a "reread the code" one. Root-caused
+with `7l -a`'s disassembly listing (Rt=31 on the buggy store, confirmed
+against the ISA rule, not guessed), fixed by routing the save through
+an intermediate register (`MOV RSP, R2` then `MOV R2, 0(R0)`) --
+matching the pattern the restore-direction line (`MOV R2, RSP`, an
+ADD-immediate, unaffected by this ambiguity) already used. Same
+"disassemble the actual encoding, don't trust the mnemonic" lesson
+docs/claude_notes/notes_arch_arm64.txt already has on file, now with a
+setjmp-shaped instance.
+
+Second finding, not a setjmp bug but surfaced BY it: linking
+lib_strings/libregexp's regcomp.c (the actual motivating consumer --
+its own rcerror()/regcomp1() pair is the only direct setjmp/longjmp
+caller in this codebase) against a freshly-rebuilt-but-not-cleaned
+libc.a/libregexp.a produced an unrelated, unrepeatable segfault (and,
+separately, a bogus 6l `doasm: notfound ... fmtalloc` diagnostic on
+relink) that had nothing to do with setjmp -- it was the same
+"mksyslib local libc.a needs clean between archs" mixed-object-archive
+corruption this file already documents above, just hit for the first
+time on libregexp.a too (never built per-arch before, since nothing
+could link against it pre-setjmp). `mk objtype=$arch cputype=$arch
+clean` before `install`, for BOTH lib_core/libc and
+lib_strings/libregexp, made both the corrupted-link symptom and the
+segfault disappear. Confirmed the fix (not just papered over the
+symptom) with a dedicated regcomp()/regexec() harness that deliberately
+drives the rcerror()->regerror()->longjmp() error-unwind path with a
+malformed pattern, checks regcomp() returns nil rather than crashing,
+and then successfully compiles+matches another pattern afterward to
+prove process state is still sane post-longjmp -- and with
+utilities/text/misc/sed.exe (amd64) actually performing a real `s/../../`
+substitution end to end.
+
+Full regression coverage after the fix: tests/c/hello_libc's
+`mk test` (all 7 Linux arches via its own clean-before-each-arch ARCHS
+loop, plus the plan9 arm/mips leg) and tests/s/variants's `mk test`
+both pass with these files in the tree.
