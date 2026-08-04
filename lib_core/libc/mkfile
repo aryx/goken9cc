@@ -119,8 +119,10 @@ PORTOFILES=\
 	port/strchr.$O\
 	port/strrchr.$O\
 	port/memccpy.$O\
+	port/memchr.$O\
 	port/strlen.$O\
 	port/strcpy.$O\
+	port/strcat.$O\
 	port/ctype.$O\
 	port/fabs.$O\
 	port/frexp.$O\
