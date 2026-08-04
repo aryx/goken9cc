@@ -475,6 +475,107 @@ imports needed both linkers rebuilt before a windows link would
 actually resolve them -- caught by linking a real consumer, not
 assumed from the diff.
 
+Tier 6: notification (notify/noted/atnotify/postnote) -- unblocks mk/rc/tee/ed self-hosting
+------------------------------------------------------------------------
+
+Surfaced building a real, build-verified survey of what utilities/,
+mk/, and rc/ still need to self-host (not guessed from headers --
+every item below comes from an actual `mk objtype=amd64` attempt
+against goken's own 6c/6l and lib_core/libc, collecting real
+"undefined:"/"not declared"/"no such file" output). Two independent
+things block self-hosting mk (and, by extension, rc, and a few
+utilities/): environment enumeration (see Tier 7 below) and this
+notification family. This tier is the more tractable of the two --
+almost the exact same shape as Tier 4's RFORK/EXEC/AWAIT/PIPE work.
+
+include/os/plan9/note.h ALREADY declares the full API (noted/notify/
+postnote/atnotify, NCONT/NDFLT/NSAVE/NRSTR, PNPROC/PNGROUP) but is not
+`#include`'d from libc.h at all -- the same "declared, never wired in"
+shape Tier 4's os/ipc.h and this project's own utfrrune()/runestrlen()
+history already hit repeatedly. syscall/os/plan9/sys.h already has the
+two raw syscall numbers too: NOTIFY=25, NOTED=26 (same table RFORK/
+EXEC/AWAIT/PIPE came from).
+
+Real, current blockers this would unblock, confirmed by attempting
+each self-hosted build directly:
+- mk/Plan9.c: catchnotes()/expunge() call atnotify()/postnote()
+  directly; Exit()/notifyf() reference PNPROC. This is the LAST gap in
+  mk/Plan9.c specifically -- every other call it makes (rfork/fork/
+  pipe/execl/dup/wait/dirstat/dirwstat/nulldir/access/create/waitpid)
+  already works against this libc as of the Tier 4 and utilities/
+  self-hosting rounds.
+- utilities/pipe/tee.c: `atnotify(intignore, true)` directly.
+- utilities/text/misc/ed.c: `noted(NCONT)`/`noted(NDFLT)` directly.
+
+Plan9 side: mechanically small, ported from principia almost verbatim
+(lib_core/libc/9syscall/notify.s, noted.s -- both trivial one-arg-spill
+raw stubs, SAME shape as RFORK/EXEC/AWAIT/PIPE's own svc_$cputype.s
+additions; port/atnotify.c -- pure portable C, a static NFN-slot
+function-pointer table plus one `notify(notifier)` registration call,
+no per-arch trampoline complexity needed since the KERNEL handles
+transferring control to the registered handler on a real note, unlike
+Unix's own signal-delivery convention; 9sys/postnote.c -- a plain
+write() to /proc/PID/note, no syscall of its own at all, matching this
+tier's own "Plan9 needs far fewer syscalls than the table suggests"
+precedent from Tier 4).
+
+Linux/darwin side: NOT mechanically small -- there is no Plan9-shaped
+notify/postnote primitive on either GOOS at all. The kernel-level
+equivalent is the POSIX signal family (signal(2)/sigaction(2) to
+register a handler, kill(2) to send one) -- a real, currently
+unimplemented syscall pair (numbers already recorded and then
+deliberately dropped from the Tier 4 commit as unused at the time; see
+that tier's own git history) plus a real design question: does a
+Linux/darwin atnotify()/postnote()/noted() get built as a compat shim
+over signal()/kill() (letting tee.c/ed.c/a future mk variant call the
+exact same Plan9-shaped API on every GOOS), or does this stay a
+Plan9-only family with linux/darwin callers routed to a different,
+GOOS-native mechanism instead? Not resolved here -- this is the same
+open question Tier 7 (mk/rc self-hosting) already raises for readenv()/
+exportenv(), and probably wants answering once for both, not twice
+(the user's own suggestion: a THIRD variant file per program --
+"goken.c" -- that reuses mk/Plan9.c's/rc/unix.c's already-working
+process-control code nearly verbatim, links against this libc same as
+Plan9.c does today, and only swaps in POSIX-native environ-walking and
+signal()-based notification for the two genuinely Plan9-specific
+pieces). Whichever program adopts a goken.c would also need its own
+mkfile's OFILES list turned from the current hardcoded single choice
+("Posix.$O below not Plan9.$O!", mk/mkfile's own comment) into an
+$objtype-conditional pick, the same `if(~ $objtype boot-gcc
+boot-clang) echo Posix.$O; if not echo goken.$O`-shaped selection
+lib_core/libc/mkfile's own $GOOS-conditional OFILES groups already use
+throughout -- not just adding the new file, but wiring it in.
+
+Tier 7: setjmp/longjmp -- unblocks utilities/byte self-hosting, a libregexp-wide dependency
+------------------------------------------------------------------------
+
+Different in KIND from every other tier here: not a syscall at all,
+pure userspace register save/restore, needed because
+lib_strings/libregexp/regcomp.c's own error-unwind path
+(regcomp1()/rcerror()) calls setjmp()/longjmp() directly -- meaning
+ANY consumer of libregexp that reaches a regex COMPILE ERROR needs
+this linked in, not just the one caller (utilities/byte's own TARG,
+found via `undefined: longjmp in rcerror` / `undefined: setjmp in
+regcomp1`) that happened to surface it first. include/core/exn.h
+already declares both, with its own header comment already flagging
+the gap: `typedef int jmp_buf; //TODO: jmp_buf defined in per-arch
+<u.h>` -- a single int is nowhere near wide enough to hold a real
+register-save state on any arch here.
+
+principia has per-arch reference implementations (lib_core/libc/386/
+setjmp.s, arm/setjmp.s) but only for those two arches -- this project
+targets 7 (386/amd64/arm/arm64/mips/riscv/riscv64), so at least 5 need
+writing from scratch (from each arch's own calling-convention rules,
+not copied), each needing: (1) a properly-sized jmp_buf struct in that
+arch's own include/arch/$cputype/u.h (callee-saved integer registers
+at minimum; floating-point callee-saved regs too if this compiler ever
+generates code that assumes they survive a longjmp, worth checking
+against each Xc's own ABI notes before assuming int-only suffices),
+and (2) the actual save/restore asm pair.
+
+Tier 4 (fork/exec/wait/pipe) itself
+------------------------------------------------------------------------
+
 This is what pcc (the compiler driver) and mk need to spawn
 subprocesses, i.e. the point where the toolchain can drive itself.
 Reference implementations again already exist in BOOT/lib9/:
