@@ -1122,6 +1122,39 @@ atexitrun() before the EXITS syscall, mirroring real Plan9's own
 lib9/atexit.c (which defines exits() itself, calling onex[] directly,
 sidestepping this split entirely -- see port/atexit.c's own comment).
 
+**** gap: bare `%u`/`%llud`-style unsigned decimal prints a stray trailing 'd'
+claude:
+Found while verifying utilities/files/wc.c: `%7llud` (Plan9's own
+"length modifiers then verb" idiom, used throughout ls.c/wc.c/mv.c
+etc, all ported from real Plan9 sources) printed the number correctly
+but then a literal trailing 'd', e.g. "42d" instead of "42" -- also
+present (previously unnoticed) in ls -l's dev/length columns. Root
+cause isolated to lib_core/libc/fmt/fmt.c's own verb table
+(`knownfmt[]`): it has a genuine upstream `#ifdef PLAN9PORT ... #else
+'u', __ifmt ... #endif` switch for the character 'u' -- PLAN9PORT mode
+treats 'u' as a FLAG (like 'l'/'h') meaning "the verb that follows is
+unsigned", matching `%lld`/`%llud`; non-PLAN9PORT (ANSI C) mode treats
+bare 'u' as its OWN terminal verb ("print an unsigned int in decimal"
+right there). `PLAN9PORT` is never `#define`d anywhere in this tree
+(grepped, not assumed), so it's silently in ANSI mode -- meaning
+`%llud` parses as: __ifmt('u') consumes the arg, prints it in decimal,
+and returns; the trailing 'd' is then just ordinary un-consumed
+literal text the outer dofmt() loop copies through verbatim. Explains
+the exact "number, then stray d" symptom precisely.
+
+NOT fixed here: naively defining PLAN9PORT (or just re-registering 'u'
+to `__flagfmt` in the `knownfmt[]` table) is NOT safe globally --
+lib_toolchain/libmach/5db.c's own ARM disassembler mnemonic templates
+(`"MOV%u%C%p"` etc, `bprint()` -> `vseprint()` -> this same fmt
+engine) rely on bare `%u` terminating as its own verb the way it
+already does; flipping global 'u' semantics would silently corrupt
+disassembly output there while fixing ls.c/wc.c/mv.c. A real fix needs
+either auditing every `%u`-using call site tree-wide first, or a more
+surgical dofmt.c change (peek at the character right after 'u' and
+only treat it as a flag when a length-modifier-shaped verb -- d/x/o/b/
+i -- immediately follows) -- out of scope for what was meant to be a
+"simple, useful for utilities/files" pass.
+
 *** libc (or libos?) (relying on libsyscall)
 
 ** Arch

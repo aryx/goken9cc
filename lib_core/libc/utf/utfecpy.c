@@ -1,7 +1,15 @@
 #include <u.h>
 #include <libc.h>
-#include "utf.h"
-#include "utfdef.h"
+
+/* claude: dropped the local #include "utf.h"/"utfdef.h" this file
+ * originally had (matching rune.c/utflen.c's own standalone-library
+ * style, meant to compile without <libc.h> at all) -- wiring this
+ * file into UTFOFILES means it's compiled alongside <libc.h> now (see
+ * utfrrune.c's earlier, same-shaped fix), and utfdef.h's nelem/nil
+ * macros have no header guard, so together with <libc.h>'s own
+ * equivalents (core/macros.h) they collided: "macro redefined: nelem"/
+ * "nil", a real 6c fatal error (not a warning), not assumed.
+ */
 
 char*
 utfecpy(char *to, char *e, const char *from)
