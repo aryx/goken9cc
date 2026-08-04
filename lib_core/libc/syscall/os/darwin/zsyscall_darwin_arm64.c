@@ -96,7 +96,7 @@ int _sysselect(int nd, void* in, void* ou, void* ex, void* tv)
 
 int _sysfstat(int fd, void* buf)
 {
-	return (int)_syscall6(SYS_fstat, (vlong)fd, (vlong)buf, 0, 0, 0, 0);
+	return (int)_syscall6(SYS_fstat64, (vlong)fd, (vlong)buf, 0, 0, 0, 0);
 }
 
 int _sysfchmod(int fd, int mode)

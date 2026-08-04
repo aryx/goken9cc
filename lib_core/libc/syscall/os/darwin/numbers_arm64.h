@@ -84,12 +84,22 @@
 #define SYS_select	93
 #define SYS_gettimeofday	116
 /* claude: the stat family (Tier 3) -- see numbers_amd64.h's identical
- * comment. fstat=189 here, NOT amd64's fstat64=339: arm64 macOS
- * postdates XNU's stat64 unification, so the plain syscall already
- * returns the unified struct -- same shape stat_arm64.c and
- * stat_amd64.c both build a Dir from, just this arch's own number.
+ * comment. The original guess here was plain fstat=189 on the theory
+ * that arm64 macOS postdates XNU's stat64 unification and so the plain
+ * syscall would already return the unified struct -- WRONG, disproven
+ * empirically on a real macOS 26/Darwin 25 arm64 host: trap 189 still
+ * returns the legacy narrow layout (dev, 32-bit ino, mode, nlink, ...,
+ * no birthtime), while stat_arm64.c's Kstat assumes the same unified
+ * shape stat_amd64.c does (dev, mode, nlink, 64-bit ino, ..., four
+ * timespec pairs, birthtime included). Confirmed by dumping raw fstat
+ * output byte-for-byte against a clang-compiled reference binary's
+ * libc fstat() on the same fd: trap 339 (SYS_fstat64, same number as
+ * amd64 -- this part of the BSD table really is arch-independent)
+ * matches the reference exactly; trap 189 does not. Kept the
+ * SYS_fstat64 name (not SYS_fstat) to match numbers_amd64.h and
+ * syscall_darwin_arm64.decl's own reference to it.
  * fchmod/ftruncate are the arch-independent classic-BSD numbers.
  */
-#define SYS_fstat	189
+#define SYS_fstat64	339
 #define SYS_fchmod	124
 #define SYS_ftruncate	201

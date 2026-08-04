@@ -53,6 +53,6 @@
 //sys _sysselect(int nd, void *in, void *ou, void *ex, void *tv) int = SYS_select
 // the stat family (Tier 3) -- see syscall_darwin_amd64.decl's identical
 // comment on ftruncate needing no register-pair split here.
-//sys _sysfstat(int fd, void *buf) int = SYS_fstat
+//sys _sysfstat(int fd, void *buf) int = SYS_fstat64
 //sys _sysfchmod(int fd, int mode) int = SYS_fchmod
 //sys _sysftruncate(int fd, vlong length) int = SYS_ftruncate
