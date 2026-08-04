@@ -19,38 +19,38 @@
 /*
  * fake malloc
  */
-void*
-malloc(ulong n)
-{
-    void *p;
-
-    // upper_round(n, 8)
-    while(n & 7)
-        n++;
-
-    while(nhunk < n)
-        gethunk();
-    p = hunk;
-    nhunk -= n;
-    hunk += n;
-    return p;
-}
+//void*
+//malloc(ulong n)
+//{
+//    void *p;
+//
+//    // upper_round(n, 8)
+//    while(n & 7)
+//        n++;
+//
+//    while(nhunk < n)
+//        gethunk();
+//    p = hunk;
+//    nhunk -= n;
+//    hunk += n;
+//    return p;
+//}
 /*e: function [[malloc]] */
 
 /*s: function [[free]] */
-void
-free(void *p)
-{
-    USED(p);
-}
+//void
+//free(void *p)
+//{
+//    USED(p);
+//}
 /*e: function [[free]] */
 
 /*s: function [[setmalloctag]] */
-//@Scheck: looks dead, but because we redefine malloc/free we must also redefine that
-void setmalloctag(void *v, ulong pc)
-{
-    USED(v); USED(pc);
-}
+////@Scheck: looks dead, but because we redefine malloc/free we must also redefine that
+//void setmalloctag(void *v, ulong pc)
+//{
+//    USED(v); USED(pc);
+//}
 /*e: function [[setmalloctag]] */
 #endif
 

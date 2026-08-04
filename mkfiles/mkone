@@ -6,11 +6,13 @@
 BIN=$ROOT/arch/$objtype/bin
 
 all:V:	$O.out
+
 # claude: $BOOTLIBS appended directly here rather than via a leaf
 # mkfile's own LDLIBS=$BOOTLIBS -- the latter hits a real mk quirk
 # (VAR=$UNASSIGNED becomes one stray empty argument, not zero) once
 # BOOTLIBS is itself unassigned for a self-hosted objtype. See
 # todo.org's "self-hosting utilities/mk/rc" entry for the full story.
+
 $O.out:	$OFILES $LIB
 	$LD $LDFLAGS -o $target $prereq $LDLIBS $BOOTLIBS
 

@@ -28,10 +28,6 @@ errorexit(void)
 /*e: function [[errorexit]] */
 
 /*s: function [[gethunk]] */
-/* claude: no longer called -- obj.c's Auto/Prog allocation now uses
- * malloc()/mallocz() directly instead of carving from this hunk arena,
- * matching linkers/5l/utils.c. Left commented out rather than deleted, to
- * keep the syncweb chunk marker intact. */
 //void
 //gethunk(void)
 //{
@@ -44,12 +40,11 @@ errorexit(void)
 //        if(thunk >= 25L*NHUNK)
 //            nh = 25L*NHUNK;
 //    }
-//    h = malloc(nh);
-//    if(h == nil) {
+//    h = sbrk(nh);
+//    if(h == (char*)-1) {
 //        diag("out of memory");
 //        errorexit();
 //    }
-//    memset(h, 0, nh);
 //    hunk = h;
 //    nhunk = nh;
 //    thunk += nh;
