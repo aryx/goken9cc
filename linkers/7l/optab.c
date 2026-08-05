@@ -232,6 +232,26 @@ Optab	optab[] =
 	{ AMOVB,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB,	LTO },  //
 	{ AMOVB,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  //
 	{ AMOVB,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  //
+	/* claude: AMOVBU was missing every C_LEXT/C_LAUTO/C_LOREG row its
+	 * signed counterpart AMOVB has (found compiling mk.c for the first
+	 * time on this arch/GOOS combo -- a function with a stack frame
+	 * over 32K bytes needs a MOVBU past C_UAUTO4K, and there was no
+	 * optab row at all for it beyond that, "illegal combination MOVBU
+	 * ... NONE REG"). movesize()/opldr12() (asmout.c) already handle
+	 * AMOVBU generically alongside AMOVB in cases 30/31 -- this was
+	 * purely a missing dispatch-table entry, not a missing encoder.
+	 * Confirmed against 9front's own sys/src/cmd/7l/optab.c, which has
+	 * the same six AMOVBU rows -- so this is a real, independently-hit
+	 * gap, not something invented here. One deliberate difference from
+	 * 9front, though, matching this file's own AMOVB rows just above
+	 * (see that comment): 9front sets LTO/LFROM on all three of its
+	 * AMOVBU rows (C_LEXT/C_LAUTO/C_LOREG alike), whereas here LTO/
+	 * LFROM stays on the C_LEXT row only -- C_LAUTO/C_LOREG's base is
+	 * a runtime register (SP or a general register), not a link-time
+	 * constant address, so span() has no pool entry to add for them. */
+	{ AMOVBU,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB,	LTO },  //
+	{ AMOVBU,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  //
+	{ AMOVBU,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  //
 	{ AMOVH,	C_REG,	C_NONE,	C_LEXT,		30, 8, REGSB,	LTO },  //
 	{ AMOVH,	C_REG,	C_NONE,	C_LAUTO,	30, 8, REGSP },  //
 	{ AMOVH,	C_REG,	C_NONE,	C_LOREG,	30, 8, 0 },  //
@@ -249,6 +269,9 @@ Optab	optab[] =
 	{ AMOVB,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  //
 	{ AMOVB,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  //
 	{ AMOVB,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },	//
+	{ AMOVBU,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB,	LFROM },  //
+	{ AMOVBU,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  //
+	{ AMOVBU,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  //
 	{ AMOVH,		C_LEXT,	C_NONE,	C_REG,		31, 8, REGSB,	LFROM },  //
 	{ AMOVH,		C_LAUTO,C_NONE,	C_REG,		31, 8, REGSP },  //
 	{ AMOVH,		C_LOREG,C_NONE,	C_REG,		31, 8, 0 },  //
