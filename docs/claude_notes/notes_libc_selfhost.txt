@@ -2979,3 +2979,108 @@ during environ()/putenv()). Same fix each time: `mk pe_amd64.mkgoldpe`
 to regenerate the golden, plus rebuilding linkers/6l itself first
 (pe.c is compiled into the linker binary, not read at runtime) --
 still the same "rebuild all consumers of shared lk files" lesson.
+
+darwin/arm64 runtime verification: mk and rc, real hardware, first time
+====================================================================================
+
+Every darwin round above (mk's own, rc's own, windows too) was
+compile+link only -- "no macOS host to run them on here". This round
+(2026-08) finally had one: a real Apple Silicon Mac. Building `mk
+'objtype=arm64' 'cputype=arm64' 'GOOS=darwin'
+'RT0OFILE=arch/arm64/rt0_darwin.7' install` for the first time with a
+REAL workload (not tests/c/hello_libc's small single-function
+programs) surfaced two real, previously-latent linker bugs and
+resolved a third, already-documented-but-unsolved one:
+
+- linkers/7l's gethunk()/halloc() (the sbrk()-backed hunk arena) hit
+  the exact same macOS sbrk() ~4MB cap already fixed in 8c/8l (see this
+  file's own "gethunk()/sbrk() OOM bug" section in notes_os_macos.txt)
+  -- OOM crash trying to link mk's ~23 object files + libregexp/libbio.
+  Fixed the same way 5l already had (not 8l's way -- 7l has no fake-
+  malloc-over-the-arena to disable, halloc() IS the arena directly):
+  gethunk()/halloc() removed outright, every former call site (sub.c's
+  prg(), pobj.c's lookup(), obj.c's zaddr()/ldobj(), and linkers/lk/
+  macho.c's newMachoLoad()/newMachoSeg(), shared with 6l) now calls
+  malloc() or mallocz() directly. Testing rc's own darwin/amd64 build
+  under Rosetta 2 on the same Mac (to differentially check whether a
+  bug was 7l-specific or shared) hit the IDENTICAL bug in 6l -- fixed
+  identically, and 6l's own pre-existing TODO comment in compat.c had
+  already sketched this exact fix, just never carried out since darwin/
+  amd64 had never actually been linked with real inputs before either.
+- linkers/7l's optab.c was missing every C_LEXT/C_LAUTO/C_LOREG row for
+  AMOVBU (unsigned byte move) that its signed counterpart AMOVB already
+  had -- "illegal combination MOVBU ... NONE REG" once a function's
+  stack frame offset exceeded C_UAUTO4K (4095 bytes). movesize()/
+  opldr12() (asmout.c) already handle AMOVBU generically alongside
+  AMOVB; this was purely a missing dispatch-table entry. Confirmed
+  against 9front's own optab.c, which has the same six rows (one
+  deliberate difference kept: LTO/LFROM stays on the C_LEXT row only,
+  not C_LAUTO/C_LOREG, matching this file's own AMOVB rows and their
+  existing rationale -- 9front sets it on all three).
+- The SAME build then hit todo.org's own long-standing "gap: 7l can't
+  link a function whose address-taken stack locals push an offset past
+  ~4095 bytes" ("illegal combination DWORD NONE NONE LACON", found
+  originally porting utilities/files/mv.c, never root-caused). Actually
+  root-caused this time: linkers/7l/span.c's addpool() already resolves
+  every C_UAUTO4K/.../C_LAUTO/C_LOREG operand to a plain integer pool
+  constant via aclass()'s own already-computed `instoffset` -- C_LACON
+  (the class aclass() returns for D_AUTO/D_PARAM under an effective-
+  address computation, its own `aconsize:` label) was simply missing
+  from that switch, falling through to `default: t.to = *a;` instead,
+  which keeps the ORIGINAL symbolic operand -- and that has no matching
+  ADWORD optab row. Not actually about the offset's magnitude at all
+  (confirmed: variables at offsets as small as -64 bytes hit this
+  identically, alongside a genuinely large -52000 one, in the same mk.c
+  build) -- purely about which class aclass() assigns. Fixed with one
+  `case C_LACON:` line, confirmed against 9front's own span.c, which
+  already has it in the identical list.
+
+With all three fixed, `mk` and `rc` both link as real, codesigned
+Mach-O arm64 binaries and RUN: `mk` executes real recipes via fork()+
+exec("/bin/rc") and a full `FOO=barbaz` readenv()/exportenv() round
+trip; `rc` handles echo, command substitution/pipes, list variables, an
+env round trip, and `if(cond) assignment` (no braces) -- the exact
+construct etc/rcmain.unix itself uses (`if(~ $#home 0) home=$HOME`).
+
+Two more things chased down during this round that turned out NOT to
+be bugs, worth recording so they aren't re-investigated from scratch:
+
+- rc's own `.` (dot-source) builtin failed with an empty-looking
+  "$file: rc (argv0): .: can't open: " (nothing after the final colon)
+  when given a bare relative path like "etc/rcmain.unix" via `-m`. Two
+  separate, both-correct behaviors compound into this one confusing
+  message: (1) rc/path.c's searchpath() only treats a `.`-argument as
+  cwd-relative if it starts with "/", "#", "./", or "../" -- a bare
+  "etc/rcmain.unix" (no "./" prefix) is instead searched against $path
+  like any other command name, and isn't found there, so `open()`
+  genuinely fails -- fixed trivially by using "./etc/rcmain.unix" (or
+  an absolute path) instead, exactly the same rule any other Plan9 rc
+  enforces, not a self-hosting-specific gap. (2) The empty error text:
+  rc has its OWN pfmt() (rc/fmt.c), completely separate from libc's
+  fmt.c dispatch table -- its `%r` case calls errstr() (include/os/
+  err.h, lib_core/libc/port/errstr.c), NOT libc's strerror()/errno.
+  errstr() is Plan9's own "swap the per-process error string" contract,
+  and per errstr.c's own header comment, nothing in this libc's syscall
+  layer ever calls werrstr() to populate it -- so it legitimately
+  returns "" on every failure today, on every architecture, and always
+  has. Direct strerror(errno) calls "worked" in every isolated repro
+  attempt (which is what initially looked like a 7c-specific bug, since
+  amd64/gcc never exercised this exact rc code path either) precisely
+  because that's a different, unrelated function -- the giveaway once
+  found was that swapping the real Xerror() call from `%r` to an
+  explicit `strerror(errno)` "fixed" it, which is only possible if `%r`
+  was never wired to strerror() in the first place.
+- (transient, not a bug at all) A freshly-rebuilt-then-`git checkout`ed
+  binary's ad-hoc codesignature can end up stripped/invalidated by the
+  checkout touching file metadata, producing a SIGKILL "Code Signature
+  Invalid" -- indistinguishable at first glance from the Falcon-
+  quarantine race this tree already has on record (notes_debug_
+  techniques.txt) or the C_LACON-class bug above's own crash. `codesign
+  -dv` on the binary immediately shows "code object is not signed at
+  all" if this is the cause; re-running `codesign -s - -f` fixes it in
+  one shot, no retry-loop needed (unlike the genuine Falcon race).
+
+See docs/claude_notes/notes_debug_techniques.txt's own new entry for
+the general lesson on the errstr()/strerror() misdirection (verify
+WHICH function a format verb or wrapper actually calls before treating
+a name match as a implementation match).

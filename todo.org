@@ -1090,7 +1090,7 @@ Still open, deliberately not attempted this round:
   were not surveyed at all this round (time/scope), only the
   directories that came up while chasing the specific errors above.
 
-*** TODO: self-host mk and rc themselves
+*** DONE: self-host mk and rc themselves
 claude:
 UPDATE: mk's side of this is done -- see docs/claude_notes/
 notes_libc_selfhost.txt's "mk self-hosting, Linux fully verified +
@@ -1186,6 +1186,21 @@ windows dup() gap already called for). mk/rc self-hosting is now
 complete to the compile+link bar on all three GOOSes this tree
 targets (linux fully runtime-verified, darwin and windows compile+link
 only, no host hardware for either here).
+
+UPDATE 6: darwin/arm64 now runtime-verified too, both mk and rc, real
+recipe/command execution on actual macOS/arm64 hardware -- the first
+time this tree had real macOS hardware to test on (every darwin round
+above was compile+link only). See notes_libc_selfhost.txt's own
+"darwin/arm64 runtime verification" section for the three real
+toolchain bugs this surfaced and fixed (linkers/7l's and 6l's gethunk()/
+sbrk() OOM crash, and 7l's addpool() missing C_LACON case) and the two
+apparent-but-not-real bugs it also chased down (rc's own %r verb is
+errstr()-based, not strerror()-based, and legitimately empty given this
+libc's syscall layer never calls werrstr(); and rc's searchpath()
+correctly requires an explicit "./" prefix on a relative dot-source
+argument, same as any other Plan9 rc). mk/rc self-hosting is now
+runtime-verified on linux/amd64 AND darwin/{amd64,arm64}; windows
+remains compile+link only (no host hardware here).
 Real design work, not mechanical porting like utilities/ above turned
 out to be. mk/mkfile currently only ever builds mk/Posix.c ("Posix.$O
 below not Plan9.$O!"), which wants genuinely POSIX-shaped primitives

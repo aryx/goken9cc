@@ -966,3 +966,57 @@ to `apport`), so there is nothing under `./core*` to load into gdb
 after the fact -- running the crash live under gdb from the start (as
 above) sidesteps that entirely, rather than fighting with core-dump
 configuration.
+
+A minimal repro that "fixes itself" standalone is a sign you're not
+calling the same function, not that the bug is flaky
+-----------------------------------------------------------------------------------
+
+Grown out of chasing an apparently arm64-specific rc bug (empty error
+text for `%r` after a failed dot-source, see notes_libc_selfhost.txt's
+"darwin/arm64 runtime verification" section for the full story) that
+turned out not to be a compiler bug at all. The trap: several
+progressively-closer standalone C programs (same format string, same
+errno value, same call depth even) all printed the CORRECT error text,
+while the real rc process, running the identical-looking `pfmt(err,
+"...: %r\n", ...)` line, kept printing nothing. Every one of those
+standalone repros "worked" for the same reason: they called libc's
+`strerror(errno)`/fmt.c's `%r` dispatch (`__errfmt`), because that's
+the only `%r` a fresh C program can reach. The real bug was that rc
+does NOT use libc's fmt.c at all for this -- it has its own `pfmt()`
+(rc/fmt.c) with its own hand-rolled `%r` case, calling `errstr()`
+(a completely different, Plan9-specific function) instead. A `%r` in
+one file is not the same code as a `%r` in another just because the
+verb character matches. The tell, once found: swapping the SUSPECT
+call from `%r` to an explicit `strerror(errno)` call in the SAME
+source file, at the SAME call site, "fixed" it -- which is only
+possible if `%r` was never routed through `strerror()` there in the
+first place. When a standalone reproduction keeps succeeding no matter
+how closely you match the failing call site's shape (args, types, call
+depth), stop trying to make the repro fail and instead grep for every
+definition of the function/macro/verb involved in the ACTUAL failing
+binary's own sources -- a same-named wrapper living in a
+project-specific file (here, rc/fmt.c shadowing libc/fmt/fmt.c) is easy
+to miss when the two are never `#include`d in the same place and both
+plausibly "belong" wherever the symbol resolves in your head.
+
+A stripped codesign signature after unrelated file operations looks
+exactly like a real crash -- check `codesign -dv` before debugging
+--------------------------------------------------------------------------------------------
+
+Same debugging round as above: a `git checkout -- <file>` (reverting
+scratch debug prints) on a source file, followed by rebuilding and
+re-running an unrelated already-working arm64 binary, produced a flat
+SIGKILL with no output at all -- indistinguishable at first glance from
+either the Falcon-quarantine race documented earlier in this file, or a
+genuine crash in whatever code was just touched. `codesign -dv
+<binary>` immediately told them apart: "code object is not signed at
+all" means the ad-hoc signature was silently invalidated by something
+in between (here: seemingly just file-metadata churn from `git
+checkout`, not even a rebuild of that exact binary), not a real
+process death. `codesign -s - -f <binary>` fixes it in one shot and
+the SAME invocation that just failed then succeeds immediately -- no
+retry-loop needed, unlike the actual Falcon race (which needs several
+attempts and doesn't respond to re-signing at all, since the FILE
+itself gets removed, not just de-signed). Worth checking `codesign -dv`
+first, before assuming a sudden SIGKILL on a previously-working binary
+is a new regression.
