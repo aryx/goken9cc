@@ -9,7 +9,7 @@ extern  char*   mktemp(char*);
 // for existence. 's' stands for secure. Note that it modifies in place
 // the template parameter, so you can recover the actual tmp filename
 // from it.
-//extern fdt mkstemp(char*);
+extern fdt mkstemp(char*);
 
 // ??
 //extern	int	opentemp(char*);

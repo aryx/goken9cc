@@ -8,4 +8,4 @@
 extern	char*	cleanname(char*);
 
 // plan9port specific, for "#9/..." and "#d/..." paths
-//extern	char*	unsharp(char*);
+extern	char*	unsharp(char*);
