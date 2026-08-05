@@ -31,6 +31,7 @@ TEXT _main+0(SB), $0
 	MOVQ	DI, AX
 	MOVQ	SI, BX
 	MOVQ	BX, _mainargv+0(SB)	// see port/mainargs.c
+	MOVQ	AX, _mainargc+0(SB)	// see port/mainargs.c's own _mainargc comment
 	SUBQ	$16, SP
 	MOVQ	AX, 0(SP)
 	MOVQ	BX, 8(SP)

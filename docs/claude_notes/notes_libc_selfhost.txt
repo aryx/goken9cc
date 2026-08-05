@@ -2629,10 +2629,144 @@ doesn't exist anywhere in this libc yet -- would be a genuinely NEW
 addition, not a port of an existing principia/lib9 file the way
 strecpy()/getfields() were for mk.
 
-Not yet done: reading unix.c's own Isatty()/signal()-handling in full
-to see exactly what POSIX primitive(s) it needs, writing rc/goken.c
-itself, wiring an $objtype/$GOOS-conditional OFILES pick into
-rc/mkfile (currently hardcoded to unix.$O unconditionally, would need
-the same three-way split mk/mkfile's own VARIANTOFILES got), and the
-same notify_full/partial/none-style GOOS split rc's own
-notifyf()/Trapinit() would need for the identical reason mk's did.
+rc self-hosting, DONE and runtime-verified on Linux/amd64
+=============================================================
+
+The survey above turned into real code. rc/goken.c follows mk/goken.c's
+own shape closely: Rcmain/Fdprefix/enval()/bigpath()/pathinit()/
+cmpenv()/mkenv()/Exit()/Globsize()/Malloc() copied from unix.c verbatim
+(already portable); signame[]/Eintr()/Noerror()/`interrupted` and
+Opendir()/Readdir()/Closedir() copied from plan9.c verbatim
+(dirread()/dirfstat()-based); Vinit()/Updenv() rewritten against
+environ()/putenv() (mkenv()'s own "NAME=value"-block-building logic
+reused unchanged, only how the block gets INSTALLED differs -- unix.c's
+own `environ = env;` doesn't typecheck against this tree's environ()
+being a function); Waitfor() rewritten against this libc's own
+Plan9-shaped `Waitmsg* wait(void)` instead of decoding a raw POSIX
+wstat int; Isatty() routed through a genuinely new primitive (below).
+notifyf()/Trapinit() live in their own GOOS-selected files
+(rc/notify_full.c for linux, rc/notify_partial.c... no, just
+rc/notify_none.c for darwin+windows -- rc never calls postnote()
+directly, so unlike mk's three-way split this is only a two-way one),
+wired via rc/mkfile's own new NOTIFYVARIANTOFILES.
+
+New libc additions this needed, beyond mk's own strecpy()/getfields():
+
+- isatty() (os/linux/isatty.c): a real ioctl(fd, TCGETS, &termios)
+  probe -- rc/plan9.c's own Isatty() is fd2path()-based, a real Plan9
+  syscall with no POSIX equivalent, so unlike almost everything else in
+  this file this is NOT a port of an existing principia/lib9 source,
+  it's new. Needed a new raw syscall (SYS_ioctl, all 7 arches --
+  numbers confirmed against real musl bits/syscall.h headers found
+  locally under /media/.../zig-codeberg/lib/libc/include/, cross-
+  checked against each arch's own already-on-record SYS_kill from the
+  same reference table) and TCGETS itself (0x5401 on every arch here
+  except mips, 0x540d -- confirmed against real asm-generic/mips
+  ioctls.h, the same "mips' ABI diverges from the generic table"
+  pattern Tier 6's Ksigaction/SYS_kill/SYS_ioctl numbers already hit).
+  Runtime-verified with a real pty (python's pty.openpty(), since a
+  plain qemu-x86_64 invocation under this harness has no controlling
+  terminal of its own to test the true-positive case against) --
+  isatty(0)==1 on the pty side, ==0 on a plain pipe/redirect.
+- strstr() (port/strstr.c): declared for years, never implemented.
+  Needed directly (rc/processes.c's Execute()) and internally by
+  utf/utfutf.c's own fast path.
+- utfutf() (utf/utfutf.c): already implemented, just never wired into
+  UTFOFILES before (needed by rc's Xbackq). Wiring it in surfaced a
+  real, separate bug: its own local `#include "utf.h"`/`"utfdef.h"`
+  redefines nelem/nil, macros <libc.h> already brings in -- the exact
+  "macro redefined" error utfrune.c's own header comment already
+  documents having hit and fixed the same way for itself and utfecpy.c
+  earlier this project. Fixed identically (dropped the two local
+  includes).
+- rfork()->fork() shim, but NOT in the shared rc/processes.c call site
+  this time (unlike mk's own execsh()/pipecmd() edits) -- rfork()
+  itself is defined as a one-line `return fork();` wrapper inside
+  rc/goken.c instead, since processes.c's Xasync() is a SHARED file the
+  host boot-gcc build still wants pointed at BOOT/lib9's real
+  p9rfork() (a pipe-dance emulation), and RFFDG|RFPROC|RFNOTEG's
+  intent is, same as mk's own RFENVG finding, already exactly what a
+  plain POSIX fork() gives for free.
+- needsrcquote(): copied from unix.c verbatim (fmt.c's pwrd() needs it,
+  plan9.c never defined it either -- a pre-existing gap on that side
+  too, out of scope to fix there this round).
+- rc.h's NSIG/SIGINT/SIGQUIT (rc's own trap-slot indices into
+  signame[]/syssigname[], NOT real kernel signal numbers) were only
+  defined in the `#ifndef Unix` branch, left over from when unix.h used
+  to be a much bigger real-<signal.h>-including file; unix.h is now
+  just u.h+libc.h (its own header comment), so there was no longer any
+  reason for these three to differ per branch. Moved them out of the
+  ifdef -- fixes trap.c's own "name not declared: NSIG" under
+  CFLAGS_EXTRA=-DUnix (which the original survey's grep pattern missed
+  entirely; re-found by testing trap.c standalone with -DUnix directly
+  rather than trusting an already-filtered grep a second time).
+  Simpler than the alternative (a conditional CFLAGS_EXTRA) -- see the
+  mk-plumbing bug below for why that alternative doesn't actually work.
+- unsharp() (Rcmain's "#9/etc/rcmain.unix" sharp-path resolution): not
+  implemented anywhere in this tree (include/os/path.h's own
+  declaration is commented out). rc/goken.c's pathinit() just skips the
+  translation -- Rcmain is only ever dot-sourced by main.c's own
+  bootstrap code, which already fails gracefully like any other missing
+  sourced file, true regardless since no rcmain.unix install path
+  exists for a goken-native build yet.
+
+A real mk-plumbing bug, found and reverted before it shipped: the
+first cut had rc/mkfile compute CFLAGS_EXTRA conditionally
+(`` `{if(~ $objtype boot-gcc boot-clang) echo -DUnix; if not echo -n} ``,
+mirroring VARIANTOFILES's own shape) instead of leaving -DUnix
+unconditional. This is exactly the "eagerly-substituted one-element
+empty-string list" pitfall mkfiles/mkfile.proto's own BOOTLIBS comment
+already warns about, now confirmed for a NEW case: a real empty-output
+mk backquote still yields ONE empty-string list element, not zero
+(tested directly: `for(i in $X)` with $X bound to an `echo -n`-branch
+backquote iterates once, unlike an unassigned variable or a real rc
+`()` literal) -- and unlike a FILE LIST (NOTIFYOFILES/OSGOOSOFILES,
+which silently tolerate a stray empty element), splicing that empty
+word into CFLAGS_EXTRA (embedded mid-command-line, not a whole separate
+target) makes 6c try to open "" as a source file, once per compile,
+interleaved unpredictably under this project's default NPROC=64
+parallel build (which is what made the symptom look like a random
+subset of files failing rather than every single one). Reverted to a
+plain unconditional `CFLAGS_EXTRA=-DUnix` once the NSIG/SIGINT/SIGQUIT
+fix above removed the actual reason -DUnix needed to differ per build.
+
+A second, unrelated, genuinely cross-cutting bug found via rc
+specifically but NOT rc-specific: port/getenv.c's own environ() used to
+find envp by scanning _mainargv (the raw kernel-provided argv pointer,
+captured once in arch/$cputype/rt0.s before any C code runs) for its
+terminating nil and returning the pointer right after it. That scan is
+only safe if nothing mutates the argv array in between rt0.s and the
+first environ()/getenv() call -- and rc/goken.c's own getflags() (a
+completely ordinary getopt-style parser, `argv[j-1] = argv[j]` to
+compact out a consumed flag) does exactly that, in place, to the EXACT
+SAME kernel-provided memory _mainargv points at (not a copy). This
+silently moved envp's apparent start earlier than the real one,
+surfacing as `rc -c 'echo hi'` printing "environment 'echo hi'?" --
+'echo hi' being getflags()'s own -c argument, not anything from the
+real environment; a shifted argv entry that happened to CONTAIN '='
+would have been silently imported as a bogus shell variable instead of
+even warning. Fixed properly, not worked around locally: rt0.s now
+also captures argc (a new `_mainargc` global, port/mainargs.c, stored
+in all 9 rt0*.s/rt0_darwin.s files at the same pristine pre-getflags()
+moment _mainargv already was), and environ() computes envp directly as
+`_mainargv + _mainargc + 1` instead of scanning. _mainargc is typed
+`intptr`, not `long` -- this compiler's `long` is always 4 bytes even
+on 64-bit arches (arch/arm64/u.h's own uintptr comment), and a `long`
+here put it at a BSS offset arm64's assembler rejected outright ("odd
+offset: 4") once every rt0.s started storing the full register width
+into it. Full `mk 'objtype=boot-gcc' test` suite re-run clean after
+this (every arch's libc.a rebuilds and links through it), and both
+mk's and rc's own env-round-trip tests re-verified under qemu-x86_64
+afterward.
+
+Verified, not just built: `mk -a 'objtype=amd64' 'cputype=amd64'
+'GOOS=linux' install` produces a real ELF rc binary; run under
+qemu-x86_64 against the real etc/rcmain.unix (via `-m`, since no
+install path wires up Rcmain's default location yet) it correctly
+handles command execution (`echo hi from rc`), the environ()/putenv()
+round trip (`FOO=barbaz ... rc -c 'echo FOO is $FOO'` -> "FOO is
+barbaz"), command substitution / real fork+exec+pipe (`` `{ls | wc -l} ``),
+and list variables (`x=(a b c); echo $x`). darwin/windows not attempted
+this round -- rc's own notify_none.c already covers the "no notify()"
+half of that gap the same way mk's did, but darwin/windows compile+link
+verification itself is still TODO (see todo.org).

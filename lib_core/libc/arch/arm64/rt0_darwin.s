@@ -46,6 +46,7 @@
 TEXT _main+0(SB), $0
 	MOV	$setSB(SB), R28
 	MOV	R1, _mainargv+0(SB)	// argv (dyld: R0=argc, R1=argv); see port/mainargs.c
+	MOV	R0, _mainargc+0(SB)	// see port/mainargs.c's own _mainargc comment
 	SUB	$32, RSP, RSP
 	MOV	R1, 16(RSP)	// argv, main's own (stack-passed) 2nd argument
 	BL	main+0(SB)

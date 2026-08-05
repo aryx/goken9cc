@@ -39,3 +39,32 @@
  */
 
 char **_mainargv;
+
+/* claude: _mainargc -- captured alongside _mainargv above, at the same
+ * pristine rt0.s moment, for the same reason: port/getenv.c's
+ * environ() used to find envp by scanning _mainargv for its
+ * terminating nil and returning the pointer right after it, which is
+ * only safe as long as nothing has mutated the argv array in between
+ * rt0.s and the first environ()/getenv() call. rc/goken.c's own
+ * getflags() (a normal getopt-style parser) compacts argv IN PLACE
+ * when it consumes a flag (`argv[j-1] = argv[j]`, shifting the
+ * terminating nil itself to an earlier slot) -- since _mainargv and
+ * the argv getflags() mutates are the exact same kernel-provided
+ * stack memory, not copies, this silently moved environ()'s scan
+ * start earlier than the real envp, making it read stale/shifted argv
+ * strings as if they were "NAME=value" environment entries. Found via
+ * rc -c 'echo hi' printing "environment 'echo hi'?" -- 'echo hi' being
+ * getflags()'s own -c argument, not anything from the real
+ * environment. Fixed by computing envp as _mainargv + _mainargc + 1
+ * directly (using argc captured before any mutation could happen)
+ * instead of scanning through memory that might have been rewritten
+ * since.
+ *
+ * intptr, not long: every rt0.s stores the FULL register width here
+ * (MOVQ/MOV, matching _mainargv's own pointer-width store right next
+ * to it), but this compiler's `long` is always 4 bytes even on 64-bit
+ * arches (arch/arm64/u.h's own uintptr comment). A `long` here put
+ * _mainargc at a 4-byte-only-aligned BSS offset, and arm64's assembler
+ * rejected the resulting `MOV R0,_mainargc+0(SB)` outright ("odd
+ * offset: 4") since MOV there is a full 8-byte-register store. */
+intptr _mainargc;

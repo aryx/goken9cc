@@ -160,3 +160,8 @@ struct Ksigaction {
 #define SYS_kill	4037
 #define SYS_rt_sigaction	4194
 #define __NR_rt_sigreturn	4193
+
+// rc self-hosting's Isatty() (os/linux/isatty.c) -- confirmed against
+// real mips-linux-musl/bits/syscall.h, matching this arch's own
+// SYS_kill=4037 above (same o32 reference table).
+#define SYS_ioctl	4054

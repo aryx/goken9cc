@@ -145,3 +145,8 @@ struct Ksigaction {
 #define SYS_rt_sigaction	13
 #define SA_RESTORER_VAL	0x04000000
 #define __NR_rt_sigreturn	15
+
+// rc self-hosting's Isatty() (os/linux/isatty.c) -- confirmed against
+// real x86_64-linux-musl/bits/syscall.h, cross-checked against this
+// arch's own SYS_kill=62 above matching the same reference table.
+#define SYS_ioctl	16

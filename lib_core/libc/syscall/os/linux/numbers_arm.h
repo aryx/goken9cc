@@ -126,3 +126,8 @@ struct Ksigaction {
  * Kept as accurate reference facts. */
 #define SA_RESTORER_VAL	0x04000000
 #define __NR_rt_sigreturn	173
+
+// rc self-hosting's Isatty() (os/linux/isatty.c) -- confirmed against
+// real arm-linux-musl/bits/syscall.h, matching this arch's own
+// SYS_kill=37 above (same reference table as numbers_386.h's).
+#define SYS_ioctl	54

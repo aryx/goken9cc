@@ -65,6 +65,12 @@ extern	int	dup(fdt, fdt);
 extern	long	read(fdt, void*, long);
 extern	long	write(fdt, void*, long);
 extern	vlong	seek(fdt, vlong, int);
+// claude: needed by rc/goken.c's Isatty() (a real ioctl(TCGETS) probe,
+// os/linux/isatty.c) -- rc/plan9.c's own Isatty() uses fd2path()
+// instead, a real Plan9 syscall with no POSIX equivalent, so this is a
+// genuinely new primitive, not a port of an existing principia/lib9
+// file. Only implemented for linux so far.
+extern	int	isatty(fdt);
 
 //less useful
 //extern	long	preadv(fdt, IOchunk*, int, vlong);

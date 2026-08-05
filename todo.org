@@ -1129,6 +1129,25 @@ libc primitive, not a port of an existing principia/lib9 file. Writing
 rc/goken.c itself, wiring rc/mkfile's OFILES the same three-way way
 mk/mkfile's VARIANTOFILES got, and rc's own notify_full/partial/none
 split are all still TODO.
+
+UPDATE 3: done, and runtime-verified on linux/amd64 -- see
+notes_libc_selfhost.txt's "rc self-hosting, DONE and runtime-verified
+on Linux/amd64" section. rc/goken.c written (mk/goken.c's own shape:
+reuse whichever of unix.c/plan9.c is already portable, rewrite only the
+genuinely GOOS-specific pieces); new libc primitives added along the
+way (isatty() -- a real ioctl(TCGETS) probe, all 7 arches' SYS_ioctl
+numbers; strstr(); wired utfutf() into the build, which surfaced and
+fixed the same "macro redefined: nelem/nil" bug utfrune.c's own header
+comment already had on record; an rfork()->fork() shim scoped to
+rc/goken.c itself rather than editing the shared processes.c call
+site). Also found and fixed a real, NOT rc-specific bug while
+verifying: port/getenv.c's environ() used to scan _mainargv for envp,
+which broke silently once any argv-mutating flag parser (getflags(), a
+completely ordinary one) ran first -- fixed by having rt0.s capture
+argc directly too (_mainargc, all 9 rt0*.s files) and computing envp
+without scanning. darwin/windows compile+link verification for rc
+itself (matching mk's own darwin/windows status) is the remaining
+open item.
 Real design work, not mechanical porting like utilities/ above turned
 out to be. mk/mkfile currently only ever builds mk/Posix.c ("Posix.$O
 below not Plan9.$O!"), which wants genuinely POSIX-shaped primitives

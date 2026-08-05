@@ -148,3 +148,8 @@ struct Ksigaction {
  * guard around SA_RESTORER usage is the actual, deliberate gate. */
 #define SA_RESTORER_VAL	0x04000000
 #define __NR_rt_sigreturn	173
+
+// rc self-hosting's Isatty() (os/linux/isatty.c) -- confirmed against
+// real x86-linux-musl/bits/syscall.h, matching this arch's own
+// SYS_kill=37 above (same reference table as numbers_arm.h's).
+#define SYS_ioctl	54

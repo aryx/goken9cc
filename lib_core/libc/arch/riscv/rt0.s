@@ -22,6 +22,7 @@ TEXT _main(SB), $0
 	MOVW	8(R2), R8	// argc
 	MOVW	$12(R2), R9	// argv
 	MOVW	R9, _mainargv+0(SB)	// see port/mainargs.c
+	MOVW	R8, _mainargc+0(SB)	// see port/mainargs.c's own _mainargc comment
 	SUB	$12, R2
 	MOVW	R9, 8(R2)
 	JAL	R1, main(SB)

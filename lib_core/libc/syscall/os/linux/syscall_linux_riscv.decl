@@ -69,3 +69,10 @@
 // carve-out at all.
 //sys _syskill(int pid, int sig) int = SYS_kill
 //sys _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize) int = SYS_rt_sigaction
+
+// rc self-hosting's Isatty() (os/linux/isatty.c). arg stays void*
+// like _sysrtsigaction's act/oact above -- the raw layer stays free
+// of struct definitions, os/linux/isatty.c is the one place that
+// knows it points at a struct termios it never even reads (only
+// checks the ioctl's own success/failure).
+//sys _sysioctl(int fd, ulong request, void *arg) int = SYS_ioctl

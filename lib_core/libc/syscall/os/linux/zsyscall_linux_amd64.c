@@ -154,3 +154,8 @@ int _sysrtsigaction(int sig, void* act, void* oact, long sigsetsize)
 	return (int)_syscall6(SYS_rt_sigaction, (vlong)sig, (vlong)act, (vlong)oact, (vlong)sigsetsize, 0, 0);
 }
 
+int _sysioctl(int fd, ulong request, void* arg)
+{
+	return (int)_syscall6(SYS_ioctl, (vlong)fd, (vlong)request, (vlong)arg, 0, 0, 0);
+}
+

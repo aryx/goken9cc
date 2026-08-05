@@ -20,6 +20,7 @@ TEXT _main(SB), $0
 	MOV	8(R2), R8	// argc
 	MOV	$16(R2), R9	// argv
 	MOV	R9, _mainargv+0(SB)	// see port/mainargs.c
+	MOV	R8, _mainargc+0(SB)	// see port/mainargs.c's own _mainargc comment
 	SUB	$24, R2
 	MOV	R9, 16(R2)
 	JAL	R1, main(SB)

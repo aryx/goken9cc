@@ -1,7 +1,14 @@
 #include <u.h>
 #include <libc.h>
-#include "utf.h"
-#include "utfdef.h"
+
+/* claude: dropped local "utf.h"/"utfdef.h" includes -- same
+ * "macro redefined: nelem"/"nil" fix already applied to utfrune.c/
+ * utfecpy.c (see utfrune.c's own header comment): both duplicate
+ * macros <libc.h> already brings in, and everything this file uses
+ * (Rune, chartorune, Runesync, strstr, utfrune, strncmp, strlen) is
+ * already declared there. Found wiring utfutf() into the build for
+ * the first time (rc self-hosting's Xbackq -- docs/claude_notes/
+ * notes_libc_selfhost.txt's "rc self-hosting survey"). */
 
 
 /*

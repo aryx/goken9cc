@@ -27,6 +27,7 @@
  */
 
 extern char **_mainargv;
+extern intptr _mainargc;
 
 /* claude: _environp is nil until the first putenv() call. Before
  * that, environ() recomputes the array fresh from _mainargv every
@@ -41,19 +42,18 @@ extern char **_mainargv;
  */
 char **_environp;
 
+/* claude: envp is computed as _mainargv + _mainargc + 1 (skip argc
+ * argv entries, then the terminating nil), not by scanning _mainargv
+ * for a nil -- see _mainargc's own comment (port/mainargs.c) for the
+ * real argv-mutation bug that scanning hit. */
 char**
 environ(void)
 {
-	char **p;
-
 	if(_environp != nil)
 		return _environp;
-	p = _mainargv;
-	if(p == nil)
+	if(_mainargv == nil)
 		return nil;
-	while(*p != nil)
-		p++;
-	return p + 1;
+	return _mainargv + _mainargc + 1;
 }
 
 /* Returns a pointer INTO the environment block, not a copy -- same as
