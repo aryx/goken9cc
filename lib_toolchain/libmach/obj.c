@@ -294,7 +294,7 @@ nextar(Biobuf *bp, int offset, char *buf)
 	r = Bread(bp, &a, SAR_HDR);
 	if(r != SAR_HDR)
 		return 0;
-	if(strncmp(a.fmag, ARFMAG, sizeof(a.fmag)))
+	if(memcmp(a.fmag, ARFMAG, sizeof(a.fmag)))
 		return -1;
 	for(i=0; i<sizeof(a.name) && i<SARNAME && a.name[i] != ' '; i++)
 		buf[i] = a.name[i];
