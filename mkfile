@@ -102,15 +102,28 @@ test_windows:V:
 #   4. bootstrap-compare: diff boot-goken's binaries against the
 #      freshly-self-rebuilt $cputype ones -- the fixpoint check.
 #
-# CURRENT STATUS (2026-08): stage 1 does not yet complete for
-# compilers/${BOOTSTRAPLETTER}c. Removing compilers/cck/cc.h's
-# redundant `#include <ctype.h>` (this project's own include/str/
-# ascii.h, already pulled in via libc.h, already provides every ctype
-# macro cc.h needs) got past the FIRST real blocker, but compilers/
-# 7c/list.c:191 then hits a genuine, unfixed compiler bug: 7c's own
-# switch statement rejects a vlong controlling expression ("switch
-# expression must be integer"), not a portability gap the way mk/rc's
-# own self-hosting work was. This target is deliberately left
+# CURRENT STATUS (2026-08): stage 1 gets through lib_core/libbio,
+# lib_strings/libregexp+libstring, generators (lex+yacc, now including
+# the yacc *tool* itself -- see lib_core/libc/port/mkstemp.c's own
+# commit), lib_toolchain/libmach, and linkers/ar (all self-hosted and
+# runtime-verified: yacc's own y.tab.c output confirmed byte-identical
+# to the committed reference, ar's own archive create+list confirmed
+# working), then mk/rc (already self-hosted and runtime-verified in an
+# earlier round, see notes_libc_selfhost.txt), but does NOT yet reach
+# compilers/${BOOTSTRAPLETTER}c: it hits a genuine, unfixed compiler
+# bug there, not a portability gap -- 7c's own switch statement rejects
+# a vlong controlling expression ("switch expression must be integer",
+# compilers/7c/list.c:191). Every gap found along the way so far turned
+# out to be a real, honestly-fixable portability gap, not a compiler
+# bug: redundant `#include <ctype.h>` in three files (this project's
+# own include/str/ascii.h, pulled in via libc.h, already covers
+# everything they needed), and two missing libc primitives
+# (mkstemp()/mktemp(), layered on the already-implemented-but-until-now-
+# untested create()) plus several char*-vs-byte[] call-site mismatches
+# in linkers/ar/ar.c and lib_toolchain/libmach/obj.c (fixed with
+# memcmp()/memmove()/memchr() where the operation was genuinely
+# byte-oriented, and explicit casts only where a byte[] field was
+# genuinely being used as text). This target is deliberately left
 # runnable-but-currently-failing: it documents the intended shape and
 # gives a concrete, reproducible stopping point, rather than describing
 # it only in prose.
@@ -146,22 +159,16 @@ BOOTSTRAPLETTER=`{if(~ $cputype arm64) echo 7; if not if(~ $cputype amd64) echo 
 
 # claude: deliberately NOT the full top-level $DIRS -- see this
 # section's own header comment above for what's excluded and why.
-# generators/yacc (and by extension generators/lex, which depends on
-# yacc -- generators/mkfile's own "lex depends on yacc" comment) is
-# ALSO deliberately excluded for now, past just liblex.a: yacc.c calls
-# mkstemp(), which needs a real create() (Plan9's own O_CREAT-equivalent
-# syscall, distinct from open() -- include/os/dir.h's own declaration,
-# no implementation anywhere in this tree yet) -- a genuinely new
-# primitive, not a quick fix like the ctype.h removals below. Not
-# needed to get this far: mk/rc/compilers/${BOOTSTRAPLETTER}c only need
-# liblex.a (already built) and the already-committed, already-up-to-date
-# y.tab.c/y.tab.h (mk's own timestamp check skips regenerating them
-# since syn.y hasn't changed) -- neither actually invokes the yacc
-# *tool* in this run. Self-hosting yacc itself is left for later, once
-# create()/mkstemp() exist for real.
+# generators (yacc, and lex which depends on it -- generators/mkfile's
+# own "lex depends on yacc" comment) needed yacc.c's mkstemp() call
+# wired to a real create() first (lib_core/libc/port/mkstemp.c, layered
+# on os/$GOOS/open.c's own create() -- already implemented there but
+# untested on real hardware until this round; both now verified
+# working, and the self-hosted yacc's own y.tab.c output confirmed
+# byte-identical to the already-committed reference for rc/syn.y).
 BOOTSTRAPDIRS=lib_core/libbio lib_strings/libregexp lib_strings/libstring \
-	generators/lex/liblex/ \
-	linkers/ar mk rc \
+	generators/lex/liblex/ generators \
+	lib_toolchain/libmach linkers/ar mk rc \
 	assemblers/${BOOTSTRAPLETTER}a linkers/${BOOTSTRAPLETTER}l compilers/${BOOTSTRAPLETTER}c
 
 bootstrap:V:
