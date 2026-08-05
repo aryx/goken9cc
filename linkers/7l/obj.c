@@ -331,13 +331,13 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 		break;
 
 	case D_SCONST:
-		a->sval = halloc(NSNAME);
+		a->sval = malloc(NSNAME);
 		memmove(a->sval, p+4, NSNAME);
 		c += NSNAME;
 		break;
 
 	case D_FCONST:
-		a->ieee = halloc(sizeof(Ieee));
+		a->ieee = malloc(sizeof(Ieee));
 		a->ieee->l = p[4] | (p[5]<<8) |
 			(p[6]<<16) | (p[7]<<24);
 		a->ieee->h = p[8] | (p[9]<<8) |
@@ -361,7 +361,7 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 			return c;
 		}
 
-	u = halloc(sizeof(Auto));
+	u = malloc(sizeof(Auto));
 	u->link = curauto;
 	curauto = u;
 	u->asym = s;
@@ -495,7 +495,13 @@ loop:
 		goto loop;
 	}
 
-	p = halloc(sizeof(Prog));
+	/* claude: mallocz (zeroed), not plain malloc: only as/reg/line/from/
+	 * to (and, only when bloc[2]&0x40 is set, from3) are filled in
+	 * below -- mark is only conditionally set (bloc[2]&0x80), link/cond
+	 * are set further down, and forwd/pc/width/ft/tt are never touched
+	 * here at all. Same reasoning as 8l's own identical ldobj() fix
+	 * (linkers/8l/obj.c) and sub.c's own gethunk() removal comment. */
+	p = mallocz(sizeof(Prog), 1);
 	p->as = o;
 	p->reg = bloc[2] & 0x3F;
 	if(bloc[2] & 0x80)

@@ -1,9 +1,5 @@
 #include	"l.h"
 
-static	usize	nhunk;
-static	usize	tothunk;
-static	char*	hunk;
-
 void
 diag(char *fmt, ...)
 {
@@ -172,62 +168,38 @@ rnd(vlong v, int32 r)
 	return v;
 }
 
+/* claude: same fix as 5l/utils.c and 8l/compat.c+utils.c (docs/
+ * claude_notes/notes_os_macos.txt's "gethunk()/sbrk() OOM bug" section)
+ * -- macOS sbrk() is hard-capped at ~4MB and then returns -1, so large
+ * links died with "out of memory" here too. gethunk()/halloc() (the
+ * sbrk()-backed bump arena prg() and a handful of pobj.c/obj.c call
+ * sites used) are gone outright, same as 5l: every former halloc()
+ * call site now calls the real libc malloc() (lib_core/libc/port/
+ * minimal_malloc.c) or mallocz() directly, judged per site on whether
+ * it relied on the arena's implicit zeroing (sub.c's own prg() didn't,
+ * since `*p = zprg` already overwrites the whole struct; pobj.c's
+ * lookup() and obj.c's ldobj() Prog allocation do, see their own
+ * comments). No recursion risk this way, unlike a naive "gethunk()
+ * calls malloc()" fix would have hit through falloc.c's now-disabled
+ * fake malloc()->halloc()->gethunk()->malloc() chain. */
 Prog*
 prg(void)
 {
 	Prog *p;
 
-	while(nhunk < sizeof(Prog))
-		gethunk();
-	p = (Prog*)hunk;
-	nhunk -= sizeof(Prog);
-	hunk += sizeof(Prog);
-
+	p = malloc(sizeof(Prog));
 	*p = zprg;
 	return p;
-}
-
-void*
-halloc(usize n)
-{
-	void *p;
-
-	n = (n+7)&~7;
-	while(nhunk < n)
-		gethunk();
-	p = hunk;
-	nhunk -= n;
-	hunk += n;
-	return p;
-}
-
-void
-gethunk(void)
-{
-	char *h;
-	int32 nh;
-
-	nh = NHUNK;
-	if(tothunk >= 5L*NHUNK) {
-		nh = 5L*NHUNK;
-		if(tothunk >= 25L*NHUNK)
-			nh = 25L*NHUNK;
-	}
-	h = sbrk(nh);
-	if(h == (void*)-1) {
-		diag("out of memory");
-		errorexit();
-	}
-
-	hunk = h;
-	nhunk = nh;
-	tothunk += nh;
 }
 
 int32
 hunkspace(void)
 {
-	return tothunk;
+	/* claude: always 0 now that the hunk arena is gone -- same accepted
+	 * regression as 8l's own frozen `thunk` global once its gethunk()
+	 * was removed; this is only ever read for a debug['v'] diagnostic
+	 * print (obj.c), not correctness-relevant. */
+	return 0;
 }
 
 void

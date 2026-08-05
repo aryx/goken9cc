@@ -42,7 +42,13 @@ newMachoLoad(uint32 type, uint32 ndata)
 	l = &load[nload++];
 	l->type = type;
 	l->ndata = ndata;
-	l->data = halloc(ndata*4);
+	/* claude: plain malloc, not mallocz -- memset right below already
+	 * zeroes the whole buffer explicitly. halloc()/gethunk() (the old
+	 * sbrk()-backed hunk arena) were removed from 7l -- see linkers/
+	 * 7l/sub.c's own comment, docs/claude_notes/notes_os_macos.txt's
+	 * "gethunk()/sbrk() OOM bug" section -- so this shared macho.c
+	 * (also linked by 6l) now calls the real libc malloc() directly. */
+	l->data = malloc(ndata*4);
 	memset(l->data, 0, ndata*4);
 	return l;
 }
@@ -59,7 +65,12 @@ newMachoSeg(char *name, int msect)
 	s = &seg[nseg++];
 	s->name = name;
 	s->msect = msect;
-	s->sect = halloc(msect*sizeof s->sect[0]);
+	/* claude: mallocz (zeroed) -- newMachoSect() below only ever sets
+	 * ->name per entry; addr/size/off/align/reloc/nreloc/flag are filled
+	 * in later (asmbmacho()) only for sects that actually need a
+	 * non-zero value, same reasoning as this fix's other mallocz call
+	 * sites (linkers/7l/sub.c's own gethunk() removal comment). */
+	s->sect = mallocz(msect*sizeof s->sect[0], 1);
 	return s;
 }
 

@@ -408,7 +408,12 @@ lookup(char *symb, int v)
 		if(memcmp(s->name, symb, l) == 0)
 			return s;
 
-	s = halloc(sizeof(Sym));
+	/* claude: mallocz (zeroed), not plain malloc: only name/link/type/
+	 * version/value/sig are set below -- become/frame/subtype/file are
+	 * left implicitly zero (the old hunk arena handed back zeroed
+	 * memory; the real libc malloc doesn't). Same reasoning as sub.c's
+	 * own gethunk() removal comment. */
+	s = mallocz(sizeof(Sym), 1);
 	s->name = malloc(l + 1);
 	memmove(s->name, symb, l);
 
