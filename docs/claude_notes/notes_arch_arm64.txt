@@ -503,9 +503,47 @@ becomes the whole recipe's exit code -- exactly what tests/rc/
 if_no_else_status.sh already exists to catch, just not in this file.
 Needed an explicit `if not exit 0` to clear it.
 
-7l fails to link a function with ~4096+ bytes of stack-local arrays
+DONE: 7l fails to link a function with ~4096+ bytes of stack-local arrays
 whose address is passed to a call ("illegal combination DWORD NONE NONE LACON")
 ------------------------------------------------------------------------
+
+Root cause and fix (2026-08, landed while runtime-testing the mk/rc
+self-host build on real macOS/arm64 hardware -- mk.c's own functions
+hit this identically, mixed with small offsets too, see below): NOT
+actually an "offset too large to encode" problem despite the framing
+this section originally shipped with. linkers/7l/span.c's addpool()
+already resolves every C_UAUTO4K/C_UAUTO8K/.../C_LAUTO/C_LOREG (and
+every other auto/oreg class) operand down to a plain integer pool
+constant, via `instoffset`, which aclass() has already computed by the
+time addpool() runs. C_LACON -- the class aclass() returns for
+D_AUTO/D_PARAM under a "compute the effective address" context (this
+file's own `aconsize:` label) -- was simply missing from that switch's
+case list, so it fell through to `default: t.to = *a;`, which keeps
+the ORIGINAL symbolic $var-offset(SP) operand instead of resolving it
+-- and that symbolic form has no matching ADWORD optab row (only
+C_VCON/C_LEXT/C_ADDR exist there), hence "illegal combination DWORD
+NONE NONE LACON". Fix: add `case C_LACON:` to that same switch,
+alongside C_LAUTO etc. -- confirmed against 9front's own span.c, which
+already has C_LACON in that exact list (9front also adds an `offset
+too large` overflow diag() there, not ported here, no repro for it
+yet).
+
+This also explains the "second local pushes the first past 4095"
+framing below: that's just ONE way to land on a D_AUTO/D_PARAM operand
+class of C_LACON specifically (versus one of the smaller-and-already-
+handled UAUTO tiers) -- not the defining condition. Confirmed while
+fixing this for mk.c: variables at small offsets (-64, -72, -88, -112,
+-344 bytes) hit the identical "illegal combination DWORD NONE NONE
+LACON" error alongside a genuinely large one (-52000 bytes) in the same
+build, all fixed by the same one-line addition. This also unblocks
+utilities/files/mv.c and utilities/kernel/data2s.c on arm64 (not
+re-verified here -- this round's own verification was scoped to mk/rc,
+see notes_libc_selfhost.txt).
+
+How this was originally found and minimized (kept for the repro; the
+"12-bit immediate limit" theory in the last paragraph below is
+superseded by the actual root cause above -- C_LACON's magnitude was
+never the issue, only whether aclass() returned that class at all):
 
 Found while porting utilities/files/mv.c against the self-hosted libc
 (unrelated task -- retrying it after unblocking cleanname()/EQ):

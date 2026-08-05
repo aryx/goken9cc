@@ -255,6 +255,20 @@ addpool(Prog *p, Adr *a)
 	case C_NSOREG:
 	case C_NPOREG:
 	case C_LOREG:
+	/* claude: C_LACON (AMOV $var-N(SP),R -- load the EFFECTIVE ADDRESS
+	 * of a local variable, case 34 in optab.c) was missing from this
+	 * list, found compiling mk.c: aclass() (this file, D_AUTO/D_PARAM
+	 * case) already resolves it to a plain integer via `instoffset`
+	 * before addpool() ever runs, exactly like every other auto/oreg
+	 * class above -- but falling through to `default: t.to = *a;`
+	 * instead kept the original symbolic $var-N(SP) operand, which then
+	 * has no matching optab row (ADWORD only has C_VCON/C_LEXT/C_ADDR,
+	 * "illegal combination DWORD NONE NONE LACON"). Confirmed against
+	 * 9front's own span.c, which has C_LACON in this exact list
+	 * (9front also adds an `offset too large` overflow diag() here that
+	 * goken's switch doesn't have for any case, not ported -- no repro
+	 * for it yet). */
+	case C_LACON:
 		t.to.type = D_CONST;
 		t.to.offset = instoffset;
 		sz = 4;
