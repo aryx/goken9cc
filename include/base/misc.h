@@ -16,7 +16,15 @@
 // declaration.
 //extern  int     encodefmt(Fmt*);
 //
-//extern  int     getfields(char*, char**, int, int, char*);
+
+// claude: needed by mk's own shprint.c -- port/getfields.c, ported
+// from BOOT/lib9/getfields.c. Found self-hosting mk/ with goken's own
+// compiler+libc instead of the host bootstrap gcc+lib9. Splits str IN
+// PLACE (nul-ing each separator rune found in set) and fills args[]
+// with pointers into str, up to max fields; if mflag is set, runs of
+// consecutive separators collapse into one split point instead of
+// producing empty fields between them.
+extern  int     getfields(char*, char**, int, int, char*);
 //extern  int     gettokens(char *, char **, int, char *);
 //
 //extern  int     iounit(fdt);

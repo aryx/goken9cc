@@ -2402,3 +2402,168 @@ kind of change too.
 mk/rc's own readenv()/exportenv() were deliberately NOT rewired to use
 these -- out of scope for this round by explicit direction, left for
 whenever mk/rc self-hosting is actually picked up.
+
+mk self-hosting, Linux fully verified + darwin compile/link-only
+=================================================================
+
+The "whenever mk/rc self-hosting is actually picked up" above: this
+round did mk (not rc yet -- see todo.org). mk/mkfile's OFILES picks
+exactly ONE of Posix.$O (host bootstrap gcc/clang build)/Plan9.$O
+(unused by any build/test script in this tree, dead code kept for a
+real Plan9 host)/goken.$O (new) -- never more than one, since all
+three define the same symbol set. goken.c is the new POSIX-shaped
+variant, for mk built BY goken's own toolchain (6c/6l etc, not the
+host's gcc/clang) targeting linux/darwin/windows.
+
+Because the three variants are mutually exclusive OFILES picks (not a
+shared-header situation), goken.c has to independently define every
+symbol mk's other .c files call that isn't defined elsewhere in mk/ --
+not just the ones that genuinely differ from Plan9.c. Surveyed by
+literally grepping every Plan9.c-only symbol (chgtime/dirtime/
+bulkmtime/mkmtime/xwaitfor/Exit/notifyf/catchnotes/expunge/rcopy/
+shell/shellname) against the rest of mk/*.c for a real (non-Plan9.c/
+non-comment) caller:
+
+  chgtime    real caller (file.c)              -> kept, copied as-is
+  mkmtime    real callers (archive.c, file.c)   -> kept, copied as-is
+  xwaitfor   real caller (run.c)                -> kept, copied as-is
+  Exit       real, heavily used                 -> kept, copied as-is
+  rcopy      real caller (graph.c)              -> kept, copied as-is
+  dirtime    NO real caller, only a stale        -> DROPPED (dead code)
+  bulkmtime  "-- is back in Plan9.c" comment in
+             file.c, mk.h declares them but
+             nothing calls them on this branch
+
+readenv()/exportenv() are rewritten against environ()/getenv()/
+putenv() (this round's own earlier addition, see above) instead of
+Plan9.c's /env-directory-listing approach -- readenv() copies each
+"NAME=value" pair's NAME into a fresh buffer rather than mutating
+environ()'s array in place (its own contract says don't, unlike a
+real POSIX environ this compiler could get away with mutating), one
+Word per variable (no null-byte-list splitting -- that's /env's own
+convention, not POSIX's). exportenv() joins multi-word values with a
+plain space and has no unsetenv() equivalent to remove a variable (not
+in this libc yet) -- a real, accepted limitation matching this
+session's own "diff-and-putenv is fine" decision: putenv() alone
+covers add/update, and removal was never asked for.
+
+execsh()/pipecmd()'s rfork(RFPROC|RFFDG|RFENVG) becomes plain fork():
+goken has no rfork() implementation on Linux at all (only fork(),
+which is itself built on rfork() on plan9 specifically -- os/plan9/
+fork.c). Linux's own fork() already gives the child an independent
+copy-on-write copy of the environment, the same thing RFENVG asks for.
+maketmp() doesn't call mktemp() (declared in include/os/tmp.h, zero
+implementation anywhere in this tree) -- builds a pid-based temp path
+directly instead, since mk only needs a name unlikely to collide with
+a concurrent mk, not cryptographic uniqueness.
+
+mk.h's own Shell struct (`extern Shell *shell`, a shell-path + shell-
+name pair mk can repoint at runtime via push/popshell()) postdates
+Plan9.c's separate "char *shell"/"char *shellname" globals -- Plan9.c
+was never updated and is stale here (another sign it's dead/unused).
+Posix.c already matches mk.h's current shape, so goken.c follows
+Posix.c's `Shell rcshell = {...}; Shell *shell = &rcshell;` pattern,
+with a POSITIONAL (not C99 designated ".field =") initializer -- this
+compiler's frontend doesn't support designated initializers, confirmed
+by it being the one thing Posix.c does that nothing else in this tree
+does.
+
+Two genuinely NEW libc primitives needed, found only by actually
+linking mk with goken's own 6l (not by reading source -- both are
+implicit-K&R-style calls in mk/*.c that only warn "function args not
+checked" at compile time and fail at LINK time): strecpy() (bounded
+string copy, truncating-and-always-nul-terminating into [to,e), used
+by mk's own recipe.c/archive.c and by goken.c's mkmtime/xwaitfor) and
+getfields() (in-place rune-set field splitter, used by mk's own
+shprint.c). Both had long-commented-out declarations already sitting
+in include/base/str.h and include/base/misc.h ("less useful?") --
+uncommented and implemented in lib_core/libc/port/strecpy.c and
+port/getfields.c, ported verbatim from the real reference source
+(BOOT/lib9/strecpy.c, BOOT/lib9/getfields.c -- plan9port's own, not
+invented), and wired into PORTOFILES (unconditional, every GOOS, same
+tier as memccpy/strcpy already there) since nothing about either is
+GOOS-specific.
+
+notifyf()/catchnotes()/expunge() (main.c's own unconditional
+catchnotes() call at startup, run.c's killchildren()->expunge() path)
+do NOT live in goken.c, unlike everything above -- Tier 6 notify()/
+noted()/postnote() support is NOT uniform across the GOOSes goken.c
+targets (lib_core/libc/mkfile's NOTIFYOFILES: linux has all three,
+darwin only postnote(), windows none at all), so goken.c would either
+fail to link on darwin/windows (if it called notify()/noted()
+unconditionally, copied straight from Plan9.c) or silently misrepresent
+what's actually supported. Split into three small GOOS-selected files
+instead -- same file-selection-over-#ifdef habit as NOTIFYOFILES
+itself, picked by mk/mkfile's own new NOTIFYVARIANTOFILES:
+
+  notify_full.c     linux    real catchnotes()+notifyf() (needs
+                              notify()/noted()) and real expunge()
+                              (needs postnote()) -- Plan9.c's bodies,
+                              unchanged
+  notify_partial.c  darwin   catchnotes() is a no-op (no notify()/
+                              noted() there yet -- the XNU sigtramp
+                              ambiguity this file's own Tier 6 darwin
+                              entry above already covers); expunge()
+                              still real (postnote() DOES exist there)
+  notify_none.c     windows  both no-ops (lib_core/libc has neither
+                              notify()/noted() nor postnote() for
+                              windows at all yet)
+
+NOTIFYVARIANTOFILES is only added alongside goken.$O itself (a no-op
+when objtype is boot-gcc/boot-clang or GOOS is plan9) -- Posix.c/
+Plan9.c already define their own notifyf/catchnotes/expunge, and
+linking both would collide.
+
+Verified, not just built: `mk -a 'objtype=amd64' 'cputype=amd64'
+'GOOS=linux' install` (after `mk clean` -- the usual mixed-arch/
+mixed-GOOS libc.a-staleness pitfall, hits libc.a/libregexp.a/libbio.a
+all three here, same as every previous round) produces a real ELF
+mk binary, run under qemu-x86_64 against a real mkfile: a plain
+recipe (two `echo` lines) executes correctly via fork()+execl("/bin/
+rc",...), AND a `FOO=barbaz qemu-x86_64 ... mk envtest` run (envtest's
+recipe: `echo FOO is $FOO`) prints "FOO is barbaz" -- proving the full
+readenv()/exportenv() round trip: FOO imported from the real process
+environment via environ(), then re-exported into the child rc's
+environment via putenv(), with rc itself (not mk) doing the $FOO
+substitution. (Separately, and unrelated to any of this: plan9port's
+own /bin/rc on this host fails to parse ANY bareword or double-quoted
+argument containing a literal `=` -- reproduces with a zero-mk
+`rc -c 'echo a=b'` -- a pre-existing bug in the installed rc binary
+itself, not something introduced here; worked around in ad hoc test
+recipes by just not putting `=` inside quoted strings, not investigated
+further.)
+
+darwin/amd64: compile+link verified only (real Mach-O, `file` reports
+`Mach-O 64-bit x86_64 executable ... PIE`), the same bar as every
+other darwin/windows piece of work in this tree -- no macOS host to
+run it on. Needed the already-documented `CFLAGS_EXTRA=-z
+RT0OFILE=arch/amd64/rt0_darwin.6` pair for libc.a itself, AND (newly
+hit here, not previously on record) the SAME `-z` for libregexp.a and
+libbio.a too -- mk links against both (`-lregexp -lbio`) and without
+-z on those two specifically the link fails with the exact
+`doasm: notfound ... pushand`/`pushator`/`popand`/`popator` pattern
+(regexp backtrack-stack statics in regaux.c), easy to mistake for the
+mixed-GOOS libc.a staleness bug but a different root cause.
+
+windows/amd64: NOT reached, and not a small gap -- `readenv: undefined:
+environ`, `execsh: undefined: fork`/`dup`, `xwaitfor: undefined: wait`,
+`Exit: undefined: waitpid`. Windows has no fork()+exec()+wait() process
+model at all (os/windows/exec.c's own header comment already covers
+this at length: CreateProcessA collapses fork+exec+wait into one call
+in one process, and a real fork() would need Cygwin-style whole-
+address-space duplication, "out of scope"), and no environ()-equivalent
+either (PORTPOSIXOFILES excludes windows from port/getenv.c, and
+os/windows/getenv.c only wraps GetEnvironmentVariable, no bulk listing).
+Making mk work on windows therefore needs a genuinely different
+execsh()/pipecmd() -- a CreateProcess-plus-pipes design mirroring
+exec()'s own approach, with STARTUPINFOA's hStdInput/hStdOutput/
+hStdError/dwFlags wired up for real (exec.c's current STARTUPINFOA
+stub only ever sets `cb` and leaves everything else zeroed) -- not a
+same-day follow-up to the strecpy()/getfields()/notify-split gaps
+above. Also worth noting: linkers targeting windows need `-H 10`
+explicit on this host, for the same host-GOOS-defaulting reason
+`-H7`/`-E _main` are non-optional for hello_libc's own ELF/Mach-O
+recipes (linkers/6l/obj.c's HEADTYPE==-1 case falls back to the HOST's
+own compiled-in GOOS when no -H is given) -- caught here because this
+host is linux, so the darwin and linux builds above both happened to
+get the right header by accident, while windows did not.

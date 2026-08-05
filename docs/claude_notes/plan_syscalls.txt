@@ -586,6 +586,17 @@ proposed as a real cross-GOOS layer) -- not implemented, just the
 design reasoning banked for whenever this tier's Linux/darwin half
 gets picked up.
 
+UPDATE: the goken.c idea above is now real, for mk (not rc yet) -- see
+notes_libc_selfhost.txt's "mk self-hosting, Linux fully verified +
+darwin compile/link-only" entry. Turned out to need a further split
+beyond one goken.c: notifyf()/catchnotes()/expunge() moved into three
+tiny GOOS-selected files (notify_full.c/notify_partial.c/
+notify_none.c) because notify()/noted()/postnote() support isn't
+uniform across linux/darwin/windows (exactly the gap this tier's
+darwin/windows entries above already predicted), so goken.c itself
+couldn't call them unconditionally without failing to link on two of
+the three GOOSes it targets.
+
 Tier 7: setjmp/longjmp -- unblocks utilities/byte self-hosting, a libregexp-wide dependency
 ------------------------------------------------------------------------
 

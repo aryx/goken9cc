@@ -16,8 +16,15 @@ extern  char*   strrchr(char*, int);
 extern  char*   strncpy(char*, char*, long);
 extern  int     cistrcmp(char*, char*);
 
+// claude: needed by mk/goken.c (dirtime/mkmtime/xwaitfor) and mk's own
+// recipe.c -- port/strecpy.c, ported from BOOT/lib9/strecpy.c. Found
+// self-hosting mk/ with goken's own compiler+libc instead of the host
+// bootstrap gcc+lib9. Copies into [s1,e1), always nul-terminating
+// before e1, and returns a pointer to the nul so callers can chain
+// further strecpy() calls onto the same buffer.
+extern  char*   strecpy(char*, char*, char*);
+
 // less useful?
-//extern  char*   strecpy(char*, char*, char*);
 //extern  char*   strncat(char*, char*, long);
 // claude: needed by lib_strings/libstring/s_rdinstack.c and
 // utilities/pipe/*.c -- port/strncmp.c, ported from principia's

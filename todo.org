@@ -1092,6 +1092,23 @@ Still open, deliberately not attempted this round:
 
 *** TODO: self-host mk and rc themselves
 claude:
+UPDATE: mk's side of this is done -- see docs/claude_notes/
+notes_libc_selfhost.txt's "mk self-hosting, Linux fully verified +
+darwin compile/link-only" section for the full story (mk/goken.c, the
+strecpy()/getfields() libc additions, and the notify_full.c/
+notify_partial.c/notify_none.c split this actually took). Short
+version: linux/amd64 builds, links, and runs real recipes plus a real
+readenv()/exportenv() round trip under qemu; darwin/amd64 reaches
+compile+link (the usual no-host-hardware bar); windows/amd64 is
+blocked on a real architectural gap (no fork()/wait(), no environ()),
+not a small missing-function one -- needs a CreateProcess-based
+execsh()/pipecmd() redesign, not attempted yet. rc is NOT started
+(rc/unix.c doesn't even compile against this toolchain yet -- <errno.h>
+missing, plus its own Updenv() assumes a real assignable `environ`
+global, which conflicts with this tree's environ() being a function).
+The analysis below predates that work and mostly still holds for rc's
+side of the problem; mk's own side is now settled by the real code,
+not just this write-up.
 Real design work, not mechanical porting like utilities/ above turned
 out to be. mk/mkfile currently only ever builds mk/Posix.c ("Posix.$O
 below not Plan9.$O!"), which wants genuinely POSIX-shaped primitives

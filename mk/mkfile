@@ -4,7 +4,29 @@ TOP=../
 TARG=mk
 LDLIBS=-lregexp -lbio $BOOTLIBS
 
-# Posix.$O below not Plan9.$O!
+# claude: exactly one of Posix.$O/Plan9.$O/goken.$O, never more than
+# one -- they all define the same symbols (shell/shellname/maketmp/
+# readenv/exportenv/execsh/pipecmd/chgtime/mkmtime/xwaitfor/Exit/
+# notifyf/catchnotes/expunge/rcopy, except goken.$O which leaves
+# notifyf/catchnotes/expunge to NOTIFYVARIANTOFILES below), so linking
+# two would collide. Posix.$O is the real-host-libc variant (used for
+# the boot-gcc/boot-clang bootstrap build, since goken's own toolchain
+# doesn't exist yet at that point); Plan9.$O is for a real Plan9 host
+# (GOOS=plan9, not yet exercised by this tree's own build/test scripts);
+# goken.$O (docs/claude_notes/notes_libc_selfhost.txt's mk self-hosting
+# entry) is for mk built BY goken's own toolchain targeting a
+# POSIX-shaped GOOS (linux/darwin/windows).
+VARIANTOFILES=`{if(~ $objtype boot-gcc boot-clang) echo Posix.$O; if not if(~ $GOOS plan9) echo Plan9.$O; if not echo goken.$O}
+
+# claude: goken.c itself doesn't define notifyf()/catchnotes()/
+# expunge() (see its own header comment) -- Tier 6 notify()/noted()/
+# postnote() support differs per GOOS (lib_core/libc/mkfile's
+# NOTIFYOFILES: linux has all three, darwin only postnote(), windows
+# none), so which of these three mk needs is picked here the same way.
+# Only wanted alongside goken.$O itself -- Posix.c/Plan9.c already
+# define their own copies, and linking both would collide.
+NOTIFYVARIANTOFILES=`{if(~ $objtype boot-gcc boot-clang) echo -n; if not if(~ $GOOS plan9) echo -n; if not if(~ $GOOS linux) echo notify_full.$O; if not if(~ $GOOS darwin) echo notify_partial.$O; if not echo notify_none.$O}
+
 OFILES=\
     globals.$O\
     utils.$O\
@@ -28,7 +50,8 @@ OFILES=\
 	var.$O\
 	varsub.$O\
 	word.$O\
-     Posix.$O\
+	$VARIANTOFILES\
+	$NOTIFYVARIANTOFILES\
 
 HFILES=fns.h mk.h
 

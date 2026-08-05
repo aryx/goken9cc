@@ -175,6 +175,8 @@ PORTOFILES=\
 	port/tokenize.$O\
 	port/strncmp.$O\
 	port/readn.$O\
+	port/strecpy.$O\
+	port/getfields.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
 # but must NOT be compiled for plan9 or windows at all -- selected here
