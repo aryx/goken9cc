@@ -162,6 +162,9 @@
 // claude: was empty -- os/path.h existed but was never #include'd
 // anywhere, found while wiring cleanname() in for utilities/files/mv.c.
 #include "os/path.h"
+// claude: same "never actually wired in" gap as os/path.h just above --
+// found self-hosting linkers/ar/ar.c, which calls mktemp() directly.
+#include "os/tmp.h"
 
 //----------------------------------------------------------------------------
 // process

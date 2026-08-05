@@ -180,6 +180,7 @@ PORTOFILES=\
 	port/getfields.$O\
 	port/strstr.$O\
 	port/mkstemp.$O\
+	port/mktemp.$O\
 	port/unsharp.$O\
 
 # claude: port/ files that are portable across the POSIX-shaped GOOSes
