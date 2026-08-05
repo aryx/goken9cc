@@ -1,7 +1,6 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <ctype.h>
 
 //TODO: to restore?
 //#pragma	lib	"../cc/cc.a$O"

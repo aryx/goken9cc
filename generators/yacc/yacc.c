@@ -2,7 +2,6 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <ctype.h>
 
 /*s: constant Bungetrune */
 #define	Bungetrune	Bungetc		/* ok for now. */

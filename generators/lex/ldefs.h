@@ -1,7 +1,6 @@
 /*s: generators/lex/ldefs.h */
 #include <u.h>
 #include <libc.h>
-#include <ctype.h>
 #include <bio.h>
 
 /*s: constant PP */
