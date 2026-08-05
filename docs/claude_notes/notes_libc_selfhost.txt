@@ -2567,3 +2567,72 @@ recipes (linkers/6l/obj.c's HEADTYPE==-1 case falls back to the HOST's
 own compiled-in GOOS when no -H is given) -- caught here because this
 host is linux, so the darwin and linux builds above both happened to
 get the right header by accident, while windows did not.
+
+rc self-hosting survey (not started yet, mk's own todo.org entry has the pointer)
+==================================================================================
+
+Same "attempt a real self-hosted build, collect real errors" method as
+mk's own survey above, run against rc/mkfile's default `unix.$O`
+OFILES (CFLAGS_EXTRA=-DUnix, unconditional -- unlike mk/mkfile's
+Posix.$O/Plan9.$O split, rc/mkfile has never had a $objtype-conditional
+OFILES at all).
+
+One REAL, standalone bug found and fixed (unrelated to the design
+question below, safe on its own): rc/rc.h's Unix-branch `__LOC__`
+macro (`__FILE__ ":" STR(__LINE__)`, used only by Exit()'s `-s`-flag
+debug fprint in error.c/trap.c/processes.c/exec.c/executils.c) needs
+`__LINE__`/`__FILE__` and the `#` stringize operator, none of which
+goken's own compilers implement (confirmed: no match for
+`__LINE__`/`__FILE__` anywhere in compilers/cc/*.c) -- every one of
+those five call sites failed with a plain "syntax error, last name:
+<string>", not an obviously-preprocessor-shaped error, which is what
+made this one take longest to place. Fixed by reusing the SAME static
+placeholder rc.h's own plan9 branch already falls back to
+(`"NO__LOC__INFO"`) instead of adding a new #ifdef axis -- __LOC__ is
+purely cosmetic debug output, not correctness-relevant, so losing real
+line numbers on the host gcc build too is an acceptable trade for not
+inventing a third macro variant. Verified the host boot-gcc build of
+rc still links and installs fine after this change.
+
+With that fixed, the ENTIRE rest of rc/mkfile's shared OFILES (code/
+exec/getflags_/glob/here/io/lex/pcmd/pfnc/simple/trap/tree/var/
+processes/globals/utils/error/words/executils/status/builtins/input/
+path/env/fmt/main/y.tab) compiles clean against goken's own 6c -- only
+unix.c itself fails, and for the expected reason (`unix.c:17 6c: No
+such file or directory: errno.h`): it is written directly against real
+host glibc (`#include <errno.h>`, `#define NOPLAN9DEFINES`, a real
+assignable `environ` global, `signal()`), the rc analogue of mk/Posix.c
+-- not reusable as a goken self-hosting base, same conclusion mk's own
+survey reached about mk/Posix.c.
+
+rc/plan9.c (unlike mk/Plan9.c, which turned out to be stale/unused --
+mk.h's own Shell struct outgrew it) is current and mostly portable
+already: Vinit()/addenv()/updenvlocal()/Updenv() (the /env-directory-
+based env sync, rc's counterpart to mk's readenv()/exportenv()) and
+notifyf()/Trapinit() (notify()/noted()-based, rc's counterpart to
+mk's notifyf()/catchnotes()) are the genuinely Plan9-specific pieces,
+matching mk's own split exactly. Everything else in plan9.c (Malloc/
+Readdir/Opendir/Closedir/Globsize/_efgfmt/Exit) already calls only
+already-portable goken libc (dirread/dirfstat/mallocz/exits), so a
+goken.c for rc would very likely follow the same "reuse plan9.c almost
+verbatim, swap the /env and notify pieces" shape mk/goken.c did.
+
+One NEW gap this survey found that mk's own goken.c never needed:
+Isatty() (plan9.c) is built on fd2path() (include/os/dir.h), which is
+a real raw syscall on plan9 (syscall/os/plan9/svc_{arm,mips}.s) but has
+ZERO implementation on any POSIX-shaped GOOS -- Plan9's "file
+descriptors have a nameable path" model doesn't carry over the way
+dirread()/notify()/environ() did. rc's own unix.c takes a completely
+different approach for the equivalent check (not yet read in detail),
+presumably a real isatty(3)/ioctl(TCGETS)-shaped primitive that simply
+doesn't exist anywhere in this libc yet -- would be a genuinely NEW
+addition, not a port of an existing principia/lib9 file the way
+strecpy()/getfields() were for mk.
+
+Not yet done: reading unix.c's own Isatty()/signal()-handling in full
+to see exactly what POSIX primitive(s) it needs, writing rc/goken.c
+itself, wiring an $objtype/$GOOS-conditional OFILES pick into
+rc/mkfile (currently hardcoded to unix.$O unconditionally, would need
+the same three-way split mk/mkfile's own VARIANTOFILES got), and the
+same notify_full/partial/none-style GOOS split rc's own
+notifyf()/Trapinit() would need for the identical reason mk's did.

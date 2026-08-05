@@ -1109,6 +1109,26 @@ global, which conflicts with this tree's environ() being a function).
 The analysis below predates that work and mostly still holds for rc's
 side of the problem; mk's own side is now settled by the real code,
 not just this write-up.
+
+UPDATE 2: rc's own survey is done too (same "attempt a real build,
+collect real errors" method) -- see notes_libc_selfhost.txt's "rc
+self-hosting survey" section. One real bug found and fixed along the
+way (rc.h's __LOC__ macro needs __LINE__/__FILE__/stringize, none of
+which goken's compilers implement -- simplified to a static
+placeholder, safe on the host gcc build too since it's cosmetic debug
+output only). With that fixed, everything in rc/mkfile's OFILES
+compiles against goken's own 6c except unix.c itself (real glibc,
+<errno.h>, same shape as mk/Posix.c). rc/plan9.c, unlike mk/Plan9.c,
+is current and mostly portable already -- Vinit()/addenv()/Updenv()
+(the /env-based env sync) and notifyf()/Trapinit() (notify()/noted())
+are the only genuinely Plan9-specific pieces, the same split mk's own
+readenv/exportenv and notifyf/catchnotes had. One NEW gap mk never
+hit: Isatty() needs fd2path(), a real Plan9 syscall with zero POSIX
+implementation -- rc/goken.c would need a genuinely new isatty()-style
+libc primitive, not a port of an existing principia/lib9 file. Writing
+rc/goken.c itself, wiring rc/mkfile's OFILES the same three-way way
+mk/mkfile's VARIANTOFILES got, and rc's own notify_full/partial/none
+split are all still TODO.
 Real design work, not mechanical porting like utilities/ above turned
 out to be. mk/mkfile currently only ever builds mk/Posix.c ("Posix.$O
 below not Plan9.$O!"), which wants genuinely POSIX-shaped primitives

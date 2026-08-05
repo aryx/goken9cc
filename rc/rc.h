@@ -30,10 +30,14 @@
 #else
 #include "unix.h"
 
-// magic incantation for cpp (found by chatGPT)
-#define STR2(x) #x
-#define STR(x) STR2(x)
-#define __LOC__ __FILE__ ":" STR(__LINE__)
+// claude: was __FILE__ ":" STR(__LINE__) via a #-stringize/__LINE__
+// trick -- goken's own compilers implement neither __LINE__/__FILE__
+// nor the # stringize operator (confirmed: no match anywhere in
+// compilers/cc/*.c), and __LOC__ is only ever read by Exit()'s `-s`
+// debug fprint, not correctness-relevant. Same static placeholder as
+// the plan9 branch above rather than a new #ifdef axis to keep real
+// line info on the one toolchain that supports it.
+#define __LOC__ "NO__LOC__INFO"
 
 #endif
 
