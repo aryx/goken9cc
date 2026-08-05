@@ -152,3 +152,21 @@
  * shipped as unverifiable guessed trampoline assembly.
  */
 #define SYS_kill	37
+
+/* claude: rc self-hosting's Isatty() (os/darwin/isatty.c) and
+ * Readdir()/Opendir() (os/darwin/dirread.c) -- confirmed against this
+ * project's own vendored GO/pkg/syscall/zsysnum_darwin_amd64.go, the
+ * same 2010-era snapshot every other number in this file traces to
+ * ("SYS_IOCTL = 54", "SYS_GETDIRENTRIES64 = 344 ... NO_SYSCALL_STUB").
+ * Arch-independent BSD table, same numbers on arm64.
+ *
+ * TIOCGETA (isatty.c's own ioctl request) is NOT here, unlike SYS_kill
+ * and friends -- it's a request-code encoding, not a syscall number,
+ * so nothing generates a wrapper from it the way mksyscall.sh does for
+ * the SYS_* names above; isatty.c defines it locally instead, the same
+ * way os/linux/isatty.c defines TCGETS locally rather than pulling it
+ * from a numbers_$cputype.h (this file is never #include'd by any .c,
+ * only read by mksyscall.sh's own code generation).
+ */
+#define SYS_ioctl	54
+#define SYS_getdirentries64	344

@@ -124,3 +124,13 @@ int _syskill(int pid, int sig, int posix)
 	return (int)_syscall6(SYS_kill, (vlong)pid, (vlong)sig, (vlong)posix, 0, 0, 0);
 }
 
+int _sysioctl(int fd, ulong request, void* arg)
+{
+	return (int)_syscall6(SYS_ioctl, (vlong)fd, (vlong)request, (vlong)arg, 0, 0, 0);
+}
+
+int _sysgetdirentries64(int fd, void* buf, ulong bufsize, void* position)
+{
+	return (int)_syscall6(SYS_getdirentries64, (vlong)fd, (vlong)buf, (vlong)bufsize, (vlong)position, 0, 0);
+}
+

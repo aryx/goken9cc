@@ -138,3 +138,11 @@
  * arch-independent BSD table so this arch shares the number.
  */
 #define SYS_kill	37
+
+/* claude: rc self-hosting's Isatty()/Readdir()/Opendir() -- see
+ * numbers_amd64.h's fuller comment (SYS_ioctl/SYS_getdirentries64
+ * arch-independent: same BSD syscall table). TIOCGETA itself is
+ * defined locally in os/darwin/isatty.c, not here -- see that
+ * file's own header comment. */
+#define SYS_ioctl	54
+#define SYS_getdirentries64	344

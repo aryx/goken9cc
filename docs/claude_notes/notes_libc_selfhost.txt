@@ -2766,7 +2766,60 @@ install path wires up Rcmain's default location yet) it correctly
 handles command execution (`echo hi from rc`), the environ()/putenv()
 round trip (`FOO=barbaz ... rc -c 'echo FOO is $FOO'` -> "FOO is
 barbaz"), command substitution / real fork+exec+pipe (`` `{ls | wc -l} ``),
-and list variables (`x=(a b c); echo $x`). darwin/windows not attempted
-this round -- rc's own notify_none.c already covers the "no notify()"
-half of that gap the same way mk's did, but darwin/windows compile+link
-verification itself is still TODO (see todo.org).
+and list variables (`x=(a b c); echo $x`).
+
+rc self-hosting on darwin, compile+link verified (both amd64 and arm64)
+=========================================================================
+
+Unlike mk's own darwin round (which stayed within primitives that
+already existed), rc/goken.c's Opendir()/Readdir()/Isatty() needed TWO
+genuinely new darwin libc primitives that had never been implemented on
+this GOOS at all:
+
+- isatty() (os/darwin/isatty.c): same ioctl-probe idea as the Linux
+  version, different request code -- Darwin's TIOCGETA, not TCGETS.
+  Computed from real headers, not guessed: sys/ttycom.h's `#define
+  TIOCGETA _IOR('t', 19, struct termios)` expanded via sys/ioccom.h's
+  `_IOR(g,n,t) = IOC_OUT | ((sizeof(t)&IOCPARM_MASK)<<16) | (g<<8) | n`,
+  with sizeof(struct termios)=72 on LP64 Darwin (sys/termios.h's own
+  tcflag_t/speed_t are `unsigned long`, 8 bytes on both amd64 and
+  arm64) -> 0x40487413, same value on both arches (arch-independent BSD
+  ioctl-group/number encoding). SYS_ioctl=54 confirmed against this
+  project's own vendored GO/pkg/syscall/zsysnum_darwin_amd64.go, the
+  same 2010-era snapshot every other darwin syscall number in this tree
+  traces to.
+- dirread()/dirreadall() (os/darwin/dirread.c): modeled directly on
+  os/linux/stat_amd64.c's own dirreadbuf() -- read raw kernel dirents
+  just for each NAME, then build a real Dir per entry via the
+  ALREADY-WORKING dirfstat(), rather than hand-parsing kernel stat
+  fields out of the raw entry. The one real difference from Linux's
+  version: Darwin has no openat()-family syscalls in this tree at all
+  (same absence os/darwin/getwd.c's own fcntl(F_GETPATH) comment
+  already covers), so instead of opening each entry via
+  openat(dirfd,name), this asks the kernel for the directory's own real
+  path ONCE via that same fcntl(F_GETPATH) trick and opens
+  "dirpath/name" directly. Uses the MODERN getdirentries64 (SYS
+  number 344, NO_SYSCALL_STUB in XNU's own syscalls.master like
+  gettimeofday already was) rather than the older 32-bit getdirentries
+  (196) -- pairs with the 64-bit-ino_t struct dirent shape real
+  <sys/dirent.h> gates on __DARWIN_64_BIT_INO_T, which is what this
+  file's own DarwinDirent struct matches (uint64 ino/seekoff, not
+  Linux's smaller ino/off fields).
+
+Both new SYS_ioctl/SYS_getdirentries64 numbers went into
+numbers_amd64.h/numbers_arm64.h (arch-independent BSD table, same on
+both) for mksyscall.sh's own code generation to pick up; TIOCGETA
+itself is NOT a syscall number so it doesn't belong there -- it's
+`#define`d directly inside isatty.c instead, same as os/linux/
+isatty.c's own local TCGETS.
+
+`-z`/RT0OFILE=arch/amd64/rt0_darwin.6 needed for amd64 (matching every
+other amd64/darwin round this tree has done), but NOT for arm64 --
+`mk 'objtype=arm64' 'cputype=arm64' 'GOOS=darwin'
+'RT0OFILE=arch/arm64/rt0_darwin.7' install`, no CFLAGS_EXTRA at all,
+matching tests/c/hello_libc/mkfile's own test_macos_arm64 recipe
+(arm64 never had the absolute-addressing PIE issue -z works around on
+amd64). Both produce real Mach-O binaries (`file`: "Mach-O 64-bit
+x86_64 executable ... PIE" / "Mach-O 64-bit arm64 executable ... PIE"),
+the established compile+link-only bar for this project's darwin work
+-- no macOS host or qemu-user Darwin emulation to run them on here.

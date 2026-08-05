@@ -81,3 +81,10 @@
 // comment for why notify()/noted() are not attempted here. A real
 // 3-argument BSD kill, unlike every other GOOS in this tree.
 //sys _syskill(int pid, int sig, int posix) int = SYS_kill
+
+// rc self-hosting's Isatty() (os/darwin/isatty.c) and
+// Readdir()/Opendir() (os/darwin/dirread.c). arg/buf stay void* like
+// every other raw stub in this tree -- the raw layer stays free of
+// struct definitions.
+//sys _sysioctl(int fd, ulong request, void *arg) int = SYS_ioctl
+//sys _sysgetdirentries64(int fd, void *buf, ulong bufsize, void *position) int = SYS_getdirentries64

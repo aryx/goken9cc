@@ -1148,6 +1148,18 @@ argc directly too (_mainargc, all 9 rt0*.s files) and computing envp
 without scanning. darwin/windows compile+link verification for rc
 itself (matching mk's own darwin/windows status) is the remaining
 open item.
+
+UPDATE 4: darwin done too, both amd64 and arm64, compile+link verified
+(real Mach-O binaries) -- see notes_libc_selfhost.txt's "rc
+self-hosting on darwin" section. Needed two genuinely new darwin libc
+primitives neither mk nor anything else in this tree had ever hit:
+isatty() (ioctl(TIOCGETA,...), the numeric request code derived from
+real Darwin headers) and dirread()/dirreadall() (getdirentries64 +
+per-entry dirfstat(), the same "just get the name, reuse the
+already-working stat path" trick os/linux/stat_amd64.c's own
+dirreadbuf() already uses, adapted for Darwin having no openat()
+family at all). windows is now the only remaining gap for rc, same
+CreateProcess-based redesign mk's own windows gap needs.
 Real design work, not mechanical porting like utilities/ above turned
 out to be. mk/mkfile currently only ever builds mk/Posix.c ("Posix.$O
 below not Plan9.$O!"), which wants genuinely POSIX-shaped primitives
