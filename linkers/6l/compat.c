@@ -1,13 +1,19 @@
 #include	"l.h"
 
 /*
- * fake malloc
- *
- * claude: every block is prefixed with a hidden vlong holding its
- * requested size, so realloc() below can grow a block (needed by
- * lk/macho.c's machorebase(), which reallocs its offset array). The
- * header keeps the returned pointer 8-byte aligned since it is itself
- * 8 bytes and hunk only ever advances by multiples of 8.
+ * claude: same fix as 8l/compat.c and 7l/falloc.c+sub.c (docs/
+ * claude_notes/notes_os_macos.txt's "gethunk()/sbrk() OOM bug" section,
+ * hit here too while runtime-testing the mk/rc self-host build on real
+ * macOS/arm64 hardware -- Rosetta-translated darwin/amd64 6l, same
+ * story) -- this whole fake malloc/free/calloc/realloc/halloc/
+ * setmalloctag family (built on mysbrk()'s sbrk(), which macOS caps at
+ * ~4MB and then returns -1) is DISABLED via #if 0, exactly matching
+ * the TODO this file already carried below: real libc malloc()/
+ * calloc()/free()/realloc()/setmalloctag() (lib_core/libc/port/
+ * minimal_malloc.c) link in instead. linkers/lk/macho.c (shared with
+ * 7l) no longer calls halloc() at all -- fixed directly to call
+ * malloc()/mallocz(), same round -- so halloc() itself needs no
+ * replacement here.
  *
  * TODO: this whole gethunk/bump-arena allocator (here and in the other
  * kencc-lineage linkers' compat.c/sub.c/utils.c) is vestigial history:
@@ -18,19 +24,30 @@
  * resource-constrained Plan9 hardware. It predates having a reliable
  * hosted libc to lean on, unlike the Go-era src/cmd/6l/ld, which never
  * had this and just calls the real system malloc/realloc directly.
- * Nothing here actually needs a non-freeing arena today, so the plan
- * is to eventually delete it and call the real lib9/libc
- * malloc/realloc/free directly. If/when doing that:
+ * Nothing here actually needs a non-freeing arena today -- done above:
  *   - free() below is a no-op today; a real free() will actually
  *     reclaim memory, so any code that keeps a pointer around after
  *     "freeing" it (relying on the arena's never-really-freed
  *     semantics) will start reading/writing freed memory -- audit
  *     every free() callsite in these linkers first.
  *   - the hidden size header and its pointer arithmetic (here and in
- *     realloc()) are only needed by this arena; drop them entirely
- *     once malloc/realloc call straight into libc, which already
- *     tracks block sizes itself.
- *   - hunk/nhunk/gethunk()/mysbrk() become dead code and can go too.
+ *     realloc()) are only needed by this arena; dropped below --
+ *     real malloc/realloc already track block sizes themselves.
+ *   - hunk/nhunk/gethunk()/mysbrk() (obj.c) are now dead code (every
+ *     former direct caller switched to malloc()/mallocz(), same as
+ *     7l's own gethunk() removal) but left in place, same as 8l's own
+ *     frozen `thunk` global -- only ever read by a debug['v']
+ *     diagnostic print, not correctness-relevant.
+ */
+#if 0
+/*
+ * fake malloc
+ *
+ * claude: every block is prefixed with a hidden vlong holding its
+ * requested size, so realloc() below can grow a block (needed by
+ * lk/macho.c's machorebase(), which reallocs its offset array). The
+ * header keeps the returned pointer 8-byte aligned since it is itself
+ * 8 bytes and hunk only ever advances by multiples of 8.
  */
 void*
 malloc(ulong n)
@@ -102,6 +119,7 @@ void
 setmalloctag(void*, ulong)
 {
 }
+#endif
 
 //old: now in libc
 //int

@@ -685,12 +685,10 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 		}
 	}
 
-	while(nhunk < sizeof(Auto))
-		gethunk();
-	u = (Auto*)hunk;
-	nhunk -= sizeof(Auto);
-	hunk += sizeof(Auto);
-
+	/* claude: plain malloc -- asym/link/aoffset/type (all 4 Auto
+	 * fields) are set immediately below. Same reasoning as compat.c's
+	 * own gethunk() removal comment. */
+	u = malloc(sizeof(Auto));
 	u->link = curauto;
 	curauto = u;
 	u->asym = s;
@@ -992,12 +990,12 @@ loop:
 		goto loop;
 	}
 
-	while(nhunk < sizeof(Prog))
-		gethunk();
-	p = (Prog*)hunk;
-	nhunk -= sizeof(Prog);
-	hunk += sizeof(Prog);
-
+	/* claude: mallocz (zeroed), not plain malloc: only as/line/back/
+	 * mode/from/to are set below -- forwd/link/pcond/pc/mark/width/reg
+	 * are never touched in this function at all. Same reasoning as
+	 * 8l's/7l's own identical ldobj() fix and compat.c's own gethunk()
+	 * removal comment. */
+	p = mallocz(sizeof(Prog), 1);
 	p->as = o;
 	p->line = bloc[2] | (bloc[3] << 8) | (bloc[4] << 16) | (bloc[5] << 24);
 	p->back = 2;
@@ -1282,12 +1280,11 @@ lookup(char *symb, int v)
 		if(memcmp(s->name, symb, l) == 0)
 			return s;
 
-	while(nhunk < sizeof(Sym))
-		gethunk();
-	s = (Sym*)hunk;
-	nhunk -= sizeof(Sym);
-	hunk += sizeof(Sym);
-
+	/* claude: mallocz (zeroed), not plain malloc: only name/link/type/
+	 * version/value/sig are set below -- become/frame/subtype/file are
+	 * left implicitly zero. Same reasoning as compat.c's own gethunk()
+	 * removal comment. */
+	s = mallocz(sizeof(Sym), 1);
 	s->name = malloc(l + 1);
 	memmove(s->name, symb, l);
 
@@ -1306,12 +1303,9 @@ prg(void)
 {
 	Prog *p;
 
-	while(nhunk < sizeof(Prog))
-		gethunk();
-	p = (Prog*)hunk;
-	nhunk -= sizeof(Prog);
-	hunk += sizeof(Prog);
-
+	/* claude: plain malloc -- *p = zprg right below overwrites the
+	 * whole struct, same as 7l's/5l's own prg(). */
+	p = malloc(sizeof(Prog));
 	*p = zprg;
 	return p;
 }
@@ -1339,27 +1333,35 @@ appendp(Prog *q)
 	return p;
 }
 
-void
-gethunk(void)
-{
-	char *h;
-	long nh;
-
-	nh = NHUNK;
-	if(thunk >= 5L*NHUNK) {
-		nh = 5L*NHUNK;
-		if(thunk >= 25L*NHUNK)
-			nh = 25L*NHUNK;
-	}
-	h = mysbrk(nh);
-	if(h == (char*)-1) {
-		diag("out of memory");
-		errorexit();
-	}
-	hunk = h;
-	nhunk = nh;
-	thunk += nh;
-}
+/* claude: dead code -- every former caller (this file's own Auto/Prog/
+ * Sym allocation sites) now calls malloc()/mallocz() directly instead,
+ * see compat.c's own gethunk() removal comment. Commented out rather
+ * than deleted (same as 5l's/8l's own gethunk()) since it would no
+ * longer link anyway: mysbrk() is gone along with the rest of
+ * compat.c's fake malloc family. `thunk` itself is left declared and
+ * frozen at whatever it started at -- only ever read by a debug['v']
+ * diagnostic print above, not correctness-relevant. */
+//void
+//gethunk(void)
+//{
+//	char *h;
+//	long nh;
+//
+//	nh = NHUNK;
+//	if(thunk >= 5L*NHUNK) {
+//		nh = 5L*NHUNK;
+//		if(thunk >= 25L*NHUNK)
+//			nh = 25L*NHUNK;
+//	}
+//	h = mysbrk(nh);
+//	if(h == (char*)-1) {
+//		diag("out of memory");
+//		errorexit();
+//	}
+//	hunk = h;
+//	nhunk = nh;
+//	thunk += nh;
+//}
 
 void
 doprof1(void)
