@@ -1160,6 +1160,32 @@ already-working stat path" trick os/linux/stat_amd64.c's own
 dirreadbuf() already uses, adapted for Darwin having no openat()
 family at all). windows is now the only remaining gap for rc, same
 CreateProcess-based redesign mk's own windows gap needs.
+
+UPDATE 5: windows done too, both mk and rc, compile+link verified
+(real PE32+ binaries) -- see notes_libc_selfhost.txt's "mk and rc on
+windows, compile+link verified via a new portable spawn()" section.
+This was the one gap in the whole mk/rc self-hosting effort that
+needed a genuinely new, general libc primitive rather than porting an
+existing one: spawn() (include/os/proc.h, docs/claude_notes/
+notes_libc_api_design.txt's own "spawn(): a portable process-spawn
+primitive" section), the same convergent "atomic spawn with fd
+redirection, no bare fork() exposed" design POSIX's posix_spawn(),
+libuv's uv_spawn(), Rust's Command::spawn() and others already
+settled on for the identical reason: Windows never had fork() at all.
+mk/goken.c's execsh()/pipecmd() now build on it (mk/exec_windows.c);
+rc's own Xasync()/Xpipe() genuinely cannot (they duplicate the RUNNING
+INTERPRETER, not start a new program -- rc/rfork_windows.c and the new
+os/windows/fork.c return a real, documented -1, which is the same
+"try again" failure path a real rfork()/fork() failure already takes,
+not a crash). Three more real windows libc gaps found and fixed along
+the way: isatty() (GetConsoleMode), dirread()/dirreadall()
+(FindFirstFileA/FindNextFileA + GetFinalPathNameByHandleA), and a
+real-but-scoped dup() (DuplicateHandle+SetStdHandle, fd targets 0/1/2
+only -- the general case still needs the fd-table this project's own
+windows dup() gap already called for). mk/rc self-hosting is now
+complete to the compile+link bar on all three GOOSes this tree
+targets (linux fully runtime-verified, darwin and windows compile+link
+only, no host hardware for either here).
 Real design work, not mechanical porting like utilities/ above turned
 out to be. mk/mkfile currently only ever builds mk/Posix.c ("Posix.$O
 below not Plan9.$O!"), which wants genuinely POSIX-shaped primitives
@@ -1306,6 +1332,16 @@ access() IS implemented for windows (GetFileAttributesA), but only
 approximately: it can answer existence and the read-only bit, not AREAD
 or AEXEC, since Win32 permissions are ACLs rather than mode bits.
 
+UPDATE: the scoped fix predicted above is now real -- os/windows/dup.c
+(rc self-hosting on windows, notes_libc_selfhost.txt's "mk and rc on
+windows" section), DuplicateHandle+SetStdHandle. NOT the general
+fd-table fix this entry describes -- exactly the fd 0/1/2 targets
+rc/simple.c's own doredir() actually needs, anything else still
+returns -1. tests/c/hello_libc/fd.c's own general case is unaffected
+and still not built for windows; the general fd-table redesign is
+still the right eventual fix if a caller needing arbitrary dup targets
+ever shows up.
+
 **** gap: dirread()/dirreadall() not implemented for darwin/windows
 claude:
 Tier 3.5 (docs/claude_notes/plan_syscalls.txt, notes_libc_selfhost.txt)
@@ -1324,6 +1360,20 @@ Until then, utilities/files/ls.c (see below) only runs self-hosted on
 linux; darwin/windows os/$GOOS/ get no dirread.c at all, so anything
 that needs one fails to link there -- same shape of gap as riscv32's
 missing stat file.
+
+UPDATE: both landed, exactly the shape predicted above -- rc self-
+hosting needed both (rc/goken.c's own Opendir()/Readdir()), see
+notes_libc_selfhost.txt's "rc self-hosting on darwin" and "mk and rc
+on windows" sections for os/darwin/dirread.c (getdirentries64) and
+os/windows/dirread.c (FindFirstFileA/FindNextFileA +
+GetFinalPathNameByHandleA, since Win32 enumerates by path pattern, not
+handle) respectively. windows' own version does not distinguish
+dirread() from dirreadall() at all (no per-call batch boundary the way
+getdents64 has) -- always enumerates the whole directory in one call,
+confirmed harmless for every caller in this tree today. Side effect
+worth checking next time ls.c comes up: utilities/files/ls.c should
+now be able to LINK on darwin/windows too, not just compile -- not
+re-verified here, this round's own verification was scoped to rc.
 
 **** DONE: utfrrune() wiring, plus strrchr()/strncpy()/dirmodefmt() -- ls.c now works
 claude:

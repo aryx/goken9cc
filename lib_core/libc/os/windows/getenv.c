@@ -31,6 +31,73 @@
  */
 
 extern ulong _wingetenv(char *name, char *buf, ulong size);
+extern char *_wingetenvstrings(void);
+extern int _winfreeenvstrings(char *p);
+
+/* environ() for windows -- rc/goken.c self-hosting's own Vinit()/
+ * Updenv() need this (docs/claude_notes/notes_libc_selfhost.txt's rc
+ * self-hosting entries), same as environ() already does on linux/
+ * darwin (port/getenv.c), but built on a genuinely different Win32
+ * primitive: GetEnvironmentVariableA above only ever answers a single
+ * name, there is no "list them all" mode for it. GetEnvironmentStrings
+ * is the real Win32 call for that -- it hands back one block of
+ * "NAME=value\0NAME2=value2\0...\0\0" strings (double-nul terminated),
+ * NOT an argv-style array of pointers, so this walks it once to count
+ * entries and total bytes, copies the whole block into a fresh buffer
+ * this process owns (the original is Win32-owned memory, released via
+ * _winfreeenvstrings() below -- pointers into it would dangle the
+ * moment that call returns), and builds a nil-terminated char** over
+ * the copy, matching every other GOOS's environ() contract
+ * (include/os/env.h).
+ *
+ * Unlike port/getenv.c's own environ(), there is no _environp caching
+ * here and no need for any: os/windows/putenv.c's own SetEnvironmentVariableA
+ * call already mutates the real OS-owned environment block directly,
+ * so simply asking Win32 fresh every call is already correct and
+ * needs no local shadow copy to keep in sync.
+ */
+char**
+environ(void)
+{
+	char *block, *p, *copy, *cp;
+	char **env;
+	long nvar, nbyte, len;
+
+	block = _wingetenvstrings();
+	if(block == nil)
+		return nil;
+
+	nvar = 0;
+	nbyte = 0;
+	for(p = block; *p != '\0'; ){
+		len = strlen(p) + 1;
+		nvar++;
+		nbyte += len;
+		p += len;
+	}
+
+	copy = malloc(nbyte);
+	if(copy == nil){
+		_winfreeenvstrings(block);
+		return nil;
+	}
+	memmove(copy, block, nbyte);
+	_winfreeenvstrings(block);
+
+	env = malloc((nvar+1) * sizeof(char*));
+	if(env == nil){
+		free(copy);
+		return nil;
+	}
+	cp = copy;
+	nvar = 0;
+	while(*cp != '\0'){
+		env[nvar++] = cp;
+		cp += strlen(cp) + 1;
+	}
+	env[nvar] = nil;
+	return env;
+}
 
 char*
 getenv(char *name)

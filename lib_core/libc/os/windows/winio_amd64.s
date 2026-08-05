@@ -634,3 +634,238 @@ TEXT _wingetexitcode+0(SB), $0
 	CALL	AX
 	MOVQ	R15, SP
 	RET				// BOOL result in AX
+
+// claude: os/windows/spawn.c's own portable spawn() (docs/claude_notes/
+// notes_libc_api_design.txt's "spawn(): a portable process-spawn
+// primitive" section) needs these four new stubs beyond what exec()
+// already had: marking a pipe end inheritable before CreateProcessA
+// (CreatePipe's own handles are non-inheritable by default -- see
+// _wincreatepipe's own comment above), waiting on however many children
+// are actually in flight (not just one, unlike _winwaitprocess), and
+// environ()'s own windows gap (os/windows/getenv.c only ever answered
+// single-name lookups, GetEnvironmentVariableA has no "list them all"
+// mode -- GetEnvironmentStrings is the real Win32 primitive for that).
+
+// ok = _winsethandleinfo(handle, mask, flags)
+//   SetHandleInformation(handle, mask, flags)
+// Three register arguments, shadow space only. os/windows/spawn.c's
+// only caller passes mask=HANDLE_FLAG_INHERIT(1), flags=1 -- kept
+// general (not hardcoded here) since the raw layer stays free of
+// interpreting its own arguments, same split as every stub above.
+TEXT _winsethandleinfo+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	handle+0(FP), CX
+	MOVL	mask+8(FP), DX
+	MOVL	flags+16(FP), R8
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_SetHandleInformation(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// BOOL
+
+// r = _winwaitmultiple(count, handles, waitall, ms)
+//   WaitForMultipleObjects(count, handles, waitall, ms)
+// Backs os/windows/wait.c's own wait() -- Win32 has no "wait for any
+// child" call the way POSIX wait4(-1,...) is, only this explicit-list
+// form (capped at MAXIMUM_WAIT_OBJECTS=64, matching wait.c's own table
+// size), so wait() has to keep a live-HANDLE table and pass it here
+// every call. Four register arguments (RCX/RDX/R8/R9), shadow space
+// only. Raw DWORD result (WAIT_OBJECT_0+n on success, WAIT_TIMEOUT or
+// WAIT_FAILED otherwise) -- wait.c does the interpreting, not this stub.
+TEXT _winwaitmultiple+0(SB), $0
+	MOVQ	SP, DI
+	MOVL	count+0(FP), CX
+	MOVQ	handles+8(FP), DX
+	MOVL	waitall+16(FP), R8
+	MOVL	ms+24(FP), R9
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_WaitForMultipleObjects(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// DWORD
+
+// p = _wingetenvstrings()
+//   GetEnvironmentStrings(void)
+// Backs os/windows/getenv.c's environ() -- the one Win32 call that
+// hands back the WHOLE environment as a double-nul-terminated block of
+// "NAME=value\0...\0\0" strings, unlike GetEnvironmentVariableA (single-
+// name lookups only, already wired via _wingetenv above). No arguments
+// at all, same shape as _wingetpid. Note the real DLL export is named
+// GetEnvironmentStrings, not GetEnvironmentStringsA -- MinGW-w64's own
+// processenv.h #defines the A-suffixed name to the same unsuffixed
+// symbol for this one call (confirmed against real headers, not
+// assumed from the usual-A-suffix pattern every other stub here uses).
+TEXT _wingetenvstrings+0(SB), $0
+	MOVQ	SP, DI
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetEnvironmentStrings(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// LPCH (or NULL) in AX
+
+// ok = _winfreeenvstrings(p) -- FreeEnvironmentStringsA(p)
+// The write-side counterpart _wingetenvstrings needs: the block it
+// returns is not caller-managed memory, Win32 owns it and this is how
+// it gets released once os/windows/getenv.c has copied what it needs
+// out of it. Real, A-suffixed export this time (unlike the get side).
+TEXT _winfreeenvstrings+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	p+0(FP), CX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_FreeEnvironmentStringsA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// BOOL
+
+// claude: rc self-hosting's own os/windows/dirread.c/isatty.c/dup.c
+// (docs/claude_notes/notes_libc_selfhost.txt's rc-on-windows entry)
+// need these six more stubs -- directory enumeration (Win32 has no
+// getdents64 equivalent, only a path-pattern-based Find*File family),
+// telling a console handle apart from a redirected file/pipe, and the
+// one honest slice of dup() this GOOS can support (see os/windows/
+// dup.c's own header comment on why only fd 0/1/2 targets work).
+
+// h = _winfindfirst(pattern, finddata) -- FindFirstFileA(pattern, finddata)
+// Two register arguments, shadow space only.
+TEXT _winfindfirst+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	pattern+0(FP), CX
+	MOVQ	finddata+8(FP), DX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_FindFirstFileA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// HANDLE (or INVALID_HANDLE_VALUE) in AX
+
+// ok = _winfindnext(handle, finddata) -- FindNextFileA(handle, finddata)
+TEXT _winfindnext+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	handle+0(FP), CX
+	MOVQ	finddata+8(FP), DX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_FindNextFileA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// BOOL
+
+// ok = _winfindclose(handle) -- FindClose(handle)
+TEXT _winfindclose+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	handle+0(FP), CX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_FindClose(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// BOOL
+
+// n = _wingetfinalpath(handle, buf, buflen, flags)
+//   GetFinalPathNameByHandleA(handle, buf, buflen, flags)
+// The Win32 counterpart of os/windows/getwd.c's/os/darwin/dirread.c's
+// own fcntl(F_GETPATH) trick: Opendir() (rc/goken.c) only ever has a
+// HANDLE for the directory, but FindFirstFileA needs a real path
+// pattern ("dir\*"), so os/windows/dirread.c asks the kernel for that
+// handle's own path first. Four register arguments, shadow space only.
+TEXT _wingetfinalpath+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	handle+0(FP), CX
+	MOVQ	buf+8(FP), DX
+	MOVL	buflen+16(FP), R8
+	MOVL	flags+24(FP), R9
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetFinalPathNameByHandleA(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// DWORD: chars written, or 0 on failure
+
+// ok = _wingetconsolemode(handle, mode) -- GetConsoleMode(handle, mode)
+// Backs isatty(): succeeds only when handle is a real console, fails
+// (mode never written) for a redirected file/pipe -- the standard
+// Win32 isatty(3) technique (what MSVCRT's own _isatty() does
+// internally), since Windows has no ioctl(TCGETS)/termios concept at
+// all for os/linux/isatty.c's/os/darwin/isatty.c's own approach to
+// carry over.
+TEXT _wingetconsolemode+0(SB), $0
+	MOVQ	SP, DI
+	MOVQ	handle+0(FP), CX
+	MOVQ	mode+8(FP), DX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetConsoleMode(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// BOOL
+
+// h = _wingetcurrentprocess() -- GetCurrentProcess(void)
+// A real DLL export (not a macro the way some CRTs inline it) that
+// hands back the current process's own pseudo-handle -- os/windows/
+// dup.c's own DuplicateHandle call needs it twice (source AND target
+// process, since it's duplicating a handle within this same process).
+TEXT _wingetcurrentprocess+0(SB), $0
+	MOVQ	SP, DI
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_GetCurrentProcess(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// HANDLE (pseudo-handle) in AX
+
+// ok = _winduphandle(src, dst)
+//   DuplicateHandle(cur, src, cur, dst, 0, TRUE, DUPLICATE_SAME_ACCESS)
+// Backs os/windows/dup.c. Unlike every other stub here, this hardcodes
+// 5 of DuplicateHandle's real 7 arguments (both process handles to
+// _wingetcurrentprocess()'s own result -- duplicating a handle within
+// THIS process, never to another one; dwDesiredAccess=0+
+// DUPLICATE_SAME_ACCESS, meaning "keep whatever access the source
+// handle already has" rather than asking for a specific, possibly-
+// mismatched set; bInheritHandle=TRUE, matching os/windows/spawn.c's
+// own child-inheritance story) since dup.c's only caller never needs
+// them to vary. Five register/stack arguments after the two real
+// parameters (src, dst's target pointer) -- the largest stack frame
+// in this file after _wincreateprocess.
+#define DUPLICATE_SAME_ACCESS	2
+TEXT _winduphandle+0(SB), $0
+	MOVQ	SP, R15
+	MOVQ	src+0(FP), SI
+	MOVQ	dst+8(FP), DI
+
+	CALL	_wingetcurrentprocess(SB) // AX = pseudo-handle, safe: no args to clobber
+
+	ANDQ	$-16, SP
+	SUBQ	$64, SP			// 32 shadow + 2 stack args (16), 16-aligned
+
+	MOVQ	AX, CX			// 1st: hSourceProcessHandle
+	MOVQ	SI, DX			// 2nd: hSourceHandle
+	MOVQ	AX, R8			// 3rd: hTargetProcessHandle (same process)
+	MOVQ	DI, R9			// 4th: lpTargetHandle
+	MOVQ	$0, 32(SP)		// 5th: dwDesiredAccess = 0
+	MOVQ	$1, 40(SP)		// 6th: bInheritHandle = TRUE
+	MOVQ	$DUPLICATE_SAME_ACCESS, 48(SP)	// 7th: dwOptions
+	MOVQ	__imp_DuplicateHandle(SB), AX
+	CALL	AX
+
+	MOVQ	R15, SP
+	RET				// BOOL
+
+// ok = _winsetstdhandle(std, handle) -- SetStdHandle(std, handle)
+// The write-side counterpart of _wingetstdhandle -- os/windows/dup.c's
+// own way to make a duplicated handle become THIS process's new
+// fd-0/1/2-equivalent, the one case dup(old,new) can honestly support
+// on this GOOS (see that file's own header comment).
+TEXT _winsetstdhandle+0(SB), $0
+	MOVQ	SP, DI
+	MOVL	std+0(FP), CX
+	MOVQ	handle+8(FP), DX
+	ANDQ	$-16, SP
+	SUBQ	$32, SP
+	MOVQ	__imp_SetStdHandle(SB), AX
+	CALL	AX
+	MOVQ	DI, SP
+	RET				// BOOL

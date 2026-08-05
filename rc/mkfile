@@ -45,6 +45,16 @@ VARIANTOFILES=`{if(~ $objtype boot-gcc boot-clang) echo unix.$O; if not if(~ $GO
 # NOTIFYVARIANTOFILES. Only wanted alongside goken.$O itself.
 NOTIFYVARIANTOFILES=`{if(~ $objtype boot-gcc boot-clang) echo -n; if not if(~ $GOOS plan9) echo -n; if not if(~ $GOOS linux) echo notify_full.$O; if not echo notify_none.$O}
 
+# claude: goken.c itself doesn't define rfork() (see its own header
+# comment) -- windows has no fork() to build a thin rfork() wrapper on
+# at all, unlike linux/darwin/plan9, so this picks between
+# rc/rfork_fork.c and rc/rfork_windows.c (a real, documented "always
+# fails" stub -- see that file's own header comment on why rc's own
+# `cmd &` background-job support genuinely cannot be ported the way
+# execsh()/pipecmd()'s own windows story could). Only wanted alongside
+# goken.$O itself, same guard as NOTIFYVARIANTOFILES.
+EXECVARIANTOFILES=`{if(~ $objtype boot-gcc boot-clang) echo -n; if not if(~ $GOOS plan9) echo -n; if not if(~ $GOOS windows) echo rfork_windows.$O; if not echo rfork_fork.$O}
+
 OFILES=\
 	code.$O\
 	exec.$O\
@@ -74,6 +84,7 @@ OFILES=\
      main.$O\
    y.tab.$O \
    $VARIANTOFILES\
+   $EXECVARIANTOFILES\
    $NOTIFYVARIANTOFILES\
 
 HFILES=rc.h\

@@ -548,24 +548,12 @@ needsrcquote(int c)
 	return 0;
 }
 
-/* claude: rc/processes.c's own Xasync() calls rfork(RFFDG|RFPROC|
- * RFNOTEG) directly (a shared file, not goken.c-specific) -- rather
- * than editing that shared call site (which the host boot-gcc build
- * still wants pointed at BOOT/lib9's own real p9rfork(), a pipe-dance
- * emulation over real POSIX fork()+pipe()+SIGCHLD), this defines
- * rfork() itself as a thin fork() wrapper, the same substitution
- * mk/goken.c's own execsh()/pipecmd() already made for
- * RFPROC|RFFDG|RFENVG: Linux's plain fork() already gives the child
- * its own independent fd table (RFFDG) and, since POSIX fork() always
- * gives a child its own independently-modifiable copy of the parent's
- * signal disposition table, its own independent note group too
- * (RFNOTEG) -- both already true of fork() alone, nothing left for
- * the flags to add. Not wired through mk/mkfile's own PROCOFILES
- * (lib_core/libc/mkfile) since rc is the only caller in this tree so
- * far; if a second one shows up this should move there instead. */
-int
-rfork(int flags)
-{
-	USED(flags);
-	return fork();
-}
+/* claude: rfork() moved to its own GOOS-selected files (rc/rfork_fork.c
+ * for linux/darwin/plan9, rc/rfork_windows.c for windows) -- see
+ * rc/rfork_windows.c's own header comment for why windows genuinely
+ * cannot support this the way a thin fork() wrapper does everywhere
+ * else (rc/processes.c's own Xasync() needs REAL fork() semantics --
+ * duplicate the running interpreter into two processes -- which is not
+ * expressible via spawn()'s "start a new program image" contract at
+ * all, unlike execsh()/pipecmd()'s windows story). Wired via
+ * rc/mkfile's own EXECVARIANTOFILES. */

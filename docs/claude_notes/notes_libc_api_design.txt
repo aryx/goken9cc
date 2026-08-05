@@ -377,3 +377,98 @@ If a design session ever happens for this, doing the /env-vs-environ
 question (category F above) in the same pass is worth considering --
 same shape of problem, real callers already waiting (mk/rc), likely a
 per-GOOS glue file rather than a goken.c-sized rewrite either way.
+
+------------------------------------------------------------------------
+spawn(): a portable process-spawn primitive, not fork() everywhere
+------------------------------------------------------------------------
+
+The gap this closes: mk/goken.c's execsh()/pipecmd() and rc/processes.c's
+Xasync() are all hand-rolled fork()+dup()+exec() sequences (see
+notes_libc_selfhost.txt's mk/rc self-hosting entries) -- portable across
+linux/darwin/plan9, where fork() already has a uniform, flag-free
+signature (port/fork.c's raw syscall wrapper on linux/darwin, os/plan9/
+fork.c's rfork(RFPROC|RFFDG|RFREND) on plan9), but fundamentally
+inexpressible on windows: there is no fork() there at all, only the
+atomic CreateProcess(app, cmdline, ..., startupinfo, procinfo), which
+combines what fork()+dup()+exec() do across three separate calls into
+one. Getting mk/rc working on windows means SOMETHING has to bridge that
+gap, and doing it once in libc (rather than per-caller, per-GOOS
+branching inside mk/goken.c and rc/processes.c both) is the same
+"portable API over incompatible primitives" shape environ()/putenv()
+already settled for the environment (see this file's own "Environment"
+section) and notify()/noted() partially settled for signals above.
+
+The chosen shape:
+    int spawn(char *path, char **argv, fdt fdin, fdt fdout, fdt fderr);
+Starts `path` as a new process running `argv`, with its stdin/stdout/
+stderr connected to the given fds (-1 meaning "leave mine as they are").
+Returns immediately (does not wait) with a pid wait()/waitpid() can
+later be given, or -1 on failure. Deliberately does NOT feed stdin or
+drain stdout itself -- the caller builds a pipe, hands one end to
+spawn(), and reads/writes the other end itself, exactly the division of
+labor fork()+dup()+exec() already has. This is narrower than POSIX's own
+posix_spawn() (which takes a whole posix_spawn_file_actions_t list of
+open/close/dup2 steps) -- three fixed fd slots is all any real caller in
+this tree (mk, rc) has ever needed, and a narrower primitive is easier
+to implement honestly on windows than a general file-actions list would
+be.
+
+This is NOT a novel idea invented for this tree -- it is the same
+convergent answer essentially every language/library that has to be
+portable across POSIX and Windows has landed on, precisely because
+Windows never had fork() as a first-class concept at all:
+  - POSIX itself standardized posix_spawn()/posix_spawnp() (POSIX.1-2008)
+    for a related but distinct reason -- fork() is unsafe in threaded or
+    memory-constrained contexts (only async-signal-safe calls are legal
+    between fork and exec) -- but the shape (atomic spawn, fd redirection
+    described declaratively, no bare fork exposed) is the same idea.
+  - libuv (the C library under Node.js) has uv_spawn() -- literally the
+    same verb -- taking a uv_process_options_t with stdio redirection,
+    implemented as fork+exec on POSIX and CreateProcess on Windows behind
+    one API.
+  - Rust's std::process::Command: Command::new(path).stdin(...).spawn()
+    returns a Child you .wait() on -- near-identical shape, same verb,
+    down to the method name.
+  - Go's os/exec, Python's subprocess.Popen, Java's ProcessBuilder: same
+    convergent design, hiding fork() (or CreateProcess) behind one
+    portable "start a process with these fds wired up, get back a
+    waitable handle" API.
+So this project's own spawn() is a small, Plan9-styled member of an
+already well-established design family, not a one-off invention.
+
+Per-GOOS implementation:
+  - linux/darwin/plan9: port/spawn.c, one portable file, no GOOS
+    branching -- fork(), dup() the given fds onto 0/1/2 in the child
+    (closing the original if it wasn't already at that number, matching
+    mk/goken.c's own already-verified execsh()/pipecmd() idiom), exec(),
+    _exits("exec") if exec() itself failed. Exactly the pattern mk/rc
+    already hand-roll, factored into one reusable call.
+  - windows: os/windows/spawn.c, genuinely new -- CreateProcess with
+    STARTUPINFOA.dwFlags=STARTF_USESTDHANDLES and hStdInput/hStdOutput/
+    hStdError wired to the given fds (real byte offsets computed from
+    MinGW-w64's own processthreadsapi.h, not guessed, same discipline as
+    every other Windows struct-offset gap this tree has hit). Since
+    os/windows/pipe.c's own CreatePipe call creates NON-inheritable
+    handles by default (its own header comment), the child-facing handle
+    needs SetHandleInformation(..., HANDLE_FLAG_INHERIT, 1) right before
+    CreateProcessA -- otherwise bInheritHandles=TRUE has nothing
+    inheritable to actually hand the child. Returns without waiting, the
+    same contract as the POSIX/plan9 side -- CreateProcess is already
+    non-blocking, so windows spawn() needs no fork()-alike helper process
+    to achieve that, unlike what a naive port might assume.
+  - wait()/waitpid() need their own windows implementation to pair with
+    this: unlike POSIX wait4(-1,...), Win32 has no "wait for any child"
+    primitive at all, only WaitForSingleObject (one handle) or
+    WaitForMultipleObjects (an explicit list, capped at
+    MAXIMUM_WAIT_OBJECTS=64). So windows wait() needs a small table of
+    in-flight child HANDLEs (populated by spawn(), drained by wait()) to
+    build that list from -- the same "keep a real table instead of
+    assuming a truncated int is enough" idea todo.org's own windows
+    dup() gap already flagged as the eventual right fix for fd-as-HANDLE
+    truncation, just scoped to processes instead of general fds.
+
+Once this exists, mk/goken.c's execsh()/pipecmd() and rc's own spawn
+call sites become callers of one portable primitive instead of each
+carrying their own fork()-vs-CreateProcess branch -- see
+notes_libc_selfhost.txt for the concrete rollout and verification
+status.

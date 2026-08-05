@@ -60,58 +60,21 @@
 extern int _wincreateprocess(char *app, char *cmdline, void *startupinfo, void *procinfo);
 extern int _winwaitprocess(void *handle);
 extern int _wingetexitcode(void *handle, void *code);
+extern int buildcmdline(char *buf, long bufsize, char *argv[]);
 
-/* claude: STARTUPINFOA is 104 bytes on x64 -- hand-derived field by
- * field (cb DWORD=4, then three 8-byte pointers, seven DWORDs, two
- * WORDs, an 8-byte pointer, and three more 8-byte HANDLEs, with the
- * padding each 8-byte pointer forces before it), not copied from a
- * real <windows.h> (this project has none). Only `cb` (offset 0) is
- * ever written -- every other field just needs to be zero, which is
- * what CreateProcessA expects when STARTF_USESTDHANDLES and friends
- * are not set in dwFlags. Sized generously above the derived 104
- * (not exactly 104) as a margin against that hand-derivation being
- * slightly wrong; a too-large zeroed buffer is harmless, a too-small
- * one is a real stack overflow, so the asymmetry is worth the few
- * wasted bytes. PROCESS_INFORMATION is 24 bytes (HANDLE hProcess at
- * offset 0, HANDLE hThread at offset 8, then two DWORDs) -- hProcess
- * at offset 0 is the only field this file reads. Neither size, nor
- * the offset-0 placement of cb/hProcess, has been checked against a
- * real Windows SDK header -- unverified, like the rest of os/windows/
- * added without a Windows host to run it on (see winio_amd64.s's own
- * "NOT verified on a real Windows host" precedent).
+#include "startupinfo.h"
+
+/* claude: STARTUPINFOA/PROCESS_INFORMATION layout and buildcmdline()
+ * both moved to startupinfo.h/cmdline.c, shared with the new spawn()
+ * (os/windows/spawn.c, docs/claude_notes/notes_libc_api_design.txt's
+ * "spawn(): a portable process-spawn primitive" section) -- the offsets
+ * are now computed from a real Windows SDK header (see startupinfo.h's
+ * own comment), not hand-derived and unverified as this file's own
+ * comment used to say. Only `cb` (offset 0) is written here still --
+ * every other field stays zero, which is what CreateProcessA expects
+ * when STARTF_USESTDHANDLES and friends are not set in dwFlags (this
+ * function never redirects; spawn() is the one that does).
  */
-#define STARTUPINFOA_SIZE 128
-#define PROCESS_INFORMATION_SIZE 32
-
-static int
-buildcmdline(char *buf, long bufsize, char *argv[])
-{
-	int i;
-	long n;
-	char *s;
-
-	n = 0;
-	for(i = 0; argv[i] != nil; i++){
-		int quote;
-
-		if(i > 0 && n < bufsize-1)
-			buf[n++] = ' ';
-		quote = 0;
-		for(s = argv[i]; *s != '\0'; s++)
-			if(*s == ' ')
-				quote = 1;
-		if(quote && n < bufsize-1)
-			buf[n++] = '"';
-		for(s = argv[i]; *s != '\0' && n < bufsize-1; s++)
-			buf[n++] = *s;
-		if(quote && n < bufsize-1)
-			buf[n++] = '"';
-	}
-	if(n >= bufsize)
-		return -1;
-	buf[n] = '\0';
-	return 0;
-}
 
 int
 exec(char *prog, char *argv[])
@@ -126,7 +89,7 @@ exec(char *prog, char *argv[])
 		return -1;
 
 	memset(startupinfo, 0, sizeof startupinfo);
-	*(long*)startupinfo = 104; /* cb: real sizeof(STARTUPINFOA), see comment above */
+	*(long*)startupinfo = STARTUPINFOA_CB;
 	memset(procinfo, 0, sizeof procinfo);
 
 	if(!_wincreateprocess(prog, cmdline, startupinfo, procinfo))

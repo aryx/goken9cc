@@ -132,6 +132,44 @@ static struct importfunc {
 	{ "CreateProcessA", 0 },
 	{ "WaitForSingleObject", 0 },
 	{ "GetExitCodeProcess", 0 },
+	// claude: spawn() (docs/claude_notes/notes_libc_api_design.txt's
+	// "spawn(): a portable process-spawn primitive" section) -- unlike
+	// exec() above, spawn() redirects the child's stdin/stdout/stderr to
+	// caller-supplied pipe ends and does not wait internally, so it
+	// needs two more calls exec() never did: SetHandleInformation to
+	// make the child-facing pipe handle inheritable (CreatePipe's own
+	// handles are non-inheritable by default, see os/windows/pipe.c's
+	// comment) right before CreateProcessA, and WaitForMultipleObjects
+	// (not WaitForSingleObject above) for wait() to reap whichever of
+	// several in-flight children finishes first -- see os/windows/
+	// wait.c's own comment on why Win32 has no "wait for any child" of
+	// its own the way POSIX wait4(-1,...) is.
+	{ "SetHandleInformation", 0 },
+	{ "WaitForMultipleObjects", 0 },
+	// claude: and these two for environ() (os/windows/getenv.c) --
+	// GetEnvironmentVariableA above only ever answers single-name
+	// lookups; GetEnvironmentStrings is the one Win32 call that hands
+	// back the whole environment block, and FreeEnvironmentStringsA
+	// releases the Win32-owned memory it returns once copied out of.
+	{ "GetEnvironmentStrings", 0 },
+	{ "FreeEnvironmentStringsA", 0 },
+	// claude: rc self-hosting on windows (docs/claude_notes/
+	// notes_libc_selfhost.txt's rc-on-windows entry) -- directory
+	// enumeration (dirread(), no getdents64 equivalent on Win32, only
+	// this path-pattern-based Find*File family plus
+	// GetFinalPathNameByHandleA to turn Opendir()'s own HANDLE back
+	// into a path), isatty() (GetConsoleMode, the standard technique),
+	// and the one honest slice of dup() this GOOS can support
+	// (DuplicateHandle + SetStdHandle for fd targets 0/1/2 -- see
+	// os/windows/dup.c's own header comment).
+	{ "FindFirstFileA", 0 },
+	{ "FindNextFileA", 0 },
+	{ "FindClose", 0 },
+	{ "GetFinalPathNameByHandleA", 0 },
+	{ "GetConsoleMode", 0 },
+	{ "GetCurrentProcess", 0 },
+	{ "DuplicateHandle", 0 },
+	{ "SetStdHandle", 0 },
 	{ 0, 0 }
 };
 static IMAGE_IMPORT_DESCRIPTOR importds[2];

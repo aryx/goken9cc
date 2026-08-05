@@ -61,6 +61,20 @@ extern	int	execl(char*, ...);
 
 extern	int	waitpid(void);
 
+// claude: spawn() -- a portable process-spawn primitive covering the
+// one thing rfork()/fork()+dup()+exec() cannot express uniformly:
+// there is no fork() on windows at all, only the atomic CreateProcess.
+// See docs/claude_notes/notes_libc_api_design.txt's "spawn(): a
+// portable process-spawn primitive" section for the full design story
+// (and real precedent: POSIX's own posix_spawn(), libuv's uv_spawn(),
+// Rust's Command::spawn(), ...). Starts path/argv with its stdin/
+// stdout/stderr connected to fdin/fdout/fderr (-1 meaning "leave mine
+// as they are"); returns immediately with a pid wait()/waitpid() can
+// later be given, or -1 on failure. Does NOT feed fdin or drain fdout
+// itself -- same division of labor as fork()+dup()+exec() already has:
+// build a pipe, hand one end here, read/write the other yourself.
+extern	int	spawn(char*, char**, fdt, fdt, fdt);
+
 // in <unistd.h>
 extern	int	getpid(void);
 extern	int	getppid(void);

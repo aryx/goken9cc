@@ -2823,3 +2823,159 @@ amd64). Both produce real Mach-O binaries (`file`: "Mach-O 64-bit
 x86_64 executable ... PIE" / "Mach-O 64-bit arm64 executable ... PIE"),
 the established compile+link-only bar for this project's darwin work
 -- no macOS host or qemu-user Darwin emulation to run them on here.
+
+mk and rc on windows, compile+link verified via a new portable spawn()
+====================================================================
+
+The last remaining gap for both tools, and the one that needed real
+new design work rather than porting an existing primitive: windows has
+no fork() at all, only the atomic CreateProcessA, so mk/goken.c's own
+execsh()/pipecmd() (fork()+dup()+exec()) and rc/processes.c's Xasync()/
+Xpipe() (rfork()/fork() to duplicate the running interpreter) could
+never work there as written. Rather than solve this per-caller, the
+user's own steer was to build a portable primitive in libc itself --
+see docs/claude_notes/notes_libc_api_design.txt's "spawn(): a portable
+process-spawn primitive" section for the full design story and the
+real cross-language precedent (POSIX's own posix_spawn(), libuv's
+uv_spawn(), Rust's Command::spawn(), Go's os/exec, Python's
+subprocess.Popen -- this is a well-trodden convergent design, not
+invented here).
+
+int spawn(char *path, char **argv, fdt fdin, fdt fdout, fdt fderr):
+starts path/argv with its stdio connected to the given fds (-1 =
+inherit mine), returns immediately with a pid wait()/waitpid() can
+later be given. linux/darwin/plan9 side (port/spawn.c) is a thin,
+portable fork()+dup()+exec() wrapper -- no GOOS branching needed, all
+three already have a plain flag-free fork(). windows side
+(os/windows/spawn.c) builds STARTUPINFOA with dwFlags=
+STARTF_USESTDHANDLES and hStdInput/hStdOutput/hStdError wired to the
+given fds -- real byte offsets this time (os/windows/startupinfo.h),
+computed from MinGW-w64's own processthreadsapi.h found locally under
+a vendored zig-codeberg toolchain checkout, not hand-derived and
+"unverified" the way os/windows/exec.c's own STARTUPINFOA guess used
+to be documented (that file's own comment updated to match, and now
+shares startupinfo.h/os/windows/cmdline.c's buildcmdline() with
+spawn.c rather than duplicating either). CreatePipe's own handles are
+non-inheritable by default (os/windows/pipe.c's own comment), so the
+child-facing handle needs SetHandleInformation(...,HANDLE_FLAG_INHERIT,
+1) right before CreateProcessA or bInheritHandles=TRUE has nothing
+usable to hand the child.
+
+wait()/waitpid() needed their own windows implementation to pair with
+spawn(): Win32 has no "wait for any child" primitive the way POSIX
+wait4(-1,...) is, only WaitForSingleObject (one handle) or
+WaitForMultipleObjects (an explicit list, capped at
+MAXIMUM_WAIT_OBJECTS=64). os/windows/wait.c keeps a small table of
+in-flight child HANDLEs (populated by spawn()'s own addwaitproc(),
+drained as each is reaped) and passes the live set to
+WaitForMultipleObjects every call -- the same "keep a real table
+instead of assuming a truncated int is enough" idea todo.org's own
+windows dup() gap already flagged as the eventual right fix for
+fd-as-HANDLE truncation, just scoped to processes here.
+
+mk/goken.c's execsh()/pipecmd() moved out into their own GOOS-selected
+files (mk/exec_fork.c: the original fork()-based bodies, unchanged;
+mk/exec_windows.c: rewritten on spawn()), wired via mk/mkfile's new
+EXECVARIANTOFILES (same guard shape as the existing
+NOTIFYVARIANTOFILES). exec_windows.c's own version is structurally
+SIMPLER than exec_fork.c's double-fork dance: that shape exists there
+only to get a second, independent Unix process that can feed shinput
+without blocking the top-level caller, and spawn() doesn't need that
+trick at all since CreateProcessA is already non-blocking -- one
+spawn() call, then the SAME top-level call writes shinput and drains
+stdout sequentially. That sequential write-then-read is a real,
+accepted limitation exec_fork.c's own double-fork avoids (large-enough
+simultaneous input+output could theoretically deadlock on the pipe
+buffer) -- not fixed, since doing so honestly would need a background
+thread this tree has no primitives for yet, and mk recipes are
+realistically small text, not large output. Documented, not silently
+assumed fine.
+
+rc's own story is different in kind, not just in the windows-specific
+file needed: rc/processes.c's Xasync() (`cmd &`) and Xpipe() (`cmd1 |
+cmd2`) both call rfork()/fork() directly to duplicate the RUNNING
+INTERPRETER into two processes that keep executing the SAME rc script
+from that point -- not "start a new program", which is all spawn()'s
+CreateProcessA-based contract can express. Real fork() emulation on
+Windows (Cygwin's own approach: force every DLL to load at identical
+fixed addresses, then ReadProcessMemory/WriteProcessMemory the whole
+address space into a suspended child) is the "fundamentally different,
+much larger engineering project" os/windows/exec.c's own header
+comment already flagged as out of scope when fork() itself was first
+found missing -- still true here, not reopened. So rc/rfork_windows.c
+and the new os/windows/fork.c both return a real, documented -1
+always, which is NOT a crash-prone stub: it is exactly the failure
+path Xasync()/Xpipe() already handle (`case -1: Xerror("try again");
+break;`), the same one a real Unix rfork()/fork() failure already
+takes. `cmd &`/`cmd1 | cmd2` fail cleanly with a real rc error message
+on windows instead of silently doing the wrong thing -- a real,
+accepted, documented gap (no working background-job or in-script-pipe
+support on this GOOS's rc), the same "confidently correct parts only"
+bar darwin's own notify()/noted() gap already set this session.
+rc/rfork_fork.c (linux/darwin/plan9) keeps rfork()'s previous
+thin-fork()-wrapper body unchanged, split out of goken.c purely for
+the same GOOS-selection reason exec_fork.c/exec_windows.c already are.
+
+Getting rc's windows build compiling+linking at all also surfaced
+three more real, previously-unneeded-anywhere-else Windows gaps,
+none of them spawn()-related:
+
+- isatty() (os/windows/isatty.c): Windows has no ioctl(TCGETS)/termios
+  concept at all for os/linux/isatty.c's/os/darwin/isatty.c's own
+  technique to carry over. GetConsoleMode is the real, standard Win32
+  answer (what MSVCRT's own _isatty() does internally) -- succeeds
+  only on a real console handle, fails silently for a redirected
+  file/pipe.
+- dirread()/dirreadall() (os/windows/dirread.c): same "just get the
+  name, reuse the already-working dirfstat()" trick os/linux/
+  stat_amd64.c's and os/darwin/dirread.c's own dirreadbuf() already
+  use, but Win32 has no getdents64-shaped "read raw entries from an
+  open directory HANDLE" call at all -- FindFirstFileA/FindNextFileA
+  enumerate by PATH PATTERN, not handle, so this asks
+  GetFinalPathNameByHandleA for the directory handle's own real path
+  first (same idea as os/darwin/dirread.c's fcntl(F_GETPATH)/
+  os/windows/getwd.c's own precedent for "turn a handle back into a
+  path"). Also, unlike Linux/Darwin, this does NOT distinguish
+  dirread() (one batch) from dirreadall() (loop to EOF) at all -- both
+  always enumerate the whole directory in one call, since Find*File
+  has no natural per-call batch boundary the way getdents64's own
+  buffer does. Confirmed harmless, not just convenient: rc/goken.c's
+  own Readdir() (the only caller in this tree) already calls dirread()
+  exactly once per "current batch exhausted" event and never calls it
+  again once it returns fewer entries than requested.
+- dup() (os/windows/dup.c): os/windows/open.c's own header comment
+  explicitly documented this as unimplementable "until fd numbers stop
+  being truncated HANDLEs" -- still true in general (an arbitrary
+  caller-chosen target fd has no Win32 equivalent without the real
+  fd-table todo.org's own dup() gap already flags), but rc's own
+  doredir() (simple.c, `>file`/`2>&1`-style redirections) only ever
+  targets fd 0/1/2, and THAT specific case has an honest answer:
+  DuplicateHandle the source, then SetStdHandle to make the copy this
+  process's new std handle for that slot. Implemented exactly that
+  slice -- fd 0/1/2 targets work for real, anything else returns -1
+  rather than silently doing the wrong thing.
+
+Verified: `mk -a 'objtype=amd64' 'cputype=amd64' 'GOOS=windows'
+'LDFLAGS=-L../ROOT/arch/amd64/lib -H 10' install` (both LDFLAGS
+overrides needed -- see the "-H is not optional, defaults to the
+HOST's own compiled-in GOOS" lesson tests/c/hello_libc/mkfile's own
+recipes already established) produces a real PE32+ binary for both mk
+and rc (`file`: "PE32+ executable (console) x86-64 ... for MS
+Windows"), the same compile+link-only bar as darwin. A standalone
+spawn()+wait() test program (not committed, scratch-only) also built
+and linked cleanly against the new libc, exercising the whole new
+primitive end to end at the libc level before wiring mk/rc to it.
+
+Also hit and fixed along the way, again: adding 12 new kernel32
+imports (SetHandleInformation, WaitForMultipleObjects,
+GetEnvironmentStrings, FreeEnvironmentStringsA, FindFirstFileA,
+FindNextFileA, FindClose, GetFinalPathNameByHandleA, GetConsoleMode,
+GetCurrentProcess, DuplicateHandle, SetStdHandle) to
+linkers/lk/pe.c's own importfuncs[] shifted the PE import-table byte
+layout again, breaking tests/s/variants' own golden-diffed
+pe_amd64.exe -- the third time this exact regression class has hit
+this tree (Tier 4's own windows round, then SetEnvironmentVariableA
+during environ()/putenv()). Same fix each time: `mk pe_amd64.mkgoldpe`
+to regenerate the golden, plus rebuilding linkers/6l itself first
+(pe.c is compiled into the linker binary, not read at runtime) --
+still the same "rebuild all consumers of shared lk files" lesson.
