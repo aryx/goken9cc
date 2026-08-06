@@ -5,7 +5,18 @@
 //old:
 // #include	"../ld/elf.h"
 // typedef vlong int64;
-typedef size_t usize;
+/* claude: was `typedef size_t usize;` -- relied on a real host
+ * <stddef.h> providing size_t, which BOOT/include's own u.h happens to
+ * pull in (so every objtype=boot-gcc/boot-clang linker build always
+ * compiled fine), but goken's own libc.h has no size_t at all (found
+ * self-hosting linkers/7l via objtype=arm64 for the first time -- no
+ * linker had been self-hosted before this, so this shared ld.h, used
+ * by every linker's own l.h, never hit goken's own compiler until
+ * now). uintptr (every arch's own u.h, already used throughout this
+ * tree for exactly this "pointer-width unsigned integer" purpose) is
+ * both available on both paths and already the closest existing match
+ * to what usize actually means here -- no new dependency added. */
+typedef uintptr usize;
 
 /*
  * basic types in all loaders
