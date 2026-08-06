@@ -464,7 +464,30 @@ asmout(Prog *p, Optab *o)
 		 * 9front. See tests/c/regressions/arm64_large_bss_sb_offset.c
 		 * and docs/claude_notes/notes_arch_arm64.txt.
 		 */
-		if(v < 0 || (v>>s) >= (1<<24))
+		/* claude: was `(v>>s) >= (1<<24)` -- wrong, and not just for
+		 * the ORIGINAL misaligned-offset case this bailout's own
+		 * comment already covers. `hi` (below) is v with bits
+		 * [0,s+11] cleared -- i.e. v rounded down to a multiple of
+		 * 2^(s+12) -- and for hi to fit an ADD-immediate (imm12<<12,
+		 * max 0xFFF000 ~ 16MB) needs hi < 1<<24, which for a v with
+		 * any bit set at position >=24 is false REGARDLESS of s
+		 * (clearing only the low s+12 bits, s+12 <= 24 for every
+		 * scale this backend uses, never touches bit 24+). So the
+		 * real threshold is v >= 1<<24, not (v>>s) >= 1<<24 -- the
+		 * `>>s` let offsets up to 8x too large through for FMOVD
+		 * (s=3), which then failed *inside* oaddi() ("offset out of
+		 * range") instead of routing to the Hugestxr/case 47 fallback
+		 * below, exactly the failure mode the "was missing this
+		 * bailout entirely" fix (see that comment, same file) was
+		 * supposed to eliminate. Found self-hosting compilers/7c,
+		 * whose own fconstnode/pows10<> float constants land past
+		 * lib_core/libc's 64MB heap[] in the data segment -- verified
+		 * against 9front's sys/src/cmd/7l/asmout.c, which has the
+		 * exact same `>>s` bug (unexercised there, not confirmed
+		 * fixed upstream; not blindly matched here since the actual
+		 * ARM64 ADD-immediate encoding this depends on is independent
+		 * of 9front's own history). */
+		if(v < 0 || v >= (1<<24))
 			goto Hugestxr;
 		hi = v - (v & (0xFFF<<s));
 		if((hi & 0xFFF) != 0)
@@ -484,8 +507,9 @@ asmout(Prog *p, Optab *o)
 		v = regoff(&p->from);
 		if((v & ((1<<s)-1)) != 0)
 			diag("misaligned offset\n%P", p);
-		/* claude: see case 30's comment above. */
-		if(v < 0 || (v>>s) >= (1<<24))
+		/* claude: see case 30's comment above (both the original
+		 * bailout-was-missing fix and the `>>s` correction). */
+		if(v < 0 || v >= (1<<24))
 			goto Hugeldxr;
 		hi = v - (v & (0xFFF<<s));
 		if((hi & 0xFFF) != 0)
@@ -1653,6 +1677,15 @@ opldrpp(int a)
 	case AMOVHU:	return 1<<30 | 7<<27 | 0<<26 | 0<<24 | 1<<22;
 	case AMOVB:	return 0<<30 | 7<<27 | 0<<26 | 0<<24 | 2<<22;
 	case AMOVBU:	return 0<<30 | 7<<27 | 0<<26 | 0<<24 | 1<<22;
+	/* claude: AFMOVS/AFMOVD -- same shape as AMOVW/AMOV just above
+	 * (same size field, bit 26 set instead of 0, the V bit selecting a
+	 * SIMD/FP register transfer instead of a general-purpose one),
+	 * ported from 9front's own opldrpp(), which already has both.
+	 * Needed once case 47/48 (this function's only caller) actually
+	 * got reached for an AFMOVD -- see asmout.c case 30's own comment
+	 * for how self-hosting compilers/7c surfaced that. */
+	case AFMOVS:	return 2<<30 | 7<<27 | 1<<26 | 0<<24 | 1<<22;
+	case AFMOVD:	return 3<<30 | 7<<27 | 1<<26 | 0<<24 | 1<<22;
 	}
 	diag("bad opldr %A\n%P", a, curp);
 	return 0;

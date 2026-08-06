@@ -370,6 +370,27 @@ Optab	optab[] =
 	{ AFMOVS,	C_LAUTO,C_NONE,	C_FREG,		31, 8, REGSP,	LFROM },
 	{ AFMOVS,	C_LOREG,C_NONE,	C_FREG,		31, 8, 0,	LFROM },
 
+	/* claude: AFMOVD (double) was missing this whole C_LEXT/C_LAUTO/
+	 * C_LOREG family that its AFMOVS (float) sibling right above
+	 * already has -- found self-hosting compilers/7c, which embeds
+	 * enough float/double constants (mpatof.c's own pows10<> table,
+	 * float literal nodes) to need SB-relative FMOVD access beyond the
+	 * short-displacement C_UAUTO32K/C_UOREG32K tiers above.
+	 * movesize()/opldr12() (asmout.c) already handle AFMOVD generically
+	 * alongside AFMOVS in cases 30/31 -- purely a missing dispatch-table
+	 * entry, not a missing encoder, same shape as the AMOVBU gap this
+	 * file already fixed. Mirrors AFMOVS's own LTO/LFROM-on-all-three
+	 * shape here (unlike AMOVB/AMOVH/AMOVW/AMOV's own C_LEXT-only
+	 * convention above) -- confirmed against 9front's own optab.c,
+	 * which has these same six AFMOVD rows in this same shape. */
+	{ AFMOVD,	C_FREG,	C_NONE,	C_LEXT,		30, 8, REGSB,	LTO },
+	{ AFMOVD,	C_FREG,	C_NONE,	C_LAUTO,	30, 8, REGSP,	LTO },
+	{ AFMOVD,	C_FREG,	C_NONE,	C_LOREG,	30, 8, 0,	LTO },
+
+	{ AFMOVD,	C_LEXT,	C_NONE,	C_FREG,		31, 8, REGSB,	LFROM },
+	{ AFMOVD,	C_LAUTO,C_NONE,	C_FREG,		31, 8, REGSP,	LFROM },
+	{ AFMOVD,	C_LOREG,C_NONE,	C_FREG,		31, 8, 0,	LFROM },
+
 	{ AFMOVS,	C_FREG,	C_NONE,	C_ADDR,		64, 8, 0,	LTO },
 	{ AFMOVS,	C_ADDR,	C_NONE,	C_FREG,		65, 8, 0,	LFROM },
 
