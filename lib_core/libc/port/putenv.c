@@ -78,6 +78,19 @@ putenv(char *name, char *value)
 		if(new == nil)
 			return -1;
 		memmove(new, old, n * sizeof(char*));
+		/* claude: the nil terminator has to be written explicitly --
+		 * `old` holds n entries PLUS a terminator (n+1 slots), and the
+		 * memmove above deliberately copies only the n entries, so
+		 * without this the last slot of the fresh array is whatever
+		 * malloc happened to leave there and every environ() walk runs
+		 * off the end. Latent until port/exec.c stopped bypassing
+		 * environ() (see its own comment): before that, no putenv()
+		 * result was ever handed to execve(), so the missing
+		 * terminator only had to survive in-process getenv() calls,
+		 * which usually found their variable before reaching it. The
+		 * else-branch below always got this right; only the
+		 * replace-an-existing-variable path was wrong. */
+		new[n] = nil;
 		new[idx] = entry;
 	}else{
 		new = malloc((n+2) * sizeof(char*));

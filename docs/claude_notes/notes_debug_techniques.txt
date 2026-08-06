@@ -1072,3 +1072,77 @@ codesign entry above, different failure shape: before spending time
 debugging surprising behavior from a tool this tree bootstraps itself
 (mk, rc, the boot-gcc compilers), check whether the BINARY actually
 reflects the CURRENT source before suspecting the source is wrong.
+
+
+Swapping ONE component of a build pipeline at a time when a tool "works
+alone but fails under the build"
+------------------------------------------------------------------------
+
+Symptom that started this: during stage 2 of `mk bootstrap`, a
+self-hosted 7c failed on every single file with `7c: no error: u.h`,
+while the SAME 7c binary run by hand on the SAME file from the same
+directory succeeded.  Anything that only reproduces under the build has
+at least two candidate causes (the tool, and whatever is driving it),
+and guessing between them is what wastes the afternoon.
+
+The cheap discriminator is a 2x2: the pipeline here was {which mk} x
+{which 7c}, and both are just paths, so all four combinations are one
+command each.
+
+  boot-gcc mk   + boot-goken 7c (CC=<abs path>)  -> works
+  boot-goken mk + boot-goken 7c (from $PATH)     -> fails
+  boot-gcc mk   + boot-goken 7c (from $PATH)     -> works
+  boot-goken mk + boot-goken 7c (CC=<abs path>)  -> fails
+
+Two of those four are enough to name the culprit (it is the mk, not the
+compiler and not $PATH), and the other two make it airtight for the
+cost of thirty seconds.  Worth doing explicitly rather than reasoning
+about it: the failing message named the COMPILER and an include file,
+which is exactly the misdirection that keeps you reading lex.c's
+include search instead of the build driver.
+
+Then: strace the child to read the argv it was actually handed
+------------------------------------------------------------------------
+
+Once the driver was the suspect, `strace -f -e trace=openat,execve` on
+the failing run answered it in one line -- not from the openat calls
+(which merely confirmed the failure) but from the execve above them:
+
+  execve(".../7c", [".../7c", "-I../../include -I../../include/ALL -I. ...",
+                    "-o", "fmt/dofmt.7", "fmt/dofmt.c"], ...)
+
+The whole of $CFLAGS is ONE argv entry.  That is a fact about argument
+passing, invisible in every log the build itself produces -- mk's own
+recipe echo (shprint.c) prints the *substituted* recipe text, which
+looks perfectly normal and word-separated, and the shell's view is
+equally innocent.  The bug was mk exporting a multi-word variable
+joined by a space where rc splits only on '\1'.
+
+Generalization: when a program reports failing on an input it was
+"clearly" given correctly, read the real execve() argv rather than the
+build system's rendering of it.  The two agreeing is an assumption, and
+here that assumption was the entire bug.  This is a different use of
+strace from the "how far did it get before dying" one already recorded
+above -- here the interesting event is at process START, and the child
+matters, so -f is mandatory.
+
+A "transient" failure that always fails is not transient
+------------------------------------------------------------------------
+
+The same target carried a 20-attempt retry loop around each nested
+build, added on a macOS host to paper over binaries vanishing after a
+clean link, with a comment recording that "5 retries was not enough, 20
+needed here".  That reading was an artifact: the loop's success test
+was `~ $status ''`, which never matches under the rc that actually runs
+mk recipes, so the loop ALWAYS ran to exhaustion -- on every host,
+whether or not anything had failed -- and then continued anyway.  The
+retry count was measuring nothing but itself.
+
+Two lessons.  First, before trusting evidence of the form "it needed N
+retries", check that the loop can observe success at all; a
+success-detector that is wrong in the "always failed" direction
+manufactures exactly this kind of plausible, quantitative-looking
+folklore.  Second, a retry that swallows the failure and proceeds is
+strictly worse than no retry: it converts a hard error into a scrolled-
+past message, which is how three unrelated real bugs stayed hidden
+behind it until it was removed.

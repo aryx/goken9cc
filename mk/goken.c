@@ -63,6 +63,15 @@
 Shell rcshell = { "/bin/rc", "rc" };
 Shell *shell = &rcshell;
 
+/* claude: the inter-word separator mk uses when flattening a
+ * multi-word variable into a single environment string, and the one rc
+ * splits it back apart on (rc.h's own SEP) -- see exportenv() below for
+ * what goes wrong when the two disagree. Defined here rather than
+ * shared with Posix.c's identical definition because the two files are
+ * alternatives (mk/mkfile's VARIANTOFILES), never linked together, and
+ * mk.h's own IWS declaration is commented out. */
+int IWS = '\1';
+
 char*
 maketmp(void)
 {
@@ -118,11 +127,22 @@ readenv(void)
  * own exportenv() documents), so mutating the real environment here
  * never affects the parent mk.
  *
- * Multi-word values are joined with a plain space, not Plan9.c's own
- * nul-separator convention (encodenulls()'s counterpart on the way
- * back out) -- there is no reason for a POSIX child process to see
- * embedded nuls in its environment, and a space-joined value is what
- * every other POSIX program already expects there.
+ * Multi-word values are joined with '\1', Posix.c's own IWS
+ * ("inter-word separator in env"), NOT with a plain space. This file
+ * used to use ' ', on the reasoning that a POSIX child has no business
+ * seeing control characters in its environment -- but the child that
+ * matters here is rc, and rc splits an imported environment value into
+ * a word LIST on '\1' and on nothing else (rc/goken.c and rc/unix.c's
+ * enval(), against rc.h's own SEP). Space-joined, every multi-word mk
+ * variable arrived in a recipe as ONE word: `$CFLAGS` reached the
+ * compiler as a single argv entry "-I../../include -I../../include/ALL
+ * -I. ...", which 7c then dutifully tried to open as an include
+ * directory named "-I../../include/ALL". Symptom was a self-hosted
+ * `7c: no error: u.h` on the very first file of stage 2 of `mk
+ * bootstrap`, with the identical 7c binary working perfectly when
+ * driven by the boot-gcc-built mk -- because that one is Posix.c, and
+ * Posix.c had it right. mk and rc have to agree on this separator;
+ * there is no freedom here to pick the nicer-looking one.
  *
  * No unsetenv() equivalent exists in this libc yet (include/os/env.h
  * only has getenv()/putenv()/environ()), so a variable mk wants
@@ -150,7 +170,7 @@ exportenv(ShellEnvVar *e)
 			e->values = nil;
 			continue;
 		}
-		values = wtos(e->values, ' ');
+		values = wtos(e->values, IWS);
 		putenv(e->name, values);
 		free(values);
 	}

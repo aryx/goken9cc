@@ -1,7 +1,15 @@
 TOP=../..
 <$TOP/mkfiles/$objtype/mkfile
 
-LIB=cc.a
+# claude: cc.a$O, not a bare cc.a -- the $O suffix is what keeps a
+# host-bootstrap build (objtype=boot-gcc, cc.ao) and a self-hosted one
+# (objtype=arm64, cc.a7) from writing the same file. compilers/cc/mkfile
+# already did this; cck didn't, and the top-level `bootstrap` target's
+# stage 2/3 made it bite for real: after a bootstrap left an arm64 cc.a
+# here, a plain `mk install` handed it to the host ld, which reported
+# "cc.a:1: syntax error" -- mk saw the newer archive as up to date and
+# never rebuilt it. Also already covered by .gitignore's own *.ao.
+LIB=cc.a$O
 
 OFILES=\
 	y.tab.$O\

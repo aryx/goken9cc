@@ -3084,3 +3084,174 @@ See docs/claude_notes/notes_debug_techniques.txt's own new entry for
 the general lesson on the errstr()/strerror() misdirection (verify
 WHICH function a format verb or wrapper actually calls before treating
 a name match as a implementation match).
+
+
+The three-stage bootstrap, fixpoint reached on linux/arm64
+====================================================================
+
+The mkfile's own `bootstrap` target -- goken's toolchain rebuilding
+ITSELF, not just mk/rc -- now runs end to end on a linux/arm64 host,
+and `bootstrap-compare` reports "Fixpoint reached": every stage-3
+binary and library is byte-identical to its stage-2 counterpart.  That
+is the real self-hosting milestone this whole file has been building
+toward: 7c/7a/7l/iar/mk/rc reproduce themselves exactly, with the
+host's gcc no longer anywhere in the picture.
+
+Read the mkfile's own bootstrap header comment for the stage-by-stage
+description and todo.org's `mk bootstrap` entry for the summary.  What
+follows is what the run actually taught, which is the part worth
+keeping.
+
+Stage 1 travelled from macOS to Linux with zero source changes
+--------------------------------------------------------------
+
+Stage 1 (build the core chain with the boot-gcc-built toolchain) had
+only ever been run on a macOS/arm64 host.  Moving it to a linux/arm64
+host needed no source change at all -- the arch-letter mapping and the
+$cputype/$ostype keying really did travel the way the mkfile comment
+claimed.  Everything below came out of stages 2 and 3, which had never
+been attempted on any host.
+
+Why stage 1 vs stage 2 is the wrong comparison
+--------------------------------------------------------------
+
+The target originally compared stage 1's binaries against stage 2's and
+called that the fixpoint check.  It isn't, and on this host all eight
+binaries duly differed (tens of bytes of .text and .data each).  Stage
+1's tools were built by boot-gcc's 7c and stage 2's by boot-goken's 7c
+-- two builds of the same compiler SOURCE but by two different
+compilers, so their output can legitimately differ.  This is exactly
+why gcc's own bootstrap has three stages and compares stage2 against
+stage3: stage 3 is built by a compiler that was itself built by goken,
+so stage2 == stage3 is the statement that the host compiler has dropped
+out.  The target now promotes twice and runs three stages.
+
+Three real bugs, all portable code (so darwin/windows have them too)
+--------------------------------------------------------------
+
+1. `port/exec.c` bypassed `environ()`.  It had its own four-line
+   `_environ()` that walked `port/mainargs.c`'s `_mainargv` directly,
+   so it never saw the fresh array `port/putenv.c` installs in
+   `_environp` -- the kernel-provided environment block cannot be grown
+   in place, so a mutation MUST switch to a new array, and exec() was
+   still handing execve() the old one.  Every putenv() a process made
+   was silently dropped the moment it exec()ed, which is precisely the
+   "set a variable, then run a child that reads it" case putenv()
+   exists for.  The same helper also found envp by scanning `_mainargv`
+   for its terminating nil -- the exact trick `_mainargc` had already
+   been introduced to replace (see port/mainargs.c).  Fixed by calling
+   `environ()`, which has been the public API in include/os/env.h since
+   it was added; the old comment claiming it was "file-static, not
+   worth exporting" was simply stale.
+
+2. `port/putenv.c` never wrote the nil terminator on the
+   replace-an-existing-variable path.  `old` holds n entries plus a
+   terminator; the memmove copies only the n entries, and the
+   append path went on to set both `new[n]` and `new[n+1]`, but the
+   replace path set only `new[idx]`.  Latent for as long as exec.c
+   bypassed environ() (an in-process getenv() usually found its
+   variable before running off the end); immediately fatal once fix 1
+   landed, since mk's exportenv() mostly REPLACES variables.
+
+3. `mk/goken.c`'s `exportenv()` joined multi-word values with a plain
+   space instead of Posix.c's `IWS` ('\1').  The original comment
+   reasoned that a POSIX child has no business seeing control
+   characters in its environment -- but the child that matters is rc,
+   and rc splits an imported value into a word LIST on '\1' and on
+   nothing else (rc/{goken,unix}.c's enval(), against rc.h's SEP).
+   Space-joined, every multi-word mk variable reached a recipe as ONE
+   word: `$CFLAGS` arrived at 7c as a single argv entry, and 7c
+   dutifully tried to open an include directory named
+   "-I../../include/ALL".  mk and rc have to agree on this separator;
+   there is no freedom to pick the nicer-looking one.
+
+Five rc/mk facts the bootstrap recipe was getting wrong
+--------------------------------------------------------------
+
+All five are documented at their own site in the mkfile, but they are
+general rc/mk facts, not bootstrap trivia:
+
+- `$status` is "" on success only for an rc built from rc/goken.c
+  (Plan9-shaped Waitmsg->msg).  rc/unix.c's Waitfor() inttoascii()s the
+  decoded POSIX wstat, so it is "0".  MKSHELL is bin/rc, the unix.c
+  build, so `~ $status ''` never matches in a recipe.  Test for both.
+- rc has NO `break`/`continue` (builtins.c's table: cd/whatis/eval/
+  exec/exit/shift/wait/...).  Guard the loop body with a flag instead.
+- rc keeps its executable search list in `path` (a list) and derives it
+  from the colon-joined `PATH` exactly once at startup
+  (pathinit()/bigpath()); plan9port's changefn hooks that keep the two
+  in sync are commented out in both rc/unix.c and rc/goken.c.  So
+  assigning either one mid-script does not update the other -- and
+  assigning `PATH` as a LIST is worse than useless, since rc exports a
+  list joined by SEP and every child then inherits one unsplittable
+  word.  Set `path` for yourself and a colon-joined `PATH` for children.
+- A word containing `=` must be quoted when it is an argument rather
+  than an assignment: `mk foo ARFLAGS=rcD` is a syntax error ("token
+  '=': syntax error"), `mk foo 'ARFLAGS=rcD'` is fine.  The mkfiles'
+  existing `'objtype='$cputype` style is not decoration.
+- mk runs every recipe under `rc -e` (mk/run.c's sched(), unless the
+  rule carries the E attribute), and rc's -e only checks TOP-LEVEL
+  commands: rc/code.c's outcode() compiles an IF's condition with
+  eflag forced false.  So an if() that doesn't fire leaves $status set
+  to the condition's result ("false", from Xbang), and if that if() is
+  the last thing a function does, the top-level call to that function
+  is where -e silently kills the recipe.  End such a function with an
+  explicit `status=''`.
+
+Two build-system gaps it forced out
+--------------------------------------------------------------
+
+- Nothing in this build system makes a tool binary depend on
+  ROOT/arch/$objtype/lib/libc.a.  mkfiles/mkone's `$O.out: $OFILES
+  $LIB` uses $LIB for a directory's OWN intermediate archive
+  (compilers/7c's cc.a, assemblers/7a's aa.a); the system libraries
+  appear only as -l flags in $LDLIBS, with no prerequisite edge.
+  Harmless for a boot-gcc build linking the host libc, fatal for a
+  bootstrap that rebuilds libc.a from source at the top of every stage:
+  a tool whose .$O files were already up to date kept a binary linked
+  against the PREVIOUS libc.a.  The bootstrap recipe now removes
+  $O.out per directory.  A real dependency edge would be the better
+  fix; not attempted here.
+- Local intermediate archives are shared across objtypes unless the
+  name carries $O.  compilers/cc/mkfile already used `cc.a$O`;
+  compilers/cck did not, so after a bootstrap left an arm64 cc.a there,
+  a plain `mk install` fed it to the host ld ("cc.a:1: syntax error")
+  and mk, seeing the newer archive, never rebuilt it.  Now `cc.a$O` in
+  cck and its seven consumers.  Relatedly, mkfiles/mklib and
+  mkfiles/mksyslib now `rm -f` the archive before running $AR: ar's `r`
+  key MERGES into whatever is already there, and $prereq is the
+  complete $OFILES list, so building fresh is both correct and what
+  kills the stale-member class ("ar: phase error", cross-objtype
+  members) for good.
+
+Reproducible archives, measured rather than guessed
+--------------------------------------------------------------
+
+bootstrap-compare originally covered bin/* only, on the grounds that
+"ar archives embed per-member metadata that may not be byte-
+reproducible even for a semantically identical rebuild (not verified
+either way for iar yet)".  Now verified, and it is both: plain `iar rc`
+stamps each member's real mtime and two archives built from identical
+objects differ; `iar rcD` (linkers/ar/ar.c's Dflag, GNU ar -D's idea)
+zeroes dates and modes and they come out byte-identical.
+mkfiles/mkfile.proto grew an `ARFLAGS` variable (default "rc", since
+$AR is the HOST's ar for a boot-gcc build and BSD ar has no D key) and
+the bootstrap passes `ARFLAGS=rcD`, so lib/*.a is now a real part of
+the fixpoint check.
+
+Note that 7a and 7c have no `-r` (reproducible) flag, unlike 5a/8a and
+5c/8c/5ck/8ck -- so arm64 object files still embed the cwd in their
+history records.  That does not affect this comparison (every stage
+runs from the same directory), but it does mean arm64 output is not yet
+reproducible ACROSS machines the way the 32-bit arches' is.
+
+Runtime-verified, not just built
+--------------------------------------------------------------
+
+The fixpoint itself proves the self-hosted mk works: stages 2 and 3
+were driven by it.  The stage-3 rc was checked separately (backquote
+substitution, list variables, `~` matching, and a real FOO=bar reaching
+`env` in a child -- the exact putenv()+exec() path fixed above).  Note
+it needs `RCMAIN=$GOROOT/etc/rcmain.unix` in the environment: this
+libc's unsharp() is an honest no-op (port/unsharp.c), so the built-in
+"#9/etc/rcmain.unix" default cannot resolve.

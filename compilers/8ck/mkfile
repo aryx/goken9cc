@@ -25,7 +25,7 @@ OFILES=\
 
 HFILES=	gc.h $TOP/linkers/8lk/8.out.h $TOP/compilers/cck/cc.h
 
-LIB= $TOP/compilers/cck/cc.a
+LIB= $TOP/compilers/cck/cc.a$O
 
 <$TOP/mkfiles/mkone
 

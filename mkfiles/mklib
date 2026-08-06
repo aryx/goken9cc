@@ -4,8 +4,18 @@ all:V:	$LIB
 
 #TODO: principia: 'ar vu' under plan9, rsc is GNU binutils specific
 # note: $AR, not a hardcoded 'ar' -- see mkfiles/mksyslib
+# claude: rm -f first, so the archive is always built from scratch.
+# $prereq here is the FULL $OFILES list (not just the out-of-date ones,
+# which is $newprereq), so a fresh archive is complete by construction --
+# whereas ar's `r` key MERGES into whatever file is already sitting
+# there. Merging is never what is wanted here and has bitten this tree
+# repeatedly: a stale archive left by the original build-mk.sh bootstrap
+# made iar report "ar: phase error", and after the top-level `bootstrap`
+# target runs, a local archive holds the OTHER objtype's members, which
+# a later build would quietly merge host .o files into.
 $LIB:	$OFILES
-	$AR rc $LIB $prereq
+	rm -f $LIB
+	$AR $ARFLAGS $LIB $prereq
 
 %.$O:	$HFILES		# don't combine with following %.$O rules
 

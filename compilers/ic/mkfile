@@ -21,7 +21,7 @@ OFILES=\
 
 HFILES=	gc.h $TOP/include/obj/i.out.h $TOP/compilers/cck/cc.h
 
-LIB=$TOP/compilers/cck/cc.a
+LIB=$TOP/compilers/cck/cc.a$O
 
 <$TOP/mkfiles/mkone
 

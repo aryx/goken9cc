@@ -12,6 +12,12 @@
 # gcc and goken libs
 *.a
 *.ao
+# claude: the same objtype-qualified intermediate archives as *.ao above
+# (mkfiles/mklib's $LIB=cc.a$O and friends), for the goken objtypes --
+# same letter set as the *.[5678evij] object-file line above. Needed
+# once anything is built for a non-boot objtype: the top-level
+# `bootstrap` target leaves a compilers/cck/cc.a7 on an arm64 host.
+*.a[5678evij]
 
 [5678ovij].out
 _testmain.go

@@ -1273,6 +1273,77 @@ rfork(RFFDG|RFPROC|RFNOTEG) needs checking against what real
 rfork(2)/our rfork() can actually honor before assuming it just works
 by analogy to mk's simpler case.
 
+*** DONE: `mk bootstrap` -- the full three-stage self-bootstrap, fixpoint reached (linux/arm64)
+claude:
+The mkfile's own `bootstrap` target now runs end to end on a
+linux/arm64 host and `bootstrap-compare` reports "Fixpoint reached":
+stage 3's binaries AND libraries are byte-identical to stage 2's, so
+goken's 7c/7a/7l/iar/mk/rc reproduce themselves exactly with the host
+gcc entirely out of the picture. Full write-up in docs/claude_notes/
+notes_libc_selfhost.txt's "the three-stage bootstrap, fixpoint reached
+on linux/arm64" section; the mkfile's own header comment carries the
+stage-by-stage description.
+
+Stage 1 needed no source changes at all to move from the macOS/arm64
+host it was developed on to this one -- the arch-letter and $ostype
+keying really did travel. Everything below was found in stages 2 and 3,
+which had never been attempted anywhere before.
+
+Three real bugs outside the build system, all portable code that
+applies to darwin/windows equally:
+- lib_core/libc/port/exec.c walked port/mainargs.c's _mainargv itself
+  instead of calling environ(), so it was blind to port/putenv.c's
+  fresh array: every putenv() a process made was dropped at exec().
+  It also used the scan-for-argv's-nil trick that _mainargc was
+  introduced to replace.
+- port/putenv.c never wrote the nil terminator on the
+  replace-an-existing-variable path (the append path was fine).
+  Latent while exec.c bypassed environ(); immediately fatal after.
+- mk/goken.c's exportenv() joined multi-word values with a space
+  rather than Posix.c's IWS ('\1', which is rc's own SEP), so a
+  recipe's $CFLAGS arrived at 7c as ONE argv entry -- the compiler
+  then tried to open an include directory literally named
+  "-I../../include/ALL". mk and rc have to agree on that separator.
+
+Five fixes to the bootstrap recipe itself (each documented at its own
+site in the mkfile): `~ $status ''` never matched because MKSHELL is
+the rc/unix.c build, whose $status is "0" not ""; rc has no `break`
+at all, so the retry loop's early exit was a command-not-found waiting
+to happen; `PATH=(list)` exported a SEP-joined single word that broke
+every child's PATH; mk runs recipes under `rc -e` and rc's -e checks
+only top-level commands, so a leftover "false" status from an if()
+that didn't fire silently aborted the whole target between stages; and
+nothing in the build system makes a tool binary depend on libc.a, so a
+rebuilt libc never reached an already-up-to-date tool. The macOS
+AV-quarantine retry loop was removed rather than fixed, at the user's
+call -- the right next step there is to find that race's actual root
+cause on a macOS host, not to keep a blind retry that (because of the
+$status bug) always ran to exhaustion and then continued anyway.
+
+Two build-system fixes the three-stage run forced out, both with
+existing precedent in this tree:
+- compilers/cck's intermediate archive was a bare `cc.a`, shared by
+  every objtype; compilers/cc/mkfile already used `cc.a$O`. After a
+  bootstrap left an arm64 cc.a there, a plain `mk install` fed it to
+  the host ld ("cc.a:1: syntax error") and mk saw the newer archive as
+  up to date. Now `cc.a$O` in cck and its seven consumers.
+- mkfiles/mklib and mkfiles/mksyslib now `rm -f` the archive before
+  running $AR, so it is always built fresh. ar's `r` key MERGES, and
+  $prereq is the complete $OFILES list, so merging was never wanted --
+  it is the same shape as the "ar: phase error" from a stale
+  build-mk.sh archive already on record.
+
+Also new: mkfiles/mkfile.proto grew ARFLAGS (default "rc"), so the
+bootstrap can pass ARFLAGS=rcD and get deterministic archives from
+iar (linkers/ar/ar.c's Dflag). That is what let bootstrap-compare
+extend from bin/* to lib/*.a; the old comment there guessed archives
+"may not be byte-reproducible" and the guess is now measured -- plain
+`iar rc` differs across rebuilds, `iar rcD` does not.
+
+Not done: darwin/arm64 and windows have not had stages 2/3 attempted.
+Worth re-running on the MacBook now that the three libc/mk bugs above
+are fixed, since none of them were host-specific.
+
 ** libs
 
 *** libsyscall

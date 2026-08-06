@@ -45,6 +45,18 @@ LDFLAGS=-L$ROOT/arch/$objtype/lib $SANITIZE
 # unassigned variable lets rc correctly expand it to zero words instead.
 #BOOTLIBS=
 
+# claude: the archiver key letters, split out of mkfiles/mklib and
+# mkfiles/mksyslib's recipes so a caller can ask for a DETERMINISTIC
+# archive without editing them: `ARFLAGS=rcD` makes goken's own iar zero
+# each member's date and mode (linkers/ar/ar.c's Dflag, same idea as GNU
+# ar -D), which is what makes two archives built from identical objects
+# compare byte-for-byte -- the top-level mkfile's `bootstrap` target
+# relies on exactly that for its stage-2-vs-stage-3 fixpoint check.
+# Deliberately still plain "rc" by default: $AR is the HOST's ar for a
+# boot-gcc/boot-clang build (mkfiles/boot-gcc/mkfile), and BSD ar, the
+# one on a macOS host, has no D key at all.
+ARFLAGS=rc
+
 LEX=lex
 #alt: bison but not always super compatible. apparently on my Linux /bin/yacc
 # is actually bison in disguise but compatible :)

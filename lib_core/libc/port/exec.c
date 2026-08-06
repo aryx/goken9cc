@@ -13,15 +13,32 @@
 /* exec() (include/os/proc.h) -- Plan9's exec(char*, char*[]) has no
  * envp argument (there is no environ concept in the Plan9 API at all,
  * see port/getenv.c's own header comment), so this bridges it onto the
- * raw 3-arg POSIX execve() the running process already has an
- * environment block for -- port/mainargs.c's _mainargv, stashed by
- * arch/$cputype/rt0.s at startup, the same source port/getenv.c reads.
+ * raw 3-arg POSIX execve() by handing it whatever port/getenv.c's
+ * environ() currently reports.
  *
- * _environ() below is a deliberate near-duplicate of port/getenv.c's
- * own file-static environ(), not a shared call: that one is static to
- * its own translation unit (matching Plan9's usual one-helper-per-file
- * style elsewhere in this tree), and the walk is four lines, not worth
- * a new cross-file API surface for.
+ * claude: environ(), NOT a local re-walk of port/mainargs.c's
+ * _mainargv, which is what this file used to do. Two separate bugs in
+ * one four-line helper. First, it read the kernel-provided block
+ * directly and so was blind to port/putenv.c, which cannot grow that
+ * block in place and instead switches getenv.c's _environp to a fresh
+ * array -- meaning every putenv() a process made was silently dropped
+ * the moment it exec()ed, exactly the "set a variable, then run a
+ * child that reads it" pattern putenv() exists for. Second, it found
+ * envp by scanning _mainargv for its terminating nil, the very trick
+ * _mainargc was introduced to replace (see port/mainargs.c's own
+ * comment: any getopt-style parser that compacts argv in place moves
+ * that nil earlier and the scan then reads shifted argv strings as
+ * environment entries). getenv.c's environ() handles both correctly
+ * and has been the public API in include/os/env.h since it was added,
+ * so there was never a "it's file-static, not worth exporting"
+ * tradeoff to make -- the old comment here claiming otherwise was
+ * simply out of date.
+ *
+ * Found self-hosting `mk bootstrap`'s stage 2 on linux/arm64: a
+ * goken-built mk ran every recipe with $stem/$target/$prereq unset,
+ * because mk/goken.c's exportenv() putenv()s them in the forked child
+ * and execsh() then exec()s the shell. Symptom was one "rc: null list
+ * in concatenation" per compile job (mkfiles/mkone's own `$stem.c`).
  *
  * execve() only ever returns on failure, so there is exactly one
  * `return` here (unlike port/dup.c's two-branch shape) -- but the raw
@@ -33,24 +50,10 @@
  */
 
 extern int _sysexecve(void *path, void *argv, void *envp);
-extern char **_mainargv;
-
-static char**
-_environ(void)
-{
-	char **p;
-
-	p = _mainargv;
-	if(p == nil)
-		return nil;
-	while(*p != nil)
-		p++;
-	return p + 1;
-}
 
 int
 exec(char *prog, char *argv[])
 {
-	_sysexecve(prog, argv, _environ());
+	_sysexecve(prog, argv, environ());
 	return -1;
 }
