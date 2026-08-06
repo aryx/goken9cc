@@ -294,13 +294,13 @@ float_const_oob.check:V: float_const_oob.c float_const_oob_start_mips.s riscv64_
 
 mulzero.check:V: mulzero.c mulzero_start_amd64.s mulzero_start_386.s
 	6c -c mulzero.c
-	6a -c mulzero_start_amd64.s
-	6l -o mulzero_amd64.exe -E _main mulzero.6 mulzero_start_amd64.6
-	8a -c mulzero_start_386.s
+	6a -o mulzero_mulzero_start_amd64.6 -c mulzero_start_amd64.s
+	6l -o mulzero_amd64.exe -E _main mulzero.6 mulzero_mulzero_start_amd64.6
+	8a -o mulzero_mulzero_start_386.8 -c mulzero_start_386.s
 	8c -c mulzero.c
-	8l -o mulzero_8c_386.exe -E _main mulzero.8 mulzero_start_386.8
+	8l -o mulzero_8c_386.exe -E _main mulzero.8 mulzero_mulzero_start_386.8
 	8ck -c mulzero.c
-	8l -o mulzero_8ck_386.exe -E _main mulzero.8 mulzero_start_386.8
+	8l -o mulzero_8ck_386.exe -E _main mulzero.8 mulzero_mulzero_start_386.8
 	st=`{ ../../../scripts/qemu-runner amd64 ./mulzero_amd64.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: mulzero_amd64.exe (6c) exit 0'
@@ -333,13 +333,13 @@ mulzero.check:V: mulzero.c mulzero_start_amd64.s mulzero_start_386.s
 # own comment for the full story.
 mulconst_unsigned_char_host.check:V: mulconst_unsigned_char_host.c mulzero_start_amd64.s mulzero_start_386.s
 	6c -c mulconst_unsigned_char_host.c
-	6a -c mulzero_start_amd64.s
-	6l -o mulconst_unsigned_char_host_amd64.exe -E _main mulconst_unsigned_char_host.6 mulzero_start_amd64.6
-	8a -c mulzero_start_386.s
+	6a -o mulconst_unsigned_char_host_mulzero_start_amd64.6 -c mulzero_start_amd64.s
+	6l -o mulconst_unsigned_char_host_amd64.exe -E _main mulconst_unsigned_char_host.6 mulconst_unsigned_char_host_mulzero_start_amd64.6
+	8a -o mulconst_unsigned_char_host_mulzero_start_386.8 -c mulzero_start_386.s
 	8c -c mulconst_unsigned_char_host.c
-	8l -o mulconst_unsigned_char_host_8c_386.exe -E _main mulconst_unsigned_char_host.8 mulzero_start_386.8
+	8l -o mulconst_unsigned_char_host_8c_386.exe -E _main mulconst_unsigned_char_host.8 mulconst_unsigned_char_host_mulzero_start_386.8
 	8ck -c mulconst_unsigned_char_host.c
-	8l -o mulconst_unsigned_char_host_8ck_386.exe -E _main mulconst_unsigned_char_host.8 mulzero_start_386.8
+	8l -o mulconst_unsigned_char_host_8ck_386.exe -E _main mulconst_unsigned_char_host.8 mulconst_unsigned_char_host_mulzero_start_386.8
 	st=`{ ../../../scripts/qemu-runner amd64 ./mulconst_unsigned_char_host_amd64.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: mulconst_unsigned_char_host_amd64.exe (6c) exit 0'
@@ -388,8 +388,8 @@ arm_div_from_lib.check:V: arm_div_from_lib.c arm_div_from_lib_lib.s arm_div_from
 
 arm64_vlong_if_branch.check:V: arm64_vlong_if_branch.c arm64_regressions_start.s
 	7c -Darm64 -c arm64_vlong_if_branch.c
-	7a -c arm64_regressions_start.s
-	7l -H7 -o arm64_vlong_if_branch.exe -E _main arm64_vlong_if_branch.7 arm64_regressions_start.7
+	7a -o arm64_vlong_if_branch_arm64_regressions_start.7 -c arm64_regressions_start.s
+	7l -H7 -o arm64_vlong_if_branch.exe -E _main arm64_vlong_if_branch.7 arm64_vlong_if_branch_arm64_regressions_start.7
 	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_vlong_if_branch.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: arm64_vlong_if_branch.exe exit 0'
@@ -400,8 +400,8 @@ arm64_vlong_if_branch.check:V: arm64_vlong_if_branch.c arm64_regressions_start.s
 
 arm64_uvlong_shift32.check:V: arm64_uvlong_shift32.c arm64_regressions_start.s
 	7c -Darm64 -c arm64_uvlong_shift32.c
-	7a -c arm64_regressions_start.s
-	7l -H7 -o arm64_uvlong_shift32.exe -E _main arm64_uvlong_shift32.7 arm64_regressions_start.7
+	7a -o arm64_uvlong_shift32_arm64_regressions_start.7 -c arm64_regressions_start.s
+	7l -H7 -o arm64_uvlong_shift32.exe -E _main arm64_uvlong_shift32.7 arm64_uvlong_shift32_arm64_regressions_start.7
 	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_uvlong_shift32.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: arm64_uvlong_shift32.exe exit 0'
@@ -447,8 +447,8 @@ warn_default_visible.check:V: hex_const_no_suffix_truncated.c
 
 arm64_bitcon_upper_bits.check:V: arm64_bitcon_upper_bits.c arm64_regressions_start.s
 	7c -Darm64 -c arm64_bitcon_upper_bits.c
-	7a -c arm64_regressions_start.s
-	7l -H7 -o arm64_bitcon_upper_bits.exe -E _main arm64_bitcon_upper_bits.7 arm64_regressions_start.7
+	7a -o arm64_bitcon_upper_bits_arm64_regressions_start.7 -c arm64_regressions_start.s
+	7l -H7 -o arm64_bitcon_upper_bits.exe -E _main arm64_bitcon_upper_bits.7 arm64_bitcon_upper_bits_arm64_regressions_start.7
 	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_bitcon_upper_bits.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: arm64_bitcon_upper_bits.exe exit 0'
@@ -459,8 +459,8 @@ arm64_bitcon_upper_bits.check:V: arm64_bitcon_upper_bits.c arm64_regressions_sta
 
 arm64_large_bss_sb_offset.check:V: arm64_large_bss_sb_offset.c arm64_regressions_start.s
 	7c -Darm64 -c arm64_large_bss_sb_offset.c
-	7a -c arm64_regressions_start.s
-	7l -H7 -o arm64_large_bss_sb_offset.exe -E _main arm64_large_bss_sb_offset.7 arm64_regressions_start.7
+	7a -o arm64_large_bss_sb_offset_arm64_regressions_start.7 -c arm64_regressions_start.s
+	7l -H7 -o arm64_large_bss_sb_offset.exe -E _main arm64_large_bss_sb_offset.7 arm64_large_bss_sb_offset_arm64_regressions_start.7
 	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_large_bss_sb_offset.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: arm64_large_bss_sb_offset.exe exit 0'
@@ -471,8 +471,8 @@ arm64_large_bss_sb_offset.check:V: arm64_large_bss_sb_offset.c arm64_regressions
 
 arm64_switch_vlong.check:V: arm64_switch_vlong.c arm64_regressions_start.s
 	7c -Darm64 -c arm64_switch_vlong.c
-	7a -c arm64_regressions_start.s
-	7l -H7 -o arm64_switch_vlong.exe -E _main arm64_switch_vlong.7 arm64_regressions_start.7
+	7a -o arm64_switch_vlong_arm64_regressions_start.7 -c arm64_regressions_start.s
+	7l -H7 -o arm64_switch_vlong.exe -E _main arm64_switch_vlong.7 arm64_switch_vlong_arm64_regressions_start.7
 	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_switch_vlong.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: arm64_switch_vlong.exe exit 0'
@@ -483,8 +483,8 @@ arm64_switch_vlong.check:V: arm64_switch_vlong.c arm64_regressions_start.s
 
 arm64_switch_vlong_wide_range.check:V: arm64_switch_vlong_wide_range.c arm64_regressions_start.s
 	7c -Darm64 -c arm64_switch_vlong_wide_range.c
-	7a -c arm64_regressions_start.s
-	7l -H7 -o arm64_switch_vlong_wide_range.exe -E _main arm64_switch_vlong_wide_range.7 arm64_regressions_start.7
+	7a -o arm64_switch_vlong_wide_range_arm64_regressions_start.7 -c arm64_regressions_start.s
+	7l -H7 -o arm64_switch_vlong_wide_range.exe -E _main arm64_switch_vlong_wide_range.7 arm64_switch_vlong_wide_range_arm64_regressions_start.7
 	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_switch_vlong_wide_range.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: arm64_switch_vlong_wide_range.exe exit 0'
@@ -495,8 +495,8 @@ arm64_switch_vlong_wide_range.check:V: arm64_switch_vlong_wide_range.c arm64_reg
 
 arm64_fmovd_large_offset.check:V: arm64_fmovd_large_offset.c arm64_regressions_start.s
 	7c -Darm64 -c arm64_fmovd_large_offset.c
-	7a -c arm64_regressions_start.s
-	7l -H7 -o arm64_fmovd_large_offset.exe -E _main arm64_fmovd_large_offset.7 arm64_regressions_start.7
+	7a -o arm64_fmovd_large_offset_arm64_regressions_start.7 -c arm64_regressions_start.s
+	7l -H7 -o arm64_fmovd_large_offset.exe -E _main arm64_fmovd_large_offset.7 arm64_fmovd_large_offset_arm64_regressions_start.7
 	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_fmovd_large_offset.exe; echo $status }
 	if (~ $st 0)
 		echo 'ok: arm64_fmovd_large_offset.exe exit 0'
@@ -507,14 +507,14 @@ arm64_fmovd_large_offset.check:V: arm64_fmovd_large_offset.c arm64_regressions_s
 
 cpp_macro_param_in_string.check:V: cpp_macro_param_in_string.c arm64_regressions_start.s mulzero_start_amd64.s mulzero_start_386.s
 	7c -Darm64 -c cpp_macro_param_in_string.c
-	7a -c arm64_regressions_start.s
-	7l -H7 -o cpp_macro_arm64.exe -E _main cpp_macro_param_in_string.7 arm64_regressions_start.7
+	7a -o cpp_macro_param_in_string_arm64_regressions_start.7 -c arm64_regressions_start.s
+	7l -H7 -o cpp_macro_arm64.exe -E _main cpp_macro_param_in_string.7 cpp_macro_param_in_string_arm64_regressions_start.7
 	6c -Damd64 -c cpp_macro_param_in_string.c
-	6a -c mulzero_start_amd64.s
-	6l -o cpp_macro_amd64.exe -E _main cpp_macro_param_in_string.6 mulzero_start_amd64.6
+	6a -o cpp_macro_param_in_string_mulzero_start_amd64.6 -c mulzero_start_amd64.s
+	6l -o cpp_macro_amd64.exe -E _main cpp_macro_param_in_string.6 cpp_macro_param_in_string_mulzero_start_amd64.6
 	8c -D386 -c cpp_macro_param_in_string.c
-	8a -c mulzero_start_386.s
-	8l -o cpp_macro_386.exe -E _main cpp_macro_param_in_string.8 mulzero_start_386.8
+	8a -o cpp_macro_param_in_string_mulzero_start_386.8 -c mulzero_start_386.s
+	8l -o cpp_macro_386.exe -E _main cpp_macro_param_in_string.8 cpp_macro_param_in_string_mulzero_start_386.8
 	for (a_exe in 'arm64 cpp_macro_arm64.exe' 'amd64 cpp_macro_amd64.exe' '386 cpp_macro_386.exe') {
 		a=`{echo $a_exe | awk '{print $1}'}
 		exe=`{echo $a_exe | awk '{print $2}'}
