@@ -11,7 +11,7 @@ TOP=../../..
 # three share this one hello.c; only the libc.a underneath and the
 # link/run step differ (see lib_core/libc/mkfile's own GOOS story).
 
-all:V: hello.exe io.exe dir.exe fd.exe mem.exe proc.exe args.exe env.exe ctime.exe atexit.exe utfmisc.exe notify.exe
+all:V: hello.exe io.exe dir.exe fd.exe mem.exe proc.exe args.exe env.exe ctime.exe atexit.exe utfmisc.exe notify.exe alarm.exe
 # claude: dir_tmp.txt and the dir_tmp_d/ directory are created by dir.c
 # and removed by it again, so they are only ever left behind if that
 # test died in between -- cleaned up here rather than left to confuse
@@ -50,6 +50,7 @@ test_one:V:
 	$TOP/scripts/qemu-runner $cputype ./atexit.exe | cmp /dev/stdin atexit_expected.txt
 	$TOP/scripts/qemu-runner $cputype ./utfmisc.exe | cmp /dev/stdin utfmisc_expected.txt
 	$TOP/scripts/qemu-runner $cputype ./notify.exe | cmp /dev/stdin notify_expected.txt
+	$TOP/scripts/qemu-runner $cputype ./alarm.exe | cmp /dev/stdin alarm_expected.txt
 	if(! ~ $cputype riscv){
 		mk 'objtype='$cputype stat.exe dirread.exe fork.exe
 		$TOP/scripts/qemu-runner $cputype ./stat.exe | cmp /dev/stdin stat_expected.txt
@@ -86,6 +87,7 @@ test:V:
 		$TOP/scripts/qemu-runner $arch ./atexit.exe | cmp /dev/stdin atexit_expected.txt
 		$TOP/scripts/qemu-runner $arch ./utfmisc.exe | cmp /dev/stdin utfmisc_expected.txt
 		$TOP/scripts/qemu-runner $arch ./notify.exe | cmp /dev/stdin notify_expected.txt
+		$TOP/scripts/qemu-runner $arch ./alarm.exe | cmp /dev/stdin alarm_expected.txt
 		if(! ~ $arch riscv){
 			mk 'objtype='$arch 'cputype='$arch stat.exe dirread.exe fork.exe
 			$TOP/scripts/qemu-runner $arch ./stat.exe | cmp /dev/stdin stat_expected.txt
@@ -236,6 +238,17 @@ utfmisc.exe: utfmisc.c
 notify.exe: notify.c
 	$CC $CFLAGS -D$objtype -c notify.c
 	$LD $LDFLAGS -H7 -o $target -E _main notify.$O -lc
+
+# claude: alarm.c: alarm() (include/os/time.h). Same -H7/-D$objtype
+# story as hello.exe above, and the same every-arch-including-riscv
+# reach as notify.exe: setitimer needs no riscv32 carve-out (it is in
+# the generic syscall table like kill/rt_sigaction, unlike fstat and
+# wait4 -- see numbers_riscv.h). Linux only, like notify.exe: the
+# expiry arrives as a note, and linux is the only GOOS here with a
+# real notify()/noted() to catch one with.
+alarm.exe: alarm.c
+	$CC $CFLAGS -D$objtype -c alarm.c
+	$LD $LDFLAGS -H7 -o $target -E _main alarm.$O -lc
 
 # claude: stat.c: dirstat/dirfstat/dirwstat/dirfwstat (Tier 3). NOT
 # built for every $cputype -- see all:V:'s own comment on why riscv is

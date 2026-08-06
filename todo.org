@@ -1372,6 +1372,27 @@ contents from the host on read (getpid() -> the host's own pid,
 testable rather than merely compiled. Worth doing before the stat or
 process-control tiers, both of which will want more of /dev.
 
+**** gap: 5i/vi don't actually serve ALARM (still "No system call" stubs)
+claude:
+alarm() now exists in lib_core/libc for all four GOOSes, and on plan9
+it is a direct syscall (syscall/os/plan9/svc_{arm,mips}.s, using sys.h's
+own ALARM=24 which was already defined and unused). Correct on the
+guest side and confirmed to compile+link for plan9/arm and plan9/mips.
+But machines/5i/syscall.c's sysalarm() and machines/vi/syscall.c's are
+both "No system call" stubs that Bprint and exits(0) the whole emulator,
+so a -H2 binary calling alarm() dies there even though it would work on
+real hardware -- same shape as the FSTAT/STAT gap below.
+
+Worth noting this one is bigger than a marshalling fix: unlike stat,
+serving ALARM means the emulator needs a notion of elapsed time in the
+interpreter loop AND a way to deliver a note to the guest, and note
+delivery is itself already a documented 5i/vi gap (notes_libc_selfhost's
+own Tier 6 entry -- which is why tests/c/hello_libc/notify.c is
+linux-only). So the two want doing together, and the alarm half is
+useless without the note half. tests/c/hello_libc/alarm.c is
+deliberately linux-only for exactly this reason, matching notify.c
+next door.
+
 **** gap: 5i/vi don't actually serve FSTAT/STAT (still TODO stubs)
 claude:
 Tier 3 (docs/claude_notes/plan_syscalls.txt, notes_libc_selfhost.txt)

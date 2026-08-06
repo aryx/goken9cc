@@ -170,3 +170,10 @@
  */
 #define SYS_ioctl	54
 #define SYS_getdirentries64	344
+
+// alarm() (os/darwin/alarm.c). BSD number, like every other entry
+// here -- 83 = setitimer, 86 = getitimer in XNU's own
+// bsd/kern/syscalls.master. Unlike linux, this GOOS does have a
+// SYS_alarm-free table anyway: BSD never carried one, alarm(3) is a
+// libc wrapper over setitimer there too.
+#define SYS_setitimer	83

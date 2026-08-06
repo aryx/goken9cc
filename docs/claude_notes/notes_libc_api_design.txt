@@ -472,3 +472,66 @@ call sites become callers of one portable primitive instead of each
 carrying their own fork()-vs-CreateProcess branch -- see
 notes_libc_selfhost.txt for the concrete rollout and verification
 status.
+
+
+------------------------------------------------------------------------
+alarm(): where the "extend the API" argument does NOT apply
+------------------------------------------------------------------------
+
+alarm(ms) -- Plan9's millisecond one-shot timer, posting an "alarm" note
+on expiry -- had been declared in include/os/time.h from the start with
+no implementation behind it on any GOOS. It now has one everywhere it
+can have one: a direct syscall on plan9 (syscall/os/plan9/svc_
+$cputype.s, using sys.h's ALARM which was already defined and unused),
+setitimer(ITIMER_REAL) glue on linux and darwin (os/$GOOS/alarm.c), and
+a documented always--1 on windows.
+
+The design question worth recording is the one that came WITH the
+request: should a more general, setitimer()-shaped API go in alongside
+it, the way spawn() went in alongside (and above) fork()? The tree does
+extend the Plan9 surface when there is a reason to, so this is a fair
+question rather than a settled one.
+
+The answer here is no, and the reason is that spawn()'s argument runs
+the opposite direction. spawn() earned its place by being MORE portable
+than what it replaced: fork()+dup()+exec() is fundamentally
+inexpressible on windows (see the section above), so a new primitive was
+the only way to cover all four GOOSes at all. A general interval timer
+is the reverse trade -- it is more EXPRESSIVE but less portable:
+
+  - plan9's kernel offers this one-shot alarm and nothing else. There is
+    no setitimer, no timer_create, no interval timer of any kind. A
+    general API would have to be emulated in userspace on the very GOOS
+    whose API this is, and with no threads in this libc there is nothing
+    to run that emulation on.
+  - windows cannot even back alarm() today, because the missing piece is
+    not the timer (Win32 has several) but note delivery, which this GOOS
+    has none of. A richer timer API would be more surface with strictly
+    less behind it.
+  - the expressiveness actually missing -- a REPEATING timer -- is the
+    part a caller can supply for itself portably, by re-arming from its
+    own note handler. That works on plan9 too, which a setitimer()
+    wrapper would not.
+  - and there is no caller. Nothing in this tree calls alarm() yet, let
+    alone wants an interval one. Adding surface ahead of a caller is the
+    thing this file's own "Plan9-clean primitives" framing argues
+    against, and the same restraint port/putenv.c's header comment
+    already applies to unsetenv().
+
+What was done instead, as a cheap hedge: the RAW setitimer stub is
+generated on both linux and darwin (_syssetitimer in each .decl), since
+that is where the per-arch syscall-number work actually lives. If a real
+caller ever needs interval timers, the plumbing is already in place on
+the two GOOSes that could support them, and only the portable-surface
+question is left open -- which is the right thing to leave open, because
+it is a question about callers, not about syscalls.
+
+One implementation note worth keeping, since it is the kind of thing
+that silently half-works: linux uses setitimer rather than the alarm(2)
+syscall, and not as a preference. alarm(2) does not exist on the generic
+syscall ABI (arm64, riscv, riscv64) -- dropped with the rest of the
+legacy group, exactly as fork() and pipe() were in favour of clone() and
+pipe2(). It also takes whole SECONDS, so it could not honour this
+signature's millisecond promise anywhere, even on the arches that still
+have it. setitimer is present on all seven and is millisecond-capable,
+so one glue file covers them all.

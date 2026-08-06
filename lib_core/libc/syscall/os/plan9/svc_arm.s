@@ -138,6 +138,25 @@ TEXT sleep(SB), $0
 	SWI	$0
 	RET
 
+// claude: alarm(ms) -- also milliseconds, and also a direct syscall on
+// this GOOS, so again no glue file: contrast os/linux/alarm.c and
+// os/darwin/alarm.c, which both have to build an itimerval and call
+// setitimer because neither kernel has a millisecond one-shot timer of
+// its own. This is the ORIGINAL of the API the other three implement;
+// the note it posts on expiry ("alarm") is the kernel's, not a name
+// this libc invented. Returns the milliseconds left on the previous
+// alarm, 0 if none was pending -- the return value arrives in R0
+// exactly like open()'s fd, so no post-processing here either.
+// NOT yet implemented by 5i or vi: machines/5i/syscall.c's sysalarm()
+// and machines/vi/syscall.c's are both "No system call" stubs, so a
+// -H2 binary calling this dies under the emulators even though it
+// would work on real hardware. See todo.org.
+TEXT alarm(SB), $0
+	MOVW	R0, 0(FP)
+	MOVW	$ALARM, R0
+	SWI	$0
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R0, 0(FP)
 	MOVW	$PREAD, R0

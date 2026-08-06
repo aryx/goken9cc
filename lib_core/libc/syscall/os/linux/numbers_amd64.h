@@ -150,3 +150,9 @@ struct Ksigaction {
 // real x86_64-linux-musl/bits/syscall.h, cross-checked against this
 // arch's own SYS_kill=62 above matching the same reference table.
 #define SYS_ioctl	16
+
+// alarm(): setitimer, not the alarm(2) syscall -- see os/linux/alarm.c
+// for why. This is the one arch here where SYS_alarm (37) does exist
+// and is deliberately NOT used, so that all seven share one glue file.
+// Confirmed against real x86_64-linux-musl bits/syscall.h.
+#define SYS_setitimer	38

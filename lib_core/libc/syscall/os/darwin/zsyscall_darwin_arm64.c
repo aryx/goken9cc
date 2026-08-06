@@ -134,3 +134,8 @@ int _sysgetdirentries64(int fd, void* buf, ulong bufsize, void* position)
 	return (int)_syscall6(SYS_getdirentries64, (vlong)fd, (vlong)buf, (vlong)bufsize, (vlong)position, 0, 0);
 }
 
+int _syssetitimer(int which, void* new, void* old)
+{
+	return (int)_syscall6(SYS_setitimer, (vlong)which, (vlong)new, (vlong)old, 0, 0, 0);
+}
+

@@ -97,6 +97,16 @@ TEXT sleep(SB), $0
 	SYSCALL
 	RET
 
+// claude: alarm(ms) -- see svc_arm.s's fuller comment. Same direct-
+// syscall shape as sleep above, R1 instead of R0 as everywhere in this
+// file. Not implemented by vi (machines/vi/syscall.c's sysalarm is an
+// explicit "No system call" stub).
+TEXT alarm(SB), $0
+	MOVW	R1, 0(FP)
+	MOVW	$ALARM, R1
+	SYSCALL
+	RET
+
 TEXT pread(SB), $0
 	MOVW	R1, 0(FP)
 	MOVW	$PREAD, R1

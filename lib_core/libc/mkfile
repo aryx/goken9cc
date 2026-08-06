@@ -444,7 +444,17 @@ SYSCALLOFILES=\
 # (getenv/putenv/environ)" entry. Both were declared in
 # include/os/env.h from the start but had no implementation anywhere
 # in this tree until now, on any GOOS.
-OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O os/plan9/getwd.$O os/plan9/getpid.$O os/plan9/time.$O os/plan9/getenv.$O os/plan9/putenv.$O os/plan9/convM2D.$O os/plan9/convD2M.$O os/plan9/dirread.$O; if not if(~ $GOOS linux) echo os/linux/getwd.$O os/linux/time.$O os/linux/isatty.$O; if not if(~ $GOOS darwin) echo os/darwin/getwd.$O os/darwin/time.$O os/darwin/isatty.$O os/darwin/dirread.$O; if not if(~ $GOOS windows) echo os/windows/getwd.$O os/windows/time.$O os/windows/getenv.$O os/windows/putenv.$O os/windows/dup.$O os/windows/isatty.$O os/windows/dirread.$O; if not echo -n}
+# claude: alarm() joins the same per-GOOS split, and splits the same way
+# the entries above do rather than uniformly:
+#   alarm    a real millisecond syscall on plan9 (svc_$cputype.s, the
+#            ORIGINAL of this API, so no file here at all); glue over
+#            setitimer(ITIMER_REAL) on linux and darwin, in separate
+#            files because the itimerval layout genuinely differs (two
+#            kernel longs vs darwin's mixed {long,int32} pair); and a
+#            documented always--1 on windows, which has plenty of timers
+#            but no note mechanism to deliver an expiry to. See each
+#            file's own header comment.
+OSGOOSOFILES=`{if(~ $GOOS plan9) echo os/plan9/access.$O os/plan9/getwd.$O os/plan9/getpid.$O os/plan9/time.$O os/plan9/getenv.$O os/plan9/putenv.$O os/plan9/convM2D.$O os/plan9/convD2M.$O os/plan9/dirread.$O; if not if(~ $GOOS linux) echo os/linux/getwd.$O os/linux/time.$O os/linux/isatty.$O os/linux/alarm.$O; if not if(~ $GOOS darwin) echo os/darwin/getwd.$O os/darwin/time.$O os/darwin/isatty.$O os/darwin/dirread.$O os/darwin/alarm.$O; if not if(~ $GOOS windows) echo os/windows/getwd.$O os/windows/time.$O os/windows/getenv.$O os/windows/putenv.$O os/windows/dup.$O os/windows/isatty.$O os/windows/dirread.$O os/windows/alarm.$O; if not echo -n}
 
 # claude: dirfstat()/dirfwstat() (Tier 3, docs/claude_notes/plan_syscalls.txt).
 # Unlike every other OSFILES entry, struct-stat layout is genuinely

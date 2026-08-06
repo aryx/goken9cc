@@ -165,3 +165,8 @@ struct Ksigaction {
 // real mips-linux-musl/bits/syscall.h, matching this arch's own
 // SYS_kill=4037 above (same o32 reference table).
 #define SYS_ioctl	4054
+
+// alarm(): setitimer, not the alarm(2) syscall -- see os/linux/alarm.c
+// for why. Same o32 reference table as this arch's own SYS_kill=4037
+// above (o32 mirrors the i386 numbering offset by 4000).
+#define SYS_setitimer	4104

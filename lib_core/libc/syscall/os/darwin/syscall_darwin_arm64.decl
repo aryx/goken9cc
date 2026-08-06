@@ -72,3 +72,8 @@
 // struct definitions.
 //sys _sysioctl(int fd, ulong request, void *arg) int = SYS_ioctl
 //sys _sysgetdirentries64(int fd, void *buf, ulong bufsize, void *position) int = SYS_getdirentries64
+
+// alarm() (os/darwin/alarm.c). new/old stay void* like every other
+// raw stub in this tree -- the raw layer stays free of struct
+// definitions.
+//sys _syssetitimer(int which, void *new, void *old) int = SYS_setitimer

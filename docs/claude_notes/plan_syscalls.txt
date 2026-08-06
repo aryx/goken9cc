@@ -673,6 +673,32 @@ riscv32 again: gettimeofday (169), clock_gettime (113) and nanosleep
 (101) are all 64-only. rv32 must use clock_gettime64 (403) and
 clock_nanosleep_time64 (407).
 
+LANDED, and with a different call than this table anticipated: time/nsec
+and sleep went to clock_gettime/clock_nanosleep everywhere (not
+gettimeofday/nanosleep) so that one arch-independent os/linux/time.c
+covers all seven -- see notes_libc_selfhost.txt's Tier 5 entries.
+
+alarm() joined this tier afterwards, and its numbers are:
+
+               386/arm   amd64   arm64/riscv/riscv64   mips(o32)   Darwin   Plan9
+  setitimer    104       38      103                   4104        83       (ALARM = 24)
+
+Note what is NOT in that row: SYS_alarm. The generic syscall ABI
+(arm64/riscv/riscv64) has no alarm(2) at all -- dropped with the rest of
+the legacy group, the same way fork() and pipe() were -- and where it
+does exist it takes whole SECONDS, so it cannot honour include/os/
+time.h's millisecond signature anyway. setitimer(ITIMER_REAL) is present
+on all seven, is millisecond-capable, and needs no per-arch struct
+layout if the itimerval fields are spelled intptr (sizeof(long) ==
+sizeof(void*) on every Linux ABI here). Darwin needs its own file only
+because its timeval is a mixed {long, int32} pair rather than two kernel
+longs. Plan9 needs no glue at all: ALARM was already in
+syscall/os/plan9/sys.h, unused, and takes milliseconds natively.
+Windows gets a documented always--1 -- it has timers but no note
+mechanism to deliver an expiry to. See notes_libc_api_design.txt's
+"alarm(): where the 'extend the API' argument does NOT apply" for why no
+general setitimer()-shaped API went in alongside it.
+
 Plan9 needs far fewer new syscalls than these tables suggest
 ------------------------------------------------------------------------
 

@@ -157,3 +157,9 @@ struct Ksigaction {
 // real aarch64-linux-musl/bits/syscall.h, matching this arch's own
 // SYS_kill=129 above (same reference table as numbers_riscv*.h's).
 #define SYS_ioctl	29
+
+// alarm(): setitimer, not the alarm(2) syscall -- the generic syscall
+// ABI has no SYS_alarm at all (same reason there is no fork() or
+// pipe() here). See os/linux/alarm.c. Same reference table as
+// numbers_riscv*.h, matching this arch's own SYS_kill=129 above.
+#define SYS_setitimer	103

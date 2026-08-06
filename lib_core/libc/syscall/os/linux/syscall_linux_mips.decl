@@ -110,3 +110,8 @@
 // knows it points at a struct termios it never even reads (only
 // checks the ioctl's own success/failure).
 //sys _sysioctl(int fd, ulong request, void *arg) int = SYS_ioctl
+
+// alarm() (os/linux/alarm.c). new/old stay void* like every other raw
+// stub here -- the raw layer stays free of struct definitions, and
+// os/linux/alarm.c declares the one itimerval shape it needs.
+//sys _syssetitimer(int which, void *new, void *old) int = SYS_setitimer

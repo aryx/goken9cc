@@ -159,3 +159,8 @@ int _sysioctl(int fd, ulong request, void* arg)
 	return (int)_syscall6(SYS_ioctl, (vlong)fd, (vlong)request, (vlong)arg, 0, 0, 0);
 }
 
+int _syssetitimer(int which, void* new, void* old)
+{
+	return (int)_syscall6(SYS_setitimer, (vlong)which, (vlong)new, (vlong)old, 0, 0, 0);
+}
+
