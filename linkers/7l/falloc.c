@@ -5,58 +5,68 @@
  * "gethunk()/sbrk() OOM bug" section) -- this whole fake malloc/free/
  * calloc/realloc/setmalloctag family (all built on the sbrk()-backed
  * hunk arena via halloc(), see sub.c's own gethunk() comment) is
- * DISABLED via #if 0 so real libc malloc()/calloc()/free()/realloc()/
+ * DISABLED so real libc malloc()/calloc()/free()/realloc()/
  * setmalloctag() (lib_core/libc/port/minimal_malloc.c) are linked in
  * instead. Keeping any one of these locally defined while the others
  * fall through to libc.a would either recurse (malloc->halloc->
  * gethunk->malloc) or duplicate-symbol-collide (minimal_malloc.c
  * defines all of these in one object file).
+ *
+ * claude: was `#if 0`/`#endif` -- goken's own compilers have NO `#if`
+ * support at all (CLAUDE.md's own note: "#if defined(X) || defined(Y)
+ * fails with 'unknown #: if'" -- confirmed here that a bare `#if 0`
+ * fails identically, not just a complex expression), so this compiled
+ * fine under every objtype=boot-gcc/boot-clang build (real cpp) but
+ * broke self-hosting linkers/7l via objtype=arm64 outright ("unknown
+ * #: if") -- the first time this file was ever compiled by goken's own
+ * 7c. Switched to individual `//` line comments instead, matching
+ * 8l/compat.c's own established convention for this exact situation
+ * (its own header comment: "the code is disabled" via `//`, not
+ * `#if 0`) -- should have matched that the first time.
  */
-#if 0
 /*
  * fake malloc
  */
-void*
-malloc(usize n)
-{
-	return halloc(n);
-}
-
-void
-free(void *p)
-{
-	USED(p);
-}
-
-void*
-calloc(usize m, usize n)
-{
-	void *p;
-
-	n *= m;
-	p = malloc(n);
-	memset(p, 0, n);
-	return p;
-}
-
-/*
- * not used by compiler or loader, but Windows needs it
- */
-void*
-realloc(void *p, usize n)
-{
-	void *new;
-
-	new = malloc(n);
-	if(new != nil && p != nil)
-		memmove(new, p, n);	/* safe only when adjecent hunks have no gaps */
-	return new;
-}
-
-void
-setmalloctag(void *v, uint32 pc)
-{
-	USED(v);
-	USED(pc);
-}
-#endif
+//void*
+//malloc(usize n)
+//{
+//	return halloc(n);
+//}
+//
+//void
+//free(void *p)
+//{
+//	USED(p);
+//}
+//
+//void*
+//calloc(usize m, usize n)
+//{
+//	void *p;
+//
+//	n *= m;
+//	p = malloc(n);
+//	memset(p, 0, n);
+//	return p;
+//}
+//
+///*
+// * not used by compiler or loader, but Windows needs it
+// */
+//void*
+//realloc(void *p, usize n)
+//{
+//	void *new;
+//
+//	new = malloc(n);
+//	if(new != nil && p != nil)
+//		memmove(new, p, n);	/* safe only when adjecent hunks have no gaps */
+//	return new;
+//}
+//
+//void
+//setmalloctag(void *v, uint32 pc)
+//{
+//	USED(v);
+//	USED(pc);
+//}

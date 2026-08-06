@@ -38,8 +38,16 @@
  *     7l's own gethunk() removal) but left in place, same as 8l's own
  *     frozen `thunk` global -- only ever read by a debug['v']
  *     diagnostic print, not correctness-relevant.
+ *
+ * claude: was `#if 0`/`#endif` -- goken's own compilers have NO `#if`
+ * support at all (CLAUDE.md's own note: "#if defined(X) || defined(Y)
+ * fails with 'unknown #: if'", and a bare `#if 0` fails identically,
+ * confirmed fixing the identical mistake in linkers/7l/falloc.c --
+ * this file hadn't been self-hosted yet to catch it here too, fixed
+ * proactively while addressing the same pattern there). Switched to
+ * individual `//` line comments instead, matching 8l/compat.c's own
+ * established convention for this exact situation.
  */
-#if 0
 /*
  * fake malloc
  *
@@ -49,77 +57,76 @@
  * header keeps the returned pointer 8-byte aligned since it is itself
  * 8 bytes and hunk only ever advances by multiples of 8.
  */
-void*
-malloc(ulong n)
-{
-	vlong *p;
-	ulong n2;
-
-	n2 = n + sizeof(vlong);
-	while(n2 & 7)
-		n2++;
-	while(nhunk < n2)
-		gethunk();
-	p = (vlong*)hunk;
-	*p = n;
-	nhunk -= n2;
-	hunk += n2;
-	return p+1;
-}
-
-void
-free(void *p)
-{
-	USED(p);
-}
-
-void*
-calloc(ulong m, ulong n)
-{
-	void *p;
-
-	n *= m;
-	p = malloc(n);
-	memset(p, 0, n);
-	return p;
-}
-
-void*
-realloc(void *v, ulong n)
-{
-	void *p;
-	vlong oldn;
-
-	if(v == nil)
-		return malloc(n);
-	oldn = ((vlong*)v)[-1];
-	if(n <= oldn)
-		return v;
-	p = malloc(n);
-	memmove(p, v, oldn);
-	return p;
-}
-
-void*
-mysbrk(ulong size)
-{
-	return sbrk(size);
-}
-
-/* claude: lk/macho.c (shared with 7l) allocates its MachoLoad/MachoSect
- * arrays via halloc(); 7l has its own hunk-based halloc() in sub.c, but
- * that's functionally identical to our malloc() above, so just reuse it */
-void*
-halloc(ulong n)
-{
-	return malloc(n);
-}
-
-void
-setmalloctag(void*, ulong)
-{
-}
-#endif
+//void*
+//malloc(ulong n)
+//{
+//	vlong *p;
+//	ulong n2;
+//
+//	n2 = n + sizeof(vlong);
+//	while(n2 & 7)
+//		n2++;
+//	while(nhunk < n2)
+//		gethunk();
+//	p = (vlong*)hunk;
+//	*p = n;
+//	nhunk -= n2;
+//	hunk += n2;
+//	return p+1;
+//}
+//
+//void
+//free(void *p)
+//{
+//	USED(p);
+//}
+//
+//void*
+//calloc(ulong m, ulong n)
+//{
+//	void *p;
+//
+//	n *= m;
+//	p = malloc(n);
+//	memset(p, 0, n);
+//	return p;
+//}
+//
+//void*
+//realloc(void *v, ulong n)
+//{
+//	void *p;
+//	vlong oldn;
+//
+//	if(v == nil)
+//		return malloc(n);
+//	oldn = ((vlong*)v)[-1];
+//	if(n <= oldn)
+//		return v;
+//	p = malloc(n);
+//	memmove(p, v, oldn);
+//	return p;
+//}
+//
+//void*
+//mysbrk(ulong size)
+//{
+//	return sbrk(size);
+//}
+//
+///* claude: lk/macho.c (shared with 7l) allocates its MachoLoad/MachoSect
+// * arrays via halloc(); 7l has its own hunk-based halloc() in sub.c, but
+// * that's functionally identical to our malloc() above, so just reuse it */
+//void*
+//halloc(ulong n)
+//{
+//	return malloc(n);
+//}
+//
+//void
+//setmalloctag(void*, ulong)
+//{
+//}
 
 //old: now in libc
 //int
