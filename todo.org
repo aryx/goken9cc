@@ -1090,6 +1090,22 @@ Still open, deliberately not attempted this round:
   were not surveyed at all this round (time/scope), only the
   directories that came up while chasing the specific errors above.
 
+*** TODO: gap: compilers/cc/compat.c still uses `#if 0`/`#endif` around its own fake-malloc block
+claude:
+Same shape as the real bug found (and fixed) in linkers/7l/falloc.c and
+linkers/6l/compat.c while self-hosting the mk/rc/toolchain bootstrap
+below: goken's own compilers have no `#if` support at all (only
+`#ifdef`/`#ifndef`), so `#if 0 ... #endif` compiles fine under every
+objtype=boot-gcc/boot-clang build (real cpp) but fails outright
+("unknown #: if") the moment anything tries to self-host this file.
+NOT yet hit in practice: compilers/cc is a separate frontend from
+compilers/cck (which compilers/${LETTER}c -- 7c confirmed, others not
+yet tried -- actually links against), and isn't part of the bootstrap
+target's own BOOTSTRAPDIRS chain. Pre-existing, not introduced by any
+work in this session. Fix when compilers/cc itself is ever self-hosted:
+same treatment as the two files above, individual `//` line comments
+instead of `#if 0`.
+
 *** DONE: self-host mk and rc themselves
 claude:
 UPDATE: mk's side of this is done -- see docs/claude_notes/

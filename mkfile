@@ -102,31 +102,41 @@ test_windows:V:
 #   4. bootstrap-compare: diff boot-goken's binaries against the
 #      freshly-self-rebuilt $cputype ones -- the fixpoint check.
 #
-# CURRENT STATUS (2026-08): stage 1 gets through lib_core/libbio,
-# lib_strings/libregexp+libstring, generators (lex+yacc, now including
-# the yacc *tool* itself -- see lib_core/libc/port/mkstemp.c's own
-# commit), lib_toolchain/libmach, and linkers/ar (all self-hosted and
-# runtime-verified: yacc's own y.tab.c output confirmed byte-identical
-# to the committed reference, ar's own archive create+list confirmed
-# working), then mk/rc (already self-hosted and runtime-verified in an
-# earlier round, see notes_libc_selfhost.txt), but does NOT yet reach
-# compilers/${BOOTSTRAPLETTER}c: it hits a genuine, unfixed compiler
-# bug there, not a portability gap -- 7c's own switch statement rejects
-# a vlong controlling expression ("switch expression must be integer",
-# compilers/7c/list.c:191). Every gap found along the way so far turned
-# out to be a real, honestly-fixable portability gap, not a compiler
-# bug: redundant `#include <ctype.h>` in three files (this project's
-# own include/str/ascii.h, pulled in via libc.h, already covers
-# everything they needed), and two missing libc primitives
-# (mkstemp()/mktemp(), layered on the already-implemented-but-until-now-
-# untested create()) plus several char*-vs-byte[] call-site mismatches
-# in linkers/ar/ar.c and lib_toolchain/libmach/obj.c (fixed with
-# memcmp()/memmove()/memchr() where the operation was genuinely
-# byte-oriented, and explicit casts only where a byte[] field was
-# genuinely being used as text). This target is deliberately left
-# runnable-but-currently-failing: it documents the intended shape and
-# gives a concrete, reproducible stopping point, rather than describing
-# it only in prose.
+# CURRENT STATUS (2026-08): stage 1's ENTIRE BOOTSTRAPDIRS chain is
+# self-hosted and runtime-verified -- lib_core/libbio, lib_strings/
+# libregexp+libstring, generators (lex+yacc, including the yacc *tool*
+# itself), lib_toolchain/libmach, linkers/ar, compilers/cck,
+# compilers/${BOOTSTRAPLETTER}c, assemblers/${BOOTSTRAPLETTER}a, and
+# linkers/${BOOTSTRAPLETTER}l, plus mk/rc (self-hosted in an earlier
+# round, see notes_libc_selfhost.txt). The whole arm64/darwin core
+# toolchain triad -- 7c, 7a, 7l -- confirmed working TOGETHER, not just
+# individually: the self-hosted 7c compiled a real test source, the
+# self-hosted 7l linked the result into a real, running Mach-O binary
+# (tests/c/regressions/arm64_fmovd_large_offset.c); yacc's own y.tab.c
+# output confirmed byte-identical to the committed reference; 7a's own
+# assembled output confirmed byte-identical to the boot-gcc-built 7a's;
+# ar's archive create+list confirmed working.
+#
+# Every gap found getting here turned out to be a real, honestly-
+# fixable bug, not a dead end -- see each fix's own commit for the
+# individual writeups, and docs/claude_notes/notes_arch_arm64.txt for
+# the arm64-specific ones. Two categories worth calling out because
+# they'd bite ANY future self-hosting work in this tree, not just this
+# one: `#if 0`/`#endif` (goken's own compilers have NO `#if` support at
+# all, only `#ifdef`/`#ifndef` -- silently fine under gcc, "unknown #:
+# if" under 7c; hit twice, linkers/7l/falloc.c and linkers/6l/
+# compat.c, both from THIS session's own earlier gethunk() fixes, both
+# switched to `//` line comments instead) and char*-vs-byte[] call-site
+# mismatches wherever a `struct ar_hdr`/similar raw-bytes struct gets
+# passed to a text function (linkers/ar/ar.c, lib_toolchain/libmach/
+# obj.c, linkers/7l/pobj.c -- tolerated as a warning by gcc, a hard
+# error under 7c). compilers/cc/compat.c has a known, NOT-yet-hit
+# instance of the `#if 0` gap too (todo.org) -- deferred, since
+# compilers/cc isn't part of this chain.
+#
+# Not yet attempted: stage 2 (self-compilation -- rebuilding this same
+# chain a second time using boot-goken's own freshly-built compiler
+# instead of boot-gcc's) and bootstrap-compare (the fixpoint check).
 #
 # Host portability: meant to run from linux and windows too, not just
 # this macOS/arm64 host -- the arch-letter mapping and the darwin-only
