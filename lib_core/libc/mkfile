@@ -135,6 +135,10 @@ PORTOFILES=\
 	port/strtoll.$O\
 	port/strtoull.$O\
 	port/atol.$O\
+	port/atof.$O\
+	port/goos.$O\
+	port/cputime.$O\
+	port/fileexists.$O\
 	port/abort.$O\
 	port/errno.$O\
 	port/assert.$O\

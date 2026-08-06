@@ -155,6 +155,10 @@
 // environment
 //----------------------------------------------------------------------------
 #include "os/env.h"
+// claude: same "never actually wired in" gap as os/path.h/os/tmp.h
+// below -- found self-hosting linkers/7l via objtype=arm64, which
+// calls getgoos() directly.
+#include "os/goos.h"
 
 //----------------------------------------------------------------------------
 // namespace
