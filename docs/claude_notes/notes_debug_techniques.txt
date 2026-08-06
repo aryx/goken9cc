@@ -782,6 +782,29 @@ apart before suspecting the toolchain:
   few attempts) or building under a name/path not previously
   quarantined this session; do not attempt to disable or bypass the
   security tool itself.
+  - Confirming it's actually Falcon (not just guessing from an old
+    note): `ps aux | grep -i falcon` shows the system extension
+    (`com.crowdstrike.falcon.Agent`) plus several XPC services,
+    including `StaticAnalysis.bundle/.../FXPredictService.xpc` -- an
+    ML-based static-analysis component, and `log show` (the REAL
+    `/usr/bin/log` -- zsh has its own unrelated `log` builtin that
+    shadows it and fails with a cryptic "too many arguments" on a
+    normal predicate string) around the exact disappearance timestamp
+    shows a burst of dozens of `trustd: SecKeyVerifySignature` calls
+    within the same few milliseconds, consistent with something
+    actively re-verifying a freshly-written binary's signature.
+  - The race is NOT evenly spread across every binary this tree
+    builds: self-hosting the whole toolchain via `mk bootstrap`
+    (linkers/7l's notes_libc_selfhost.txt section), linkers/ar's own
+    output got hit far harder and more persistently than mk/rc/yacc/
+    lex/libmach built in the exact same run (5 retries insufficient,
+    20 needed) -- plausibly (not confirmed against CrowdStrike's own
+    inaccessible detection rules) because it's the one binary linking
+    lib_toolchain/libmach, which embeds a lot of raw Mach-O/ELF/PE
+    header and opcode-table data an ML static-analysis model may
+    weight as more suspicious than a plain compiler frontend. Worth
+    checking whether a future binary that also links libmach (acid,
+    nm) hits the same pattern, which would corroborate this.
 
 A bug that only reproduces inside a live repro script -- and looks
 like, but is NOT, the Falcon-quarantine gotcha above: `mk test_macos`
@@ -1020,3 +1043,32 @@ attempts and doesn't respond to re-signing at all, since the FILE
 itself gets removed, not just de-signed). Worth checking `codesign -dv`
 first, before assuming a sudden SIGKILL on a previously-working binary
 is a new regression.
+
+`bin/mk`/`bin/rc` can be silently stale for days, and misbehave exactly
+like a real interpreter bug
+-----------------------------------------------------------------------------------
+
+Grown out of the same debugging round as the two entries above.
+scripts/promote-mk.sh's own header comment explains why `mk install`
+can't overwrite bin/mk or bin/rc in place ("Text file busy") -- but the
+flip side of that is a change to mk/ or rc/ source does NOT reach
+bin/mk or bin/rc until someone rebuilds for objtype=boot-gcc and reruns
+that script BY HAND, with no staleness warning anywhere in between.
+`bin/rc` sat 8 days stale (predating a real Updenv()/mkenv() fix to
+rc/unix.c, "cmpenv/mkenv/Updenv were commented out ... restored") long
+enough that a plain variable reassignment (`VAR=newvalue`) inside an rc
+script stopped propagating to real child processes' environment at
+all -- `echo $VAR` inside the SAME script correctly showed the new
+value (rc's own in-memory variable table was fine), but a forked child
+(`env`, or a nested `mk` invocation) still saw the ORIGINAL, pre-
+reassignment value. This looks exactly like a shell bug (and was
+initially treated as one, working around it with an external `env -u`
+wrapper before the real cause surfaced) -- but `bin/rc`'s own mtime
+(`ls -la bin/rc`, compare against `git log -1 -- rc/`) immediately told
+them apart. Rebuilding bin/rc (and bin/mk, same staleness, same reason)
+from current source and rerunning scripts/promote-mk.sh made the
+"bug" disappear instantly, no source change needed. Same lesson as the
+codesign entry above, different failure shape: before spending time
+debugging surprising behavior from a tool this tree bootstraps itself
+(mk, rc, the boot-gcc compilers), check whether the BINARY actually
+reflects the CURRENT source before suspecting the source is wrong.

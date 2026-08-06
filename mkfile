@@ -169,17 +169,95 @@ BOOTSTRAPLETTER=`{if(~ $cputype arm64) echo 7; if not if(~ $cputype amd64) echo 
 BOOTSTRAPDIRS=lib_core/libbio lib_strings/libregexp lib_strings/libstring \
 	generators/lex/liblex/ generators \
 	lib_toolchain/libmach linkers/ar mk rc \
-	assemblers/${BOOTSTRAPLETTER}a linkers/${BOOTSTRAPLETTER}l compilers/${BOOTSTRAPLETTER}c
+	assemblers/${BOOTSTRAPLETTER}a linkers/${BOOTSTRAPLETTER}l \
+	compilers/cck compilers/${BOOTSTRAPLETTER}c
 
 bootstrap:V:
 	echo '=== bootstrap: arch letter '$BOOTSTRAPLETTER', host '$cputype'/'$ostype' ==='
 	echo '=== stage 1: core toolchain for '$cputype'/'$ostype', built by boot-gcc ==='
+	# claude: mk exports every mkfile variable into its recipe's shell
+	# environment (mk/env.c's initenv(), "user variables in mkfiles, or
+	# mk process environment" -- unlike GNU Make, no explicit `export`
+	# needed). Since `mk bootstrap` itself normally runs under the
+	# default objtype=boot-gcc, mkfiles/boot-gcc/mkfile's own
+	# `BOOTLIBS=-l9 -lm` is already in THIS recipe's environment before
+	# any of the `mk 'objtype='$cputype ...` calls below even start --
+	# and since a *child* mk process seeds its own variables from its
+	# environment for anything the invoking command line doesn't
+	# override, and mkfiles/$cputype/mkfile never sets BOOTLIBS itself
+	# (relying on it being genuinely unset, mkfiles/mkfile.proto's own
+	# "eagerly-substituted empty-string" comment), the inherited
+	# boot-gcc value leaks straight through: `-lbio -l9 -lm` on a
+	# non-boot LDLIBS line, which 7l/6l/etc. then can't find (this
+	# host's own arm64/darwin lib dir has no lib9.a). `BOOTLIBS=()`
+	# (rc's own "bind to zero words" unset idiom) below clears it --
+	# verified against a FRESH `bin/rc` build (see below) that this
+	# correctly omits the variable from every child process's
+	# environment from here on, not just from rc's own $BOOTLIBS.
+	#
+	# A first attempt at this appeared not to work at all (`env | grep
+	# BOOTLIBS` inside a freshly spawned child still showed the
+	# ORIGINAL "-l9 -lm", unchanged, even after `BOOTLIBS=()`) --
+	# looked like rc itself failing to sync a reassigned variable into
+	# the real process environment it hands to exec(). It wasn't: `bin/
+	# rc` (Jul 29) predated rc/unix.c's own most recent change (Aug 3,
+	# "cmpenv/mkenv/Updenv were commented out ... restored below" --
+	# exactly the mechanism this depends on) by over a week, so the
+	# binary actually being tested had none of that fix. Rebuilding
+	# `bin/rc` from current source (`cd rc; mk 'objtype=boot-gcc'
+	# install; scripts/promote-mk.sh`, needed for `bin/mk` too, also
+	# stale for the same reason) reproduced correct behavior
+	# immediately: a plain reassignment AND `BOOTLIBS=()` both propagate
+	# to a real child's environment as expected, no workaround needed.
+	# Lesson for next time: scripts/promote-mk.sh's own header comment
+	# explains why `mk install` can't just overwrite bin/mk or bin/rc in
+	# place ("Text file busy") -- but that also means a change to mk/rc
+	# source silently does NOT reach bin/ until someone remembers to
+	# rebuild for objtype=boot-gcc and rerun that script by hand, with
+	# no staleness warning of any kind in between.
+	# claude: retries a full `mk ... install` up to 20 times, 2s apart
+	# -- the freshly-linked binary a single such invocation produces
+	# occasionally vanishes moments after being written (`cp: ...: No
+	# such file or directory` right after a clean link), matching this
+	# host's own AV-quarantine race already on record (docs/
+	# claude_notes/notes_debug_techniques.txt). Confirmed which AV this
+	# session (`ps aux | grep -i falcon`): CrowdStrike Falcon is
+	# installed and running, including
+	# StaticAnalysis.bundle/.../FXPredictService.xpc -- an ML-based
+	# static-analysis component, evidenced further by a burst of dozens
+	# of `trustd: SecKeyVerifySignature` calls in the same few
+	# milliseconds as a disappearance (`/usr/bin/log show`, not the
+	# zsh-builtin `log`). Consistently concentrated on linkers/ar's own
+	# output specifically, far more than any other BOOTSTRAPDIRS entry
+	# across many consecutive `mk bootstrap` runs (5 retries was not
+	# enough, 20 needed here) -- plausibly because it's the one binary
+	# here linking lib_toolchain/libmach, which embeds a lot of raw
+	# Mach-O/ELF/PE header and opcode-table data an ML static-analysis
+	# model may weight as more suspicious than a plain compiler
+	# frontend; not confirmed against CrowdStrike's own (inaccessible)
+	# detection internals, so held as a plausible explanation, not a
+	# proven one. A plain retry still reliably clears it within a
+	# bounded number of attempts (same as every other place in this
+	# tree that's hit the race), so wrapping every nested install here
+	# rather than requiring the caller to notice and rerun `mk
+	# bootstrap` by hand.
+	BOOTLIBS=()
+	fn bsmk {
+		extra = $*
+		for(i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20){
+			if(~ $ostype darwin)
+				mk $extra 'RT0OFILE=arch/'$cputype'/rt0_darwin.'$BOOTSTRAPLETTER install
+			if not
+				mk $extra install
+			if(~ $status '')
+				break
+			echo '  (retry '$i': transient link/copy failure, likely AV-quarantine race)'
+			sleep 2
+		}
+	}
 	fn bootstrapbuild {
 		@{cd lib_core/libc; rm -f libc.a
-			if(~ $ostype darwin)
-				mk -a 'objtype='$cputype 'cputype='$cputype 'GOOS='$ostype 'RT0OFILE=arch/'$cputype'/rt0_darwin.'$BOOTSTRAPLETTER install
-			if not
-				mk -a 'objtype='$cputype 'cputype='$cputype 'GOOS='$ostype install
+			bsmk -a 'objtype='$cputype 'cputype='$cputype 'GOOS='$ostype
 		}
 		for(d in $BOOTSTRAPDIRS) @{
 			echo $d
@@ -199,10 +277,7 @@ bootstrap:V:
 			# too, the first time this loop was actually run end to
 			# end). A no-op for directories with no local .a at all.
 			rm -f *.a
-			if(~ $ostype darwin)
-				mk 'objtype='$cputype 'cputype='$cputype 'GOOS='$ostype 'RT0OFILE=arch/'$cputype'/rt0_darwin.'$BOOTSTRAPLETTER install
-			if not
-				mk 'objtype='$cputype 'cputype='$cputype 'GOOS='$ostype install
+			bsmk 'objtype='$cputype 'cputype='$cputype 'GOOS='$ostype
 		}
 	}
 	bootstrapbuild
