@@ -159,7 +159,7 @@
 # arches, not just the two that were broken: riscv64 was already correct
 # and is the control, which is the whole point of checking an invariant
 # rather than a fix.
-test:V: uintptr_width.check vlong_mul.check mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check mulconst_unsigned_char_host.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check arm64_large_bss_sb_offset.check
+test:V: uintptr_width.check vlong_mul.check mips_aut3_align.check riscv64_ptr_width.check riscv64_sraiw.check float_const_oob.check mulzero.check mulconst_unsigned_char_host.check arm_div_from_lib.check arm64_vlong_if_branch.check arm64_uvlong_shift32.check warn_default_visible.check arm64_bitcon_upper_bits.check cpp_macro_param_in_string.check arm64_large_bss_sb_offset.check arm64_switch_vlong.check arm64_switch_vlong_wide_range.check arm64_fmovd_large_offset.check
 
 mips_aut3_align.check:V: mips_aut3_align.c
 	vc -A mips_aut3_align.c >/tmp/mips_aut3_align.$pid.trace >[2=1]
@@ -466,6 +466,42 @@ arm64_large_bss_sb_offset.check:V: arm64_large_bss_sb_offset.c arm64_regressions
 		echo 'ok: arm64_large_bss_sb_offset.exe exit 0'
 	if not {
 		echo 'FAILED: arm64_large_bss_sb_offset.exe (got '$st')'
+		exit failed
+	}
+
+arm64_switch_vlong.check:V: arm64_switch_vlong.c arm64_regressions_start.s
+	7c -Darm64 -c arm64_switch_vlong.c
+	7a -c arm64_regressions_start.s
+	7l -H7 -o arm64_switch_vlong.exe -E _main arm64_switch_vlong.7 arm64_regressions_start.7
+	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_switch_vlong.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: arm64_switch_vlong.exe exit 0'
+	if not {
+		echo 'FAILED: arm64_switch_vlong.exe (got '$st')'
+		exit failed
+	}
+
+arm64_switch_vlong_wide_range.check:V: arm64_switch_vlong_wide_range.c arm64_regressions_start.s
+	7c -Darm64 -c arm64_switch_vlong_wide_range.c
+	7a -c arm64_regressions_start.s
+	7l -H7 -o arm64_switch_vlong_wide_range.exe -E _main arm64_switch_vlong_wide_range.7 arm64_regressions_start.7
+	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_switch_vlong_wide_range.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: arm64_switch_vlong_wide_range.exe exit 0'
+	if not {
+		echo 'FAILED: arm64_switch_vlong_wide_range.exe (got '$st')'
+		exit failed
+	}
+
+arm64_fmovd_large_offset.check:V: arm64_fmovd_large_offset.c arm64_regressions_start.s
+	7c -Darm64 -c arm64_fmovd_large_offset.c
+	7a -c arm64_regressions_start.s
+	7l -H7 -o arm64_fmovd_large_offset.exe -E _main arm64_fmovd_large_offset.7 arm64_regressions_start.7
+	st=`{ ../../../scripts/qemu-runner arm64 ./arm64_fmovd_large_offset.exe; echo $status }
+	if (~ $st 0)
+		echo 'ok: arm64_fmovd_large_offset.exe exit 0'
+	if not {
+		echo 'FAILED: arm64_fmovd_large_offset.exe (got '$st')'
 		exit failed
 	}
 
