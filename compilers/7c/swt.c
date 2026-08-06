@@ -15,19 +15,53 @@ swit2(C1 *q, int nc, int32 def, Node *n, Node *tn)
 {
 	C1 *r;
 	int i;
-	int32 v;
+	vlong v;
+	vlong range;
 	Prog *sp;
 
+	/* claude: was `int i = (q+nc-1)->val - (q+0)->val;`, reusing the
+	 * SAME `i` this function's other loops use as a plain 0..nc-1
+	 * counter -- a new, distinctly-named `vlong range` instead, both
+	 * to avoid that overload and because the old `int` truncated any
+	 * genuinely 64-bit case-value spread. Found self-hosting
+	 * compilers/7c: switch(vlong) with case values 2^33 and 2^33+1 (a
+	 * spread of 8589934593, nowhere near "dense") truncated to `1`,
+	 * wrongly taking the `direct` jump-table path below meant only for
+	 * a tightly clustered case set. `v` (used only in that `direct`
+	 * path, no reuse-elsewhere concern) widened to vlong for the same
+	 * reason: it used to start at `q->val` truncated to int32, which
+	 * for a base case value like 2^33 (0 mod 2^32) starts the
+	 * increment loop already wrong, and increments one at a time
+	 * toward a `q->val` comparison that -- constrained to int32's own
+	 * range -- it can now never reach: an infinite loop, not just a
+	 * wrong table, confirmed by reproducing it directly (7c hung
+	 * indefinitely on exactly this switch shape). Confirmed against
+	 * 9front's own compilers/7c/swt.c, which has the identical
+	 * `int i` truncation (its own `v` is a real `long`, 64-bit on
+	 * Plan9's own arm64, so it doesn't share the second half of this
+	 * bug) -- not confirmed hit upstream, not blindly matched here.
+	 * See tests/c/regressions/arm64_switch_vlong_wide_range.c. */
 	if(nc >= 3) {
-		i = (q+nc-1)->val - (q+0)->val;
-		if(i > 0 && i < nc*2)
+		range = (q+nc-1)->val - (q+0)->val;
+		if(range > 0 && range < nc*2)
 			goto direct;
 	}
+	/* claude: nodgconst (not nodconst, int32-only) in all three spots
+	 * below too -- same bug and same fix as the `direct:` label further
+	 * down (see this function's own header comment): q->val/r->val are
+	 * real vlong case values, and nodconst() silently truncates
+	 * whatever it's given to int32. This half didn't hang (unlike the
+	 * `direct` path's runaway v++ loop) -- it just silently compared
+	 * against the wrong, truncated constant, so switch(vlong) with
+	 * case values that don't fit 32 bits still returned wrong answers
+	 * even after the `direct`-path infinite loop was fixed (caught by
+	 * tests/c/regressions/arm64_switch_vlong_wide_range.c, run range
+	 * >= nc*2 so this file's own bug stays isolated from that one). */
 	if(nc < 5) {
 		for(i=0; i<nc; i++) {
 			if(debug['K'])
 				print("case = %.8llux\n", q->val);
-			gopcode(OEQ, nodconst(q->val), n, Z);
+			gopcode(OEQ, nodgconst(q->val, n->type), n, Z);
 			patch(p, q->label);
 			q++;
 		}
@@ -40,9 +74,9 @@ swit2(C1 *q, int nc, int32 def, Node *n, Node *tn)
 	r = q+i;
 	if(debug['K'])
 		print("case > %.8llux\n", r->val);
-	gopcode(OGT, nodconst(r->val), n, Z);
+	gopcode(OGT, nodgconst(r->val, n->type), n, Z);
 	sp = p;
-	gopcode(OEQ, nodconst(r->val), n, Z);	/* just gen the B.EQ */
+	gopcode(OEQ, nodgconst(r->val, n->type), n, Z);	/* just gen the B.EQ */
 	patch(p, r->label);
 	swit2(q, i, def, n, tn);
 
@@ -53,10 +87,18 @@ swit2(C1 *q, int nc, int32 def, Node *n, Node *tn)
 	return;
 
 direct:
+	/* claude: nodgconst (not nodconst, int32-only) -- v is a real
+	 * vlong now (see this function's own header comment); nodgconst
+	 * itself dispatches to a genuine 64-bit constant node when n's own
+	 * type is vlong-shaped, falling back to nodconst's plain 32-bit
+	 * path otherwise (exactly the n->type check doswit()'s own isv
+	 * flag already established for this whole switch), so this stays
+	 * correct for a plain 32-bit switch too, not just the vlong case
+	 * that exposed the bug. */
 	v = q->val;
 	if(v != 0)
-		gopcode(OSUB, nodconst(v), Z, n);
-	gopcode(OHI, nodconst((q+nc-1)->val - v), n, Z);
+		gopcode(OSUB, nodgconst(v, n->type), Z, n);
+	gopcode(OHI, nodgconst((q+nc-1)->val - v, n->type), n, Z);
 	patch(p, def);
 	gopcode(OCASE, n, Z, tn);
 	for(i=0; i<nc; i++) {

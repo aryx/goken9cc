@@ -248,6 +248,7 @@ void	gargs(Node*, Node*, Node*);
 void	garg1(Node*, Node*, Node*, int, Node**);
 Node*	nodconst(int32);
 Node*	nod32const(vlong);
+Node*	nodgconst(vlong, Type*);
 Node*	nodfconst(double);
 void	nodreg(Node*, Node*, int);
 void	regret(Node*, Node*);
