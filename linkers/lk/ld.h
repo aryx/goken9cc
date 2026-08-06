@@ -12,10 +12,23 @@
  * self-hosting linkers/7l via objtype=arm64 for the first time -- no
  * linker had been self-hosted before this, so this shared ld.h, used
  * by every linker's own l.h, never hit goken's own compiler until
- * now). uintptr (every arch's own u.h, already used throughout this
- * tree for exactly this "pointer-width unsigned integer" purpose) is
- * both available on both paths and already the closest existing match
- * to what usize actually means here -- no new dependency added. */
+ * now).
+ *
+ * usize (this file's own halloc(usize) declaration below, and
+ * falloc.c's now-dead malloc()/calloc()/realloc() family) is a
+ * BYTE-COUNT passed to this linker's own arena allocator -- the
+ * concept size_t names on a real host. But size_t's own real-world
+ * convention is to track the ADDRESS-SPACE width, not be unconditionally
+ * 64-bit: an allocator can never be asked for an object bigger than
+ * the address space can hold, so on an actual 32-bit host (386/arm/mips,
+ * all still targets of this tree) size_t is itself only 4 bytes there
+ * too -- there is no in-principle 32-bit host needing a 64-bit byte
+ * count, since it could never address the result. That is exactly what
+ * uintptr (per-arch u.h) already gives: pointer/address-space width on
+ * every target, 8 bytes on a 64-bit arch, 4 on a 32-bit one. uvlong
+ * (include/core/types.h) is always 64-bit regardless of arch, which
+ * would be the wrong, non-idiomatic choice here -- oversized and
+ * inconsistent with how size_t actually behaves on a 32-bit host. */
 typedef uintptr usize;
 
 /*
