@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, start kenccs unification, wasm ea/ec/el, multiplatform libc)
+* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, start kenccs unification, wasm ea/ec/el, multiplatform libc, bootstrapped)
 
 ** toolchain
 - import 5a/5c/5l and 8a/8c/8l from principia (and rename the 5a/5l/5c
