@@ -14,13 +14,13 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
 ## News
 
 - **Q3 2026** &mdash; v0.4 (in progress): a big unification release.
-  - imported the arm and x86 toolchains (5a/5c/5l, 8a/8c/8l) from the Principia Softwarica project back into goken9cc, fixing the many mismatches against the older kencc-derived variants (kept side by side as 5ak/8ak, etc.)
+  - imported the arm and x86 toolchains (5a/5c/5l, 8a/8c/8l) from the Principia Softwarica project and fixed the many mismatches against the older kencc-derived variants (kept side by side as 5ak/8ak, etc.)
   - fix native macOS (Mach-O) output for amd64 and arm64 (6l/7l)
   - fix native Windows (PE) output for amd64 and x86 (6l/8l)
-  - early WebAssembly backend (ea/ec/el) by Claude Code
-  - separately ported a large batch of 9front fixes (mostly Cinap lenrek work) into the mips and arm64 toolchains (va/vc/vl, 7a/7c/7l)
+  - early WebAssembly backend (ea/ec/el) fully written by Claude Code
+  - ported a large batch of 9front fixes (mostly Cinap lenrek work) into the mips and arm64 toolchains (va/vc/vl, 7a/7c/7l)
   - brought up riscv64 for real (it was only commented-out stubs before)
-  - self-hosted `libc.a` (fmt/printf plus basic Linux syscalls), built entirely by goken's own compilers with no gcc involved, for every Linux arch this project targets (arm64, amd64, 386, arm, mips, riscv, riscv64), with syscalls declared through a small Go-`mksyscall.sh`-inspired generator (see `tests/c/hello_libc`)
+  - self-hosted `libc.a` derived from Plan 9 libc, built entirely by goken's own compilers with no gcc involved, for every Linux arch this project targets (arm64, amd64, 386, arm, mips, riscv, riscv64), with syscalls declared through a small Go-`mksyscall.sh`-inspired generator (see `tests/c/hello_libc`), and extended also to macOS and Windows
   - fixed the arm and mips emulators (5i/vi) so they actually run their Plan 9 hello-world tests
   - much richer test infra: tests now run for many architectures under qemu/Linux, and many operating systems with wine (for Windows) and Node (for wasm) all from Linux CI; also check output against expected.txt instead of just checking the build succeeds; new tests/s/variants and tests/c/variants compare the object files and executables produced by the principia vs. kencc lineages to catch mismatches
 - **Q2 2026** &mdash; v0.3: presented goken9cc at IWP9, the International Workshop on Plan 9.
@@ -45,7 +45,7 @@ See [changes.txt](changes.txt) for the detailed changelog.
 ## Features
 
 - **Portable:**
-  It can *build* on Linux, macOS, and Windows (WSL, Cygwin) (TODO Plan 9 and xv6) using gcc or clang (TODO or a boostrapped version of itself), on 32 bits or 64 bits machines
+  It can *build* on Linux, macOS, and Windows (WSL, Cygwin) (TODO Plan 9 and xv6) using gcc or clang or a boostrapped version of itself, on 32 bits or 64 bits machines
 - **Multi-OS support:** 
   Link C and assembly programs that can *run* on Linux, macOS, Windows, and Plan 9 (TODO xv6)
 - **Multi-architecture support:**
@@ -83,14 +83,14 @@ mk
 mk install
 ```
 
-You can also play with the `$GOOS` and `$GOARCH` environment variables
+You can also play with the `$ostype` and `$objtype` environment variables
 for cross compiling.
 
 ---
 
 ## Architecture Naming Convention
 
-Plan 9 (and goken9cc) uses single-character codes for architectures.
+goken9cc, like Plan 9, uses single-character codes for architectures.
 Each tool is prefixed with this code:
 
 | Code | Arch | Compiler | Assembler | Linker | Object ext |
@@ -142,15 +142,27 @@ to support the latest Linux, macOS, and Windows to reach
 a point where one could use goken9cc to compile goken9cc itself
 on many architectures and many operating systems.
 
+## AI disclaimer
+
+All the clerical work of finding the right syscall numbers
+for each architecture and operating systems for the
+multiplatform C library in goken
+was done mostly by Claude Code,
+inspired by what Go developers did for Go (see the GO/pkg/syscall
+and GO/pkg/runtime).
+
+The entire wasm backend was written by Claude Code.
+
+Most of the architecture and operating system bugfixes were
+done by Claude Code.
+
 ---
 
 ## Environment variables
 
 build time:
-GOARCH
-GOOS
-GODYNLINK
-GOLANG
+objtype
+ostype
 
 run time:
 for all: GOROOT (used for "#9/..." paths)
