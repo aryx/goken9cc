@@ -23,6 +23,7 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
   - self-hosted `libc.a` derived from Plan 9 libc, built entirely by goken's own compilers with no gcc involved, for every Linux arch this project targets (arm64, amd64, 386, arm, mips, riscv, riscv64), with syscalls declared through a small Go-`mksyscall.sh`-inspired generator (see `tests/c/hello_libc`), and extended also to macOS and Windows
   - fixed the arm and mips emulators (5i/vi) so they actually run their Plan 9 hello-world tests
   - much richer test infra: tests now run for many architectures under qemu/Linux, and many operating systems with wine (for Windows) and Node (for wasm) all from Linux CI; also check output against expected.txt instead of just checking the build succeeds; new tests/s/variants and tests/c/variants compare the object files and executables produced by the principia vs. kencc lineages to catch mismatches
+  - bootstrapped: you can compile goken using goken on arm64 (7a/7c/7l)
 - **Q2 2026** &mdash; v0.3: presented goken9cc at IWP9, the International Workshop on Plan 9.
 - **Q1 2026** &mdash; v0.2: added Plan 9 `pcc` to compile legacy Unix programs (called APE in Plan 9); started using AddressSanitizer (configure -asan) to catch memory bugs in the toolchain itself; wrote up the project for an IWP9 paper submission.
 - **Q4 2025** &mdash; v0.1: first working release &mdash; a Plan 9-style toolchain (compilers, assemblers, linkers for arm, x86, mips, and early riscv, plus an arm/mips emulator and the acid debugger) able to cross compile Principia Softwarica's own `pc`/`pi` operating system targets from Linux and macOS.
@@ -45,7 +46,7 @@ See [changes.txt](changes.txt) for the detailed changelog.
 ## Features
 
 - **Portable:**
-  It can *build* on Linux, macOS, and Windows (WSL, Cygwin) (TODO Plan 9 and xv6) using gcc or clang or a boostrapped version of itself, on 32 bits or 64 bits machines
+  It can *build* on Linux, macOS, and Windows (WSL, Cygwin) (TODO Plan 9 and xv6) using gcc or clang or a bootstrapped version of itself, on 32 bits or 64 bits machines
 - **Multi-OS support:** 
   Link C and assembly programs that can *run* on Linux, macOS, Windows, and Plan 9 (TODO xv6)
 - **Multi-architecture support:**
