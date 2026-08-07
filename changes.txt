@@ -101,7 +101,8 @@
   * tests/s/mini/hello_macos_libc_amd64.s calls libSystem's _write via
     the GOT slot and runs under darling.
   * see docs/claude_notes/notes_exec_macho.txt for the full story and darling recipe.
-- 6l/8l: support windows PE with -H10, thx to rafael2knokia (and Claude probably)
+- 6l/8l: support windows PE with -H10, thx to rafael2knokia (and Claude probably),
+  adapting again the Go-era lk/pe.c
 - 8l/8lk: fix a real ELF-writer bug found via tests/c/vlong and
   tests/c/float: asmb()'s H_ELF case seeked to the symbol table using the
   unrounded HEADR+textsize+datsize, but the .data section before it was
@@ -156,7 +157,7 @@
   absolute-address-fed-to-auipc bug in the linker's long-jump case,
   and the register-range widening also pending for 7a/7c/7l)
 - add an experimental wasm (WebAssembly) toolchain skeleton: ea/el
-  (new arch letter 'e') (thx to Claude)
+  (new arch letter 'e') (all Claude work with little guidance)
   * include/e.out.h: new opcode/operand-kind header, modeled on
     5.out.h/8.out.h and on v.out.h/i.out.h's combined D_* enum;
     locals/globals stand in for a register file (wasm has none), and
@@ -216,6 +217,9 @@
     also runs these two through 5i/vi and cmp's the output against the
     shared hello.expected.txt -- hello_plan9_386.exe stays build-only,
     no x86 Plan9 emulator exists yet
+- fully bootstrapped, with mk bootstrap target inspired by OCaml
+  bootstrap fixpoint process, with lots of bugfixes and extensions
+  to the multiplatform libc (big thx to Claude)
 
 ** os
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
@@ -230,20 +234,22 @@
 
 ** arch
 - real support for 386, amd64, arm, arm64, riscv, riscv64, mips
-  with basic helloprintf.exe working on all those archs, at least on Linux
+  with basic helloprintf.exe working on all those archs, across many OSes
 - experimental support for riscv64
 - experimental support for wasm: assembler+linker only (ea/el),
   hello world (WASI fd_write) working
 
 ** compilers
 - display warning by default and new -q (quiet) to remove the warnings
+- many bugfixes (lots of long -> int32 so can work with gcc/clang)
 
 ** libs
-- lib_core/libc: a real, reusable libc.a (fmt/printf + basic Linux
-  syscalls) self-hosted by goken's own toolchain (7c/6c/8c/5c/vc/ic/jc),
+- lib_core/libc: multiplatform and multi OS libc.a (Linux, macOS, Windows
+  syscalls + portable libc code from Plan 9) self-hosted by goken's own
+  toolchain (7c/6c/8c/5c/vc/ic/jc),
   no gcc involved, for every Linux arch this project targets
-  (arm64/amd64/386/arm/mips/riscv/riscv64); see tests/c/hello_libc
-  (thx Claude)
+  (arm64/amd64/386/arm/mips/riscv/riscv64) as well as macOS, Windows, and Plan 9.
+  see tests/c/hello_libc (big thx to Claude)
 - found and fixed a genuinely new linkers/5l bug along the way (not
   present in 9front or principia's own 5l either, just never
   triggered there): arm's software divide/modulo helpers
@@ -266,6 +272,8 @@
   call-argument gap in src/cmd/cc/com64.c (7c/vc/ic/jc's frontend, now
   matching compilers/cc/com64.c's already-correct version), and
   vl/il's linker -lXXX resolution ignoring -L entirely
+- libc complete enough so it can be used to compile and 
+  link goken using goken.
 
 
 ** internals
