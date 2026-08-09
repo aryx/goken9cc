@@ -1,7 +1,8 @@
 
+// I like types!
 typedef int fdt; // file descriptor type
 
-// enum Open_flag, open parameter
+//alt: enum Open_flag, open parameter
 #define	OREAD	0	/* open for read */
 #define	OWRITE	1	/* write */
 #define	ORDWR	2	/* read and write */
@@ -16,8 +17,7 @@ typedef int fdt; // file descriptor type
 //#define	OLOCK	0x2000	/* or'ed in, lock after opening */
 //#define	OAPPEND	0x4000	/* or'ed in, append only */
 
-// alt: in dir.h
-// enum Access_flag
+// alt: in dir.h, enum Access_flag
 #define	AEXIST	0	/* accessible: exists */
 #define	AEXEC	1	/* execute access */
 #define	AWRITE	2	/* write access */
@@ -65,6 +65,7 @@ extern	int	dup(fdt, fdt);
 extern	long	read(fdt, void*, long);
 extern	long	write(fdt, void*, long);
 extern	vlong	seek(fdt, vlong, int);
+
 // claude: needed by rc/goken.c's Isatty() (a real ioctl(TCGETS) probe,
 // os/linux/isatty.c) -- rc/plan9.c's own Isatty() uses fd2path()
 // instead, a real Plan9 syscall with no POSIX equivalent, so this is a
@@ -77,10 +78,8 @@ extern	int	isatty(fdt);
 //extern	long	pwritev(fdt, IOchunk*, int, vlong);
 //extern	long	readv(fdt, IOchunk*, int);
 //extern	long	writev(fdt, IOchunk*, int);
-// claude: needed by utilities/archive/tar/tar.c (short-read-looping
-// wrapper over read()) -- port/readn.c, ported from principia's
-// lib_core/libc/port/readn.c. Found self-hosting tar.c with goken's
-// own compiler+libc instead of the host bootstrap gcc+lib9.
+
+// (needed by utilities/archive/tar/tar.c)
 extern	long	readn(fdt, void*, long);
 
 // extern	int	fdflush(int);

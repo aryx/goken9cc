@@ -1,6 +1,6 @@
 
 // Plan 9 specific
-// exits() is the libc exit that performs some cleanup (and handle atexit)
+// exits() is the libc exit that performs some cleanup (and handle atexit())
 // while _exits() is the syscall that is more abrupt
 // TODO? still the case in goken libc? maybe reverted now
 // alt: move under os/plan9/proc.h
@@ -79,12 +79,5 @@ extern	int	spawn(char*, char**, fdt, fdt, fdt);
 extern	int	getpid(void);
 extern	int	getppid(void);
 
-// claude: process id type, matching os/file.h's own `typedef int fdt;`
-// convention -- declared (include/ALL/mach.h's attachproc/ctlproc/
-// procnotes) but never defined anywhere, a real gap found blocking
-// utilities/misc/file.c (Map* attachproc(pidt pid, Fhdr *fp) failed to
-// parse with "syntax error, last name: pid" -- the same 6c/7c
-// typedef-right-after-a-pointer-declaration bug ls.c's own `ord` hit,
-// see notes_libc_selfhost.txt, except here root-caused to pidt simply
-// never existing rather than just an unlucky compiler quirk).
+// process id type. I like types! similar to os/file.h fdt.
 typedef int pidt;

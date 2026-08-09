@@ -1,9 +1,10 @@
 
-// pad's define, clearer code IMHO
+// IMHO this results in clearer code; abusing int for everything is bad.
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2
 
+// ??
 struct IOchunk {
  void	*addr;
  ulong	len;

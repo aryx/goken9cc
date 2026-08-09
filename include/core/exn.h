@@ -1,16 +1,7 @@
 
-//alt: could also be in reflect.h
+// Poor's man exceptions using setjmp()/longjmp().
 
-/* claude: was `typedef int jmp_buf` -- a single int, nowhere near wide
- * enough to hold a real saved register (let alone a pointer, on any
- * 64-bit arch here), and setjmp()/longjmp() had no implementation
- * anywhere in this tree at all (found blocking utilities/byte/ and,
- * transitively, any lib_strings/libregexp caller that reaches a real
- * regex compile error, since regcomp.c's own error-unwind path calls
- * both directly). Found while self-hosting utilities/ with goken's
- * own compiler+libc.
- *
- * This compiler family (unlike gcc/clang) preserves NO registers
+/* claude: goken (unlike gcc/clang) preserves NO registers
  * across a function call at all -- every Xc backend reloads whatever
  * it needs from the stack after any call, so a real jmp_buf here only
  * ever needs the two things a "return a second time" trick actually

@@ -1,15 +1,16 @@
 //******************************************************************************
 // Prelude
 //******************************************************************************
-// "Not so standard C library" header modeled after Plan 9 libc.h but split in
-// separate headers following the Go standard library organization (GO/pkg/),
+// "The Goken Not So Standard C library" header modeled after Plan 9 libc.h
+// but split in separate headers following the Go standard library (see GO/pkg/),
 // the OCaml standard library, my own XiX standard library, and the
-// Principia Softwarica Core libraries book table of contents.
+// table of contents of the Principia Softwarica's Core libraries book.
 //
 // require: this file assumes a per-arch <u.h> has been included first defining
 // the u32/s32/u64/s64/uintptr, jmp_ptr, va_list, and other arch-specific types.
 
-// makes goken's own linkers (5l/6l/7l/8l/vl/il) auto-link libc.a
+// makes goken's own linkers (5l/6l/7l/8l/vl/il) auto-link libc.a without
+// having to add -lc in LDLIBS (or BOOTLIBS)
 #pragma	lib	"libc.a"
 
 //******************************************************************************
@@ -110,7 +111,7 @@
 //----------------------------------------------------------------------------
 // Trigonometry
 //----------------------------------------------------------------------------
-// in "math/basic.h"
+#include "math/trigo.h"
 
 //----------------------------------------------------------------------------
 // Conversion
@@ -146,49 +147,32 @@
 #include "os/dir.h"
 
 //----------------------------------------------------------------------------
-// stat (dirfstat/dirfwstat/dirstat/dirwstat -- require os/dir.h's Dir
-// and os/file.h's fdt above)
+// Stat 
 //----------------------------------------------------------------------------
+// require: os/dir.h's Dir and os/file.h's fdt above
 #include "os/stat.h"
 
 //----------------------------------------------------------------------------
 // environment
 //----------------------------------------------------------------------------
 #include "os/env.h"
-// claude: same "never actually wired in" gap as os/path.h/os/tmp.h
-// below -- found self-hosting linkers/7l via objtype=arm64, which
-// calls getgoos() directly.
 #include "os/goos.h"
 
 //----------------------------------------------------------------------------
 // namespace
 //----------------------------------------------------------------------------
-// claude: was empty -- os/path.h existed but was never #include'd
-// anywhere, found while wiring cleanname() in for utilities/files/mv.c.
 #include "os/path.h"
-// claude: same "never actually wired in" gap as os/path.h just above --
-// found self-hosting linkers/ar/ar.c, which calls mktemp() directly.
 #include "os/tmp.h"
 
 //----------------------------------------------------------------------------
 // process
 //----------------------------------------------------------------------------
 #include "os/proc.h"
+//TODO
+//#include "os/plan9/waitmsg.h ?
+// but not rfork moved in not include os/plan9/proc.h? 
 #include "flag/cli.h"
 
-// claude: was empty -- os/plan9/note.h existed (declaring noted/notify/
-// postnote/atnotify) but was never #include'd anywhere, the same
-// "declared, never wired in" gap os/path.h/os/ipc.h's own comments
-// already flagged and fixed elsewhere. Declared for every GOOS (same
-// "declare everywhere, implement per-GOOS" convention os/proc.h's own
-// rfork/Waitmsg/await already use) -- Tier 6 notification
-// (docs/claude_notes/plan_syscalls.txt): Plan9 (arm/mips) has a real
-// implementation as of this commit; Linux/darwin do not yet (needs
-// sigaction()/kill() as real syscalls first, see
-// docs/claude_notes/notes_libc_api_design.txt's "Notes vs. signals"
-// section), so atnotify()/postnote()/noted() are link-time-only gaps
-// there for now, same treatment Tier 4's own darwin/windows rounds
-// gave partially-done process control.
 #include "os/plan9/note.h"
 
 //----------------------------------------------------------------------------
@@ -219,11 +203,7 @@
 //----------------------------------------------------------------------------
 // IPC
 //----------------------------------------------------------------------------
-// claude: was empty -- os/ipc.h existed (declaring pipe()) but was never
-// #include'd anywhere, the same kind of gap os/path.h's own comment
-// above already flagged and fixed for cleanname(). Found wiring
-// port/pipe.c in for Tier 4 process control
-// (docs/claude_notes/plan_syscalls.txt).
+// pipe() 
 #include "os/ipc.h"
 
 //----------------------------------------------------------------------------
