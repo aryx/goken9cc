@@ -11,17 +11,80 @@ stop drifting apart cosmetically.
 todo.org remains the authority for project-wide priorities; this file
 only orders the work within lib_core/libc/.
 
-Scope of this pass: principia's lib_core/libc/port/ and 9sys/ as the
-source side. principia's fmt/, 386/, arm/, 9syscall/ were measured too
-(see "Out of scope for this pass") but are not part of the list below.
+Scope: all six directories of principia's lib_core/libc/ -- port/,
+9sys/, fmt/, 386/, arm/, 9syscall/ -- against everything under goken's
+lib_core/libc/. The headline is that only two of the six are sync
+candidates at all; the other four are covered here so the next session
+doesn't re-measure them hoping otherwise.
+
+  principia port/     -> real opportunity, 24 files (Tier 2 below)
+  principia 9sys/     -> real opportunity, folded into the same tiers
+  principia fmt/      -> NO. Different lineage. One import opportunity
+                         of a different kind (the rune-output family).
+  principia 386/      -> NO, beyond what was already taken. Mostly
+                         optimized asm goken deliberately covers with
+                         portable C.
+  principia arm/       -> same as 386/; the two files worth taking were
+                         already taken.
+  principia 9syscall/ -> NO. Structurally different by design.
+
+
+Directory mapping (non-obvious, get this right first)
+--------------------------------------------------------------------------
+
+The two trees do not agree on where a file lives, so pairing by
+directory gives the wrong answer and pairing by *filename alone* gives
+false positives across arches. The actual mapping:
+
+  principia port/      -> goken port/, and also goken utf/ and math/
+                          (principia keeps rune*/utf* and lnrand/lrand/
+                          nan in port/; goken inherited the Go-era
+                          split into utf/ and math/)
+  principia 9sys/      -> goken port/ (portable-ized) and goken
+                          os/plan9/ (kept Plan9-specific)
+  principia fmt/       -> goken fmt/
+  principia 386/, arm/ -> goken arch/386/, arch/arm/ ONLY. Pairing them
+                          against arch/{amd64,arm64,mips,riscv,riscv64}
+                          by filename is meaningless -- principia has no
+                          counterpart for those arches at all, so a
+                          "setjmp.s differs" verdict there is noise.
+  principia 9syscall/  -> goken syscall/os/plan9/ (see that section)
+
+
+Lineage map -- why "almost a copy" is true of some dirs and not others
+--------------------------------------------------------------------------
+
+goken's libc has three distinct ancestries mixed together, and the sync
+question only makes sense for one of them.
+
+  (a) Go-era lib9 / plan9port lineage. Entered the tree in commit
+      69b74c395 "import the plan 9 libraries libc (lib9) and libbio
+      into the tree", originally as src/lib9/. All of goken's fmt/ is
+      this, and lib_core/libc/mkfile:58 says so outright ("the same
+      Plan9 fmt implementation BOOT/lib9/ already builds"). Descends
+      from Plan 9, but through plan9port, so it is a *sibling* of
+      principia's code, not a copy of it.
+  (b) Principia ports, written this project's lifetime. The "lib_core/
+      libc: add X" commits. These are the files this document is about.
+  (c) Written for goken. arch/*/setjmp.s (dff443851), arch/*/rt0.s,
+      syscall/os/*/svc_*.s, the zsyscall_*.c generated files, most of
+      os/{linux,darwin,windows}/.
+
+CAVEAT on determining which is which: `git log --follow` reports the
+commit that added the *path*, not the provenance of the current
+*content*. utf/utfrune.c, utf/utfrrune.c and port/tokenize.c all
+--follow back to the 69b74c395 lib9 import, yet all three were later
+wholesale replaced by principia copies -- each says so in its own
+header ("replaced with a plain copy of principia's ..."), and the
+normalized diff agrees. So the authority is the file's own header text
+plus the normalized diff, with git history as corroboration only.
 
 
 How the comparison was made (reproduce before acting)
 --------------------------------------------------------------------------
 
-For every *.c / *.h / *.s under /home/pad/github/goken9cc/lib_core/libc,
-find the same-named file anywhere under /home/pad/principia/lib_core/libc,
-then compare twice:
+For every *.c / *.h / *.s under goken lib_core/libc, find the
+same-named file under principia lib_core/libc, then compare twice:
 
   1. raw byte comparison  -> "already identical, nothing to do"
   2. normalized comparison: strip /* */ and // comments, collapse all
@@ -30,7 +93,7 @@ then compare twice:
      differ"
 
 Step 2 is what makes the list meaningful. The systematic difference
-between the two trees on these files is exactly two things:
+between the two trees on the (b)-lineage files is exactly two things:
 
   - goken carries the "Claude Code / Copyright (C) 2026 Yoann
     Padioleau / LGPL" header block plus a hand-written explanatory
@@ -42,12 +105,23 @@ between the two trees on these files is exactly two things:
 Neither survives normalization, so a "0 differing code lines" verdict
 means the two files compile to the same thing.
 
-TOOLING TRAP, cost a first bogus run: sourcing env.sh puts goken's own
-diff and cmp on PATH ahead of GNU's, and they accept neither -q nor -w.
-`diff -q a b` therefore exits non-zero for *every* pair (usage error),
-which reads as "all files differ". Use /usr/bin/diff explicitly. Same
-family as the memory note about `sed -i` silently no-opping. See also
-notes_test_infra.txt on golden-diffing.
+Three traps, all of which produced a wrong first answer:
+
+  - TOOLING. Sourcing env.sh puts goken's own diff, cmp and tr on PATH
+    ahead of GNU's. goken's diff accepts neither -q nor -w, so
+    `diff -q a b` exits non-zero for *every* pair (usage error), which
+    reads as "all files differ"; and goken's tr does not decode
+    escapes, so `tr '\n' ' '` replaces literal 'n' characters (making
+    "runestrcat.c" render as "ru estrcat.c" in a directory listing and
+    look like a corrupt filename). Use /usr/bin/diff explicitly. Same
+    family as the memory note about `sed -i` silently no-opping.
+  - SYMLINKS. GO/lib9/{fmt,math,utf} are symlinks into lib_core/libc/
+    (commit 2968f76d7). Comparing goken libc against GO/lib9 to test
+    the lineage question therefore compares files with themselves and
+    "proves" identity. os.walk does not follow them, so a naive script
+    silently reports nothing at all for those three dirs. Use git
+    history for lineage, not a filesystem diff.
+  - CROSS-ARCH PAIRING. See "Directory mapping" above.
 
 The measurement script lives nowhere permanent -- it is ~30 lines of
 python (os.walk both trees, re.sub the comments, difflib) and is
@@ -55,12 +129,15 @@ cheaper to rewrite than to maintain. The verdicts below are what it
 printed on 2026-08-10; re-run before acting, since goken's side moves.
 
 
+==========================================================================
+PART 1 -- principia port/ and 9sys/ : the real opportunity
+==========================================================================
+
 Tier 1 -- already byte-identical, nothing to do (26 files)
 --------------------------------------------------------------------------
 
-All in goken port/ <- principia port/. These were copied verbatim
-already, syncweb markers and all, and are listed only so a future pass
-doesn't re-measure them:
+All goken port/ <- principia port/. Copied verbatim already, syncweb
+markers and all; listed only so a future pass doesn't re-measure:
 
   asin.c atan.c atan2.c atol.c exp.c fabs.c floor.c fmod.c frexp.c
   getfields.c log.c memccpy.c memcmp.c memmove.c memset.c pow.c
@@ -96,15 +173,18 @@ goken file              copy from principia     hand-written comment
   port/rerrstr.c        9sys/rerrstr.c           ~15
   port/sysfatal.c       9sys/sysfatal.c          ~18
   port/werrstr.c        9sys/werrstr.c           ~14
-
-Same verdict for five files that live outside goken's port/ but whose
-source is principia port/ or 9sys/, if the pass wants to take them too:
-
-  math/lnrand.c         port/lnrand.c            0
+  math/lnrand.c         port/lnrand.c             0   (already a
+                          principia copy; only the /*s: libc includes */
+                          marker pair is missing)
   utf/utfrune.c         port/utfrune.c           ~12
   utf/utfrrune.c        port/utfrrune.c          ~12
   os/plan9/putenv.c     9sys/putenv.c            ~29
   os/plan9/fork.c       9sys/fork.c              ~21
+
+utf/utfrune.c and utf/utfrrune.c stay under goken utf/ (matching the
+Go-era directory split) even though principia keeps them in port/ --
+their own headers already record that choice deliberately. Copy the
+content, not the location.
 
 The only real cost of this tier is the prose. Two of them are worth
 salvaging rather than dropping, because they explain a design and not
@@ -112,13 +192,19 @@ just the code in front of them:
 
   - port/atnotify.c's header (~30 lines) on the notify()/noted()
     dispatch layer, why it is shared unchanged across every GOOS, and
-    why notify() itself is the per-GOOS piece. Belongs in
+    why notify() itself is the one per-GOOS piece. Belongs in
     notes_libc_api_design.txt ("Notes vs. signals") / plan_syscalls.txt.
   - os/plan9/putenv.c's header (~29 lines) on Plan9 /env semantics and
     why create(OWRITE) covers both add and replace where the POSIX
     port/putenv.c needs two branches. Belongs in notes_os_plan9.txt.
 
-Move those two first, then overwrite.
+A third is worth keeping only as a one-liner: utf/utfrune.c's and
+utf/utfrrune.c's headers both record that the pre-existing Go-era
+versions used `const` and had to go because this compiler's const
+support isn't trustworthy. That fact already lives in
+notes_libc_selfhost.txt; the copies here are redundant.
+
+Move those first, then overwrite.
 
 
 Tier 3 -- one-line decisions, not blind copies
@@ -136,7 +222,7 @@ Tier 3 -- one-line decisions, not blind copies
 Tier 4 -- do NOT overwrite, goken deliberately diverges
 --------------------------------------------------------------------------
 
-  port/goos.c   principia hardcodes `return "plan9"` (with the
+  port/goos.c   principia hardcodes `return "plan9"` (with its
                 defgetenv call commented out); goken does
                 getenv("GOOS"), which is the whole point of the file in
                 a multi-OS tree.
@@ -149,48 +235,223 @@ Tier 4 -- do NOT overwrite, goken deliberately diverges
                 until the uintptr width fix (see
                 tests/c/regressions/uintptr_width.c). Copying would
                 regress both.
+  port/vlrt.c   The near-miss most likely to fool a future pass: 99.4%
+                identical to principia's *arm* vlrt.c (596 vs 591 code
+                lines, 7 differing). Those 7 are load-bearing -- goken
+                adds an `#ifdef mips` big-endian branch to the Vlong
+                union, which principia's little-endian-only arm version
+                has no need for. (One of the few #ifdefs this tree
+                accepts against its own no-#ifdef convention: the union
+                layout genuinely cannot be selected per-file, since
+                port/vlrt.c is one file serving every arch.) Note the
+                pairing: goken's vlrt.c derives from principia arm/, not
+                386/ -- against 386/vlrt.c it differs by ~98 lines,
+                because that one carries extra 386-only helpers.
 
 Tier 4 is the reason this is a plan and not a shell loop over the whole
-directory: three of ~30 files in scope carry real, load-bearing
-divergence, and two of the three look cosmetic at a glance.
+directory: four of ~30 files in scope carry real, load-bearing
+divergence, and three of the four look cosmetic at a glance.
 
 
-Out of scope for this pass (measured, recorded so it isn't re-measured)
+Not a pairing at all
 --------------------------------------------------------------------------
 
-  fmt/       goken's fmt/ has diverged substantially from principia's
-             fmt/ -- dofmt.c, fltfmt.c, fmtquote.c, fmtdef.h all show
-             heavy real differences, and goken's fmt/strtod.c
-             (principia port/strtod.c) differs by ~127 code lines. Only
-             the small wrappers (fprint.c, seprint.c, snprint.c) are
-             near-identical, and even those differ by a line each.
-             A separate pass, if ever.
-  port/strtod.c  goken's is a 7-line shim; the real principia
-             port/strtod.c corresponds to goken fmt/strtod.c above.
-             Do not pair them by name.
-  arch/      goken arch/arm/div.s and arch/arm/vlop.s ARE code-identical
-             to principia arm/div.s and arm/vlop.s, but their goken
-             headers document *why only part* of the upstream file was
-             taken (vlop.s: only _mulv, because port/vlrt.c already
-             defines _addv/_subv in C, so a whole-file copy is a
-             duplicate-symbol link error). Overwriting would delete the
-             reason and invite exactly that link error later. Leave
-             them. Every other arch/ pairing (setjmp.s, getcallerpc.s,
-             vlop.s on 386/mips/riscv) is genuinely different code.
-  os/        outside plan9/putenv.c and plan9/fork.c above, goken's
-             os/{darwin,linux,windows}/ files are real ports, not
-             copies (time.c, dirread.c, getenv.c all rewritten).
-  syscall/os/plan9/sys.h  code-identical to principia 9syscall/sys.h
-             except for goken's added first line,
-             `// coupling: principia, must be kept in sync`. That line
-             is the point; keep it, don't overwrite.
+principia port/strtod.c corresponds to goken *fmt/*strtod.c (lineage
+(a), heavily diverged -- see Part 2), not to goken port/strtod.c.
+goken's port/strtod.c is a 14-line wrapper that exists for a completely
+different reason: fmt/strtod.c only defines fmtstrtod(), while
+fltfmt.c's xdtoa() self-verification calls the plain ANSI strtod(),
+which on the gcc/BOOT build comes from glibc. Both are in FMTOFILES/
+PORTOFILES simultaneously and do not collide. Do not pair by name.
 
 
+==========================================================================
+PART 2 -- principia fmt/ : different lineage, do not sync
+==========================================================================
+
+goken's entire fmt/ is lineage (a): it traces to src/lib9/fmt/ in the
+Go import commit 69b74c395, i.e. plan9port's libfmt. principia's fmt/
+is the Plan 9 native libc fmt. Both descend from Plan 9, so they look
+similar file-for-file, but neither is a copy of the other and goken's
+is the larger, later branch:
+
+  dofmt.c    559 code lines here vs 477 there
+  fltfmt.c   450 vs 261
+  fmtquote.c 213 vs 208
+  fmtdef.h    90 vs 70
+
+and goken has eight fmt/ files with no principia counterpart at all
+(charstod.c, fmtfdflush.c, fmtlocale.c, fmtnull.c, nan64.c, pow10.c,
+strtod.c, test.c) -- the plan9port additions.
+
+The small wrappers look temptingly close (fprint.c, seprint.c,
+snprint.c each differ by exactly one code line) but the differing line
+is `#include "fmtdef.h"`, which goken's versions need and principia's
+do not. Even these are not free copies.
+
+Verdict: no sync. Overwriting anything in fmt/ from principia is a
+lineage *switch*, not a cosmetic tidy, and would silently drop
+plan9port behavior that the rest of the tree already depends on.
+
+The one real opportunity here is the opposite of a sync -- an import of
+something goken never had:
+
+  principia fmt/ has eight rune-OUTPUT wrappers goken lacks entirely:
+    runefmtstr.c (runefmtstrflush), runeseprint.c, runesmprint.c,
+    runesnprint.c, runesprint.c, runevseprint.c, runevsmprint.c,
+    runevsnprint.c
+
+  Worth noting because the hard part is already present: goken's
+  fmt/dofmt.c and fmt/fmt.c already carry the full runes machinery
+  (__fmtdispatch(f, fmt, isrunes), f->runes), and goken even has
+  fmt/dorfmt.c, the rune-format driver. Two things are missing besides
+  the eight wrappers themselves:
+    - fmt/dorfmt.c is NOT in lib_core/libc/mkfile's FMTOFILES, so it is
+      not currently built.
+    - include/libc.h declares none of the family (grep for runesprint /
+      runeseprint / runefmtstrflush / runevsnprint: no hits).
+  So this is "enable dorfmt.c, add eight small wrappers, add eight
+  declarations", not a port. Nobody in the tree calls them yet, which
+  is presumably why it never happened; do it when a caller appears.
+
+
+==========================================================================
+PART 3 -- principia 386/ and arm/ : mostly a deliberate non-import
+==========================================================================
+
+Only two files in these two directories were ever taken, both from
+arm/, and both are already CODE-IDENTICAL to principia:
+
+  arch/arm/div.s   <- arm/div.s    (93 code lines, identical)
+  arch/arm/vlop.s  <- arm/vlop.s   (13 code lines, identical)
+
+Do NOT "finish the job" by overwriting them with the full principia
+files. goken's headers on both document why only *part* of the upstream
+file was taken, and the reason is a link error waiting to happen:
+principia's vlop.s also defines _addv and _subv (and, on 386,
+_mul64by32 and _div64by32), while goken's port/vlrt.c already defines
+_addv/_subv in portable C. A whole-file copy is a duplicate-symbol link
+error. The same subsetting was done on the 386 side --
+
+  arch/386/vlop.s is byte-for-byte principia 386/vlop.s lines 1-14
+  (the _mulv block) and nothing else.
+
+-- so that file is best read as "already synced, deliberately
+truncated", not as a divergence.
+
+The remaining same-arch pairings, corrected (an earlier draft of this
+file called them all "genuinely different code", which is too broad):
+
+  arch/386/setjmp.s   Same instruction sequence as principia's,
+                      instruction for instruction. The nd=23 verdict is
+                      entirely (i) principia ordering longjmp before
+                      setjmp, (ii) `ok:` sharing a line with its first
+                      instruction there, (iii) FP operand names (j/v vs
+                      l/r -- documentation only in Plan 9 asm). No
+                      reason to copy: the code is already the same, and
+                      goken's header documents 8a's pseudo-SP-vs-real-SP
+                      subtlety, which is worth more than the markers.
+  arch/arm/setjmp.s   Genuinely different in form. principia uses
+                      symbolic register defines (arg=0, link=14, sp=13)
+                      and declares both bodies `TEXT foo(SB), 1, $-4`;
+                      goken writes R13/R14 literally with `$0` frames.
+                      The flag/framesize difference is real, not
+                      cosmetic. Leave it.
+  arch/{386,arm}/getcallerpc.s
+                      Differ only in the TEXT line (goken
+                      `getcallerpc+0(SB), $0` vs principia
+                      `getcallerpc(SB), $0` on 386 and
+                      `getcallerpc(SB), 1, $-4` on arm) plus goken's
+                      long headers. Both goken headers already say
+                      "adapted verbatim from principia" and record a
+                      caveat worth keeping (nothing currently reads the
+                      result; never exercised under a non-linux GOOS).
+                      Not worth touching.
+
+Everything else in principia 386/ and arm/ is absent from goken, and
+that is a standing design choice rather than a gap: these are
+hand-optimized assembly versions of routines goken implements once, in
+portable C, under port/.
+
+  principia has, goken covers in portable C:
+    memccpy.s memchr.s memcmp.s memmove.s memset.s strcat.s strchr.s
+    strcpy.s strcmp.s strlen.s sqrt.s vlrt.c argv0.s
+    (-> port/memccpy.c, port/memchr.c, ... , port/argv0.c)
+  principia has, goken has nothing at all:
+    atom.s cycles.s/cycles.c getfcr.s getfcr.vfp.S main9.s main9p.s
+    memcpy.s muldiv.s notejmp.c tas.s
+
+The second group is the interesting one, and splits cleanly:
+main9.s/main9p.s are Plan9-native startup, superseded here by
+arch/$cputype/rt0.s; notejmp.c belongs with the note machinery
+(plan_syscalls.txt Tier 6); tas.s/atom.s are the atomic primitives a
+threaded libc would need and this one does not yet; getfcr.s is FP
+control-register access; cycles.s is a profiling counter. Import them
+per-need, from principia, when a caller appears -- not as a batch.
+
+Import the first group only if profiling ever says so, and only per
+arch. Note the cost that makes it unattractive today: each import
+splits one portable file into N per-arch files across the seven arches
+goken targets, and principia only supplies two of the seven.
+
+Finally, ignore any tool output pairing principia 386/ or arm/ files
+against goken arch/{amd64,arm64,mips,riscv,riscv64}/. Those goken files
+are lineage (c), written for goken (setjmp.s for all seven arches
+landed in one commit, dff443851); principia has no counterpart for
+those arches, and a filename-only match reports a difference that means
+nothing.
+
+
+==========================================================================
+PART 4 -- principia 9syscall/ : structurally different by design
+==========================================================================
+
+principia's 9syscall/ is one hand-written .s file per syscall -- 40 of
+them (open.s, close.s, pread.s, rfork.s, notify.s, segattach.s, ...),
+each a three-line MOVL/SWI/RET stub.
+
+goken does not have that shape at all. Its syscall/os/plan9/ is:
+
+  svc_$cputype.s          one file of shared trap stubs per arch
+  syscall_plan9_$arch.h   per-arch declarations
+  zsyscall_plan9_$arch.c  generated wrappers (the z prefix is the
+                          Go-era convention for generated files)
+  sys.h                   the syscall number table
+
+So the 40 "MISSING-IN-GOKEN" hits a filename comparison produces here
+are not a gap and not a TODO -- they are the same functionality in a
+different arrangement, chosen so that adding an arch means adding one
+svc_*.s rather than 40 stubs. See plan_syscalls.txt for what the
+syscall set should actually grow into, and notes_abi_plan9.txt for the
+trap convention itself.
+
+The one genuinely shared file is sys.h, which IS code-identical to
+principia's 9syscall/sys.h. Do not overwrite it: goken's version adds
+exactly one line, at the top,
+
+  // coupling: principia, must be kept in sync
+
+and that line is the entire point -- it is the marker that this table
+is a copy with an upstream. Overwriting would delete the only record of
+the coupling it documents. If principia's numbers change, edit the body
+and keep the line.
+
+
+==========================================================================
 After the copies
---------------------------------------------------------------------------
+==========================================================================
 
 Rebuild and re-run tests; `mk clean` first if switching objtype, or
 lib_core/libc/libc.a accumulates mixed-arch objects and corrupts its
-symbol table (see notes_libc_selfhost.txt / the mksyslib note). When
-this lands, fold the outcome into notes_libc_selfhost.txt and delete or
-shrink this file per the plan_ convention in CLAUDE.md.
+symbol table (see notes_libc_selfhost.txt / the mksyslib note).
+
+Tier 2 changes no code by construction, so a green build is the whole
+verification. Tier 3 does change code (an added #include, a renamed
+parameter) -- build those separately from Tier 2 so a breakage has one
+obvious cause.
+
+When this lands, fold the outcome into notes_libc_selfhost.txt and
+delete or shrink this file per the plan_ convention in CLAUDE.md. Parts
+2-4 are the parts worth keeping longest: they are negative results, and
+negative results are exactly what a future session would otherwise
+spend a day re-deriving.
