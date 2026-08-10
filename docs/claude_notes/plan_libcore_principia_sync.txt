@@ -1,0 +1,196 @@
+Plan: which lib_core/libc/ files can be re-synced verbatim from principia
+==========================================================================
+
+Like plan_syscalls.txt and plan_c_extensions.txt (and unlike every
+notes_ file, which records done, verified work -- see CLAUDE.md), this
+one is forward looking: it is the inventory behind a not-yet-done
+cleanup, namely replacing goken libc files that are *already* an
+almost-exact copy of principia's with a literal copy, so the two trees
+stop drifting apart cosmetically.
+
+todo.org remains the authority for project-wide priorities; this file
+only orders the work within lib_core/libc/.
+
+Scope of this pass: principia's lib_core/libc/port/ and 9sys/ as the
+source side. principia's fmt/, 386/, arm/, 9syscall/ were measured too
+(see "Out of scope for this pass") but are not part of the list below.
+
+
+How the comparison was made (reproduce before acting)
+--------------------------------------------------------------------------
+
+For every *.c / *.h / *.s under /home/pad/github/goken9cc/lib_core/libc,
+find the same-named file anywhere under /home/pad/principia/lib_core/libc,
+then compare twice:
+
+  1. raw byte comparison  -> "already identical, nothing to do"
+  2. normalized comparison: strip /* */ and // comments, collapse all
+     runs of whitespace, drop blank lines, then diff the remaining
+     lines -> "code-identical, only the header block and indentation
+     differ"
+
+Step 2 is what makes the list meaningful. The systematic difference
+between the two trees on these files is exactly two things:
+
+  - goken carries the "Claude Code / Copyright (C) 2026 Yoann
+    Padioleau / LGPL" header block plus a hand-written explanatory
+    comment; principia carries syncweb chunk markers instead
+    (/*s: libc/port/foo.c */ ... /*e: ... */, /*s: libc includes */,
+    /*s: function [[foo]] */).
+  - goken indents with tabs, principia with 4 spaces.
+
+Neither survives normalization, so a "0 differing code lines" verdict
+means the two files compile to the same thing.
+
+TOOLING TRAP, cost a first bogus run: sourcing env.sh puts goken's own
+diff and cmp on PATH ahead of GNU's, and they accept neither -q nor -w.
+`diff -q a b` therefore exits non-zero for *every* pair (usage error),
+which reads as "all files differ". Use /usr/bin/diff explicitly. Same
+family as the memory note about `sed -i` silently no-opping. See also
+notes_test_infra.txt on golden-diffing.
+
+The measurement script lives nowhere permanent -- it is ~30 lines of
+python (os.walk both trees, re.sub the comments, difflib) and is
+cheaper to rewrite than to maintain. The verdicts below are what it
+printed on 2026-08-10; re-run before acting, since goken's side moves.
+
+
+Tier 1 -- already byte-identical, nothing to do (26 files)
+--------------------------------------------------------------------------
+
+All in goken port/ <- principia port/. These were copied verbatim
+already, syncweb markers and all, and are listed only so a future pass
+doesn't re-measure them:
+
+  asin.c atan.c atan2.c atol.c exp.c fabs.c floor.c fmod.c frexp.c
+  getfields.c log.c memccpy.c memcmp.c memmove.c memset.c pow.c
+  qsort.c rand.c sin.c sqrt.c strchr.c strcmp.c strcpy.c strdup.c
+  strecpy.c strlen.c
+
+Note what this tier proves: the project has *already* accepted keeping
+principia's syncweb markers inside goken's libc port/. Tier 2 is not a
+new policy, just the rest of the same one.
+
+
+Tier 2 -- safe to overwrite verbatim (0 differing code lines)
+--------------------------------------------------------------------------
+
+goken file              copy from principia     hand-written comment
+                                                lines that would be lost
+  port/cistrcmp.c       port/cistrcmp.c          ~13
+  port/cleanname.c      port/cleanname.c         ~27
+  port/memchr.c         port/memchr.c            ~13
+  port/perror.c         port/perror.c            ~16
+  port/readn.c          port/readn.c             ~14
+  port/strcat.c         port/strcat.c            ~12
+  port/strncmp.c        port/strncmp.c           ~14
+  port/strncpy.c        port/strncpy.c           ~12
+  port/strrchr.c        port/strrchr.c           ~14
+  port/strtol.c         port/strtol.c            ~26
+  port/strtoll.c        port/strtoll.c           ~24
+  port/strtoul.c        port/strtoul.c           ~24
+  port/strtoull.c       port/strtoull.c          ~28
+  port/atnotify.c       port/atnotify.c          ~30
+  port/tokenize.c       port/tokenize.c          ~26
+  port/nulldir.c        9sys/nulldir.c           ~17
+  port/rerrstr.c        9sys/rerrstr.c           ~15
+  port/sysfatal.c       9sys/sysfatal.c          ~18
+  port/werrstr.c        9sys/werrstr.c           ~14
+
+Same verdict for five files that live outside goken's port/ but whose
+source is principia port/ or 9sys/, if the pass wants to take them too:
+
+  math/lnrand.c         port/lnrand.c            0
+  utf/utfrune.c         port/utfrune.c           ~12
+  utf/utfrrune.c        port/utfrrune.c          ~12
+  os/plan9/putenv.c     9sys/putenv.c            ~29
+  os/plan9/fork.c       9sys/fork.c              ~21
+
+The only real cost of this tier is the prose. Two of them are worth
+salvaging rather than dropping, because they explain a design and not
+just the code in front of them:
+
+  - port/atnotify.c's header (~30 lines) on the notify()/noted()
+    dispatch layer, why it is shared unchanged across every GOOS, and
+    why notify() itself is the per-GOOS piece. Belongs in
+    notes_libc_api_design.txt ("Notes vs. signals") / plan_syscalls.txt.
+  - os/plan9/putenv.c's header (~29 lines) on Plan9 /env semantics and
+    why create(OWRITE) covers both add and replace where the POSIX
+    port/putenv.c needs two branches. Belongs in notes_os_plan9.txt.
+
+Move those two first, then overwrite.
+
+
+Tier 3 -- one-line decisions, not blind copies
+--------------------------------------------------------------------------
+
+  port/ctype.c       principia's only extra code line is
+                     `#include <ctype.h>`. Copyable iff that header
+                     exists on the goken side; check before copying.
+  port/dirmodefmt.c  principia's only extra code line is
+                     `#include <fcall.h>`. Same question.
+  port/atof.c        identical except the parameter is named cp instead
+                     of s. Purely cosmetic, copyable.
+
+
+Tier 4 -- do NOT overwrite, goken deliberately diverges
+--------------------------------------------------------------------------
+
+  port/goos.c   principia hardcodes `return "plan9"` (with the
+                defgetenv call commented out); goken does
+                getenv("GOOS"), which is the whole point of the file in
+                a multi-OS tree.
+  port/abort.c  principia does `while(*(int*)0) ;` (deliberate fault);
+                goken does exit(1).
+  port/sbrk.c   goken adds an overflow guard absent upstream, and uses
+                `~(uintptr)Round` rather than principia's plain
+                `~Round` -- the latter leans on int -8 sign-extending
+                through the conversion, which was actively wrong here
+                until the uintptr width fix (see
+                tests/c/regressions/uintptr_width.c). Copying would
+                regress both.
+
+Tier 4 is the reason this is a plan and not a shell loop over the whole
+directory: three of ~30 files in scope carry real, load-bearing
+divergence, and two of the three look cosmetic at a glance.
+
+
+Out of scope for this pass (measured, recorded so it isn't re-measured)
+--------------------------------------------------------------------------
+
+  fmt/       goken's fmt/ has diverged substantially from principia's
+             fmt/ -- dofmt.c, fltfmt.c, fmtquote.c, fmtdef.h all show
+             heavy real differences, and goken's fmt/strtod.c
+             (principia port/strtod.c) differs by ~127 code lines. Only
+             the small wrappers (fprint.c, seprint.c, snprint.c) are
+             near-identical, and even those differ by a line each.
+             A separate pass, if ever.
+  port/strtod.c  goken's is a 7-line shim; the real principia
+             port/strtod.c corresponds to goken fmt/strtod.c above.
+             Do not pair them by name.
+  arch/      goken arch/arm/div.s and arch/arm/vlop.s ARE code-identical
+             to principia arm/div.s and arm/vlop.s, but their goken
+             headers document *why only part* of the upstream file was
+             taken (vlop.s: only _mulv, because port/vlrt.c already
+             defines _addv/_subv in C, so a whole-file copy is a
+             duplicate-symbol link error). Overwriting would delete the
+             reason and invite exactly that link error later. Leave
+             them. Every other arch/ pairing (setjmp.s, getcallerpc.s,
+             vlop.s on 386/mips/riscv) is genuinely different code.
+  os/        outside plan9/putenv.c and plan9/fork.c above, goken's
+             os/{darwin,linux,windows}/ files are real ports, not
+             copies (time.c, dirread.c, getenv.c all rewritten).
+  syscall/os/plan9/sys.h  code-identical to principia 9syscall/sys.h
+             except for goken's added first line,
+             `// coupling: principia, must be kept in sync`. That line
+             is the point; keep it, don't overwrite.
+
+
+After the copies
+--------------------------------------------------------------------------
+
+Rebuild and re-run tests; `mk clean` first if switching objtype, or
+lib_core/libc/libc.a accumulates mixed-arch objects and corrupts its
+symbol table (see notes_libc_selfhost.txt / the mksyslib note). When
+this lands, fold the outcome into notes_libc_selfhost.txt and delete or
+shrink this file per the plan_ convention in CLAUDE.md.
