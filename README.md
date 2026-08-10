@@ -147,7 +147,7 @@ on many architectures and many operating systems.
 
 All the clerical work of finding the right syscall numbers for each
 architecture and operating systems for the multiplatform C library in
-goken9cc (see `lib_core/libc/syscall/os`) was done by Claude Code,
+goken9cc (see `lib_core/libc/{arch,syscall,os}`) was done by Claude Code,
 inspired by what Go developers did for Go (see the `GO/pkg/syscall`
 and `GO/pkg/runtime` directories).
 
