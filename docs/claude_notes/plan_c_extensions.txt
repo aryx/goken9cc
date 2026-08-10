@@ -1,0 +1,384 @@
+Plan: which C language extensions goken's cc should grow, and why
+========================================================================
+
+Like plan_syscalls.txt and unlike every other file in
+docs/claude_notes/ (which record done, verified work -- see CLAUDE.md),
+this one is deliberately forward looking. Nothing described here is
+implemented. It exists so the next session doesn't re-derive the
+duplication census of principia-softwarica, or re-litigate the ordering
+of the candidate features, or re-discover the two dead ends recorded at
+the bottom.
+
+todo.org remains the authority for project-wide priorities; this file
+only orders the language-extension work itself. When any of these
+lands, fold the outcome into a notes_ file (a new
+notes_frontend_extensions.txt would be the natural home, alongside
+notes_frontend_optlevels.txt) and cut the corresponding section here
+down to a pointer.
+
+
+The question this file answers
+------------------------------------------------------------------------
+
+principia-softwarica is ~470k lines of C that goken compiles. What
+could be added to the C *language* (in compilers/cc/, shared by 5c/6c/
+7c/8c/vc/ic) that would meaningfully factorize that code?
+
+
+Scope: the toolchain is excluded, deliberately
+------------------------------------------------------------------------
+
+goken's own compilers/, assemblers/ and linkers/ must stay buildable by
+gcc/clang, since that is how goken bootstraps (mkfiles/boot-gcc/mkfile,
+mkfiles/boot-clang/mkfile). So the toolchain *implements* any feature
+here but never *uses* it in its own source.
+
+Two consequences, both load-bearing:
+
+- The feature never has to bootstrap. Stage-0 goken is built by
+  gcc/clang from feature-free source, so there is no chicken-and-egg,
+  no #ifdef fallback path, and no need for the feature to be
+  expressible in its own absence. This removes the usual reason to
+  keep a language extension conservative.
+
+- The toolchain is not a beneficiary and should not constrain the
+  design. Measured on goken's own compilers+assemblers+linkers:
+  718 `goto out/err/done/bad` sites but only 84 free() calls, and
+  zero longjmp. The gotos are parser error-recovery and state-machine
+  control flow, not resource cleanup -- the linkers bump-allocate via
+  gethunk and essentially never free (see the "simplify linker
+  allocators" cleanup). There is very little here to defer.
+
+Also worth recording since it was checked: both bootstrap mkfiles
+already compile at --std=gnu89, so GNU extensions are *enabled* today;
+the toolchain simply uses none (count of __attribute__ across
+compilers/assemblers/linkers/lib_core/include: 0).
+
+
+Provenance of every number below
+------------------------------------------------------------------------
+
+All counts are greps over principia-softwarica at the state of the
+2026-08-10 session, on a corpus defined as:
+
+  find . \( -path ./compilers -o -path ./linkers -o -path ./assemblers
+            -o -path ./generators -o -path ./debuggers -o -path ./MISC
+            -o -path ./SRC -o -path ./ROOT -o -path ./APE
+            -o -path ./kernel/COMPILE \) -prune -o -name '*.c' -print
+
+which yields 1627 files / 470932 lines.
+
+Excluding kernel/COMPILE matters and is easy to get wrong: it is a
+build staging area that duplicates kernel/*/port sources, and including
+it roughly doubles every kernel-side count. An earlier pass in this
+session reported waserror at 559 for exactly that reason; the real
+number is 267.
+
+These are grep counts, not parsed occurrences. They are good enough to
+rank features by order of magnitude and should not be quoted as exact.
+
+
+The census
+------------------------------------------------------------------------
+
+  idiom                                sites    where
+  -----------------------------------------------------------------
+  waserror() / poperror()            267/284    100% kernel
+  goto out/err/done/bad                  434
+  ad-hoc realloc-grow                    311    diffuse (below)
+  fn-ptr struct fields                   471    mixed, see below
+  void* aux/arg callback context         240    kernel 130, lib_core 23
+  ARGBEGIN                          212 files
+  usage()                                185
+  GBIT/PBIT                     157 (17 files)
+  multi-byte LE/BE load/store             53
+  qsort comparators                       45
+  driver register #defines                45
+  ad-hoc hash tables                 40 files   kernel 9, vcs 8, sec 6
+  enum->string name tables           21 files
+  hand-written conv*2* marshalling  ~930 lines  lib_core/libc/9sys,
+                                                lib_security/libauthsrv
+
+realloc-grow by area: version_control 53, editors 50, windows 29,
+browsers 28, typesetting 25, utilities 20, security 18, kernel 17,
+lib_gui 11, profilers 10. Note how diffuse this is -- roughly two
+sites per program across twenty unrelated programs.
+
+
+Recommended ordering
+------------------------------------------------------------------------
+
+1. defer / errdefer
+2. compile-time field iteration
+3. downward-only closures
+4. parametric container types (generics)
+
+Rationale for the ordering is per-feature below. The short version:
+(1) is the cheapest and hits the single densest idiom in the corpus;
+(2) has the highest ceiling because one feature retires four idiom
+families; (3) removes the codebase's main source of void* unsafety;
+(4) is real but its best customers were in the excluded toolchain.
+
+Everything below is frontend-only. cc.y:158 already hands the complete
+function tree to codgen(), so all four can be done before code
+generation, and 5c/6c/7c/8c/vc/ic see only ordinary C. Given what
+notes_shared_frontend_bugs.txt records about those six backends having
+diverged independently, "one implementation, six targets, zero backend
+edits" is a large part of why these are attractive at all.
+
+
+1. defer / errdefer
+------------------------------------------------------------------------
+
+The kernel already implements deferred cleanup; it just has no syntax
+for it. waserror()/poperror() on the Proc error-label stack IS
+dynamic-scope defer built on setjmp.
+
+    qlock(&c->l);                        qlock(&c->l);
+    if(waserror()){               -->    defer qunlock(&c->l);
+        qunlock(&c->l);                  ...
+        nexterror();
+    }
+    ...
+    poperror();
+    qunlock(&c->l);
+
+Two keywords, not one. The distinction is semantic, not environmental,
+and the kernel already makes it explicitly:
+
+  defer     runs on every normal exit from the enclosing block
+            (fall-through, break, continue, goto out of block,
+            return). Pure block-exit lowering. Works identically in
+            rio, mk, rc and the utilities, where no error stack exists.
+
+  errdefer  runs only on the unwind path. In the kernel it registers
+            on the same p->errlab[] stack that nexterror() walks.
+            Unavailable (or a no-op) outside the kernel.
+
+kernel/files/chan.c namec() is the site that justifies the split, and
+is the recommended first conversion target:
+
+  - chan.c:1394  free(aname)                      -> defer
+  - chan.c:1470  cclose(c); free(e.name); ...      -> errdefer for
+    cclose, because namec() *returns* c. A plain always-run defer
+    would close the value being returned.
+
+Block-scoped, not function-scoped. Go and V are function-scoped and
+that is precisely why Go needed a runtime defer-record list (and later,
+in 1.14, "open-coded defers" to claw the cost back). Every systems
+language since -- Swift, Zig, Odin, Jai, Nim, D -- is block-scoped,
+because it lowers to straight-line code emitted on each exit edge with
+zero runtime and zero allocation. Prior art for the two-keyword split:
+Zig's defer/errdefer, D's scope(exit)/scope(success)/scope(failure).
+
+Sizing: ~267 waserror sites, each shedding a 4-5 line scaffold, plus
+the mismatched-poperror bug class. Note that only 74 of 313 poperror
+sites have their cleanup mirrored within two lines, so "the cleanup is
+written twice" is a substantial minority, not the universal case -- the
+win is deleting the scaffold, not deduplicating the cleanup body.
+
+Estimated cost: 300-500 lines in cc/, plus a small kernel runtime hook
+for errdefer. Cheapest item on this list.
+
+
+2. Compile-time field iteration
+------------------------------------------------------------------------
+
+Highest ceiling of anything here, because four separate entries in the
+census are one missing capability -- walking a struct's fields at
+compile time:
+
+  - ~930 lines of hand-written pack/unpack (convS2M.c 404, convM2S.c
+    325, convD2M.c 106, convM2D.c 104, plus libauthsrv's five small
+    conv files) become derived from a layout declaration
+  - the 21 enum->string tables, which silently drift from their enums
+  - debug printing of arbitrary structs
+  - Dirtab arrays (see the 9P note below)
+
+A deliberately small form -- an unrolled loop, not a macro system, not
+AST manipulation:
+
+    foreach(f in Fcall) {
+        put(b, f.offset, f.width);   /* f.name, f.type, f.offset,
+                                        f.width are compile-time
+                                        constants */
+    }
+
+Why this is tractable in *this* compiler specifically: cc.h's Type
+already carries everything the feature needs. The field list hangs off
+Type.down, and each field carries its sym (name) and offset. You would
+be exposing information the frontend already computes, not adding a new
+analysis. dcl.c:189 tcopy() and sub.c:170 copytyp() are the existing
+type-walking primitives to build on.
+
+Prior art: Zig's comptime/@typeInfo, D's __traits(allMembers), Nim
+macros -- cut down to the single operation that pays.
+
+
+3. Downward-only closures
+------------------------------------------------------------------------
+
+240 void* aux/arg parameters and 45 qsort comparators are the same
+shape: a function pointer plus an untyped context cast on both ends.
+That void* round-trip is where the type system gives up, and the kernel
+holds 130 of the 240.
+
+The design that fits a kernel is closures that may be passed *down* but
+never stored in a struct or returned:
+
+    qsort(a, n, sizeof(*a),
+          [](void *x, void *y){ return cmp(base[*x], base[*y]); });
+
+No heap allocation, no trampolines, no executable stack -- just a
+static link to the enclosing frame, which is safe precisely because
+escape is forbidden. The non-escape restriction is checkable in the
+frontend and is what makes this kernel-safe. GCC's nested functions get
+this wrong: they synthesize trampolines on an executable stack.
+
+Important scoping caveat: the 471 function-pointer struct fields are
+NOT all candidates. The Dev vtable (kernel/files/portdat_files.h:379)
+is a genuine stored vtable and must remain plain function pointers.
+The win is the aux-carrying callbacks, not the dispatch tables.
+
+
+4. Parametric container types (generics)
+------------------------------------------------------------------------
+
+Monomorphized at instantiation, no C++-style templates:
+
+    struct Array[T] { T *a; int n, max; };
+    void  arraypush(Array[T]*, T);
+
+    Array[Line*] lines;
+    arraypush(&lines, l);
+
+Brackets rather than <>: in a declarator position cc already knows
+Array is a typedef-name, so there is no ambiguity with subscripting,
+and it adds no new punctuation to the language.
+
+Implementation: parse the generic body once into a Node tree with a
+placeholder TPARAM type; clone-and-substitute at each instantiation
+(tcopy/copytyp again); cache instantiations keyed on (generic sym, arg
+types); ASCII-safe name mangling. Linker unaffected beyond longer
+symbol names. Estimated 1000-1500 lines in cc/.
+
+Why it is ranked last despite being the first idea considered: the
+toolchain exclusion removed its best customers. cc, 5l, 8l, acid and
+libmach were roughly 24 of the ~64 hash tables in the full tree and
+~766 of the 1200 cleanup gotos -- exactly the dense, sophisticated
+container users where a generic library pays for itself. What remains
+is 311 realloc sites spread across ~20 unrelated programs at ~2 sites
+each, plus 40 hash tables. Real duplication, but no cluster large
+enough to make the migration self-funding.
+
+Revisit after feature 2 lands, since reflection-based containers may
+cover enough of this to change the calculus.
+
+
+Dead ends, recorded so they are not re-explored
+------------------------------------------------------------------------
+
+A. The macro route to generic containers is not merely ugly here --
+   it does not compile.
+
+   goken's preprocessor is textual, not token-based. macdef() stores a
+   macro body with parameters encoded as #a, #b, ... (mac.c:348), and
+   macexpand() substitutes with a literal strcpy() into a buffer that
+   is then re-lexed (mac.c:643). Therefore:
+
+   - There is no ISO ## token-paste operator. In this dialect ## is
+     the *escape for a literal #* (mac.c:428, mac.c:637). So
+     kh_##name##_t does not paste.
+   - There is no #x stringize either; the # branch in macdef() is the
+     escape path and no stringize path exists.
+   - macif() confirms #if has no expression evaluation -- it is a bare
+     (s->macro != nil) ^ f definedness test, matching CLAUDE.md.
+
+   klib / sys/queue.h style monomorphizing container macros are
+   therefore unwritable without first rewriting mac.c (1063 lines,
+   whose entire design is that textual #a encoding) into a token-based
+   preprocessor. That rewrite is comparable in size to implementing
+   generics properly, and buys an untyped, undebuggable version of the
+   same capability.
+
+B. __attribute__((cleanup)) is not a substitute for defer.
+
+   Support is excellent -- GCC 3.3+ (2003), Clang throughout, already
+   enabled by goken's --std=gnu89 -- and it is battle-tested at scale
+   (systemd's _cleanup_*_, Linux's include/linux/cleanup.h since 6.5).
+   The *defer statement* by contrast has no support in any released
+   gcc/clang; it is a C2y proposal (N3199) whose exact status should be
+   verified rather than taken from this file.
+
+   But the whole interface is: on a variable T x, the compiler calls
+   f(&x) at scope exit. Every limitation follows from that signature:
+
+   - It binds cleanup to a *declaration*, not an action. When the
+     thing to undo is not something being declared -- a lock inside
+     another object, a refcount, a registration -- a dummy variable
+     must be manufactured to carry it. Linux's guard(mutex)(&lock) is
+     exactly that macro, hiding the dummy behind __UNIQUE_ID.
+   - f sees only what is reachable from &x.
+   - It always runs. There is no success/failure split, so a value
+     being returned must be disarmed by hand.
+   - It does NOT run on longjmp. glibc's longjmp performs no
+     unwinding and setjmp/longjmp is not forced unwinding, so
+     cleanups are simply skipped.
+
+   The last two are individually fatal for the kernel, which is where
+   the value is: namec() both returns its Chan and leaves via
+   nexterror(). It is a fine mechanism for resources that genuinely
+   ARE variables (malloc'd buffers, fds, namec's Elemlist -- for which
+   a single freeelemlist(Elemlist*) works well), and useless for the
+   lock-and-unwind majority.
+
+C. Byte-packing looked like a large marshalling win and is not.
+
+   A first grep for shift-and-or byte packing returned 998 sites,
+   which reads as a huge case for a declarative wire-layout feature.
+   It is not: 289 are in lib_security and more in lib_strings, i.e.
+   SHA/AES/RSA and flate. That is inherent algorithmic bit-twiddling,
+   not boilerplate. The genuinely factorizable marshalling is 53
+   multi-byte LE/BE load/store sites plus the ~930 lines of conv*
+   files -- which feature 2 covers, so no separate wire-layout feature
+   is warranted.
+
+D. Rejected without needing measurement:
+
+   - Slices / fat pointers. Better than (buf, n), but Plan 9 C's
+     entire idiom and all the existing .nw prose is built on the
+     pair; the churn is paid across 470k lines for less than
+     containers return.
+   - Interfaces / method dispatch. 27 Dev vtables is not a problem,
+     and designated initializers (already supported per cc/c99.txt)
+     solved the readability half.
+   - Multiple return values. Pleasant, modest, factorizes nothing
+     across programs.
+   - Declarative flag parsing. 212 ARGBEGIN files and 185 usage()
+     functions, but ARGBEGIN is already terse and this is a library
+     problem at best.
+   - Driver register descriptions. Only 45 sites. Not worth grammar.
+
+
+The largest non-language finding
+------------------------------------------------------------------------
+
+Recorded here because it came out of the same census and is worth more
+than several of the features above, at zero compiler cost:
+
+lib_networking/lib9p already exists, and roughly 14 userland servers
+hand-roll 9P dispatch anyway -- rio, plumb, sam, acme, samterm, ramfs,
+dossrv, webfs, cs, dns, exportfs, ftpfs, keyfs, iostats. Add the 27
+kernel drivers, each rewriting gen/walk/stat, and this is the largest
+un-factored duplication in the corpus.
+
+kernel/devices/sys/devpipe.c pipegen() is representative: ~25 lines of
+which the DEVDOTDOT case, the skip-'.', the bounds check, the mkqid and
+the devdir call are identical everywhere; only the switch computing len
+is driver-specific. Just 12 of the 27 drivers use the table-driven
+devgen path at all.
+
+This wants to be a library plus feature 2 (derive Dirtabs and gen
+functions from a declaration, giving lib9p a reason to be adopted), not
+a keyword. A language construct dedicated to one OS's filesystem
+protocol is too narrow to earn a place in the grammar.
