@@ -32,6 +32,63 @@ mapping and what this setup does and doesn't catch (some FPU corner
 cases are qemu's own emulation bugs, not toolchain bugs -- worth
 excluding before chasing a float-test failure through the compiler).
 
+The one thing qemu-user does NOT emulate: execve
+------------------------------------------------------------------
+
+qemu-user emulates the guest's *instructions* and translates its
+syscalls, but execve() is handed straight to the HOST kernel: the
+emulated process is replaced by whatever the host can load. So a guest
+binary that exec()s another foreign-arch binary -- including itself --
+only works if the host kernel can run that arch on its own, either
+natively or via exactly the binfmt_misc registration the section above
+deliberately refuses to depend on. Nothing about it is visible until a
+test actually exec()s something.
+
+tests/c/hello_libc/fork.c is that test (fork/exec/wait/pipe, Tier 4),
+and it hit this the moment it reached CI: it re-execs argv[0], which
+works on an arm64 dev host (whose kernel runs aarch32 binaries
+natively, so the arm target needs no help at all, and whose distro
+happens to have binfmt_misc handlers registered for i386/x86_64/mips/
+riscv32/riscv64 -- i.e. every arch in ARCHS is covered *by accident*)
+but fails on the amd64 GitHub runner, where the container has no
+binfmt_misc registration at all. The signature in the CI log is
+precise and worth recognizing:
+
+    386      ... fork test passes   (runs natively on an amd64 host)
+    amd64    ... fork test passes   (native)
+    arm      ... /dev/stdin fork_expected.txt differ: char 14
+
+char 14 is the first byte after "fork+wait ok\n" -- fork() and wait()
+worked, exec() returned ENOEXEC, so the child printed "exec failed"
+instead of "child alive". The pass/fail split falls exactly on
+"can the host kernel load this arch", which is the tell that the
+toolchain and the libc wrapper are both fine.
+
+Fix: scripts/qemu-runner exports $GOKEN_EXEC_PREFIX (the absolute path
+of the emulator it invoked), and a test that needs to exec() execs
+"$GOKEN_EXEC_PREFIX <target> ..." instead of <target> directly.
+Exec'ing the emulator is a host-native exec the host kernel always
+accepts, and the child still runs the cross-compiled binary under
+emulation. Unset means a native run (macOS, or a host matching the
+target), where the plain exec is right. Any future test that exec()s
+must do the same -- there is no way to make the host-kernel
+dependency go away from the guest side.
+
+Reproducing a "host can't exec this arch" failure on a host that CAN
+is possible without root, and is how the above was confirmed: pick an
+arch whose binfmt_misc entry has no F (fix-binary) flag -- check
+/proc/sys/fs/binfmt_misc/qemu-mips -- and hide the interpreter inside
+a private mount namespace, which makes the kernel's binfmt lookup fail
+the same way an unregistered host does:
+
+    unshare -rm --propagation private sh -c '
+      mkdir -p /tmp/empty_qbf
+      mount --bind /tmp/empty_qbf /usr/libexec/qemu-binfmt
+      env -u GOKEN_EXEC_PREFIX qemu-mips ./fork.exe'
+
+With F set, binfmt_misc holds the interpreter open at registration
+time and this trick does nothing -- the entry has to be P/O-only.
+
 Non-Linux targets get their own equivalent runner, one tier at a time
 ---------------------------------------------------------------------------
 

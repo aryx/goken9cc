@@ -45,4 +45,15 @@ riscv64)        qemu=qemu-riscv64 ;;
 	;;
 esac
 
+# A test binary that wants to exec() something (tests/c/hello_libc/fork.c
+# re-execs itself) cannot just exec its own path here: qemu-user does not
+# emulate execve, it hands it to the host kernel, which can only run this
+# arch's binaries if it is that arch or has a binfmt_misc handler -- and
+# not relying on binfmt_misc is the whole point of this script. So export
+# where the emulator actually lives; such a test execs "$GOKEN_EXEC_PREFIX
+# <its own path> ..." instead, which is a host-native exec that always
+# works. Absolute, since the exec() under test does no $PATH search.
+GOKEN_EXEC_PREFIX=$(command -v "$qemu")
+export GOKEN_EXEC_PREFIX
+
 exec "$qemu" "$@"

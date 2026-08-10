@@ -21,6 +21,22 @@
  * exact value is never printed: it differs across environments (qemu
  * vs native, different tmp dirs), but is always a valid path back to
  * this same binary since cwd is unchanged across fork()/exec().
+ *
+ * $GOKEN_EXEC_PREFIX exists for the one case where re-exec'ing argv[0]
+ * is not enough: under qemu-user, execve() is NOT emulated -- qemu
+ * hands it straight to the HOST kernel, which can only honour it if it
+ * can run this arch's binaries itself (natively, or via a binfmt_misc
+ * registration). scripts/qemu-runner deliberately does not rely on
+ * binfmt_misc (see its header), so on a host of a different arch the
+ * exec below would just fail with ENOEXEC -- and did, in CI: an
+ * arm binary re-exec'ing itself works on an arm64 host (which runs
+ * aarch32 natively) but not on an amd64 one. So qemu-runner exports
+ * the absolute path of the emulator it used, and we re-exec
+ * "<emulator> <argv[0]> child" instead: exec'ing the emulator is a
+ * host-native exec the host kernel always accepts, and the child still
+ * ends up running this same cross-compiled binary. Unset (native runs
+ * -- macOS, or a host that matches the target) means the plain
+ * re-exec of argv[0] above.
  */
 void
 main(int argc, char *argv[])
@@ -75,12 +91,21 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	if(pid == 0){
-		char *cargv[3];
+		char *cargv[4], *prefix;
 
-		cargv[0] = argv[0];
-		cargv[1] = "child";
-		cargv[2] = nil;
-		exec(argv[0], cargv);
+		prefix = getenv("GOKEN_EXEC_PREFIX");
+		if(prefix != nil && prefix[0] != '\0'){
+			cargv[0] = prefix;
+			cargv[1] = argv[0];
+			cargv[2] = "child";
+			cargv[3] = nil;
+			exec(prefix, cargv);
+		} else {
+			cargv[0] = argv[0];
+			cargv[1] = "child";
+			cargv[2] = nil;
+			exec(argv[0], cargv);
+		}
 		print("exec failed\n");
 		exit(1);
 	}
