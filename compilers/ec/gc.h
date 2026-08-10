@@ -241,6 +241,15 @@ int	Bconv(Fmt*);
  * reg.c -- true no-ops, see the file comment above
  */
 void	regopt(Prog*);
+/* claude: swt.c's swit1() calls this once per switch statement, right
+ * after emitting its compare-and-branch dispatch chain, recording
+ * (bodystart, displo, disphi) -- see reg.c's hoistswitches()/
+ * recordswitch() for what each means and why (doswit()'s body-then-
+ * dispatch ordering makes every case label a *backward* branch target,
+ * which buildscopes() cannot always nest correctly when the switch
+ * sits inside a loop that has its own backward back-edge in the same
+ * region). */
+void	recordswitch(int32, int32, int32);
 
 /*
  * machcap.c

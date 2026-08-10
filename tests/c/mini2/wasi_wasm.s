@@ -27,7 +27,7 @@
 //     ec-compiled C with three real int arguments, so it needs its own
 //     real signature spelled out explicitly.
 TEXT	write(SB), $0
-SIGNATURE	write(SB), $"WWWW"
+SIGNATURE	write(SB), $"WWWV"
 
 	CONSTW	$iov+0(SB)
 	LOCALGET	LOCAL(1)	// buf
@@ -44,8 +44,26 @@ SIGNATURE	write(SB), $"WWWW"
 	CALL	fd_write(SB)
 	DROP			// discard the i32 errno result
 
-	LOCALGET	LOCAL(2)	// claude: pretend success -- matches every write() in
-				// this test suite: nothing here checks the return value
+	// claude: genuinely void (SIGNATURE above is "WWWV", not "WWWW") --
+	// an earlier version pushed LOCAL(2) here to "pretend success" with
+	// a real i32 result, matching hellowrite_wasm.c's own *local*
+	// `extern int write(...)` prototype. But minilibc.h -- the
+	// prototype print_nofloat_no64.c's vprintf()/printf() actually
+	// compile against -- declares `extern void write(...)`, and ec's
+	// cgen() (cgen.c's OFUNC case) trusts the caller's own C-level
+	// declared type to decide whether a bare call-statement needs an
+	// ADROP, not this function's *real* wasm signature: a void-declared
+	// call is assumed to push 0 results, so no drop is ever emitted for
+	// it. With write() actually returning 1 value here, every void-
+	// prototyped call left a genuine, un-dropped value behind -- masked
+	// wherever something else's own codegen happened to consume/absorb
+	// it, but a hard wasm validation failure ("expected 0 elements ...
+	// found 1") for any function whose write() call was its last
+	// statement (e.g. print_nofloat_no64.c's own ·printbool()/vprintf()).
+	// Matching the SIGNATURE to what minilibc.h actually promises is the
+	// real fix -- hellowrite_wasm.c's own separate `int`-returning
+	// prototype was simply never true of the underlying wasm function
+	// either way (nothing has ever read the "pretend success" value).
 	RET
 
 GLOBL	nwritten(SB), $4

@@ -214,7 +214,38 @@ swit1(C1 *q, int nc, int32 def, Node *n)
 {
 	Node nsafe;
 	int i;
+	int32 displo, bodystart;
 
+	/* claude: every q[i].label is a pcid doswit() already assigned
+	 * *before* calling us (`cases->label = pc` in cck/pswt.c, recorded
+	 * inline as gen() walked the switch's own body -- see this file's
+	 * comment above) -- so the case body's own earliest live position
+	 * (what reg.c's hoistswitches() needs as its own "lo") is simply
+	 * the smallest of them. Deliberately *not* including `def` here:
+	 * when this switch has no `default:`, cck/pswt.c's doswit() sets
+	 * def = breakpc, captured (cck/pgen.c's OSWITCH case) *before* the
+	 * body even starts -- i.e. smaller than every real case label, not
+	 * a body position at all -- which would always incorrectly win the
+	 * minimum. This does mean a switch whose `default:` physically
+	 * comes *before* every other case in source order gets the wrong
+	 * (too late) bodystart; none of this backend's test sources do
+	 * that today (regress_wasm.c's classify_switch() and
+	 * print_nofloat_no64.c's two switches all have default last or
+	 * omitted), so it's left as a known gap rather than guessed at. */
+	bodystart = nc > 0 ? q[0].label : def;
+	for(i = 1; i < nc; i++)
+		if(q[i].label < bodystart)
+			bodystart = q[i].label;
+
+	/* claude: this whole function's own output -- from the scratch-
+	 * local spill through the final unconditional branch to `def` -- is
+	 * a single, self-contained compare-and-dispatch chain that always
+	 * lands *after* doswit()'s already-emitted case bodies (see this
+	 * file's own comment above), making every q[i].label a backward
+	 * branch target. Recording its span lets reg.c's hoistswitches()
+	 * physically move it before the body post hoc, turning those into
+	 * ordinary forward branches -- see recordswitch()'s own comment. */
+	displo = pc;
 	regsalloc(&nsafe, n);
 	gins(ALOCALSET, Z, &nsafe);
 
@@ -230,6 +261,7 @@ swit1(C1 *q, int nc, int32 def, Node *n)
 	}
 	gbranch(OGOTO);
 	patch(p, def);
+	recordswitch(bodystart, displo, pc);
 }
 
 /*

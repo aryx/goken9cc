@@ -296,3 +296,23 @@ Also note bin/rc is a PROMOTED COPY (scripts/promote-mk.sh) and
 $MKSHELL points at it, not at ROOT/arch/$objtype/bin/rc. A rebuilt rc
 does not take effect for mk until promote-mk.sh has run -- the same
 install-vs-use gap notes_exec_pe.txt records for lk/pe.c and 6l.
+
+tests/c/mini2/mkfile's own clean:V: rule (`rm -f *.[5678ijv] *.exe
+*.a`) predates the wasm arch and doesn't cover ec/el's own extensions
+(.e objects, .wasm outputs) -- so after rebuilding `ec` or `el`
+themselves (a real toolchain change, not a test-source change), `mk
+clean; mk test_wasm` in that directory can *silently keep testing
+stale .wasm files* compiled by the OLD compiler/linker, since mk's own
+staleness check only compares a target's mtime against its immediate
+prerequisites (regress_wasm.c, wasi_wasm.s, ...), never against the
+`ec`/`el` binaries that actually produced it. But while fixing a real
+compilers/ec bug this session: several "still passes!" checks in a row
+were actually re-verifying output built by the pre-fix compiler,
+because none of the wasm test *sources* had changed, only the compiler
+had. The fix isn't a better clean rule (same class of gap as
+notes_debug_techniques.txt's "rebuilding a host tool needs
+objtype=boot-gcc explicitly" -- both are "the build graph doesn't know
+about this dependency") but discipline: after changing compilers/ec,
+assemblers/ea, or linkers/el themselves, `rm -f *.wasm *.e` by hand in
+every directory being used to verify the fix before rerunning, don't
+trust mk's own up-to-date check to notice.

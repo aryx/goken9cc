@@ -845,8 +845,35 @@ gpseudo(int a, Sym *s, Node *n)
 	if(s->class == CSTATIC)
 		p->from.name = D_STATIC;
 	naddr(n, &p->to);
-	if(a == ADATA || a == AGLOBL)
-		pc--;
+	/*
+	 * claude: ic/txt.c's own gpseudo() (which this is modeled on, see
+	 * gc.h's file comment) does `if(a == ADATA || a == AGLOBL) pc--;`
+	 * here, so consecutive data chunks/globals don't inflate its pc
+	 * counter -- harmless there since a real arch's regopt() never
+	 * indexes anything by raw pcid. Deliberately dropped for ec: a
+	 * string-literal argument's ADATA (com.c's OSTRING case, via
+	 * outstring()) is emitted *while* the enclosing function's own
+	 * statements are being walked, not as a separate pre/post pass, so
+	 * it becomes one more Prog in *that function's* own flat list --
+	 * exactly the list reg.c's collect()/resolve() index by raw pcid
+	 * (list[target-base]), which silently assumes every entry's pcid is
+	 * unique and position-matching. `pc--` here duplicated the ADATA's
+	 * pcid onto whatever Prog came right after it (e.g. the ACONSTW
+	 * pushing the string's address for a call argument), desyncing
+	 * every later index in that function from its true pcid by one.
+	 * Confirmed via a minimal repro: a `for` loop containing two
+	 * `switch` statements, preceded by a call passing a string literal
+	 * (e.g. `debug("x")`), miscompiled into a genuine cyclic branch
+	 * chain (reg.c's resolve() diag "cycle in branch chain") instead of
+	 * valid wasm -- exactly print_nofloat_no64.c's vprintf() shape
+	 * (tests/c/mini2). Same reasoning as the ASIGNATURE case just below
+	 * (also deliberately not `pc--`), just for a pseudo-op that can
+	 * appear mid-function instead of only right after ATEXT. Top-level
+	 * AGLOBL/ADATA (gclean()'s own end-of-file loop, gextern()'s
+	 * globals) never reach regopt() at all -- pcid is reg.c-internal
+	 * only (never serialized to the .e file), so leaving those dense
+	 * too costs nothing.
+	 */
 
 	/*
 	 * claude: codgen() (compilers/cck/pgen.c) calls gpseudo(ATEXT,...)

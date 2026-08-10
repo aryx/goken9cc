@@ -5,18 +5,21 @@
 // compilers/ec/reg.c's rotateloops(), see docs/notes_wasm.txt, since
 // their own entry jump lands inside the loop body from outside it,
 // which plain block/loop nesting can't express directly), and switch/
-// case (standalone only -- switch inside a loop that also has its own
-// backward branch, e.g. a `continue`, hits a real, still-open relooper
-// limitation, see notes_wasm.txt). Also: pointer dereference (OIND),
-// increment/decrement and compound assignment (on a plain ONAME
-// lvalue), address-of a global, and the variadic-call ABI (a variadic
-// function's own named parameter, plus its "..." actuals). No printf
-// here (print_nofloat_no64.c's own vprintf() is exactly what hits the
-// switch/continue relooper limitation above): runtests() below checks
-// everything itself and returns 0 for all-pass or a bug-identifying
-// nonzero code otherwise, verified by scripts/wasm-call-runner.js the
-// way every other arch's hello*.exe is verified by `cmp` against an
-// expected.txt.
+// case -- standalone (classify_switch()) and, since reg.c's
+// hoistswitches(), inside a loop that also has its own backward branch
+// like a `continue` (loopswitch()); see notes_wasm.txt for how that
+// used to be a real, open relooper limitation. Also: pointer
+// dereference (OIND), increment/decrement and compound assignment (on
+// a plain ONAME lvalue), address-of a global, and the variadic-call
+// ABI (a variadic function's own named parameter, plus its "..."
+// actuals). No printf here even so (print_nofloat_no64.c's own
+// vprintf() -- exactly loopswitch()'s shape -- still needs two more
+// separate, still-open pieces: initialized global/static data, and
+// el linking two input files that each have their own string-literal
+// data, see notes_wasm.txt): runtests() below checks everything itself
+// and returns 0 for all-pass or a bug-identifying nonzero code
+// otherwise, verified by scripts/wasm-call-runner.js the way every
+// other arch's hello*.exe is verified by `cmp` against an expected.txt.
 
 // plain recursion + if/else, both branches returning -- exercises
 // compilers/ec/reg.c's dead-code elision: codgen() always appends a
@@ -446,17 +449,11 @@ sumvariadic(int n, ...)
 }
 
 // switch/case (swit1() in txt.c) -- multiple case labels sharing one
-// body, a default, and a plain (non-loop) context. Deliberately NOT
-// inside a loop that also uses `continue`/`break`-as-loop-exit: that
-// combination hits a real, deeper limitation (see notes_wasm.txt) --
-// buildscopes() (reg.c) treats every backward branch as a loop's own
-// back-edge, but switch's own case-dispatch branches are also
-// backward (case bodies are emitted before the dispatch code that
-// jumps to them, per cck/pswt.c's doswit()), so when both a loop's
-// *and* a switch's backward branches land in the same region, they
-// get misclassified as overlapping loops instead of one loop plus a
-// plain multi-way jump -- a real "relooper" problem, not something
-// swit1() itself can fix. A switch used standalone still works today.
+// body, a default, and a plain (non-loop) context. See loopswitch()
+// below for the same construct *inside* a loop that also has its own
+// backward branch -- a real, deeper limitation this used to hit
+// unconditionally (see notes_wasm.txt), now fixed by reg.c's
+// hoistswitches().
 int
 classify_switch(int n)
 {
@@ -474,6 +471,48 @@ classify_switch(int n)
 		r = -1;
 	}
 	return r;
+}
+
+// switch(es) *inside* a `for` loop that also has its own backward
+// branch (`continue`) -- the exact shape classify_switch()'s own
+// comment used to flag as a real, open relooper limitation (a switch's
+// case-dispatch branches are backward too, per doswit()'s body-then-
+// dispatch ordering, and used to get misclassified as overlapping with
+// the loop's own back-edge). Fixed by reg.c's hoistswitches(): each
+// switch's whole compare-and-dispatch chain gets physically relocated
+// before its own body (swt.c's swit1() records the span via
+// recordswitch()), turning every case-label branch into an ordinary
+// *forward* one before buildscopes() ever sees it. This is exactly
+// print_nofloat_no64.c's vprintf() shape (a `for` with `continue`,
+// containing two back-to-back switches) -- see notes_wasm.txt.
+int
+loopswitch(int n)
+{
+	int i, sum;
+
+	sum = 0;
+	for (i = 0; i < n; i = i + 1) {
+		if (i == 1)
+			continue;
+		switch (i) {
+		case 0:
+		case 2:
+			sum = sum + 1;
+			break;
+		}
+		switch (i) {
+		case 0:
+			sum = sum + 100;
+			break;
+		case 3:
+			sum = sum + 200;
+			break;
+		case 4:
+			sum = sum + 300;
+			break;
+		}
+	}
+	return sum;
 }
 
 int
@@ -559,5 +598,7 @@ runtests(void)
 		return 39;
 	if (classify_switch(9) != -1)
 		return 40;
+	if (loopswitch(5) != 602)
+		return 41;
 	return 0;
 }

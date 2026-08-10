@@ -91,13 +91,46 @@
 #include "gc.h"
 
 static Prog*	newprog(int as);
+static int32	safeopen(Prog**, int32);
 
 enum
 {
 	SBLOCK,
 	SLOOP,
 	MAXDEPTH	= 128,
+	MAXSWITCHREC	= 256,	/* claude: recordswitch()'s own registry cap --
+				 * generous relative to any test source today
+				 * (regress_wasm.c has 1, print_nofloat_no64.c's
+				 * vprintf() has 2), matching the fixed-cap style
+				 * el/asm.c's own MAXSIG already uses for a similar
+				 * whole-file registry. */
 };
+
+/*
+ * claude: recordswitch()'s own registry -- see gc.h's comment on the
+ * prototype and hoistswitches() below for how these get consumed.
+ * File-scope (not per-function): pcid is a whole-file monotonic
+ * counter (txt.c's nextpc()), so recorded spans from every switch in
+ * the file coexist here and regopt() just filters by whichever ones
+ * fall inside the function it's currently processing.
+ */
+static int32	swbodystart[MAXSWITCHREC];	/* earliest live pcid of the switch's own body */
+static int32	swdisplo[MAXSWITCHREC];		/* swit1()'s own first instruction */
+static int32	swdisphi[MAXSWITCHREC];		/* one past swit1()'s own last instruction */
+static int	nswitchrec;
+
+void
+recordswitch(int32 bodystart, int32 displo, int32 disphi)
+{
+	if(nswitchrec >= MAXSWITCHREC) {
+		diag(Z, "ec: too many switch statements in one file (max %d)", MAXSWITCHREC);
+		return;
+	}
+	swbodystart[nswitchrec] = bodystart;
+	swdisplo[nswitchrec] = displo;
+	swdisphi[nswitchrec] = disphi;
+	nswitchrec++;
+}
 
 typedef struct Scope Scope;
 struct Scope
@@ -602,6 +635,171 @@ retarget(Prog **live, int32 m, int32 base, int32 *liveidx)
 }
 
 /*
+ * claude: swaps the two adjacent live-index spans [lo,d0) ("body") and
+ * [d0,d1) ("dispatch") in place -- the actual "hoist a switch's
+ * dispatch before its own body" move hoistswitches() (below) computes
+ * the endpoints for. Deliberately simpler than rotateonce() (no
+ * special-cased trailing instruction retargeted to the span's own
+ * start): there is no automatic "loop back-edge" here needing that
+ * treatment, just two blocks trading places and every branch target
+ * that fell inside either one following along. Also remaps `curpos[]`
+ * (hoistswitches()' own "where does original pcid X currently live"
+ * table) the same way, since a later recorded switch's endpoints are
+ * looked up through it and must reflect this move too.
+ */
+static void
+swapspans(Prog **live, int32 m, int32 lo, int32 d0, int32 d1, int32 *curpos, int32 ncurpos)
+{
+	int32 bodylen, dlen, i, target, idx;
+	int32 *remap;
+	Prog **tmp;
+
+	bodylen = d0 - lo;
+	dlen = d1 - d0;
+
+	remap = alloc(m * sizeof(int32));
+	for(i = 0; i < m; i++)
+		remap[i] = i;
+	for(i = d0; i < d1; i++)
+		remap[i] = lo + (i - d0);
+	for(i = lo; i < d0; i++)
+		remap[i] = lo + dlen + (i - lo);
+
+	tmp = alloc((bodylen + dlen) * sizeof(Prog*));
+	for(i = 0; i < dlen; i++)
+		tmp[i] = live[d0 + i];
+	for(i = 0; i < bodylen; i++)
+		tmp[dlen + i] = live[lo + i];
+	for(i = 0; i < bodylen + dlen; i++)
+		live[lo + i] = tmp[i];
+
+	for(i = 0; i < m; i++) {
+		if(live[i]->as != ABR && live[i]->as != ABRIF)
+			continue;
+		target = live[i]->to.offset;
+		if(target < 0 || target >= m)
+			continue;
+		idx = remap[target];
+		live[i]->to.offset = idx;
+	}
+
+	for(i = 0; i < ncurpos; i++) {
+		if(curpos[i] < 0)
+			continue;
+		if(curpos[i] >= lo && curpos[i] < d1)
+			curpos[i] = remap[curpos[i]];
+	}
+}
+
+/*
+ * claude: doswit() (compilers/cck/pswt.c, shared by every backend)
+ * always emits a switch statement as "body first (case labels recorded
+ * inline as gen() walks it), compare-and-dispatch chain after" --
+ * irrelevant for a real arch's arbitrary-target branches, but it makes
+ * every one of swit1()'s own q[i].label branches (this file's own
+ * comment on swit1() -- see swt.c) a *backward* one, which
+ * buildscopes() classifies as a loop back-edge no differently than a
+ * real for/while's own. That's merely redundant (a wasm `loop` that
+ * only ever runs once still validates) when the switch sits on its
+ * own, but genuinely unfixable by buildscopes()/extendscopes() when
+ * the switch sits inside a real loop that has its own backward back-
+ * edge landing in the same region: two LOOP scopes can only nest
+ * (unlike two BLOCK scopes, extendscopes() has no "loop" equivalent of
+ * widening a block's open point), and a switch's dispatch span and an
+ * enclosing loop's own span will partially overlap rather than nest
+ * whenever the switch isn't the very last thing in the loop body.
+ * Confirmed via tests/c/mini2/print_nofloat_no64.c's vprintf() (a
+ * `for` loop containing two switches): silently miscompiled --
+ * emit()'s own "branch target scope not on stack" safety diag() didn't
+ * even catch it, it just picked the wrong enclosing scope -- into a
+ * module that failed wasm validation ("expected 0 elements on the
+ * stack for fallthru, found 1"), not the clean "unsupported control
+ * flow" validatescopes() gives the for/do-while entry case.
+ *
+ * The fix: physically relocate each switch's whole dispatch chain
+ * (recorded by swit1() via recordswitch()) to right before its own
+ * body, via swapspans() above. This turns every q[i].label branch
+ * (and the final unconditional branch to `def`) into an *ordinary
+ * forward* branch into the body -- exactly what buildscopes() already
+ * handles for every other if/while/for -- eliminating the conflict
+ * entirely rather than trying to reconcile two overlapping loop
+ * scopes. The switch's own *entry* jump (OSWITCH's `gbranch(OGOTO)`,
+ * cck/pgen.c) already targets the dispatch chain's start, so after the
+ * move it simply becomes "branch to the very next live position" -- a
+ * degenerate but valid one-line block, not special-cased away, since
+ * emit()'s generic block/loop machinery already handles it for free.
+ *
+ * Runs once per recorded switch, in whatever order recordswitch()
+ * received them (nesting/ordering doesn't matter -- see the comment
+ * on curpos[] below); must run *before* rotateloops(), so a switch's
+ * own former backward branches never reach findrotation()/buildscopes()
+ * at all, and after retarget(), since it needs live-index (not raw
+ * pcid) positions throughout.
+ */
+static void
+hoistswitches(Prog **live, int32 m, int32 base, int32 n, int32 *liveidx)
+{
+	int32 *curpos;
+	int32 i, bs, lo, hi, d0, d1;
+
+	/*
+	 * claude: recordswitch()'s values are permanent, whole-file pcid
+	 * values (relative to `base`, this function's own *original*,
+	 * pre-compaction index space, size `n`), but swapspans() needs
+	 * live-index positions, which shift out from under a *later*
+	 * recorded switch every time an *earlier* one is hoisted (whether
+	 * that earlier one is a sibling later in the same function, or --
+	 * for a switch nested inside another switch's own case body --
+	 * literally the one just moved). curpos[] tracks "where does
+	 * original index i currently live", seeded from compact()'s own
+	 * liveidx[] (a case body can't be dead code -- it's only ever
+	 * reached via this same dispatch chain, so markdead() never elides
+	 * it) and kept in sync by every swapspans() call (see its own tail
+	 * loop), so each switch's endpoints are always looked up fresh
+	 * rather than computed once up front from now-stale positions.
+	 */
+	curpos = alloc(n * sizeof(int32));
+	for(i = 0; i < n; i++)
+		curpos[i] = liveidx[i];
+
+	for(i = 0; i < nswitchrec; i++) {
+		bs = swbodystart[i] - base;
+		lo = swdisplo[i] - base;
+		hi = swdisphi[i] - base;
+		if(bs < 0 || hi > n)
+			continue;	/* not this function's own switch */
+
+		/*
+		 * claude: swbodystart[i] is directly the switch's own earliest
+		 * case label (see swit1()'s own comment) -- no need to hunt
+		 * for OSWITCH's entry jump (cck/pgen.c) at all, which is just
+		 * as well: that Prog is often dead code by this point (e.g.
+		 * print_nofloat_no64.c's vprintf() has two switches back to
+		 * back with nothing between them -- the first one's own
+		 * dispatch chain already jumps straight to breakpc, which
+		 * *is* the second switch's own true start, so its redundant
+		 * entry jump never survives markdead()/compact() and a target-
+		 * value search for it would either find nothing or -- worse --
+		 * latch onto an unrelated live branch that happens to share
+		 * the same target, like one of the first switch's own break
+		 * gotos converging on that identical position).
+		 *
+		 * `lo` (swit1()'s own first instruction) is not the dispatch's
+		 * true start either -- see swit1()'s comment on `displo` --
+		 * but is recoverable the same way as before: nothing can
+		 * legally branch into the middle of the switch expression's
+		 * own (always height>0 mid-run) evaluation, so the nearest
+		 * position at or before it with height 0 (safeopen()'s own
+		 * technique) is exactly where that evaluation began.
+		 */
+		d0 = safeopen(live, curpos[lo]);
+		d1 = curpos[hi - 1] + 1;
+
+		swapspans(live, m, curpos[bs], d0, d1, curpos, n);
+	}
+}
+
+/*
  * claude: a wasm block/loop resets what's visible on the operand
  * stack to its own declared params (none, for the void blocks/loops
  * this file only ever emits) -- a value computed *before* the block
@@ -950,6 +1148,8 @@ regopt(Prog *sp)
 	liveidx = alloc(n * sizeof(int32));
 	live = compact(list, n, dead, liveidx, &m);
 	retarget(live, m, base, liveidx);
+
+	hoistswitches(live, m, base, n, liveidx);
 
 	live = rotateloops(live, &m);
 

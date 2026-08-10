@@ -6,13 +6,14 @@ this toolchain: assemblers/ea, linkers/el, include/e.out.h, and now
 compilers/ec (the C compiler backend, reusing compilers/cck's shared
 frontend). Written to be read before touching any of those. The "Open
 questions for ec" section at the end tracks what's still unimplemented
-(floats, general address-of-a-local, a real relooper for switch-inside-
-a-continue-using-loop) now that the bootstrap, if/else, all of C's loop
-constructs (while, for, do while, including nesting/break/continue and
-loop rotation), switch/case (standalone), string literals, address-of
-for globals/statics and for a variadic function's own named parameter,
-pointer dereference, increment/decrement, compound assignment, and the
-variadic-call ABI are done.
+(floats, general address-of-a-local, initialized global/static data,
+el linking two files that each have their own string-literal data) now
+that the bootstrap, if/else, all of C's loop constructs (while, for, do
+while, including nesting/break/continue and loop rotation), switch/case
+(standalone and inside a loop with its own backward branch), string
+literals, address-of for globals/statics and for a variadic function's
+own named parameter, pointer dereference, increment/decrement, compound
+assignment, and the variadic-call ABI are done.
 
 See tests/s/mini/hello_wasm.s (hand-written ea assembly) and
 tests/s/mini/hello_wasm.wat (the same program in traditional
@@ -27,15 +28,18 @@ against expected.txt via cmp, the same way every other arch's
 helloprintf.exe is checked, rather than regress_wasm.c's self-checking
 return-code trick. It isn't helloprintf.c itself: the variadic-call
 ABI needed for real printf() is done now (see below), and so are
-test.c and helloprintf.c themselves (both compile against ec
-unmodified) -- but print_nofloat_no64.c's own vprintf() hits a real,
-still-open relooper limitation (switch inside a loop that also uses
-`continue`), so a true tests/c/mini2/helloprintf.wasm built from the
-unmodified shared sources isn't there yet. tests/s/mini/mkfile's
-storeorder_wasm.s is a from-a-different-angle sibling: hand-assembled
-rather than ec-compiled, and built specifically to catch a real
-STOREx-operand-order bug (below) rather than to demonstrate a full C
-program.
+test.c, helloprintf.c, and (since reg.c's hoistswitches(), see "Switch/
+case" below) print_nofloat_no64.c itself -- all three now compile
+against ec unmodified. A true tests/c/mini2/helloprintf.wasm built by
+*linking* them together still isn't there yet, though: two separate,
+still-open gaps block it (see "Open questions"), found while trying --
+initialized global/static data (print_nofloat_no64.c's `static int32
+fd = 1;` silently comes out as 0), and el merging two input files that
+each declare their own file-local `.string` data symbol into one
+(corrupting both). tests/s/mini/mkfile's storeorder_wasm.s is a
+from-a-different-angle sibling: hand-assembled rather than ec-compiled,
+and built specifically to catch a real STOREx-operand-order bug (below)
+rather than to demonstrate a full C program.
 
 
 Why 'e' for the arch letter
@@ -745,17 +749,157 @@ on for their own regsalloc() calls (e.g. ic/cgen.c's indirect-call
 spill). (Finding and fixing this mechanism's own latent gpseudo() bug
 is what made regsalloc() actually work -- see above.)
 
-A switch used standalone (not inside a loop that also has its own
-backward branch, e.g. a `continue`) works and is tested
-(tests/c/mini2/regress_wasm.c's classify_switch()). Switch *inside*
-such a loop does not -- see the "Open questions" relooper entry below,
-now with a concrete, confirmed trigger: this is the actual, current
-blocker for building the real, unmodified print_nofloat_no64.c (its
-vprintf() has exactly this shape: `for(...) { ...continue...
-switch(...) {...} switch(...) {...} }`), i.e. for a true
-tests/c/mini2/helloprintf.wasm built from the shared sources verbatim.
-test.c and helloprintf.c themselves both already compile against ec
-unmodified; print_nofloat_no64.c is the one file that doesn't yet.
+A switch used standalone works and is tested (regress_wasm.c's
+classify_switch()); switch *inside* a loop that also has its own
+backward branch (e.g. a `continue`) -- print_nofloat_no64.c's own
+vprintf() shape, `for(...) { ...continue... switch(...){...}
+switch(...){...} }` -- used to be a real, confirmed relooper-class
+limitation (buildscopes() misclassifying the switch's own backward
+case-dispatch branches as the loop's back-edge) and is now fixed by
+hoistswitches() below; regress_wasm.c's loopswitch() tests exactly
+this shape.
+
+hoistswitches() (reg.c) -- fixing switch-inside-a-loop without a
+full relooper
+--------------------------------------------------------------------
+
+The root cause (recapped from the old "Open questions" entry this
+replaces): doswit() always emits a switch as *body first* (case labels
+recorded inline as gen() walks it), *dispatch chain after* -- swit1()'s
+own compare-and-branch sequence, described above, always lands
+physically after the case bodies it jumps into, making every
+q[i].label branch a *backward* one. That's merely redundant (a wasm
+`loop` that only ever runs once still validates) for a standalone
+switch, but breaks when the switch sits inside a real loop that has
+its own backward back-edge landing in the same region: two wasm `loop`
+scopes can only ever *nest*, never partially overlap (unlike two
+`block` scopes, extendscopes() has no equivalent of widening a loop's
+open point -- a loop's open *is* its own branch target, not a movable
+marker), and a switch's dispatch span and an enclosing loop's own span
+overlap rather than nest whenever the switch isn't the very last thing
+in the loop body. validatescopes() catches the shape it was written
+for (a `for`/`do while`'s own entry landing mid-loop) with a clean
+diag(), but does *not* catch this one -- confirmed the hard way, via
+print_nofloat_no64.c's vprintf(): it silently miscompiled into a
+module that failed wasm *validation* ("expected 0 elements on the
+stack for fallthru, found 1"), not a clean ec-side diagnostic. (Finding
+that also surfaced two unrelated real bugs along the way, both below:
+the ADATA/AGLOBL pcid bug, and the wasi_wasm.s write() signature
+mismatch -- each was masking or compounding the picture until fixed
+independently.)
+
+The fix does *not* generalize reg.c into a real relooper (Emscripten's
+algorithm, or LLVM's CFGStackify) -- that's still open for genuinely
+irregular control flow (arbitrary goto), see "Open questions". Instead
+it eliminates the *specific* conflict at its source: swit1() (swt.c)
+now also computes and records, via a new recordswitch() (reg.c):
+  - `bodystart` -- the switch's own earliest case label (`min` over
+    `q[i].label`, deliberately *not* including `def` when there's no
+    `default:`: doswit() sets def=breakpc then, a raw pc captured
+    *before* the body even starts, i.e. always smaller than every real
+    case label and not a body position at all -- would always
+    incorrectly win the minimum. A switch whose `default:` physically
+    comes before every other case would need `def` included too; none
+    of this backend's test sources do that, so it's a known, narrow
+    gap rather than guessed at).
+  - `displo`/`disphi` -- swit1()'s own first and one-past-last
+    instruction (the scratch-local spill through the final
+    unconditional branch to `def`).
+reg.c's new hoistswitches() (regopt(), between retarget() and
+rotateloops() -- must run before rotateloops() so a switch's former
+backward branches never reach findrotation()/buildscopes() at all)
+then, per recorded switch belonging to the function being processed:
+  1. Recovers the dispatch chain's *true* start (`d0`): `displo` is
+     swit1()'s own first instruction, not cgen(l,&nod)'s (the switch
+     expression's own evaluation, emitted from cck/pgen.c's OSWITCH
+     case, a hook this file has no access to). Recovered instead via
+     the same technique safeopen() already uses for the analogous
+     "where did this run of code start" question: a statement always
+     begins at operand-stack height 0, so the nearest position at or
+     before `displo` with height 0 is exactly where the switch
+     expression's evaluation began.
+  2. Physically swaps the two adjacent spans [bodystart,d0) ("body")
+     and [d0,d1) ("dispatch") in place (swapspans()) -- deliberately
+     simpler than rotateonce() (no special-cased trailing instruction
+     retargeted to the span's own start: there's no automatic "loop
+     back-edge" here, just two blocks trading places and every branch
+     target that fell inside either one following along via the same
+     remap[] trick).
+This turns every q[i].label branch (and the final unconditional branch
+to `def`) into an *ordinary forward* branch into the (now relocated)
+body -- exactly what buildscopes() already handles for every other
+if/while/for -- eliminating the conflict entirely instead of trying to
+reconcile two overlapping loop scopes. OSWITCH's own entry jump
+(cck/pgen.c, `gbranch(OGOTO); sp=p; ...; patch(sp,pc);`) needs no
+special handling either way: after the swap it simply becomes "branch
+to the very next live position", a degenerate but valid one-instruction
+block, and is often not even a *live* instruction any more by this
+point (e.g. print_nofloat_no64.c's two back-to-back switches: the
+first one's own dispatch already jumps straight to breakpc, which *is*
+the second switch's true start, so its own now-redundant entry jump
+never survives markdead()/compact() -- which is exactly why
+hoistswitches() locates a switch's body via its own case labels
+(bodystart), never by searching for "the branch targeting the
+dispatch": on a function with several switches sharing convergent
+targets, that search can find the *wrong* live branch instead of
+finding nothing, corrupting an unrelated span silently).
+
+Multiple switches in one function (vprintf() has two, sequential) are
+each hoisted independently, in whatever order recordswitch() received
+them: curpos[] (hoistswitches()' own "where does original pcid X
+currently live" table, seeded from compact()'s liveidx[]) is kept in
+sync by every swapspans() call, so a later switch's endpoints are
+always looked up fresh rather than computed once from now-stale
+positions -- the same reason rotateloops() re-scans the live array
+from scratch on every iteration instead of precomputing everything
+up front.
+
+Two more real, independent bugs found while chasing this (both fixed,
+neither wasm-hoisting-specific):
+
+  - gpseudo()'s `if(a == ADATA || a == AGLOBL) pc--;` (txt.c), copied
+    verbatim from ic/txt.c's own gpseudo() (this file's own stated
+    reuse-what-transfers philosophy): harmless there since a real
+    arch's regopt() never indexes anything by raw pcid, but wrong for
+    ec specifically, whose reg.c *does* (collect()/resolve() index
+    `list[target-base]`, needing every Prog's pcid dense and unique).
+    A string-literal call argument's ADATA (com.c's OSTRING case, via
+    outstring()) is emitted *while* the enclosing function's own
+    statements are being walked (not as a separate pass), so it
+    becomes one more Prog in that function's own flat list -- `pc--`
+    duplicated its pcid onto whatever Prog came right after it (e.g.
+    the ACONSTW pushing the string's address for a call argument),
+    desyncing every later index in that function from its true pcid by
+    one. Confirmed via a minimal repro: a `for` loop containing two
+    `switch`es, preceded by a call passing a string literal (e.g.
+    `debug("x")`), miscompiled into a genuine cyclic branch chain
+    (reg.c's resolve() diag "cycle in branch chain") -- exactly
+    vprintf()'s own shape (its very first statement is `debug("VPRINTF")`).
+    Fixed by dropping the `pc--` special case entirely for ec (see
+    txt.c's own comment) -- the same reasoning ASIGNATURE already got
+    right (gc.h's comment, further up): top-level AGLOBL/ADATA
+    (gclean()'s end-of-file loop, gextern()'s globals) never reach
+    regopt() at all, so leaving those dense too costs nothing.
+
+  - wasi_wasm.s's write() declared `SIGNATURE write(SB), $"WWWW"` --
+    3 i32 params *plus* an i32 result (el/asm.c's own sig-string
+    convention: the last char is the result type, 'V' for none) -- to
+    "pretend success" for hellowrite_wasm.c's own separate `extern int
+    write(...)` prototype. But minilibc.h (what print_nofloat_no64.c
+    actually compiles against) declares `extern void write(...)` --
+    void. ec's cgen() (cgen.c's OFUNC case) decides whether a bare
+    call-statement needs a wasm DROP purely from the *caller's*
+    declared C return type, not the callee's real wasm signature, so
+    every void-prototyped write() call left write()'s real i32 result
+    genuinely un-dropped on the operand stack -- harmless wherever
+    something else's own codegen happened to consume/absorb the stray
+    value, a hard wasm validation failure ("expected 0 ... found 1")
+    for any function whose write() call was its last statement (e.g.
+    ·printbool()/vprintf()). Fixed by matching wasi_wasm.s's SIGNATURE
+    to what minilibc.h actually promises ("WWWV", genuinely void) and
+    updating hellowrite_wasm.c's own local prototype to match (it was
+    already effectively unused -- nothing ever read write()'s "pretend
+    success" value either way).
 
 
 Open questions for ec (not yet started)
@@ -766,30 +910,56 @@ exists today, kept here so it doesn't have to be re-derived:
 
   - Should ec ever need genuinely irregular control flow (arbitrary
     goto into another block, computed jumps) -- reg.c's scope-based
-    approach would need to become a real "relooper" (Emscripten's
+    approach would still need to become a real "relooper" (Emscripten's
     algorithm, or LLVM's CFGStackify) instead of the direct
-    construction it does today. This is no longer hypothetical: a
-    switch statement *inside* a loop that also has its own backward
-    branch (e.g. a `continue`) hits exactly this, confirmed via a
-    minimal repro and via print_nofloat_no64.c's real vprintf()
-    (`for(...) { ...continue... switch(...){...} switch(...){...} }`)
-    -- the actual, current blocker for a true tests/c/mini2/
-    helloprintf.wasm built from the unmodified shared sources (test.c
-    and helloprintf.c themselves already compile against ec as-is;
-    print_nofloat_no64.c is the one holdout). Root cause: reg.c's
-    buildscopes() classifies *every* backward branch as a loop's own
-    back-edge, but a switch's own case-dispatch branches are also
-    backward (case bodies are emitted before the dispatch code that
-    jumps to them, per cck/pswt.c's doswit()) and are not loop
-    back-edges at all -- when a loop's and a switch's backward
-    branches land in the same region, they get misclassified as
-    overlapping loops instead of one loop plus a plain multi-way jump,
-    and validatescopes() correctly refuses to emit a module for the
-    shape it can't make sense of, rather than silently emitting wrong
-    wasm. Fixing this for real needs the relooper generalization
-    above, not a narrower patch to swit1() or buildscopes() -- a
-    switch used standalone (not inside such a loop) already works and
-    is tested (regress_wasm.c's classify_switch()).
+    construction it does today. The one case that used to force this
+    question (switch inside a loop with its own backward branch,
+    print_nofloat_no64.c's vprintf()) turned out *not* to need the full
+    generalization -- see "Switch/case"'s hoistswitches() above, which
+    resolves it with a narrower, targeted physical-relocation pass
+    instead. This bullet is only still open for something reaching
+    *further* than that (arbitrary/computed goto); nothing in the
+    shared test sources needs it yet.
+
+  - Two separate, still-open gaps block a true, fully-linked
+    tests/c/mini2/helloprintf.wasm built from print_nofloat_no64.c +
+    helloprintf.c + test.c verbatim, found while trying to wire one up
+    (both are pre-existing limitations, unrelated to the switch/
+    relooper fix above -- see tests/c/mini2/helloprintf_wasm.c, which
+    stops short of the full multi-file link for exactly these reasons):
+      - Initialized global/static data isn't implemented: gextern()
+        (swt.c) explicitly no-ops the initializer (`if(off ||
+        s->class==CSTATIC) { /* not implemented */ }`), so e.g.
+        print_nofloat_no64.c's `static int32 fd = 1;` silently comes
+        out zero-initialized instead. Confirmed via a minimal repro
+        (write(fd,...) with fd read back as 0, i.e. stdin, instead of
+        1/stdout -- no crash, no diag, just silently wrong output).
+        Needs real support for a static's initializer expression
+        turning into actual ADATA content (gextern() already has the
+        `w`/width and a zero constant on hand; it's the *value*, not
+        the space, that's missing) -- probably straightforward for a
+        simple integer constant like this one, more involved for
+        anything requiring relocations (e.g. a pointer initializer).
+      - el merges multiple input files' own file-local (CSTATIC)
+        symbols of the *same name* into one, instead of keeping them
+        separate per file. Every ec-compiled file gets its own
+        `.string` blob (symstring, cck/lex.c's `slookup(".string")`,
+        CSTATIC) for its own string-literal data, always the identical
+        name -- fine for every real arch's own linker (a Plan 9-style
+        object format's CSTATIC/local symbols are scoped per input
+        file, never merged across files by name), but el evidently
+        resolves symbols globally regardless of storage class,
+        confirmed via a minimal repro: linking two small ec-compiled
+        objects that each contain their own distinct string literals
+        together corrupts *both* (reading one file's own literal
+        yields bytes from the other file's blob instead). Only
+        surfaced now because no earlier wasm test linked two files that
+        each contain string data (hellowrite_wasm.e + wasi_wasm.e is
+        the only prior multi-file link, and wasi_wasm.s has no string
+        literals of its own). Needs el's own symbol-table/collectsyms()
+        logic (linkers/el/obj.c) to scope CSTATIC symbols per input
+        file rather than merging them by bare name -- a linker-side
+        fix, nothing to do with ec's own codegen.
 
   - The address-taken-local split, general case. Address-of a global/
     static is done (cgen.c's OADDR case, see above); address-of a

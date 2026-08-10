@@ -14,7 +14,14 @@
 // today: string literals (ec/swt.c's outstring()) and taking the
 // address of a *global*/*static* (ec/cgen.c's OADDR case) -- both new
 // this session -- are enough for this, not for varargs.
-extern int write(int fd, char *buf, int n);
+// claude: void, not int -- must match minilibc.h's own `extern void
+// write(...)` prototype (what print_nofloat_no64.c's vprintf() compiles
+// against) and wasi_wasm.s's own real, void SIGNATURE for write() (see
+// its comment): ec's cgen() decides whether a bare call-statement needs
+// a wasm DROP purely from the *caller's* declared C return type, so a
+// mismatched prototype here would silently desync this file's own
+// stack bookkeeping from write()'s real (void) wasm signature.
+extern void write(int fd, char *buf, int n);
 
 void
 main(void)
