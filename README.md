@@ -145,17 +145,6 @@ on many architectures and many operating systems.
 
 ## AI disclaimer
 
-All the clerical work of finding the right syscall numbers for each
-architecture and operating systems for the multiplatform C library in
-goken9cc (see `lib_core/libc/{arch,syscall,os}`) was done by Claude Code,
-inspired by what Go developers did for Go (see the `GO/pkg/syscall`
-and `GO/pkg/runtime` directories).
-
-The entire wasm backend was written by Claude Code.
-
-Most of the architecture and operating system bugfixes were
-done by Claude Code.
-
 95% of the code in goken9cc was written by humans (mostly Ken Thompson,
 Rob Pike, Charles Forsyth, Richard Miller, and other Plan 9 contributors),
 and for the most part written more than 30 years ago.
@@ -164,6 +153,17 @@ and then use AI to write the remaining 5% so that the toolchains
 could work not just *on* Plan 9 *for* Plan 9
 but also *on* and *for* Linux, macOS, and Windows (imitating for the most part what
 was done by Go developers for the Go language).
+
+All the clerical work of finding the right syscall numbers for each
+architecture and operating systems for the multiplatform C library in
+goken9cc (see `lib_core/libc/{arch,syscall,os}`) was done by Claude
+Code, inspired by what Go developers did for Go (see the
+`GO/pkg/{syscall,runtime}` directories).
+
+The entire wasm backend was written by Claude Code.
+
+Most of the architecture and operating system bugfixes were
+done by Claude Code.
 
 Most of the code written by AI is clearly marked with a special `claude:`
 comment at the front and part of a commit authored by Claude code.
