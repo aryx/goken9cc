@@ -1135,12 +1135,41 @@ exists today, kept here so it doesn't have to be re-derived:
     into is ec's job -- probably a pass very similar to how existing
     backends already decide which C locals become register variables
     versus stack-resident ones, just with a binary fast/slow split
-    instead of "how many registers are free". Nothing in the shared
-    test sources needs this yet: write() (hellowrite_wasm.c) doesn't
-    (wasi_wasm.s's wrapper builds its iovec out of a private global,
-    never the caller's own frame), and printf() only ever takes the
-    address of its own named parameter (the variadic-ABI case, done),
-    never of an ordinary local.
+    instead of "how many registers are free". Nothing in
+    tests/c/mini2's own sources needs this yet: write()
+    (hellowrite_wasm.c) doesn't (wasi_wasm.s's wrapper builds its iovec
+    out of a private global, never the caller's own frame), and
+    printf() only ever takes the address of its own named parameter
+    (the variadic-ABI case, done), never of an ordinary local.
+
+    Confirmed as the concrete, sole blocker for tests/c/vlong/ and
+    tests/c/float/ (tried, not yet started, while looking at whether
+    those two directories' own helloprintf.c could reuse the same
+    unmodified-source approach as tests/c/mini2's): `ec -o x.e print.c`
+    against either directory's print.c fails immediately, at the exact
+    same three functions in both (they're otherwise-identical code --
+    tests/c/vlong/print.c's own top comment says "Same as ../float/
+    print.c but without float stuff") -- ·printuint()/·printint()/
+    ·printhex() each declare `byte buf[100];` as a genuine local array,
+    then index and pointer-arithmetic into it (`buf[i] = ...`, `(char*)
+    buf+i`), which is exactly the "array decays to an address" case
+    this bullet describes. Unlike this same trio of functions in
+    tests/c/mini2/print_nofloat_no64.c, which sidesteps the whole issue
+    by declaring `buf` as a *global* instead (see that file's own `byte
+    buf[100];` at file scope, with its own claude-tagged comment on
+    why) -- tests/c/vlong/ and tests/c/float/'s own print.c can't be
+    changed to match without breaking the "byte-identical to every
+    other arch's own unmodified copy" property that makes this
+    comparison meaningful in the first place. So getting either
+    directory running on wasm needs this bullet actually implemented,
+    not a narrower workaround. tests/c/float/'s float.c (float64tobits/
+    frombits, used by isNaN()/isInf()/NaN()) would be a second, separate
+    blocker past this one -- a `union {float64 f; uint64 i;}` local,
+    which needs the same real-memory-backed-local machinery this bullet
+    is about (unlike the AREINTQD/AREINTDQ opcodes already in e.out.h/
+    txt.c's stackdelta(), which reinterpret a value already sitting on
+    the operand stack -- not a substitute for a union's own memory
+    aliasing between two named fields).
 
   - The shadow stack's actual push/pop sequence at a *function's own*
     entry/exit (as opposed to a call site's, which callvariadic()
