@@ -6,7 +6,7 @@ with a MIT-like license (See license.txt).
 
 The rest of the code is mostly under an MIT license and comes from
 different sources:
- - plan9port (especially lib9/) by Russ Cox, see lib9/LICENSE file
+ - plan9port (especially BOOT/lib9/) by Russ Cox, see BOOT/lib9/LICENSE file
  - golang (GO/) by Google (including work by Rob Pike, Ken Thompson, Russ Cox
    and many others), see the copyright note below
  - inferno-os by Vita Nuova Holdings Limited, see the copyright note below
