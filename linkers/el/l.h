@@ -56,6 +56,7 @@ struct	Sym
 {
     char*	name;
     short	type;	/* enum Section */
+    short	version;	/* 0 for D_EXTERN symbols; per-file for D_STATIC, see obj.c */
 
     /* SBSS: linear-memory byte content, grown by DATA/GLOBL records.
      * datasize is the logical/declared size asm.c's layout uses;
@@ -145,7 +146,18 @@ extern	char*	outfile;
 extern	Biobuf	obuf;
 extern	int	nerrors;
 
-Sym*	lookup(char*);
+/*
+ * claude: modeled on linkers/6l/obj.c's own `version` -- bumped once per
+ * input file readobj() reads, so a D_STATIC (file-local, e.g. ec's own
+ * per-file `.string` blob) ANAME resolves through lookup() with a
+ * nonzero, file-unique version instead of colliding by bare name with
+ * another file's same-named static. D_EXTERN symbols always look up
+ * with version 0, so cross-file CALL/GLOBL references still resolve to
+ * the same Sym the way they must.
+ */
+extern	int	version;
+
+Sym*	lookup(char*, int);
 Text*	newtext(Sym*);
 Instr*	newinstr(int, Adr*, Adr*);
 void	addimport(char*, char*, char*);

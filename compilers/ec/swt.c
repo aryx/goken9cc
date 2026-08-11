@@ -132,19 +132,56 @@ outcode(void)
 	}
 }
 
+/*
+ * claude: unlike the earlier stub, this never emits AGLOBL itself --
+ * gclean()'s own end-of-file loop already emits exactly one AGLOBL per
+ * CGLOBL/CSTATIC symbol, sized from s->type->width, for every such
+ * symbol whether or not it was ever initialized. Emitting a second one
+ * here (the old stub's behaviour, sized from `w` -- the *this-
+ * initializer-chunk* width, not the symbol's total width) was
+ * redundant and, for anything wider than a scalar, wrong; dropping it
+ * matches compilers/ic/swt.c's own gextern(), which never touches
+ * AGLOBL either.
+ *
+ * Two initializer shapes are needed by tests/c/mini2/
+ * print_nofloat_no64.c, and are all this bootstrap supports (no vlong,
+ * matching the file's own "no64" name):
+ *   - `n->op == OCONST`: a plain integer constant (e.g. `static int32
+ *     fd = 1;`). Emitted as an ADATA whose value is a bare D_CONST --
+ *     el/obj.c's ADATA reader already writes it in, `reg` bytes,
+ *     little-endian, no linker involvement needed.
+ *   - `n->op == ONAME`: a pointer initialized from another symbol's
+ *     address, at some offset (e.g. `static int8 *dig =
+ *     "0123456789abcdef";` -- cck/dcl.c's init1() already strips the
+ *     OADDR a string literal decays to, leaving exactly this: an ONAME
+ *     of class CSTATIC, sym==symstring, xoffset==the literal's own
+ *     offset in the shared `.string` blob). el/obj.c's ADATA reader
+ *     already turns a D_CONST-with-a-sym `to` into a DataReloc,
+ *     resolved once the referenced symbol's own arena address is known
+ *     (asm.c's layout pass) -- exactly the existing mechanism a
+ *     hand-written `DATA iov+0(SB)/4, $msg(SB)` already goes through
+ *     (see docs/notes_wasm.txt's "el: a single-pass linker" section),
+ *     just reached from gextern() instead of from ea's grammar.
+ */
 void
 gextern(Sym *s, Node *n, long off, long w)
 {
-	Node nod;
-
-	USED(n);
-	nod = *nodconst(w);
-	if(off || s->class == CSTATIC) {
-		/* claude: not implemented -- ec has no test with initialized
-		 * globals yet (see docs/notes_wasm.txt); a plain zero-size
-		 * GLOBL (below) is enough to reserve space. */
+	if(n->op == OCONST) {
+		gpseudo(ADATA, s, nodconst((int32)n->vconst));
+		p->from.offset += off;
+		p->reg = w;
+		return;
 	}
-	gpseudo(AGLOBL, s, &nod);
+	if(n->op == ONAME) {
+		gpseudo(ADATA, s, nodconst(0));
+		p->from.offset += off;
+		p->reg = w;
+		p->to.type = D_CONST;
+		p->to.sym = n->sym;
+		p->to.offset = n->xoffset;
+		return;
+	}
+	diag(n, "gextern: unsupported initializer for %s", s->name);
 }
 
 /*

@@ -111,9 +111,28 @@ hellowrite_wasm.wasm: hellowrite_wasm.c wasi_wasm.s
    ea wasi_wasm.s
    el -o $target -I 'fd_write=wasi_snapshot_preview1.fd_write' hellowrite_wasm.e wasi_wasm.e
 
-test_wasm:V: regress_wasm.wasm hellowrite_wasm.wasm
+# real, running printf() for wasm: helloprintf_wasm.c + the shared
+# print_nofloat_no64.c (unmodified) linked together via wasi_wasm.s,
+# the same "actual stdout vs expected.txt" check as every helloprintf.exe
+# recipe above. Needed both gaps docs/notes_wasm.txt's "Open questions"
+# used to list for this to link and run correctly: ec's gextern()
+# (compilers/ec/swt.c) emitting real ADATA for initialized global/static
+# data (print_nofloat_no64.c's `static int32 fd = 1;` and `static int8
+# *dig = "..."`), and el (linkers/el/obj.c) scoping D_STATIC symbols
+# per input file so print_nofloat_no64.c's own `.string` blob doesn't
+# collide with helloprintf_wasm.c's. Not the full helloprintf.c: see
+# helloprintf_wasm.c's own comment for why (test.c needs uint64/float64
+# and exit(), neither wired up for wasm yet).
+helloprintf_wasm.wasm: helloprintf_wasm.c print_nofloat_no64.c wasi_wasm.s
+   ec -o helloprintf_wasm.e helloprintf_wasm.c
+   ec -o print_nofloat_no64.e print_nofloat_no64.c
+   ea wasi_wasm.s
+   el -o $target -I 'fd_write=wasi_snapshot_preview1.fd_write' helloprintf_wasm.e print_nofloat_no64.e wasi_wasm.e
+
+test_wasm:V: regress_wasm.wasm hellowrite_wasm.wasm helloprintf_wasm.wasm
 	node $TOP/scripts/wasm-call-runner.js regress_wasm.wasm runtests
 	node $TOP/scripts/wasm-runner.js hellowrite_wasm.wasm | cmp /dev/stdin hellowrite_wasm.expected.txt
+	node $TOP/scripts/wasm-runner.js helloprintf_wasm.wasm | cmp /dev/stdin helloprintf_wasm.expected.txt
 
 
 # Windows amd64: PE32+ (6l -H 10), kernel32.dll GetStdHandle/WriteFile/

@@ -459,7 +459,7 @@ asmb(void)
          * function directly, without needing a working _start/WASI
          * path at all yet.
          */
-        Sym *startsym = lookup("_start");
+        Sym *startsym = lookup("_start", 0);
         int idx;
 
         if(startsym->type != STEXT)

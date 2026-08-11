@@ -29,24 +29,26 @@ Text*	curtext;
 Import*	imports;
 DataReloc*	datarelocs;
 int	nerrors;
+int	version;
 
 Sym*
-lookup(char *name)
+lookup(char *name, int v)
 {
     Sym *s;
     char *p;
     ulong h;
 
-    h = 0;
+    h = v;
     for(p = name; *p; p++)
         h = h*37 + *p;
     h %= NHASH;
     for(s = hash[h]; s != S; s = s->link)
-        if(strcmp(s->name, name) == 0)
+        if(s->version == v && strcmp(s->name, name) == 0)
             return s;
     s = malloc(sizeof(Sym));
     memset(s, 0, sizeof(Sym));
     s->name = strdup(name);
+    s->version = v;
     s->link = hash[h];
     hash[h] = s;
     return s;
@@ -220,6 +222,7 @@ readobj(char *file)
     memset(h, 0, sizeof(h));
     p = buf;
     end = buf + size;
+    version++;
 
     while(p < end) {
         int op = p[0];
@@ -237,7 +240,7 @@ readobj(char *file)
                 diag("%s: truncated ANAME", file);
                 errorexit();
             }
-            s = lookup((char*)p+3);
+            s = lookup((char*)p+3, name == D_STATIC? version : 0);
             if(symidx >= 0 && symidx < NSYM)
                 h[symidx] = s;
             p = stop+1;

@@ -1,0 +1,4 @@
+Hello World: true
+Hello World: 0x2a
+Hello World: 42
+Hello World: 42

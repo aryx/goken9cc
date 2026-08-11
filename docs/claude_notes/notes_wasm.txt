@@ -6,14 +6,15 @@ this toolchain: assemblers/ea, linkers/el, include/e.out.h, and now
 compilers/ec (the C compiler backend, reusing compilers/cck's shared
 frontend). Written to be read before touching any of those. The "Open
 questions for ec" section at the end tracks what's still unimplemented
-(floats, general address-of-a-local, initialized global/static data,
-el linking two files that each have their own string-literal data) now
-that the bootstrap, if/else, all of C's loop constructs (while, for, do
-while, including nesting/break/continue and loop rotation), switch/case
-(standalone and inside a loop with its own backward branch), string
-literals, address-of for globals/statics and for a variadic function's
-own named parameter, pointer dereference, increment/decrement, compound
-assignment, and the variadic-call ABI are done.
+(floats, general address-of-a-local) now that the bootstrap, if/else,
+all of C's loop constructs (while, for, do while, including nesting/
+break/continue and loop rotation), switch/case (standalone and inside a
+loop with its own backward branch), string literals, address-of for
+globals/statics and for a variadic function's own named parameter,
+pointer dereference, increment/decrement, compound assignment, the
+variadic-call ABI, initialized global/static data, and el linking
+multiple files that each have their own file-local (D_STATIC) data are
+all done.
 
 See tests/s/mini/hello_wasm.s (hand-written ea assembly) and
 tests/s/mini/hello_wasm.wat (the same program in traditional
@@ -26,20 +27,17 @@ tests/c/mini2/hellowrite_wasm.c is this arch's first *real*,
 running tests/c/mini2 example -- an actual C program's stdout compared
 against expected.txt via cmp, the same way every other arch's
 helloprintf.exe is checked, rather than regress_wasm.c's self-checking
-return-code trick. It isn't helloprintf.c itself: the variadic-call
-ABI needed for real printf() is done now (see below), and so are
-test.c, helloprintf.c, and (since reg.c's hoistswitches(), see "Switch/
-case" below) print_nofloat_no64.c itself -- all three now compile
-against ec unmodified. A true tests/c/mini2/helloprintf.wasm built by
-*linking* them together still isn't there yet, though: two separate,
-still-open gaps block it (see "Open questions"), found while trying --
-initialized global/static data (print_nofloat_no64.c's `static int32
-fd = 1;` silently comes out as 0), and el merging two input files that
-each declare their own file-local `.string` data symbol into one
-(corrupting both). tests/s/mini/mkfile's storeorder_wasm.s is a
-from-a-different-angle sibling: hand-assembled rather than ec-compiled,
-and built specifically to catch a real STOREx-operand-order bug (below)
-rather than to demonstrate a full C program.
+return-code trick. tests/c/mini2/helloprintf_wasm.c is the next one:
+helloprintf_wasm.c + the shared print_nofloat_no64.c (unmodified) +
+wasi_wasm.s, linked together and checked the same way (see "Initialized
+global/static data..." below for the two gaps that used to block this
+and how they got fixed). Still not the full, real helloprintf.c: that
+also exercises test.c's test()/test_hello(), which need uint64/float64
+and exit(), none wired up for wasm yet -- see helloprintf_wasm.c's own
+comment. tests/s/mini/mkfile's storeorder_wasm.s is a from-a-different-
+angle sibling: hand-assembled rather than ec-compiled, and built
+specifically to catch a real STOREx-operand-order bug (below) rather
+than to demonstrate a full C program.
 
 
 Why 'e' for the arch letter
@@ -902,6 +900,78 @@ neither wasm-hoisting-specific):
     success" value either way).
 
 
+Initialized global/static data, and el's per-file D_STATIC scoping --
+getting tests/c/mini2/helloprintf_wasm.wasm to actually run
+--------------------------------------------------------------------
+
+A follow-on session closed the two gaps the previous paragraph used to
+list as blocking a real, fully-linked printf() test (see git history
+around "helloprintf_wasm.wasm" for the commit). Result: tests/c/mini2/
+helloprintf_wasm.c + print_nofloat_no64.c (unmodified) + wasi_wasm.s
+now link and run correctly, output verified byte-for-byte against
+helloprintf_wasm.expected.txt via test_wasm -- see that mkfile recipe
+and helloprintf_wasm.c's own comment. Both fixes, in the order they had
+to land (the first was a prerequisite to even reach the second):
+
+  - ec's gextern() (swt.c) now emits real ADATA for a static's
+    initializer instead of no-oping it. Two shapes, both needed by
+    print_nofloat_no64.c and both this bootstrap supports (no vlong,
+    matching that file's own "no64" name):
+      - `n->op == OCONST` (`static int32 fd = 1;`): a bare
+        `gpseudo(ADATA, s, nodconst((int32)n->vconst))`, with
+        `p->from.offset` bumped by gextern()'s own `off` parameter and
+        `p->reg` set to the initializer's width -- el/obj.c's ADATA
+        reader already knew how to write a plain D_CONST value in
+        (`to.type==D_CONST && to.sym==S`); it had just never been fed
+        one by ec before now.
+      - `n->op == ONAME` (`static int8 *dig = "0123456789abcdef";` --
+        cck/dcl.c's init1() already strips the OADDR a string literal
+        decays to before calling gextern(), leaving exactly an ONAME of
+        class CSTATIC, sym==symstring, xoffset==the literal's offset in
+        the shared `.string` blob): emit the same ADATA shape but with
+        `p->to.type=D_CONST, p->to.sym=n->sym, p->to.offset=n->xoffset`
+        -- el/obj.c's ADATA reader already turns exactly this shape
+        (`to.type==D_CONST && to.sym!=S`) into a DataReloc, the same
+        deferred-symbol-address-patch mechanism a hand-written `DATA
+        iov+0(SB)/4, $msg(SB)` already went through (see "el: a
+        single-pass linker" above) -- again, already correct on el's
+        side, just never reached from ec's gextern() before.
+    One thing dropped, not added: the old stub's unconditional
+    `gpseudo(AGLOBL, s, &nod)` (sized from `w`, the *initializer
+    chunk's* width) was redundant and, for anything wider than a
+    scalar, wrong -- gclean()'s own end-of-file loop already emits
+    exactly one correctly-sized AGLOBL (from `s->type->width`) for
+    every CGLOBL/CSTATIC symbol, initialized or not. Matches
+    compilers/ic/swt.c's own gextern(), which never touches AGLOBL
+    either.
+
+  - el (linkers/el/obj.c, linkers/el/l.h) now scopes D_STATIC symbols
+    per input file instead of merging every symbol, regardless of
+    storage class, into one bare-name-keyed global hash. This was a
+    real, previously-latent bug, confirmed via a minimal repro before
+    the fix (two small ec-compiled objects, each with its own distinct
+    string literal, corrupted both on link -- reading one file's
+    literal yielded bytes from the other's `.string` blob) -- only
+    surfaced now because no earlier wasm test linked two files that
+    each contain their own string data (hellowrite_wasm.e + wasi_wasm.e
+    was the only prior multi-file link, and wasi_wasm.s has no string
+    literals of its own). Fixed the same way every other arch's own
+    linker already solves this (see linkers/6l/obj.c's `version`/
+    `lookup(name, v)`): Sym grew a `version` field, `lookup()` takes a
+    version number and matches on `(name, version)` instead of `name`
+    alone, `readobj()` bumps a global `version` counter once per input
+    file and looks up an ANAME record's symbol with that file's version
+    when the record's own `name` field (already carried in the wire
+    format, per-occurrence) is D_STATIC, or with version 0 (meaning
+    "the one shared, cross-file namespace") otherwise -- so a D_EXTERN/
+    D_STATIC-vs-D_EXTERN CALL/GLOBL reference between files still
+    resolves to the *same* Sym (required for cross-file calls to work
+    at all), while two files' own same-named D_STATIC symbols become
+    two distinct Sym's. asm.c's one other lookup() call site
+    (`lookup("_start")`, always a global symbol) was updated to pass
+    version 0 to match.
+
+
 Open questions for ec (not yet started)
 -------------------------------------------
 
@@ -920,46 +990,6 @@ exists today, kept here so it doesn't have to be re-derived:
     instead. This bullet is only still open for something reaching
     *further* than that (arbitrary/computed goto); nothing in the
     shared test sources needs it yet.
-
-  - Two separate, still-open gaps block a true, fully-linked
-    tests/c/mini2/helloprintf.wasm built from print_nofloat_no64.c +
-    helloprintf.c + test.c verbatim, found while trying to wire one up
-    (both are pre-existing limitations, unrelated to the switch/
-    relooper fix above -- see tests/c/mini2/helloprintf_wasm.c, which
-    stops short of the full multi-file link for exactly these reasons):
-      - Initialized global/static data isn't implemented: gextern()
-        (swt.c) explicitly no-ops the initializer (`if(off ||
-        s->class==CSTATIC) { /* not implemented */ }`), so e.g.
-        print_nofloat_no64.c's `static int32 fd = 1;` silently comes
-        out zero-initialized instead. Confirmed via a minimal repro
-        (write(fd,...) with fd read back as 0, i.e. stdin, instead of
-        1/stdout -- no crash, no diag, just silently wrong output).
-        Needs real support for a static's initializer expression
-        turning into actual ADATA content (gextern() already has the
-        `w`/width and a zero constant on hand; it's the *value*, not
-        the space, that's missing) -- probably straightforward for a
-        simple integer constant like this one, more involved for
-        anything requiring relocations (e.g. a pointer initializer).
-      - el merges multiple input files' own file-local (CSTATIC)
-        symbols of the *same name* into one, instead of keeping them
-        separate per file. Every ec-compiled file gets its own
-        `.string` blob (symstring, cck/lex.c's `slookup(".string")`,
-        CSTATIC) for its own string-literal data, always the identical
-        name -- fine for every real arch's own linker (a Plan 9-style
-        object format's CSTATIC/local symbols are scoped per input
-        file, never merged across files by name), but el evidently
-        resolves symbols globally regardless of storage class,
-        confirmed via a minimal repro: linking two small ec-compiled
-        objects that each contain their own distinct string literals
-        together corrupts *both* (reading one file's own literal
-        yields bytes from the other file's blob instead). Only
-        surfaced now because no earlier wasm test linked two files that
-        each contain string data (hellowrite_wasm.e + wasi_wasm.e is
-        the only prior multi-file link, and wasi_wasm.s has no string
-        literals of its own). Needs el's own symbol-table/collectsyms()
-        logic (linkers/el/obj.c) to scope CSTATIC symbols per input
-        file rather than merging them by bare name -- a linker-side
-        fix, nothing to do with ec's own codegen.
 
   - The address-taken-local split, general case. Address-of a global/
     static is done (cgen.c's OADDR case, see above); address-of a

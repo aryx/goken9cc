@@ -1,32 +1,23 @@
-// NOT YET a working end-to-end test (not wired into this directory's
-// mkfile/test_wasm on purpose) -- kept as a checked-in record of how
-// far real printf() reaches today and exactly what still blocks it.
-// `ec -o helloprintf_wasm.e helloprintf_wasm.c` compiles this file
-// cleanly on its own, and -- more importantly -- `ec -o x.e
-// print_nofloat_no64.c` (unmodified) now *also* compiles cleanly:
-// until reg.c's hoistswitches() (docs/notes_wasm.txt's "Switch/case"
-// section), vprintf()'s own `for(...) { ...continue... switch(){}
-// switch(){} }` shape was a real, open relooper-class limitation.
+// A working end-to-end test, wired into this directory's mkfile/
+// test_wasm: `ec -o helloprintf_wasm.e helloprintf_wasm.c` compiles
+// this file, `ec -o print_nofloat_no64.e print_nofloat_no64.c`
+// compiles the shared print_nofloat_no64.c unmodified, and linking
+// both together with wasi_wasm.s via el now produces a module whose
+// stdout matches helloprintf_wasm.expected.txt byte for byte -- see
+// docs/notes_wasm.txt's "Open questions" section (the two entries this
+// resolved: ec's gextern() emitting real ADATA for initialized global/
+// static data, and el scoping D_STATIC symbols per input file instead
+// of merging same-named statics like the `.string` blob across files)
+// for how each of the two gaps that used to block this got fixed.
 //
-// Linking this file together with print_nofloat_no64.c and
-// wasi_wasm.s currently produces a module that validates and runs but
-// prints nothing, because of two *separate*, still-open, pre-existing
-// gaps (see notes_wasm.txt's "Open questions" for both): ec doesn't
-// implement initialized global/static data yet (print_nofloat_no64.c's
-// `static int32 fd = 1;` silently comes out as 0, so its own
-// write(fd,...) calls target fd 0/stdin instead of 1/stdout), and el
-// merges two input files' own same-named file-local (CSTATIC) symbols
-// -- both this file's and print_nofloat_no64.c's own `.string` blob --
-// into one, corrupting both files' string-literal data. Neither is a
-// switch/control-flow issue; both need their own separate fix.
-//
-// Once both are fixed, this covers what real printf() needs beyond
-// classify_switch()/loopswitch() (regress_wasm.c): %t/%x/%s/%d,
-// multiple "..." arguments, and the variadic-call ABI's `arg =
-// (byte*)(&s+1)` address-of-a-named-param trick inside printf() itself.
-// Not the full helloprintf.c: that also exercises fact()/fact_iter()
-// (fine) but test()/test_hello() (test.c uses uint64/float64, and
-// exit() has no wasi wiring yet -- both out of scope here too).
+// This covers what real printf() needs beyond classify_switch()/
+// loopswitch() (regress_wasm.c): %t/%x/%s/%d, multiple "..." arguments,
+// the variadic-call ABI's `arg = (byte*)(&s+1)` address-of-a-named-param
+// trick inside printf() itself, and now print_nofloat_no64.c's own
+// initialized statics (`fd`, `dig`). Not the full helloprintf.c: that
+// also exercises fact()/fact_iter() (fine) but test()/test_hello()
+// (test.c uses uint64/float64, and exit() has no wasi wiring yet --
+// both still out of scope here).
 #include "minilibc.h"
 
 // claude: print_nofloat_no64.c's '!' case (an unreachable format
