@@ -69,6 +69,41 @@ SIGNATURE	write(SB), $"WWWV"
 GLOBL	nwritten(SB), $4
 GLOBL	iov(SB), $8
 
+// claude: WASI's proc_exit(rval: i32) -> () -- unlike fd_write, its
+// shape ("WV": one i32 param, void result) doesn't match fd_write's
+// own "WWWWW" ((i32,i32,i32,i32)->i32), which is why -I grew an
+// optional `:sig` suffix (see linkers/el/l.h's Import comment) instead
+// of el going on hardcoding a single import shape for every future
+// import too. Genuinely diverges at runtime (a WASI host terminates
+// the instance right here), but the wasm module itself has no
+// "noreturn" concept -- the trailing RET is dead code at runtime, kept
+// only so the function validates structurally, the same reasoning
+// already given for write()'s own signature further up.
+TEXT	exit(SB), $0
+SIGNATURE	exit(SB), $"WV"
+
+	LOCALGET	LOCAL(0)	// status
+	CALL	proc_exit(SB)
+	RET
+
+// claude: every real arch's own OS-runtime .s (linux_amd64.s,
+// macos_amd64.s, windows_amd64.s, ...) already defines panic() this
+// same way -- ignore its argument and exit(0) -- because
+// print_nofloat_no64.c's vprintf() unconditionally references it
+// (the unreachable `case '!': panic(-1);`) and el, like every other
+// arch's own linker, requires every referenced symbol to resolve at
+// link time even though nothing in helloprintf.c's own format strings
+// ever reaches that case at runtime. Belongs here (the wasm runtime
+// shim) rather than in print_nofloat_no64.c itself, matching every
+// other arch: panic() is real-OS/runtime-specific, not part of the
+// portable print library.
+TEXT	panic(SB), $0
+SIGNATURE	panic(SB), $"WV"
+
+	CONSTW	$0
+	CALL	exit(SB)
+	RET
+
 // -------------------------------------------
 // _start: WASI's own entry-point convention (not "_main" -- there is
 // no separate arg/env setup step to do first the way a real OS's

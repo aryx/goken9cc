@@ -97,42 +97,76 @@ regress_wasm.wasm: regress_wasm.c
    ec -o regress_wasm.e regress_wasm.c
    el -o $target regress_wasm.e
 
+# wasi_wasm.e is its own target (rather than an `ea wasi_wasm.s` line
+# repeated inside both hellowrite_wasm.wasm's and helloprintf_wasm.wasm's
+# own recipes below, as an earlier version of this file had it): mk can
+# run independent recipes in parallel ($NPROC, see env.sh), and two
+# recipes both writing the same wasi_wasm.e as one of their own steps
+# raced -- confirmed the hard way, `mk test_wasm` intermittently failing
+# with "undefined symbol: proc_exit" (el reading a wasi_wasm.e still
+# mid-write by the other recipe's own `ea` invocation) once wasi_wasm.s
+# grew past write()/_start alone. A real mk dependency edge (both
+# recipes list wasi_wasm.e as a prerequisite instead) makes mk build it
+# once and serialize/dedupe correctly instead.
+wasi_wasm.e: wasi_wasm.s
+   ea wasi_wasm.s
+
 # real, running hello-world for wasm -- like every helloprintf.exe
 # recipe above, a C program's actual stdout compared against
-# expected.txt via cmp, just not literally calling printf() yet (see
-# hellowrite_wasm.c's own comment for the real blocker: variadic
-# printf needs address-taken locals, which needs the shadow-stack
-# redesign docs/notes_wasm.txt still lists as a TODO). wasi_wasm.s is
-# this arch's counterpart of linux_amd64.s/macos_amd64.s/
-# windows_amd64.s: write()/_start, adapted to WASI instead of a real
-# OS's syscall ABI -- see its own comment.
-hellowrite_wasm.wasm: hellowrite_wasm.c wasi_wasm.s
+# expected.txt via cmp. wasi_wasm.s is this arch's counterpart of
+# linux_amd64.s/macos_amd64.s/windows_amd64.s: write()/exit()/panic()/
+# _start, adapted to WASI instead of a real OS's syscall ABI -- see its
+# own comments. Both -I imports are required here even though
+# hellowrite_wasm.c itself never calls exit(): el links a whole object
+# file's Text list, not individual referenced functions (no dead-code
+# elimination, see l.h's own comment), so wasi_wasm.e's exit() TEXT
+# (unconditionally present once linked in, whether or not the C side
+# ever calls it) still has its own unresolved `CALL proc_exit(SB)` that
+# needs an import declared for it -- confirmed the hard way, this
+# recipe failing with "undefined symbol: proc_exit" once wasi_wasm.s
+# grew exit()/panic(), even though this test doesn't use either.
+hellowrite_wasm.wasm: hellowrite_wasm.c wasi_wasm.e
    ec -o hellowrite_wasm.e hellowrite_wasm.c
-   ea wasi_wasm.s
-   el -o $target -I 'fd_write=wasi_snapshot_preview1.fd_write' hellowrite_wasm.e wasi_wasm.e
+   el -o $target -I 'fd_write=wasi_snapshot_preview1.fd_write' -I 'proc_exit=wasi_snapshot_preview1.proc_exit:WV' hellowrite_wasm.e wasi_wasm.e
 
-# real, running printf() for wasm: helloprintf_wasm.c + the shared
-# print_nofloat_no64.c (unmodified) linked together via wasi_wasm.s,
-# the same "actual stdout vs expected.txt" check as every helloprintf.exe
-# recipe above. Needed both gaps docs/notes_wasm.txt's "Open questions"
-# used to list for this to link and run correctly: ec's gextern()
-# (compilers/ec/swt.c) emitting real ADATA for initialized global/static
-# data (print_nofloat_no64.c's `static int32 fd = 1;` and `static int8
-# *dig = "..."`), and el (linkers/el/obj.c) scoping D_STATIC symbols
-# per input file so print_nofloat_no64.c's own `.string` blob doesn't
-# collide with helloprintf_wasm.c's. Not the full helloprintf.c: see
-# helloprintf_wasm.c's own comment for why (test.c needs uint64/float64
-# and exit(), neither wired up for wasm yet).
-helloprintf_wasm.wasm: helloprintf_wasm.c print_nofloat_no64.c wasi_wasm.s
-   ec -o helloprintf_wasm.e helloprintf_wasm.c
-   ec -o print_nofloat_no64.e print_nofloat_no64.c
-   ea wasi_wasm.s
-   el -o $target -I 'fd_write=wasi_snapshot_preview1.fd_write' helloprintf_wasm.e print_nofloat_no64.e wasi_wasm.e
+# the real, unmodified helloprintf.c + test.c + print_nofloat_no64.c,
+# exactly like every other arch's own helloprintf.exe recipe above --
+# not a wasm-specific stand-in C file. wasi_wasm.s is this arch's
+# counterpart of linux_amd64.s/macos_amd64.s/windows_amd64.s: write()/
+# exit()/panic()/_start, adapted to WASI instead of a real OS's syscall
+# ABI -- see its own comments, in particular for why panic() (called by
+# print_nofloat_no64.c's vprintf(), even though nothing in
+# helloprintf.c's own format strings ever reaches that case at runtime)
+# lives there rather than in print_nofloat_no64.c itself, the same way
+# it does on every other arch.
+#
+# Getting here (docs/notes_wasm.txt has the full account) needed: ec's
+# gextern() (compilers/ec/swt.c) emitting real ADATA for initialized
+# global/static data (print_nofloat_no64.c's `static int32 fd = 1;` and
+# `static int8 *dig = "...";`, test.c's `static uint64 uvnan = ...;`);
+# el (linkers/el/obj.c) scoping D_STATIC symbols per input file so
+# print_nofloat_no64.c's own `.string` blob doesn't collide with
+# helloprintf.c's; ec's ASIGNATURE builder (compilers/ec/txt.c's
+# gpseudo()) using each param/result's real type instead of a hardcoded
+# 'W', needed for test.c's test_float() (returns float64); and el
+# (linkers/el/l.h's Import.sig) supporting more than one hardcoded
+# import shape, needed once exit() required a second WASI import
+# (proc_exit) with a different signature than fd_write's own.
+#
+# Verified the same way as every other arch: stdout compared against
+# the one shared helloprintf.expected.txt via cmp -- byte-for-byte
+# identical to what 5c/6c/7c/8c/vc/ic produce, not a separate
+# wasm-specific expected.txt.
+helloprintf_wasm.wasm: helloprintf.c test.c print_nofloat_no64.c wasi_wasm.e
+   ec -o helloprintf_wasm.e helloprintf.c
+   ec -o test_wasm.e test.c
+   ec -o print_nofloat_no64_wasm.e print_nofloat_no64.c
+   el -o $target -I 'fd_write=wasi_snapshot_preview1.fd_write' -I 'proc_exit=wasi_snapshot_preview1.proc_exit:WV' helloprintf_wasm.e test_wasm.e print_nofloat_no64_wasm.e wasi_wasm.e
 
 test_wasm:V: regress_wasm.wasm hellowrite_wasm.wasm helloprintf_wasm.wasm
 	node $TOP/scripts/wasm-call-runner.js regress_wasm.wasm runtests
 	node $TOP/scripts/wasm-runner.js hellowrite_wasm.wasm | cmp /dev/stdin hellowrite_wasm.expected.txt
-	node $TOP/scripts/wasm-runner.js helloprintf_wasm.wasm | cmp /dev/stdin helloprintf_wasm.expected.txt
+	node $TOP/scripts/wasm-runner.js helloprintf_wasm.wasm | cmp /dev/stdin helloprintf.expected.txt
 
 
 # Windows amd64: PE32+ (6l -H 10), kernel32.dll GetStdHandle/WriteFile/

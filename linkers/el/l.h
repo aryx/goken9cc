@@ -93,22 +93,36 @@ struct	Text
     char	sig[NSNAME];
 };
 
-/* claude: one entry per -I flag: `-I symbol=module.field` tells el
- * that an otherwise-undefined CALL target should become a wasm
+/* claude: one entry per -I flag: `-I symbol=module.field[:sig]` tells
+ * el that an otherwise-undefined CALL target should become a wasm
  * import instead of a link error, the same role 6lg's `-I thunk:sym:
  * lib` plays for Mach-O dynamic imports (see tests/s/mini/mkfile's
  * hello_macos_libc_amd64 recipe) -- adapted to wasm's two-level
- * (module, field) import naming instead of a library path. v1 only
- * supports one hardcoded signature (4 x i32 -> i32, i.e. WASI's
- * fd_write) -- see asm.c's importsig comment.
+ * (module, field) import naming instead of a library path. `sig` is
+ * optional and defaults to DEFAULTIMPORTSIG (WASI's own fd_write
+ * shape, the only import v1 originally had) when omitted -- every
+ * `-I` flag before this comment predates per-import signatures and
+ * still works unchanged. A second, differently-shaped import (WASI's
+ * proc_exit, `(i32) -> ()`, wired up for tests/c/mini2/helloprintf_wasm.c's
+ * exit()) is what forced this from "one hardcoded shape" to "one sig
+ * string per Import", the same shape Text.sig already carries for a
+ * defined function -- asm.c's sigindex()/emittype() already worked
+ * per-signature and needed no changes, only asm.c's import-section
+ * loop did (see its own comment).
  */
 struct	Import
 {
     char*	symname;
     char*	module;
     char*	field;
+    char	sig[NSNAME];
     Import*	link;
 };
+
+/* claude: shared with main.c (parses -I) and asm.c (its own former
+ * IMPORTSIG local #define, now just this default) -- see Import's
+ * comment above. */
+#define	DEFAULTIMPORTSIG	"WWWWW"
 
 /*
  * claude: a DATA value that is itself a symbol's address (`DATA
@@ -160,7 +174,7 @@ extern	int	version;
 Sym*	lookup(char*, int);
 Text*	newtext(Sym*);
 Instr*	newinstr(int, Adr*, Adr*);
-void	addimport(char*, char*, char*);
+void	addimport(char*, char*, char*, char*);
 
 void	readobj(char*);
 

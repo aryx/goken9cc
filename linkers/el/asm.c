@@ -127,9 +127,6 @@ emitsection(int id, Bytebuf *bb)
 static char sigtab[MAXSIG][NSNAME];
 static int nsigs;
 
-/* the one shape v1 needs for imports (WASI fd_write); see l.h's Import comment */
-#define	IMPORTSIG	"WWWWW"
-
 static int
 valtype(int c)
 {
@@ -368,12 +365,22 @@ asmb(void)
      * distinct signature actually used, built from ec's ASIGNATURE
      * records (l.h's Text.sig; 'V'/no-ASIGNATURE for a hand-written
      * .s TEXT, which takes no arguments and returns nothing a caller
-     * could use, matching every hello_*.s's _start) plus the one
-     * hardcoded import shape (see l.h's Import comment).
+     * could use, matching every hello_*.s's _start) plus each -I
+     * import's own sig (l.h's Import.sig, defaulted to
+     * DEFAULTIMPORTSIG by addimport() when -I's caller doesn't specify
+     * one) -- two imports can have genuinely different signatures now
+     * (e.g. WASI's fd_write vs proc_exit), unlike when there was only
+     * ever one hardcoded IMPORTSIG. Every signature (Text's and
+     * Import's alike) has to be sigindex()'d *before* the type section
+     * is emitted -- wasm requires sections in increasing id order, so
+     * the type section (id 1) must reach obuf before the import
+     * section (id 2) below, even though it's the import section that
+     * introduces most of these signatures.
      */
-    sigindex(IMPORTSIG);
     for(t = firsttext; t != nil; t = t->link)
         sigindex(t->sig);
+    for(im = imports; im != nil; im = im->link)
+        sigindex(im->sig);
 
     memset(&bb, 0, sizeof(bb));
     bbuleb(&bb, nsigs);
@@ -391,7 +398,7 @@ asmb(void)
             bbname(&bb, im->module);
             bbname(&bb, im->field);
             bbput(&bb, 0x00);
-            bbuleb(&bb, sigindex(IMPORTSIG));
+            bbuleb(&bb, sigindex(im->sig));
         }
         emitsection(2, &bb);
     }

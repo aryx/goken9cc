@@ -6,15 +6,18 @@ this toolchain: assemblers/ea, linkers/el, include/e.out.h, and now
 compilers/ec (the C compiler backend, reusing compilers/cck's shared
 frontend). Written to be read before touching any of those. The "Open
 questions for ec" section at the end tracks what's still unimplemented
-(floats, general address-of-a-local) now that the bootstrap, if/else,
-all of C's loop constructs (while, for, do while, including nesting/
-break/continue and loop rotation), switch/case (standalone and inside a
-loop with its own backward branch), string literals, address-of for
-globals/statics and for a variadic function's own named parameter,
-pointer dereference, increment/decrement, compound assignment, the
-variadic-call ABI, initialized global/static data, and el linking
-multiple files that each have their own file-local (D_STATIC) data are
-all done.
+(float arithmetic, general address-of-a-local) now that the bootstrap,
+if/else, all of C's loop constructs (while, for, do while, including
+nesting/break/continue and loop rotation), switch/case (standalone and
+inside a loop with its own backward branch), string literals, address-
+of for globals/statics and for a variadic function's own named
+parameter, pointer dereference, increment/decrement, compound
+assignment, the variadic-call ABI, initialized global/static data
+(including vlong-width statics), a function's real per-param/result
+ASIGNATURE (not a hardcoded 'W'/'V', needed for a float64 return value),
+el linking multiple files that each have their own file-local
+(D_STATIC) data, and el importing more than one WASI function with
+different signatures are all done.
 
 See tests/s/mini/hello_wasm.s (hand-written ea assembly) and
 tests/s/mini/hello_wasm.wat (the same program in traditional
@@ -27,17 +30,20 @@ tests/c/mini2/hellowrite_wasm.c is this arch's first *real*,
 running tests/c/mini2 example -- an actual C program's stdout compared
 against expected.txt via cmp, the same way every other arch's
 helloprintf.exe is checked, rather than regress_wasm.c's self-checking
-return-code trick. tests/c/mini2/helloprintf_wasm.c is the next one:
-helloprintf_wasm.c + the shared print_nofloat_no64.c (unmodified) +
-wasi_wasm.s, linked together and checked the same way (see "Initialized
-global/static data..." below for the two gaps that used to block this
-and how they got fixed). Still not the full, real helloprintf.c: that
-also exercises test.c's test()/test_hello(), which need uint64/float64
-and exit(), none wired up for wasm yet -- see helloprintf_wasm.c's own
-comment. tests/s/mini/mkfile's storeorder_wasm.s is a from-a-different-
-angle sibling: hand-assembled rather than ec-compiled, and built
-specifically to catch a real STOREx-operand-order bug (below) rather
-than to demonstrate a full C program.
+return-code trick. tests/c/mini2/helloprintf_wasm.wasm is the full
+version of that: the real, unmodified helloprintf.c + test.c +
+print_nofloat_no64.c (the exact same three files every other arch
+compiles), linked via wasi_wasm.s and checked against the one shared
+helloprintf.expected.txt every other arch already uses -- byte-for-byte
+identical output, not a separate wasm-specific expected.txt or a
+wasm-specific stand-in main() (an earlier session had a
+helloprintf_wasm.c stub for this, since retired once the real file
+worked). See "Initialized global/static data..." and "A function's real
+ASIGNATURE..." below for what it took to get here. tests/s/mini/mkfile's
+storeorder_wasm.s is a from-a-different-angle sibling: hand-assembled
+rather than ec-compiled, and built specifically to catch a real
+STOREx-operand-order bug (below) rather than to demonstrate a full C
+program.
 
 
 Why 'e' for the arch letter
@@ -972,6 +978,128 @@ to land (the first was a prerequisite to even reach the second):
     version 0 to match.
 
 
+A function's real ASIGNATURE, el's per-import signatures, and
+panic()/exit() -- getting the real helloprintf.c (+ test.c) running
+--------------------------------------------------------------------
+
+A follow-on session went from tests/c/mini2/helloprintf_wasm.wasm's
+earlier scope (a wasm-specific stand-in main() + print_nofloat_no64.c)
+to linking the exact, unmodified helloprintf.c + test.c +
+print_nofloat_no64.c -- the same three files every other arch already
+compiles byte-for-byte -- with output verified against the one shared
+helloprintf.expected.txt. Four things needed fixing/adding, discovered
+in this order (each test failure pointed at the next gap):
+
+  - ec's ASIGNATURE builder (txt.c's gpseudo(), ATEXT case) hardcoded
+    every param and the result to 'W' (i32) regardless of the C
+    function's real type. Harmless as long as nothing returned or took
+    a non-i32-shaped value, until test.c's `float64 test_float(void) {
+    return 2.2; }` needed a real 'D' result. Fixed with a new
+    sigchar(Type*) helper (txt.c) -- reusing cck/sub.c's typefd[]/
+    typev[] classification tables (already how the shared frontend
+    tells float/double/vlong/everything-else apart, see gextern()'s
+    own reuse of the same tables below) -- and walking `thisfn->down`
+    (the function Type's own param-type chain; the same chain
+    isvariadic() already walks looking for a trailing TDOT, and dcl.c's
+    `t->down = fnproto(n)` is where it's built) to compute each
+    param's real sig char, plus thisfn->link's for the result. A
+    variadic function's own signature is unchanged by this (still
+    forced to "one 'W' param", see the variadic-call-ABI section above
+    -- its true wasm param is always the synthetic argptrnode pointer,
+    never shaped by its C params at all). Nothing else needed touching:
+    cgen.c's rval() already special-cased OCONST float constants
+    (`gins(ACONSTF/ACONSTD, ...)`) and txt.c's stackdelta() already
+    tracked ACONSTF/ACONSTD/ADROP/ACALL as type-agnostic (wasm's own
+    `drop` and the operand-stack height reg.c tracks don't care about
+    *which* value type, only that there is one) -- both were already
+    correct, just never reachable through a correctly-signed ATEXT
+    before this fix. Confirmed via a minimal repro (a function
+    returning a float64 constant, called and its result discarded)
+    before wiring it into the real test.c.
+
+  - ec's gextern() grew a second OCONST shape: typev (vlong/uvlong)
+    statics, needed by test.c's `static uint64 uvnan =
+    0x7FF0000000000001ULL;` (unused at runtime but still walked by
+    gclean()'s own end-of-file GLOBL loop and gextern()'s initializer
+    dispatch regardless). D_CONST's own wire encoding (swt.c's
+    outopd()) is only ever 4 bytes, so -- exactly compilers/ic/swt.c's
+    own gextern(), which has the identical constraint -- a vlong
+    initializer splits into two 4-byte ADATA writes via nod32const()
+    (already implemented in txt.c, just unused until now), low half at
+    the static's own offset and high half 4 bytes further in.
+
+  - Real archs' own linux_amd64.s/macos_amd64.s/windows_amd64.s/etc.
+    already define panic() (ignore its argument, exit(0)) precisely
+    because print_nofloat_no64.c's vprintf() unconditionally
+    references it (`case '!': panic(-1);`) and every arch's linker
+    requires every referenced symbol to resolve even though nothing in
+    helloprintf.c's own format strings ever reaches that case at
+    runtime -- exactly the same shape helloprintf_wasm.c's own removed
+    panic() stub used to paper over locally. wasi_wasm.s grew the same
+    definition (calling its own new exit(), see next bullet), matching
+    every other arch's own convention of keeping panic() in the OS-
+    runtime shim, not the portable print library.
+
+  - exit() needed a second WASI import, proc_exit(rval: i32) -> (),
+    genuinely divergent at runtime (the host terminates the instance)
+    but still needing a normal RET afterward so the wasm function
+    itself validates structurally (there's no "noreturn" concept at the
+    module level). This exposed a real, previously-unnoticed limit:
+    el's import machinery (asm.c) had exactly one hardcoded signature
+    for *every* `-I` import (IMPORTSIG = "WWWWW", the shape WASI's
+    fd_write happens to need) -- fine as long as fd_write was the only
+    import anything ever used, wrong the moment a second import needed
+    a different shape. Fixed by giving `-I` an optional `:sig` suffix
+    (`-I symbol=module.field[:sig]`, l.h's Import gained its own `sig`
+    field, defaulting to the old hardcoded shape when omitted so every
+    pre-existing `-I fd_write=...` invocation keeps working unchanged)
+    and having asm.c register each import's own signature into the
+    type table instead of a single shared one. One real ordering bug
+    surfaced while doing this: wasm requires module sections in
+    increasing id order, and an early version of this fix accidentally
+    emitted the import section (id 2) before the type section (id 1)
+    it depends on, since it's the import loop that discovers most
+    signatures -- fixed by registering every signature (Texts' and
+    Imports' alike) into sigtab *before* emitting either section, so
+    the type section can still be written first while carrying entries
+    the import section will reference.
+
+  - A genuinely separate, non-obvious consequence of el's "no dead-code
+    elimination, must resolve every symbol referenced by every linked
+    object file" design (see "el: a single-pass linker" above): once
+    wasi_wasm.s's exit() (referencing proc_exit) is linked in at all,
+    *every* consumer of wasi_wasm.e needs `-I proc_exit=...` declared,
+    even tests/c/mini2/hellowrite_wasm.wasm, whose own C code never
+    calls exit(). el links a whole object file's Text list, not
+    individual reachable functions -- exit()'s own `CALL proc_exit(SB)`
+    stays an unresolved reference for any link that includes it,
+    reachable from _start's control flow or not. Confirmed the hard
+    way: hellowrite_wasm.wasm's link started failing with "undefined
+    symbol: proc_exit" purely as a side effect of wasi_wasm.s growing
+    exit()/panic(), with no change to hellowrite_wasm.c itself. Fixed
+    by adding the same `-I proc_exit=...` to that recipe too (mkfile).
+
+  - A smaller, unrelated mkfile hygiene issue found while chasing the
+    above: tests/c/mini2/mkfile used to have `ea wasi_wasm.s` repeated
+    inside both hellowrite_wasm.wasm's and helloprintf_wasm.wasm's own
+    recipes, each producing the same wasi_wasm.e as one of their own
+    steps rather than as a real, shared mk target. mk can run
+    independent recipes in parallel ($NPROC, see env.sh) -- and does,
+    at this project's own default -- so two recipes both writing the
+    same output file outside mk's own dependency tracking is a latent
+    race regardless of whether it was the actual cause of any one
+    observed failure here (one `mk test_wasm` run, while still missing
+    the hellowrite_wasm.wasm `-I proc_exit` fix above, also left a
+    corrupted regress_wasm.wasm behind -- consistent with, though not
+    conclusively pinned on, the batch aborting mid-write during
+    parallel execution). Fixed regardless, on general principle: giving
+    wasi_wasm.e its own mk target and listing it as an ordinary
+    prerequisite from both recipes instead of building it inline lets
+    mk's own dependency graph build it once and serialize correctly --
+    the general fix for any shared intermediate file two independent
+    recipes both need, race observed or not.
+
+
 Open questions for ec (not yet started)
 -------------------------------------------
 
@@ -1020,3 +1148,17 @@ exists today, kept here so it doesn't have to be re-derived:
     decremented by the frame's shadow-stack size on entry and restored
     on exit. Nothing needs this yet since no *ordinary* local is
     address-taken in any test so far (see the previous bullet).
+
+  - Float *arithmetic*. Float64 now works end-to-end as a constant, a
+    function parameter/return type (ASIGNATURE's sigchar(), see "A
+    function's real ASIGNATURE..." above), and a call argument/result
+    (test.c's test_float()) -- but txt.c's gopcode() (the OADD/OSUB/
+    OMUL/OSTUFF -> A* opcode table every binary op and comparison goes
+    through) is still, in its own words, "only int is wired up for this
+    bootstrap": it picks AADDW/AADDQ purely from typev[] (int vs vlong),
+    with no typefd[] branch to pick AADDF/AADDD/etc for an actual float
+    operand. A real float expression (`2.2 + x`, not just `return
+    2.2;`) would currently silently emit the wrong (integer) opcode
+    rather than diag()ing -- nothing in the shared test sources performs
+    float arithmetic yet, only passes float64 values through unchanged,
+    which is why this went unnoticed until written down here.

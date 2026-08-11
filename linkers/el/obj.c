@@ -90,7 +90,7 @@ newinstr(int as, Adr *from, Adr *to)
 }
 
 void
-addimport(char *symname, char *module, char *field)
+addimport(char *symname, char *module, char *field, char *sig)
 {
     Import *im;
 
@@ -98,6 +98,8 @@ addimport(char *symname, char *module, char *field)
     im->symname = strdup(symname);
     im->module = strdup(module);
     im->field = strdup(field);
+    memset(im->sig, 0, sizeof(im->sig));
+    strncpy(im->sig, sig != nil? sig : DEFAULTIMPORTSIG, sizeof(im->sig)-1);
     im->link = imports;
     imports = im;
 }

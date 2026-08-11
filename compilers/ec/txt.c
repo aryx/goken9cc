@@ -306,6 +306,26 @@ isvariadic(Type *t)
 }
 
 /*
+ * claude: the ASIGNATURE char for one C Type -- 'W'=i32 (int/short/
+ * char/pointer, the common case), 'Q'=i64 (vlong/uvlong), 'F'=f32,
+ * 'D'=f64. Shared by gpseudo()'s ATEXT case below for both a
+ * function's own param types (thisfn->down's chain) and its result
+ * type (thisfn->link) -- reuses cck/sub.c's typefd[]/typev[] tables
+ * (already indexed by Type->etype, and already how every other piece
+ * of the shared frontend classifies a type into float-vs-vlong-vs-int)
+ * rather than duplicating that classification here.
+ */
+static int
+sigchar(Type *t)
+{
+	if(typefd[t->etype])
+		return t->etype == TFLOAT ? 'F' : 'D';
+	if(typev[t->etype])
+		return 'Q';
+	return 'W';
+}
+
+/*
  * claude: how many *real* wasm param locals a function has -- nparams
  * (dcl.c's own count of *named* params) for an ordinary function, but
  * always exactly 1 for a variadic one (the incoming argument-block
@@ -642,7 +662,13 @@ storeop(Type *t)
  * claude: arithmetic/compare opcodes need no operand at all (see
  * e.out.h) -- gopcode() just resolves the O* tree op to the matching
  * A* opcode and emits it, nothing more. Only int is wired up for this
- * bootstrap.
+ * bootstrap: a float64 value already works as a constant, a call
+ * argument/result, and a function parameter/result (see
+ * docs/notes_wasm.txt's "A function's real ASIGNATURE..." section),
+ * but no test source performs actual float *arithmetic* yet, so this
+ * diag()s instead of silently picking an integer opcode for a float
+ * operand -- the AADDF/AADDD/etc family (e.out.h, txt.c's stackdelta())
+ * is implemented and ready for whoever wires this in first.
  */
 void
 gopcode(int o, Node *t)
@@ -650,6 +676,10 @@ gopcode(int o, Node *t)
 	int a;
 	int w;
 
+	if(t != Z && t->type != T && typefd[t->type->etype]) {
+		diag(Z, "gopcode: float arithmetic not implemented yet: %O", o);
+		return;
+	}
 	w = t != Z && t->type != T && typev[t->type->etype];
 
 	switch(o) {
@@ -885,8 +915,10 @@ gpseudo(int a, Sym *s, Node *n)
 	 * place that's guaranteed to run immediately after every ATEXT.
 	 * nparams is already final by now: dcl.c's argmark()/walkparam()
 	 * (via align()'s Aarg0/Aarg1 cases) walk all of a function's
-	 * parameters before codgen() ever runs. Int-only for this
-	 * bootstrap (every param/result becomes 'W' = i32).
+	 * parameters before codgen() ever runs. Each param/result gets its
+	 * real sigchar() ('W'/'Q'/'F'/'D'), not a hardcoded 'W' -- needed
+	 * once a function can return or take a float64 (e.g. tests/c/mini2/
+	 * test.c's test_float()); see sigchar()'s own comment.
 	 *
 	 * wasmnparams(), not nparams, decides the arity: for a variadic
 	 * function this must be exactly 1 (the incoming argument-block
@@ -898,6 +930,7 @@ gpseudo(int a, Sym *s, Node *n)
 	if(a == ATEXT) {
 		char sig[NSNAME];
 		int i, np;
+		Type *t;
 
 		/* claude: a real bug lived here -- ptext saves the ATEXT
 		 * Prog itself, because the nextpc() call below (for
@@ -924,9 +957,25 @@ gpseudo(int a, Sym *s, Node *n)
 		stackheight = 0;
 		memset(sig, 0, sizeof(sig));
 		np = wasmnparams();
-		for(i = 0; i < np && i < NSNAME-2; i++)
-			sig[i] = 'W';
-		sig[i] = thisfn->link->etype == TVOID ? 'V' : 'W';
+		/* claude: a variadic function's sole real wasm param is the
+		 * synthetic argument-block pointer (argptrnode, TIND), never
+		 * whatever its own named C params are typed -- always 'W',
+		 * same as before. An ordinary function's params come straight
+		 * from thisfn->down's chain, in order (see fnproto()/dcl.c's
+		 * `t->down = fnproto(n)`, the same chain isvariadic() already
+		 * walks looking for its trailing TDOT). */
+		if(isvariadic(thisfn)) {
+			for(i = 0; i < np && i < NSNAME-2; i++)
+				sig[i] = 'W';
+		} else {
+			t = thisfn->down;
+			for(i = 0; i < np && i < NSNAME-2; i++) {
+				sig[i] = t != T ? sigchar(t) : 'W';
+				if(t != T)
+					t = t->down;
+			}
+		}
+		sig[i] = thisfn->link->etype == TVOID ? 'V' : sigchar(thisfn->link);
 
 		nextpc();
 		p->as = ASIGNATURE;

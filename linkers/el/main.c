@@ -27,33 +27,40 @@ errorexit(void)
 }
 
 /*
- * claude: `-I symbol=module.field` -- see l.h's Import comment for
- * why this exists (the wasm counterpart of 6lg's `-I thunk:sym:lib`
- * dynamic-import flag) and why v1 hardcodes a single import
- * signature rather than taking one here too.
+ * claude: `-I symbol=module.field[:sig]` -- see l.h's Import comment
+ * for why this exists (the wasm counterpart of 6lg's `-I thunk:sym:lib`
+ * dynamic-import flag) and for the optional trailing `:sig` (a Text.sig-
+ * shaped string, e.g. "WV" for WASI's proc_exit), needed once a second
+ * import shows up that isn't fd_write's own "WWWWW" shape.
  */
 static void
 addimportflag(char *arg)
 {
-    char *eq, *dot;
-    char *symname, *module, *field;
+    char *eq, *dot, *colon;
+    char *symname, *module, *field, *sig;
 
     eq = strchr(arg, '=');
     if(eq == nil) {
-        fprint(2, "el: -I needs symbol=module.field\n");
+        fprint(2, "el: -I needs symbol=module.field[:sig]\n");
         errorexit();
     }
     *eq = '\0';
     symname = arg;
     dot = strrchr(eq+1, '.');
     if(dot == nil) {
-        fprint(2, "el: -I needs symbol=module.field\n");
+        fprint(2, "el: -I needs symbol=module.field[:sig]\n");
         errorexit();
     }
     *dot = '\0';
     module = eq+1;
     field = dot+1;
-    addimport(symname, module, field);
+    sig = nil;
+    colon = strchr(field, ':');
+    if(colon != nil) {
+        *colon = '\0';
+        sig = colon+1;
+    }
+    addimport(symname, module, field, sig);
 }
 
 void

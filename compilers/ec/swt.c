@@ -143,13 +143,23 @@ outcode(void)
  * matches compilers/ic/swt.c's own gextern(), which never touches
  * AGLOBL either.
  *
- * Two initializer shapes are needed by tests/c/mini2/
- * print_nofloat_no64.c, and are all this bootstrap supports (no vlong,
- * matching the file's own "no64" name):
- *   - `n->op == OCONST`: a plain integer constant (e.g. `static int32
- *     fd = 1;`). Emitted as an ADATA whose value is a bare D_CONST --
- *     el/obj.c's ADATA reader already writes it in, `reg` bytes,
- *     little-endian, no linker involvement needed.
+ * Three initializer shapes are needed by tests/c/mini2/
+ * print_nofloat_no64.c and test.c, and are all this bootstrap supports
+ * (no float statics -- nothing needs one yet, unlike a float *return
+ * value*, which cgen.c's rval() already handles for a different reason,
+ * see its own OCONST case):
+ *   - `n->op == OCONST`, ordinary width (e.g. `static int32 fd = 1;`):
+ *     a single ADATA whose value is a bare D_CONST -- el/obj.c's ADATA
+ *     reader already writes it in, `reg` bytes, little-endian, no
+ *     linker involvement needed.
+ *   - `n->op == OCONST`, typev (vlong/uvlong) width (e.g. test.c's
+ *     `static uint64 uvnan = 0x7FF0000000000001ULL;`): D_CONST's own
+ *     wire encoding is only ever 4 bytes wide (see swt.c's outopd()
+ *     above), so a single ADATA can't carry a 64-bit value -- split
+ *     into two 4-byte ADATA writes instead, low half at `off` and high
+ *     half at `off+4`, exactly compilers/ic/swt.c's own gextern() (it
+ *     has the same wire-format constraint, for the same reason: no
+ *     arch here has a native 8-byte immediate encoding for ADATA).
  *   - `n->op == ONAME`: a pointer initialized from another symbol's
  *     address, at some offset (e.g. `static int8 *dig =
  *     "0123456789abcdef";` -- cck/dcl.c's init1() already strips the
@@ -166,7 +176,16 @@ outcode(void)
 void
 gextern(Sym *s, Node *n, long off, long w)
 {
-	if(n->op == OCONST) {
+	if(n->op == OCONST && typev[n->type->etype]) {
+		gpseudo(ADATA, s, nod32const(n->vconst));
+		p->from.offset += off;
+		p->reg = 4;
+		gpseudo(ADATA, s, nod32const(n->vconst>>32));
+		p->from.offset += off + 4;
+		p->reg = 4;
+		return;
+	}
+	if(n->op == OCONST && !typefd[n->type->etype]) {
 		gpseudo(ADATA, s, nodconst((int32)n->vconst));
 		p->from.offset += off;
 		p->reg = w;
