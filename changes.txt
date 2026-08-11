@@ -605,7 +605,7 @@ fork Go at the October 2010 time to start goken9cc (in May 2025).
 
 ** Plan 9: 1985-2002
 Most of the code in goken9cc comes from Plan 9 4th edition:
-- cmd/[0568kqv][alc]/ cc/ and libmach/
+- cmd/[02568kqv][alc]/ cc/ and libmach/
   a multiarch assembler, linker, C compiler toolchain
 - libc/, libbio/
   a new minimalist C library (far smaller than glibc or musl)
