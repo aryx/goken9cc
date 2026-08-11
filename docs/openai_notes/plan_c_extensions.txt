@@ -1,0 +1,121 @@
+Plan 9 C extensions that would concretely reduce this codebase
+===============================================================
+
+This recommendation is based on a static survey of the repository's C and
+header files.  The tree already contains type-intent comments that amount to
+a roadmap: 134 option<...>, 201 ref<...>, 170 ref_own<...>, 107 array<...>,
+226 enum<...>, and 29 chan<...> annotations.  The most useful extensions
+are therefore the ones that make these concepts executable and checked.
+
+1. Algebraic data types: option<T>, result<T,E>, tagged unions, and
+   exhaustive match.
+
+   This replaces a great deal of pointer-plus-nil signalling, integer flags,
+   manual tags, and unchecked switches.  It fits 9P messages, compiler ASTs,
+   parsers, UI events, and protocol packets.
+
+       type Wctl = union {
+           Reshaped { Rectangle r; };
+           Moved { Rectangle r; };
+           Refresh { Image *image; };
+           Deleted;
+       };
+
+       match (m) {
+       case Reshaped(r): ...
+       case Deleted: ...
+       }
+
+   This is the largest semantic win: adding a case becomes compiler-visible,
+   and impossible tag/payload combinations are unrepresentable.
+
+2. Ownership and nullable-reference types, with scope cleanup.
+
+       own<string> path;
+       borrow<Image> image;
+       option<borrow<Window>> focus;
+
+   An own<T> value is freed at scope exit unless ownership is transferred.
+   option<T> replaces null-sentinel conventions.  Pair this with defer:
+
+       fd = try open(path, OREAD);
+       defer close(fd);
+       buf = try alloc<byte>(n);
+
+   The tree has 3,649 labels and 4,726 gotos.  Many are legitimate parser or
+   fast-path control flow, but cleanup/error ladders are a strong target for
+   structured cleanup.
+
+3. Typed, sized slices and growable vectors.
+
+       slice<Rune> text;
+       vec<Fcall> requests;
+       bytes packet;
+
+   Provide push, append, reserve, and subslice.  This replaces naked (T*,n)
+   pairs, end/slack pointers, and local realloc code.  The survey found 561
+   allocation expressions involving sizeof, 1,002 nelem uses, and 107
+   chancreate(sizeof(T), ...) constructions: type and length are repeatedly
+   expressed manually.
+
+4. Parametric types and a small standard container library.
+
+       map<string, Object*> objects;
+       set<Qid> open;
+       list<Rule> rules;
+       vec<Dir> entries;
+
+   Use compile-time monomorphization, with opt-in allocator/ownership
+   parameters where kernel code needs them.  Canonical vectors, maps, sets,
+   lists, and byte buffers would eliminate repeated bespoke arrays, queues,
+   hash tables, and next-pointer chains.  This is a code-size feature as much
+   as a type-safety feature.
+
+5. Typed channels and a typed select.
+
+       chan<Rune> key;
+       chan<Timer*> timer;
+
+       select {
+       case <-timer => t: ...
+       case <-key => r: ...
+       }
+
+   This preserves Plan 9's good channel model while removing Channel*, void*,
+   sizeof(T), Alt[] setup, integer case tags, and manually maintained receive
+   destinations.  It is particularly valuable in rio, acme, plumbing, and
+   network services.
+
+6. try with typed failures, retaining %r compatibility at boundaries.
+
+       result<Buf, Error> readpacket(fd);
+       Buf b = try readpacket(fd);
+
+   Internally, this removes inconsistent nil/0/-1/error-string conventions.
+   Keep werrstr and %r for legacy and operating-system boundaries.  The tree
+   has roughly 1,375 uses of Plan 9 error-string machinery.
+
+7. Opt-in compile-time derivation for data conversion and formatting.
+
+       type Wctl = union ...;
+       derive { Debug, Encode9P, Decode9P } Wctl;
+
+   This can reduce manual 9P Fcall conversion, packet/object-format codecs,
+   message formatting, and AST debugging.  Derivation must remain explicit
+   about field width, byte order, tags, and ownership; it should not try to
+   serialize arbitrary pointer-rich structs magically.
+
+Implementation strategy
+-----------------------
+
+Implement these as a front end or source-to-source transpiler for the
+non-toolchain C code, emitting conservative C plus a small runtime.  Keep
+the compiler, assembler, linker, bootstrap, and C-runtime sources as ordinary
+gcc/clang-compatible C.  Start with the near-zero-runtime-cost features:
+ADTs, option, ownership checking and cleanup lowering, slices, generics, and
+typed channels layered on the existing thread library.
+
+Do not prioritize classes, exceptions, lambdas, or a garbage collector.
+They may be useful, but they do not address the codebase's dominant,
+already-documented duplication as directly as ADTs, ownership, collections,
+slices, typed errors, and typed concurrency.
