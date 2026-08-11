@@ -119,3 +119,250 @@ Do not prioritize classes, exceptions, lambdas, or a garbage collector.
 They may be useful, but they do not address the codebase's dominant,
 already-documented duplication as directly as ADTs, ownership, collections,
 slices, typed errors, and typed concurrency.
+
+
+Second-tier extensions and deliberately small versions
+======================================================
+
+The following are worthwhile, but should follow the first seven features.
+Each has a constrained initial design that supplies most of its benefit while
+remaining suitable for a small Plan 9-oriented implementation.
+
+8. Downward-only closures (or named local functions).
+
+The useful small feature is a callback that may capture only variables whose
+lifetime encloses the callback's call; it may not be stored, returned, or
+sent on a channel.  The compiler can lower it to a C function plus an
+explicit stack environment pointer.
+
+       sort(entries, fn (Dir *a, Dir *b) { return strcmp(a->name, b->name); });
+       walk(root, fn (Node *n) { count += n->size; });
+
+Initial plan:
+  - Permit capture by reference only in a syntactically immediate call.
+  - Reject escaping captures at compile time.
+  - Lower to a regular C callback and a generated context struct.
+  - Later, add explicit heap/owned closures only if a real use justifies it.
+
+This removes one-off callback structs, globals used only to pass context, and
+small named helper functions.  It is not a substitute for Plan 9 processes;
+closures passed to another process must remain forbidden in this first form.
+
+9. Restricted generics before general generics.
+
+Do not begin with arbitrary higher-kinded type parameters or a large generic
+standard library.  Start with a declaration generator that accepts one
+concrete value type and emits a namespaced implementation:
+
+       vector(Rune) runes;
+       hash(String, Object*) objects;
+       ring(Xfid*) freeq;
+
+Initial plan:
+  - Support value types and pointer types only; no generic functions passed
+    as values.
+  - Instantiate in the defining compilation unit, not in headers.
+  - Provide vec, ring, intrusive-list, hash, bitset, and arena as the first
+    templates.
+  - Require an explicit equality/hash function where the type needs one.
+
+This can initially be implemented by macros or a small code generator, but a
+front end can provide better diagnostics, names, and ownership checking.
+
+10. X-macros or enum tables with generated names and dispatch.
+
+Many Plan 9 programs maintain an enum, a string table, a printer, and a
+switch in parallel.  A compact table declaration can generate these:
+
+       cases(QidKind) {
+           case(Qdir, "dir")
+           case(Qmouse, "mouse")
+           case(Qcons, "cons")
+       }
+
+Initial plan:
+  - Implement first as conventional X-macros, so it works under gcc/clang.
+  - Generate enum values, names, parse/print helpers, and exhaustive dispatch
+    table declarations.
+  - Offer a language spelling only after usage has settled.
+
+This is especially productive for 9P Qids, opcodes, parser tokens, and UI
+commands, where adding an entry currently touches several locations.
+
+11. Typed handles (newtypes), including file descriptors and IDs.
+
+       type Fd = distinct int;
+       type WindowId = distinct uint;
+       type QidPath = distinct uvlong;
+
+Initial plan:
+  - `distinct T` has the same ABI and representation as T.
+  - Implicit conversion is permitted only to the underlying type at selected
+    FFI/syscall boundaries.
+  - Arithmetic is disabled unless specifically declared.
+
+This is almost free to compile and catches mistaken interchange of `int` as
+an error code, descriptor, count, flag mask, index, or protocol tag.  It
+directly addresses the repository's widespread use of int for unrelated
+concepts.
+
+12. Flag sets and bitfields as a checked language/library feature.
+
+       flags<OpenMode> mode = OREAD | OCEXEC;
+       if (mode has OCEXEC) ...
+
+Initial plan:
+  - Use an enum-backed integer representation.
+  - Permit only members of the declared enum in bit operations.
+  - Generate parsing/printing for diagnostic output.
+
+This is a small but broad improvement for device state, mount/open flags,
+window state, and protocol capability bits.  It can start as macros plus
+compiler warnings.
+
+13. `with` / resource protocols rather than a broad object system.
+
+       with (qlock(&row)) {
+           flushwarnings();
+       }
+       with (Bopen(path, OREAD)) as b {
+           ...
+       }
+
+Initial plan:
+  - A resource type declares acquire/release functions.
+  - Lower the construct into one acquisition and a `defer` release.
+  - Supply protocols for Lock/QLock/RWlock, Biobuf, files, and mount-like
+    resources.
+
+This reduces lock/unlock and open/close pairing errors without adding classes
+or exceptions.  It is also readable in kernel and systems code.
+
+14. A `must` policy for deliberate process-fatal allocation.
+
+       Image *im = must alloc(Image);
+       vec_reserve(&v, n) or die("out of memory");
+
+Initial plan:
+  - Standardize the existing emalloc/erealloc/estrdup family around explicit
+    policy: return Result, panic/die, or allocate from an arena.
+  - Generate size expressions from the pointed-to type.
+  - Preserve Plan 9's existing error reporting and allocation tags.
+
+This is mostly a library plus syntax sugar.  It removes repeated `malloc`,
+nil checks, diagnostic, and exits calls while making the exceptional policy
+obvious.  It must not be used blindly in recoverable kernel paths.
+
+15. Arena regions as an explicit, low-risk alternative to tracing GC.
+
+       region request {
+           Packet *p = new(request, Packet);
+           ...
+       } // all request allocations released here
+
+Initial plan:
+  - Add an Arena allocator and explicit scoped reset/free.
+  - Allow allocations from an arena to be borrowed only within its region.
+  - Use it first for parsers, 9P request decoding, temporary strings, and
+    compiler intermediate data.
+
+This gains much of GC's code-size benefit for clearly bounded lifetimes,
+without an always-on collector or a kernel runtime dependency.
+
+16. Bounds-aware byte/string primitives, first as a library.
+
+       bytes b = readall(fd, limit);
+       string s = fmt("%s/%s", dir, name);
+       split(s, '/') each part { ... }
+
+Initial plan:
+  - Define `bytes { uchar *p; usize n; }` and UTF-8-aware `string` views.
+  - Add total, length-explicit routines for append, find, split, format, and
+    I/O; retain NUL strings at C/Plan 9 ABI boundaries.
+  - Begin as a library/macros; add literals and compiler checking later.
+
+This targets manual buffer sizing and `sprint`/`snprint` arithmetic, while
+respecting Plan 9's Rune and UTF-8 conventions.
+
+17. Matchable protocol declarations, a 9P-specific macro/DSL.
+
+       ninep service {
+           read(fid, offset, count) -> bytes { ... }
+           write(fid, offset, bytes data) -> count { ... }
+           walk(fid, names) -> qids { ... }
+       }
+
+Initial plan:
+  - Make this an external generator or C macro layer first.
+  - Generate Fcall dispatch, response construction, routine error replies,
+    and the server's Qid/name table.
+  - Keep handlers as plain C functions and retain escape hatches for unusual
+    9P behavior.
+
+This is not a general-language feature, but it can remove particularly dense
+boilerplate from Plan 9 file servers and ensure protocol coverage.
+
+18. A state-machine declaration for event and protocol loops.
+
+       state Download {
+           Start -> Headers on connected;
+           Headers -> Body on header_done;
+           Body -> Done on eof;
+       }
+
+Initial plan:
+  - Generate an enum, transition table, names, and invalid-transition error.
+  - Keep state payloads in tagged unions.
+  - Use it only for protocol parsers and UI/network event machines.
+
+This is more niche than ADTs, but it replaces scattered state integers and
+switches in long-lived services.  It could be a code generator rather than a
+C extension indefinitely.
+
+19. Compile-time reflection only for declared records.
+
+Initial plan:
+  - Allow `fields(T)` and `nameof(Enum, value)` only for types explicitly
+    marked reflectable.
+  - Generate debug printing, command/config parsing, and safe field tables.
+  - Do not expose arbitrary runtime introspection or dynamic allocation.
+
+This is the small foundation under `derive Debug`, instead of adopting a
+large runtime reflection model.
+
+20. Intent annotations that begin as lint and become checked extensions.
+
+       // @takes: ownership
+       // @returns: borrow(self)
+       // @locked: row
+       // @send: Xfid -> workerq
+
+Initial plan:
+  - Parse existing style annotations and comments first.
+  - Build a linter for ownership transfer, lock pairing/order, and channel
+    payload agreement.
+  - Promote only the stable annotations to syntax.
+
+This gives immediate value to the existing C code without requiring a flag
+day.  The annotations already present in the tree are an unusually valuable
+seed corpus for this approach.
+
+Suggested rollout
+-----------------
+
+Phase 0: Portable headers/macros/code generators: distinct handle wrappers,
+X-macro enum tables, arenas, vectors, byte/string library, and 9P service
+generator.  These improve code now and validate syntax choices under gcc and
+clang.
+
+Phase 1: A source-to-source checker/lowerer: option/result, tagged unions,
+defer, ownership annotations, slices, and typed channels.  Emit portable C
+and use the existing Plan 9 runtime and thread library.
+
+Phase 2: Convenience syntax with static restrictions: downward closures,
+with-resource scopes, constrained generic container instantiation, derive
+Debug/codec, and state machines.
+
+Phase 3: Re-evaluate only after migration experience: escaping closures,
+more general generics, automatic reference counting, or tracing GC.  None is
+needed to obtain most of the code-size reduction above.
