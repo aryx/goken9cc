@@ -226,6 +226,11 @@ dotext(void)
                 if(p->from.sym != S)
                     p->from.sym->value = c;
                 /*s: [[dotext()]] detect if large procedure */
+                //old:
+                //if(c - otxt >= 1L<<17) {
+                //    diag("Procedure %s too large\n", TNAME);
+                //    errorexit();
+                //}
                 /* claude: a procedure past 1<<17 (128K) bytes is NOT a
                  * fatal error. The kencc 5lk only sets a flag for an extra
                  * span pass here and keeps going (linkers/5lk/span.c); ARM
