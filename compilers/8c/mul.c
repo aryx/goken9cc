@@ -338,6 +338,7 @@ mulgen1(ulong v, Node *n)
     Mparam *p;
     Node nod, nods;
 
+    // claude: ??
     if(v == 0){
         zeroregm(n);
         return 1;
