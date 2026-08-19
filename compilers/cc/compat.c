@@ -63,7 +63,7 @@ pathchar(void)
  * above) get honest heap allocation. See compilers/cc/utils.c:gethunk().
  * (The syncweb chunk markers are kept; only the code is disabled.)
  */
-#if 0
+#ifdef NOT_DEFINED
 /*s: function [[malloc]] */
 /*
  * fake mallocs
