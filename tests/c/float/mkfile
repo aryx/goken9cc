@@ -3,7 +3,7 @@ TOP=../../..
 
 all:V: helloprintf.exe
 clean:V:
-	rm -f *.[5678ijv] *.exe *.a
+	rm -f *.[5678ijvz] *.exe *.a
 test_one:V:
 	mk 'objtype='$cputype all
 	./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
@@ -39,7 +39,7 @@ helloprintf.exe: helloprintf.c
 #           vc's own codegen and the FREGZERO/HALF/ONE/TWO runtime-constant
 #           convention (see linux_mips.s) are correct; this is a qemu
 #           emulation gap, not a toolchain bug. Left out of ARCHS.
-ARCHS=386 amd64 arm64 riscv
+ARCHS=386 amd64 arm64 riscv alpha
 test:V:
         for (arch in $ARCHS) {
            echo $arch

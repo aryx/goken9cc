@@ -3,7 +3,7 @@ TOP=../../..
 
 all:V: helloprintf.exe
 clean:V:
-	rm -f *.[5678ijv] *.exe *.a
+	rm -f *.[5678ijvz] *.exe *.a
 test_one:V:
 	mk 'objtype='$cputype all
 	./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
@@ -20,7 +20,7 @@ helloprintf.exe: helloprintf.c
    $LD -L. -o $target -E _main helloprintf.$O
 
 #TODO: arm_
-ARCHS=386 amd64 arm arm64 mips riscv
+ARCHS=386 amd64 arm arm64 mips riscv alpha
 test:V:
         for (arch in $ARCHS) {
            echo $arch
