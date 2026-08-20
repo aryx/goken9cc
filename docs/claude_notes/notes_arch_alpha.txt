@@ -381,6 +381,34 @@ correct output (matching helloprintf.expected.txt) under qemu-alpha,
 `mk test` in tests/c/mini2 passes for alpha alongside every other arch
 in ARCHS.
 
+tests/c/vlong and tests/c/float: no new bugs, confirming the fixes above were the real thing
+-----------------------------------------------------------------------------------------------
+
+Both passed on the first try, no further zc/za/zl changes needed --
+the SZ_IND and gopcode()/gmove()/reg.c TIND fixes from the tests/c/
+mini2 bring-up already covered what these needed too (vlong's own
+helloprintf.c doesn't happen to exercise real 64-bit arithmetic in its
+printf calls, matching every other arch's own copy of the same file;
+this tier is really about vlrt.c/print.c linking and running cleanly,
+not exclusively about int64 correctness).
+
+tests/c/float additionally needed initializing the hardwired FPU
+constant registers compilers/zc/txt.c's gmove() assumes for common
+float literals -- z.out.h: FREGHALF=28/FREGONE=29/FREGTWO=30/
+FREGZERO=31, the same convention mips/riscv already have their own
+linux_*.s stubs handle (see those files' own comments). za has no
+float-immediate MOVT (unlike mips's assembler sugar for "MOVD
+$0.5,F26"; confirmed by grep: no C_FCON row for AMOVT in linkers/lk/
+optab.c), so tests/c/float/linux_alpha.s loads 0.5 from a DATA-
+declared memory constant and derives 1.0/2.0 via ADDT, the same
+indirection riscv's own stub already needs for the same reason.
+FREGZERO (F31) needed no initialization at all -- confirmed by
+omission, not by looking it up: skipped it initially assuming Alpha's
+real ISA hardwires $f31 to +0.0 in hardware (same as $31 for
+integers), and the "+0.000000e+000" line matched expected output
+without any explicit zeroing, confirming the assumption held under
+qemu-alpha too.
+
 What's actually verified vs. still open
 -------------------------------------------
 
@@ -395,6 +423,11 @@ compiles and runs a real two-function-call C program correctly
 (tests/c/mini/helloc.c, via `mk test` with alpha added to that
 mkfile's ARCHS) -- the setSB/gp path, the two-arg calling convention,
 and -L-based autolib resolution are all exercised together here.
+tests/c/mini2/helloprintf.c (varargs, multi-string printf, 8-byte-
+pointer arithmetic and parameter passing), tests/c/vlong (vlrt.c/
+print.c linking), and tests/c/float (float codegen, incl. the
+hardwired FPU-constant registers) all pass too, each added to its own
+mkfile's ARCHS.
 
 HEADTYPE 0-3 (the native Plan9/Unix-alpha a.out formats) compile but
 have no test exercising them at runtime -- there's no alpha hardware
