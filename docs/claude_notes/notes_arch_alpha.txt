@@ -1,0 +1,152 @@
+The alpha toolchain (za/zc/zl): reintroduction and first working binary
+==========================================================================
+
+Notes from bringing linkers/zl up to a working Linux ELF binary in
+August 2026, as the first real milestone after "alpha: Reintroducing
+alpha toolchain from Plan 9 4th ed" reintroduced za/zc/zl under the
+'z' letter. This file is about alpha's own codegen/ABI/build-system
+quirks; for how the '7' -> 'z' rename came about at all, see
+git log on linkers/zl, assemblers/za, compilers/zc. See also
+linkers/lk/elf.c (shared ELF writer, used by zl same as il/vl/6l/8l),
+tests/s/exit/exit_linux_alpha.s.
+
+Why the letter is 'z', not '7'
+-------------------------------
+
+Old Plan 9 4th edition / 9front used '7' for alpha. This project later
+repurposed '7' for arm64 (assemblers/7a, linkers/7l, compilers/7c are
+all arm64), so the reintroduced alpha toolchain uses 'z' instead
+(assemblers/za, compilers/zc, linkers/zl, include/objexec/z.out.h).
+The imported source still had 'thechar = \'7\'' and "7l"/"7.out"/".7
+file" strings left over from before the rename -- za already had
+thechar='z' from the start, zl did not until this pass. Grep for
+literal '7' in a freshly-imported zl/zc/za file before trusting it;
+the old value compiles fine (it's just a char), so nothing catches a
+leftover '7' except reading the actual output/error strings.
+
+l.h had no EXTERN: silent until modern gcc's -fno-common default
+----------------------------------------------------------------------
+
+zl/l.h's big global-variable block (HEADR, HEADTYPE, INITTEXT, hunk,
+symsize, ... ~60 vars) was a straight copy from the original Plan 9
+4th edition source: plain tentative definitions with no `EXTERN`
+macro, one per line, included as-is by every .c file in the linker.
+This relies on old-style "common symbol" linking (every TU's tentative
+definition of the same name merges into one), which was the default
+behavior of every C compiler for decades but is NOT gcc's default
+since gcc 10 (-fno-common). The result: it *compiles* cleanly (no
+error until link time), then fails at the final link step with a wall
+of "multiple definition of `X`; Y.o: first defined here" for every one
+of those ~60 globals, once every .c file's .o gets linked together --
+completely silent until that point, unlike a normal missing-symbol
+bug. vl/6l/8l/il already carry the fix (every one of those globals
+prefixed with `EXTERN`, `#define EXTERN` added before `#include "l.h"`
+in exactly one file -- obj.c, by convention); zl now matches. If a
+future arch gets reintroduced from an old, pre-EXTERN-convention Plan
+9 source tree the same way alpha was, expect the identical failure
+mode and the identical fix.
+
+elf.c needs wput/wputl/lputl/llput/llputl/cput/strnput to exist by name
+---------------------------------------------------------------------------
+
+linkers/lk/elf.c is shared verbatim across every linker that wants ELF
+output. Critically, it does NOT take its byte-order put-functions as
+parameters -- elf32()/elf64() do `putl = lput; putw = wput;` (or the
+_l-suffixed pair for little-endian) by direct symbol name, so every
+linker's own asm.c must define global functions under those exact
+names (wput, wputl, lput, lputl, llput, llputl) plus cput/strnput as
+real callable symbols (not just a local macro), even for an
+architecture like alpha that only ever exercises the *l (little-
+endian) half at runtime -- the compiler still needs the BE-slot names
+to exist for the `putl = lput;`-style assignment to typecheck/link.
+zl/asm.c pre-existed with only a `lput` (already little-endian, LPUT
+macro) and a `lputbe`/`vlput` pair under non-matching names; the
+native-format header cases (HEADTYPE 0-3, Plan9/Unix-alpha a.out
+variants, all pre-dating ELF support here) already depend on `lput`
+staying little-endian, so it was left alone rather than renamed to
+match the BE-slot convention -- the new wput/llput genuinely implement
+big-endian (dead code for alpha, but correctly labeled), while
+wputl/lputl/llputl are the ones that actually run. cput was only a
+local uppercase CPUT() macro in asm.c, invisible to elf.c's own
+translation unit; promoted to a real `#define cput(c) ...` in l.h
+(matching 6l/l.h's own convention) plus a genuine strnput() function.
+
+compat.c (mysbrk) had been commented out of the mkfile
+---------------------------------------------------------
+
+zl/mkfile had `compat.$O` commented out, so obj.c's gethunk() (which
+calls mysbrk()) failed to link. Other linkers (6l, 8l) have since
+migrated off this hunk/bump-allocator entirely in favor of real libc
+malloc() (see notes_libc_selfhost.txt-style comments in their own
+compat.c, and the "simplify linker allocators" cleanup already
+tracked elsewhere) -- zl has NOT been migrated yet, it's still on the
+original fake malloc/free/calloc/realloc/mysbrk family via compat.c,
+same starting point 6l/8l were once at. Re-enabling compat.$O in the
+mkfile was enough to get zl linking; doing the same gethunk-removal
+pass 6l/8l already went through is follow-up work, not a prerequisite.
+
+The EM_ALPHA gotcha: 41 is registered but wrong; Linux wants 0x9026
+------------------------------------------------------------------------
+
+The ELF spec's officially registered e_machine value for Alpha is 41
+(glibc's elf.h calls this EM_FAKE_ALPHA). Linux's actual Alpha port --
+and so qemu-alpha, which emulates the Linux ABI -- never adopted that
+value; it still expects the old pre-standardization value 0x9026
+(glibc's elf.h calls *this* one EM_ALPHA, the confusing part). A
+binary built with e_machine=41 looks entirely plausible (readelf even
+labels it "Digital Alpha (old)", easy to misread as "not the modern
+one, needs updating to 41"), but qemu-alpha flatly refuses it:
+"Invalid ELF image for this architecture", no other diagnostic.
+linkers/lk/elf.h's ALPHA constant is 0x9026 for exactly this reason --
+do not "fix" it to 41 without re-testing under qemu-alpha.
+
+HEADTYPE 7 (ELF Linux) layout, and alpha's 8192-byte page size
+--------------------------------------------------------------------
+
+zl's HEADTYPE 7 (added in zl/obj.c and zl/asm.c) mirrors il/vl's own
+HEADTYPE 7 exactly: HEADR = rnd(Ehdr64sz+3*Phdr64sz, 16), a page-
+aligned data-segment offset (`rnd(HEADR+textsize, INITRND)`, both for
+the actual seek() before writing data and for the symbol-table seek
+after it -- ELF requires vaddr mod page == file-offset mod page), and
+`elf64(ALPHA, ELFDATA2LSB, 0, nil)` for the final header emission with
+debug['S']=1 to also emit section headers. The one alpha-specific
+number: INITRND (and so the data segment's page alignment) is 8192,
+not the 4096 il/vl default to -- alpha Linux genuinely uses an 8KB
+page size, matching what zl's own pre-existing native-format
+HEADTYPE 2 ("plan9 format", INITRND=8192) already assumed. INITTEXT
+defaults to 0x120000000+HEADR, reusing the same base address zl's
+HEADTYPE 0 ("unix simple") already had hardcoded (with its own "BUG"
+comment) -- a real, conventional Alpha/Linux text base, not invented
+for this case.
+
+Alpha Linux syscall ABI, as used by tests/s/exit/exit_linux_alpha.s
+-------------------------------------------------------------------------
+
+Inherited from OSF/1, quite different in *mechanism* from every other
+arch here even though the register roles are familiar: v0/R0 holds the
+syscall number going in and the return value coming out; a0-a5 are
+R16-R21. The trap instruction is `CALL_PAL $0x83` (za's grammar:
+LTYPEE takes a single `$`-prefixed immediate -- see assemblers/za/a.y,
+lex.c's "CALL_PAL" entry), i.e. what OSF1/Linux call "callsys" as a
+PAL-code call rather than a dedicated syscall/trap opcode the way
+SVC/ECALL are on arm/riscv. exit is syscall number 1 -- same numeric
+value as x86 (both trace back to the same old Unix numbering), not 93
+like arm64/riscv.
+
+What's actually verified vs. still open
+-------------------------------------------
+
+Verified: za assembles, zl links (both native HEADTYPE 0-3 *compiling*
+-- not exercised at runtime -- and HEADTYPE 7 ELF *running*),
+tests/s/exit/exit_linux_alpha.s produces a real qemu-alpha-executable
+binary exiting 42, via `mk test` in tests/s/exit.
+
+Not yet done: zc (the C compiler) hasn't been brought up or exercised
+at all -- only the assembler+linker path has a working end-to-end
+test. No .data-touching test exists yet (tests/s/exit deliberately
+avoids .data; see that mkfile's own comment), so INITDAT/data-segment
+placement for HEADTYPE 7 is untested beyond "the linker didn't
+complain". HEADTYPE 0-3 (the native Plan9/Unix-alpha a.out formats)
+compile but have no test exercising them at runtime -- there's no
+alpha hardware or Plan9-native-alpha emulator available to run them
+under, unlike qemu-alpha for the ELF path.
