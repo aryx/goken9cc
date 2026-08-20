@@ -1,4 +1,3 @@
-#include <ctype.h>
 #define	EXTERN
 #include "a.h"
 #include "y.tab.h"
@@ -9,8 +8,9 @@ main(int argc, char *argv[])
 	char ofile[100], incfile[20], *p;
 	int nout, nproc, status, i, c, of;
 
-	thechar = '7';			/* of 9 */
+	thechar = 'z';
 	thestring = "alpha";
+
 	memset(debug, 0, sizeof(debug));
 	cinit();
 	outfile = 0;
@@ -689,6 +689,6 @@ outhist(void)
 	}
 }
 
-#include "../cc/lexbody"
-#include "../cc/macbody"
-#include "../cc/compat"
+#include "../../compilers/cck/lexbody"
+#include "../../compilers/cck/macbody"
+#include "../../compilers/cck/compat"

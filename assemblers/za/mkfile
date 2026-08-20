@@ -1,19 +1,19 @@
-</$objtype/mkfile
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
 
-TARG=7a
+TARG=za
+LDLIBS=-lbio $BOOTLIBS
+
 OFILES=\
 	y.tab.$O\
 	lex.$O\
 
-HFILES=\
-	../7c/7.out.h\
-	y.tab.h\
-	a.h\
+HFILES=	$TOP/include/obj/z.out.h y.tab.h a.h
 
 YFILES=a.y\
 
-BIN=/$objtype/bin
-< /sys/src/cmd/mkone
 YFLAGS=-D1 -d
 
-lex.$O:	../cc/macbody ../cc/lexbody
+<$TOP/mkfiles/mkone
+
+lex.$O:	$TOP/compilers/cck/macbody $TOP/compilers/cck/lexbody $TOP/compilers/cck/compat
