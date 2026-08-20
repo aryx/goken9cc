@@ -18,6 +18,22 @@
  * access, dup2, fork, execve, wait4, pipe) it ever had, so this file's
  * syscall SET matches amd64's decl/numbers shape exactly, unlike
  * riscv64/arm64's generic-ABI-only shims.
+ *
+ * pipe is the one exception to "matches amd64's shape exactly" above,
+ * for an unrelated reason: alpha inherited not just OSF/1's syscall
+ * *numbering* but also its legacy BSD-style *calling convention* for a
+ * few historically odd syscalls -- confirmed via svc_alpha.s's own a3/
+ * R19-error-flag fix (the same non-negative-errno convention o32 mips
+ * uses, per numbers_mips.h's own comment), and pipe(2) on this same
+ * family of ABIs returns its two fds directly in v0/a4(R20) rather
+ * than through the pointer argument every generic-ABI arch's sys_pipe
+ * writes to -- _syscall6 only ever surfaces v0/R0, so raw SYS_pipe
+ * can't go through it at all. SYS_pipe2 (sys_pipe2, normal
+ * pointer+flags shape, confirmed at __NR_pipe2=488 in the same
+ * installed alpha-linux-gnu header this file's own numbers came from)
+ * is the substitute syscall_linux_alpha.h's own pipe() shim calls
+ * with flags=0 instead -- same fix, same reason, as numbers_mips.h's
+ * own SYS_pipe2.
  */
 
 #define SYS_exit	1
@@ -32,7 +48,8 @@
 #define SYS_getpid	20	/* __NR_getxpid; aliased by uapi/asm/unistd.h */
 #define SYS_kill	37
 #define SYS_dup		41
-#define SYS_pipe	42
+#define SYS_pipe	42	/* unused directly -- see this file's own pipe comment above; SYS_pipe2 is the real entry point */
+#define SYS_pipe2	488
 #define SYS_ioctl	54
 #define SYS_open	45
 #define SYS_execve	59

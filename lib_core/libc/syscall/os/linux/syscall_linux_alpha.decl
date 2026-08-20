@@ -79,7 +79,12 @@
 //sys _sysfork(void) int = SYS_fork
 //sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
 //sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
-//sys _syspipe(int *fd) int = SYS_pipe
+// No _syspipe here: numbers_alpha.h's own comment explains why raw
+// SYS_pipe (fds returned in v0/a4, not the pointer argument) can't go
+// through the generic _syscall6 trampoline at all -- _sysrawpipe2
+// (SYS_pipe2, normal pointer+flags shape) is the raw call instead, and
+// syscall_linux_alpha.h's own pipe() shim wraps it with flags=0.
+//sys _sysrawpipe2(int *fd, int flags) int = SYS_pipe2
 
 // Tier 6 notification (docs/claude_notes/plan_syscalls.txt). See
 // numbers_alpha.h's own header comment: the syscall numbers below are

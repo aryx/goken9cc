@@ -139,9 +139,9 @@ int _syswait4(int pid, void* status, int options, void* rusage)
 	return (int)_syscall6(SYS_wait4, (vlong)pid, (vlong)status, (vlong)options, (vlong)rusage, 0, 0);
 }
 
-int _syspipe(int* fd)
+int _sysrawpipe2(int* fd, int flags)
 {
-	return (int)_syscall6(SYS_pipe, (vlong)fd, 0, 0, 0, 0, 0);
+	return (int)_syscall6(SYS_pipe2, (vlong)fd, (vlong)flags, 0, 0, 0, 0);
 }
 
 int _syskill(int pid, int sig)

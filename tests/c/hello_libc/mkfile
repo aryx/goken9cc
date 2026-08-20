@@ -68,7 +68,7 @@ test_one:V:
 # tests/c/mkfile's DIRS and mkfiles/mkdirs' generic recursion -- no
 # per-arch objtype/cputype needs to be passed in from outside, unlike
 # test_one, which expects the caller to have already picked one.
-ARCHS=386 amd64 arm arm64 mips riscv riscv64
+ARCHS=386 amd64 arm arm64 mips riscv riscv64 alpha
 test:V:
 	for (arch in $ARCHS) {
 		echo $arch

@@ -26,3 +26,20 @@ extern long _syscall6(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5
  * that truncation to matter).
  */
 extern vlong _syscall6v(long num, vlong a1, vlong a2, vlong a3, vlong a4, vlong a5, vlong a6);
+
+/* claude: pipe is the one syscall on this arch that doesn't go through
+ * mksyscall.sh's generated _syspipe name directly -- see numbers_alpha.h's
+ * own comment: alpha's real sys_pipe (like o32 mips's sysm_pipe) returns
+ * the two fds directly in v0/a4, not through the pointer argument every
+ * generic-ABI arch's sys_pipe writes to, and _syscall6 only ever
+ * surfaces v0/R0. _sysrawpipe2 (generated from SYS_pipe2, the normal
+ * pointer+flags shape) is the substitute; this shim wraps it with
+ * flags=0 so port/pipe.c can call the same _syspipe(fd) name on every
+ * arch. Same shape as syscall_linux_mips.h's own identical shim.
+ */
+extern int _sysrawpipe2(int *fd, int flags);
+
+int _syspipe(int *fd)
+{
+	return _sysrawpipe2(fd, 0);
+}
