@@ -1,11 +1,10 @@
 /*
- * 7obj.c - identify and parse an alpha object file
+ * zobj.c - identify and parse an alpha object file
  */
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include <mach.h>
-#include "7c/7.out.h"
+#include <obj/z.out.h>
 #include "obj.h"
 
 typedef struct Addr	Addr;
@@ -20,7 +19,7 @@ static char type2char(int);
 static void skip(Biobuf*, int);
 
 int
-_is7(char *s)
+_isz(char *s)
 {
 	return  s[0] == ANAME				/* ANAME */
 		&& s[1] == D_FILE			/* type */
@@ -29,7 +28,7 @@ _is7(char *s)
 }
 
 int
-_read7(Biobuf *bp, Prog *p)
+_readz(Biobuf *bp, Prog *p)
 {
 	int as, n;
 	Addr a;

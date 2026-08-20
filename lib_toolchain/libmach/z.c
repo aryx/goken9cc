@@ -4,8 +4,8 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "/alpha/include/ureg.h"
-#include <mach.h>
+#include <arch/mach.h>
+#include <arch/alpha/ureg.h>
 
 #define	REGOFF(x)	(ulong)(&((struct Ureg *) 0)->x)
 
