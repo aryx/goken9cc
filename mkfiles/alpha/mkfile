@@ -2,7 +2,7 @@
 
 O=z
 CC=zc
-LD=zl
+LD=zl -H7
 AS=za
 AR=iar
 

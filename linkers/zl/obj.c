@@ -11,6 +11,16 @@ char	symname[]	= SYMDEF;
 char	thechar		= 'z';
 char	*thestring 	= "alpha";
 
+/* claude: -L search path list, ported from vl/il's own addlibpath()/
+ * findlib() -- zl had neither, so a bare "#pragma lib libmini.a" (no
+ * leading '/' or '.') always fell through addlib()'s hardcoded
+ * /usr/%clib or /%s/lib guess, ignoring any -L flag entirely (found
+ * building tests/c/mini/helloc.c, whose "libmini.a" lives in the
+ * build directory, found via -L. -- see addlib() below). */
+char**	libdir;
+int	nlibdir	= 0;
+static	int	maxlibdir = 0;
+
 /*
  *	-H0 -T0x12000004C -D0x140000000	is abbrev unix
  *	-H1 -T0x20000000 -R4		is bootp() format
@@ -69,6 +79,11 @@ main(int argc, char *argv[])
 		a = ARGF();
 		if(a)
 			INITRND = atolwhex(a);
+		break;
+	case 'L':
+		a = ARGF();
+		if(a)
+			addlibpath(a);
 		break;
 	case 'H':
 		a = ARGF();
@@ -267,6 +282,42 @@ loop:
 	for(s = hash[h]; s != S; s = s->link)
 		if(s->type == SXREF)
 			goto loop;
+}
+
+void
+addlibpath(char *arg)
+{
+	char **p;
+
+	if(nlibdir >= maxlibdir) {
+		if(maxlibdir == 0)
+			maxlibdir = 8;
+		else
+			maxlibdir *= 2;
+		p = malloc(maxlibdir*sizeof(*p));
+		if(p == nil) {
+			diag("out of memory");
+			errorexit();
+		}
+		memmove(p, libdir, nlibdir*sizeof(*p));
+		free(libdir);
+		libdir = p;
+	}
+	libdir[nlibdir++] = strdup(arg);
+}
+
+char*
+findlib(char *file)
+{
+	int i;
+	char name[1024];
+
+	for(i = 0; i < nlibdir; i++) {
+		snprint(name, sizeof(name), "%s/%s", libdir[i], file);
+		if(fileexists(name))
+			return libdir[i];
+	}
+	return nil;
 }
 
 void
@@ -497,12 +548,13 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 void
 addlib(char *obj)
 {
-	char name[1024], comp[256], *p;
-	int i;
+	char name[1024], name2[1024], comp[256], *p, *found, *use;
+	int i, search;
 
 	if(histfrogp <= 0)
 		return;
 
+	search = 0;
 	if(histfrog[0]->name[1] == '/') {
 		name[0] = 0;
 		i = 1;
@@ -511,11 +563,13 @@ addlib(char *obj)
 		snprint(name, sizeof name, ".");
 		i = 0;
 	} else {
-		if(debug['9'])
-			snprint(name, sizeof name, "/%s/lib", thestring);
-		else
-			snprint(name, sizeof name, "/usr/%clib", thechar);
+		/* claude: no leading '/' or '.' means a bare "#pragma lib
+		 * foo.a"-style reference (e.g. tests/c/mini's libmini.a) --
+		 * search the -L list (findlib(), below) instead of guessing
+		 * /usr/%clib or /%s/lib, matching vl/il's own addlib(). */
+		name[0] = 0;
 		i = 0;
+		search = 1;
 	}
 
 	for(; i<histfrogp; i++) {
@@ -542,19 +596,30 @@ addlib(char *obj)
 			diag("library component too long");
 			return;
 		}
-		strcat(name, "/");
+		if(strlen(name) > 0 || !search)
+			strcat(name, "/");
 		strcat(name, comp);
 	}
+
+	use = name;
+	if(search) {
+		found = findlib(name);
+		if(found != nil) {
+			snprint(name2, sizeof(name2), "%s/%s", found, name);
+			use = name2;
+		}
+	}
+
 	for(i=0; i<libraryp; i++)
-		if(strcmp(name, library[i]) == 0)
+		if(strcmp(use, library[i]) == 0)
 			return;
 	if(libraryp == nelem(library)){
-		diag("too many autolibs; skipping %s", name);
+		diag("too many autolibs; skipping %s", use);
 		return;
 	}
 
-	p = malloc(strlen(name) + 1);
-	strcpy(p, name);
+	p = malloc(strlen(use) + 1);
+	strcpy(p, use);
 	library[libraryp] = p;
 	p = malloc(strlen(obj) + 1);
 	strcpy(p, obj);

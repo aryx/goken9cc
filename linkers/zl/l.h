@@ -257,6 +257,8 @@ int	Pconv(Fmt*);
 int	Sconv(Fmt*);
 int	aclass(Adr*);
 void	addhist(long, int);
+void	addlibpath(char*);
+char*	findlib(char*);
 void	addnop(Prog*);
 void	append(Prog*, Prog*);
 void	asmb(void);

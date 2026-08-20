@@ -63,7 +63,7 @@ static Obj	obj[Maxobjtype] =
 	[ObjAmd64]	"amd64 .6",	_is6, _read6,
 	[ObjArm64]	"arm64 .7",	_is7, _read7,
 	[ObjRiscv]	"riscv .i",	_isi, _readi,
-	[ObjAlpha]	"alpha .7",	_is7, _read7,
+	[ObjAlpha]	"alpha .z",	_isz, _readz,
 //	[Maxobjtype]	0, 0
 };
 
