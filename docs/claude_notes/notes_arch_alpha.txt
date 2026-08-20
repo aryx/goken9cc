@@ -46,6 +46,10 @@ future arch gets reintroduced from an old, pre-EXTERN-convention Plan
 9 source tree the same way alpha was, expect the identical failure
 mode and the identical fix.
 
+See also tests/s/mini/hello_linux_alpha.s and its own section below
+(the setSB/gp truncation bug) for the second real bug this bring-up
+found, once a test finally touched .data.
+
 elf.c needs wput/wputl/lputl/llput/llputl/cput/strnput to exist by name
 ---------------------------------------------------------------------------
 
@@ -114,10 +118,76 @@ number: INITRND (and so the data segment's page alignment) is 8192,
 not the 4096 il/vl default to -- alpha Linux genuinely uses an 8KB
 page size, matching what zl's own pre-existing native-format
 HEADTYPE 2 ("plan9 format", INITRND=8192) already assumed. INITTEXT
-defaults to 0x120000000+HEADR, reusing the same base address zl's
-HEADTYPE 0 ("unix simple") already had hardcoded (with its own "BUG"
-comment) -- a real, conventional Alpha/Linux text base, not invented
-for this case.
+defaults to 0x10000+HEADR (il/vl's own small ELF base), deliberately
+NOT the real, conventional 0x120000000 Alpha/Linux non-PIE base that
+zl's HEADTYPE 0 ("unix simple") already had hardcoded -- see the next
+section for why that address doesn't actually work through this
+linker.
+
+The setSB/gp truncation bug: span()'s classification runs too early
+-------------------------------------------------------------------------
+
+Found via tests/s/mini/hello_linux_alpha.s (the exit(42) test has no
+.data segment and so never exercises this at all). Symptom: the
+program assembled and linked with no errors or warnings, ran, exited
+0, but produced no output. Root-caused by tracing actual executed
+instructions with `qemu-alpha -d in_asm,cpu` (objdump has no alpha
+target on this host; `zdb`/`zobj` are only compiled into libmach.a,
+not built as standalone tools -- see notes_libmach.txt) rather than
+reading the assembler/linker source first.
+
+The mechanism: `MOVQ $setSB(SB), R29` is the standard Plan 9 static-
+base/gp setup (same idiom as riscv's `MOVW $setSB(SB), R3`, see
+tests/s/mini/hello_linux_riscv64.s), resolving to the pseudo-symbol
+"setSB" whose value is `BIG` (32760, l.h's ldgp-style constant).
+span.c's aclass() has a special "botch" case (the original Plan 9
+source's own comment) recognizing this symbol and resolving its real
+value to `BIG+INITDAT`. This value drives which of two very different
+code shapes optab.c picks: C_LCON -> case 15 in asm.c, a 2-instruction
+lda+ldah pair that only ever encodes the low 32 bits of the target
+(compare case 16's C_QCON, a real 5-instruction 64-bit load using
+v>>32 and v>>48 too). The original "botch" branch always returned
+C_LCON, unconditionally -- with HEADTYPE 0's INITTEXT=0x120000000,
+BIG+INITDAT doesn't fit in 32 bits, so the encoded gp silently lost
+its high bit and became ~0x20000000 instead, and every SB-relative
+access (e.g. `$msg(SB)`, encoded as gp-relative) was corrupted downstream.
+That INITTEXT value already carried a "/* BUG */" comment in the
+original imported source -- almost certainly the same bug, just never
+caught because nothing ever ran HEADTYPE 0 (no test, no Alpha hardware
+or native-a.out emulator available; see the closing section below).
+
+Widening the bound check alone (`return C_QCON` when BIG+INITDAT
+doesn't fit in 32 bits, span.c's aclass()) turned out to be necessary
+but NOT sufficient: oplook() (also span.c) caches the chosen optab
+entry -- and therefore the instruction's byte size and shape -- in
+`p->optab` the first time it classifies a given Prog. For the setSB
+instruction that first classification happens during span()'s own
+sizing loop, which runs BEFORE span() computes the real INITDAT (its
+`INITDAT = rnd(c, INITRND)` assignment is the very last thing span()
+does, after the loop that sizes every instruction including this one).
+So aclass() always observes INITDAT==0 at the point that matters, sees
+BIG+0 (fits comfortably in C_LCON), and that 2-instruction shape gets
+locked into `p->optab` for good. asmb()'s later re-evaluation of the
+same instruction (now with the correct, final INITDAT) can still
+change the *value* it computes (regoff() has no cache, unlike
+oplook()) but can no longer change the already-cached *shape* --
+so it re-derives the correct large offset and then silently truncates
+it through the same 2-instruction encoding. Confirmed by instrumenting
+oplook()/aclass() directly (temporary fprint(2, ...) calls, since
+p->optab's caching wasn't obvious from reading the code alone -- do
+this again before assuming a span.c/asm.c fix "should" work; verify
+with qemu-alpha -d, not by re-reading the source more carefully).
+
+Real fix applied here: keep INITTEXT small enough (0x10000+HEADR, see
+above) that BIG+INITDAT never leaves the 32-bit range the existing
+2-instruction form can actually encode, sidestepping the bug rather
+than fixing span()'s classify-before-INITDAT-is-known ordering. A
+proper fix (computing text size and INITDAT in a first pass before
+classifying/sizing any instruction that depends on it, or just always
+picking C_QCON conservatively for anything BIG-relative regardless of
+apparent size) would let HEADTYPE 7 use the conventional 0x120000000
+base too, and is the more principled fix for HEADTYPE 0 as well --
+not done here, out of scope for getting one working ELF binary.
 
 Alpha Linux syscall ABI, as used by tests/s/exit/exit_linux_alpha.s
 -------------------------------------------------------------------------
@@ -139,14 +209,21 @@ What's actually verified vs. still open
 Verified: za assembles, zl links (both native HEADTYPE 0-3 *compiling*
 -- not exercised at runtime -- and HEADTYPE 7 ELF *running*),
 tests/s/exit/exit_linux_alpha.s produces a real qemu-alpha-executable
-binary exiting 42, via `mk test` in tests/s/exit.
+binary exiting 42, and tests/s/mini/hello_linux_alpha.s exercises
+.data placement and SB-relative addressing (the setSB/gp bug above)
+end to end, printing "Hello, world" under qemu-alpha. Both pass via
+`mk test` in tests/s/exit and tests/s/mini respectively.
 
 Not yet done: zc (the C compiler) hasn't been brought up or exercised
-at all -- only the assembler+linker path has a working end-to-end
-test. No .data-touching test exists yet (tests/s/exit deliberately
-avoids .data; see that mkfile's own comment), so INITDAT/data-segment
-placement for HEADTYPE 7 is untested beyond "the linker didn't
-complain". HEADTYPE 0-3 (the native Plan9/Unix-alpha a.out formats)
-compile but have no test exercising them at runtime -- there's no
-alpha hardware or Plan9-native-alpha emulator available to run them
-under, unlike qemu-alpha for the ELF path.
+at all -- only the assembler+linker path has working end-to-end tests.
+HEADTYPE 0-3 (the native Plan9/Unix-alpha a.out formats) compile but
+have no test exercising them at runtime -- there's no alpha hardware
+or Plan9-native-alpha emulator available to run them under, unlike
+qemu-alpha for the ELF path -- and HEADTYPE 0 in particular is now
+suspected to hit the exact same setSB/gp truncation bug documented
+above (same INITTEXT magnitude, same original "BUG" comment), unverified
+since it can't be run at all. Only one SB-relative symbol (msg, a
+single 13-byte string) has been exercised; anything requiring C_SECON/
+C_LECON/C_LACON's own bound-checked-but-uncached paths (large .data,
+.bss, or stack-frame offsets genuinely near the +-32KB BIG boundary)
+is unverified.

@@ -1146,3 +1146,78 @@ folklore.  Second, a retry that swallows the failure and proceeds is
 strictly worse than no retry: it converts a hard error into a scrolled-
 past message, which is how three unrelated real bugs stayed hidden
 behind it until it was removed.
+
+qemu -d in_asm,cpu to see what a new backend actually executed, when there's no disassembler
+------------------------------------------------------------------------------------------------
+
+A freshly-linked alpha ELF binary (tests/s/mini/hello_linux_alpha.s,
+see notes_arch_alpha.txt's "setSB/gp truncation bug" for the full
+story) ran and exited cleanly but printed nothing.  No error, no
+crash -- just silently wrong, the hardest kind to start on.  This
+host's binutils has no alpha objdump target, and this project's own
+alpha disassembler (lib_toolchain/libmach's zdb.c/zobj.c) is only ever
+compiled into libmach.a, not built as a standalone zobj/zdb binary
+(see notes_libmach.txt), so neither of the usual "just disassemble it"
+options existed.
+
+`qemu-<arch> -d in_asm,cpu -D <logfile> ./binary` sidesteps needing
+any of that: it single-steps by translation block, logging each
+block's disassembly followed by the full register file *as observed
+entering the next block* (i.e. the effect of the block that just ran,
+not the block about to run -- easy to misread as "these registers are
+about to feed this code" when it's actually "this is what the previous
+code left behind").  That log immediately showed the real bug: a
+2-instruction gp-setup sequence whose destination register ended up
+with the wrong high bits, and the very next block's register dump
+showing the syscall's own return-value register carrying an error
+code (a3=1, v0=14=EFAULT on this ABI) -- turning a mute "prints
+nothing" symptom into a concrete "this address is wrong, here's what
+it actually resolved to" data point, without writing or trusting any
+theory about the assembler/linker source first.
+
+Generalization: for any new backend without a working disassembler,
+`qemu-<arch> -d in_asm,cpu` (or `-d in_asm,cpu,exec` for even more
+detail) turns "the linker/assembler must be doing something to this
+instruction" into a direct read of what silicon (well, TCG) actually
+executed. Reach for it before reading codegen source top-to-bottom
+speculatively -- it answers "what did this actually become" in one
+command, where source-reading only answers "what was this supposed to
+become".
+
+Trust a live trace over the source once the two disagree, and verify with instrumentation, not re-reading
+--------------------------------------------------------------------------------------------------------------
+
+Once the qemu trace pinned the wrong value on a specific 2-instruction
+gp-load sequence, the natural next step was reading the linker's
+operand-classification code (span.c's aclass()) to find why it chose
+the narrow (32-bit-only) encoding instead of the wide one, fix the
+classification, rebuild, and expect it fixed. It didn't fix it --
+identical wrong output, byte-for-byte identical disassembly after the
+fix as before it. The classification fix was in fact correct on its
+own terms; the actual bug was one level away, in oplook()'s separate
+per-instruction cache (p->optab) locking in the *old* classification's
+instruction shape before the corrected classification ever got a
+chance to run again on the same instruction.
+
+This was not findable by more careful re-reading -- the caching
+function and the classification function are both individually
+reasonable and the interaction between them (classify once, early,
+before the value that matters is even known; cache the *shape*
+decision, not just the *value*; the value gets recomputed fresh later
+but the shape doesn't) only becomes obvious from watching it happen.
+The move that actually worked: add a one-line fprint(2, ...) at the
+top of oplook() and at the point aclass() resolves the suspect symbol,
+rebuild, and read the actual sequence and argument values of every
+call for the one instruction in question. Two rounds of this (first
+printing *whether* the cache was populated, then printing *where* the
+cache got written) were enough to see the real shape: classify-time
+INITDAT=0 (correct value not computed yet) permanently cached, re-
+classify-time INITDAT=<real value> computed but too late to matter.
+
+Generalization: once a live trace (qemu, strace, gdb, whatever)
+contradicts what source-reading says should happen, stop trying to
+find the bug by reading harder -- add a print at the point the trace
+says is suspicious, rebuild, and let the second trace disambiguate
+between competing theories. This is cheaper than it feels: each round
+here was a one-line edit, rebuild, and rerun, cheaper than the reading
+time already spent forming an incorrect theory.
