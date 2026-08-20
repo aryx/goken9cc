@@ -203,6 +203,47 @@ SVC/ECALL are on arm/riscv. exit is syscall number 1 -- same numeric
 value as x86 (both trace back to the same old Unix numbering), not 93
 like arm64/riscv.
 
+zc build fixes: the same int32/const-qualifier gap vc already closed
+-------------------------------------------------------------------------
+
+zc shares its frontend with vc/5ck/8ck/etc. via compilers/cck/ (pgen.c,
+pswt.c, cc.h), the same shape of relationship zl has with linkers/lk/.
+The compile errors here were the exact same class already fixed once
+for vc when it was brought up, just not yet ported to zc's own gc.h/
+swt.c/txt.c:
+- swt.c's align()/maxround() were declared `long` locally but cc.h's
+  shared prototype is `int32` -- harmless on this 64-bit host where
+  long and int32 differ in width but not in practice, until the
+  mismatched prototype/definition pair becomes a hard "conflicting
+  types" error under a stricter compiler.
+- gc.h's swcmp() prototype was `(void*, void*)`, but pswt.c's actual
+  definition (shared, used by every cck-based compiler) is
+  `(const void*, const void*)` -- every other compiler's gc.h already
+  has the const-qualified version; zc's was just never updated.
+- gc.h declared `hintabsize` via the EXTERN macro (real definition in
+  whichever .c file #define's EXTERN away, here list.c), but mul.c
+  ALSO carries its own real, initialized definition (`int hintabsize =
+  nelem(hintab);`) -- two real definitions of the same symbol, a
+  multiple-definition link error once mul.o and list.o are both
+  linked. vc/gc.h already has the fix: a plain (non-EXTERN) `extern`
+  declaration with a "// defined in mul.c" comment, so mul.c stays the
+  sole owner. Unlike the l.h-wide EXTERN gap zl needed (notes above),
+  this is NOT a systemic issue across zc/gc.h's whole global block --
+  it's specific to hintabsize, because mul.c is the one file in this
+  frontend that defines a global outside the usual list.c-owns-
+  everything convention.
+
+Also had the same pre-rename '7' thechar leftover as zl (txt.c's
+ginit()), harmless to compile but printed "usage: 7c" until fixed.
+
+Verified: zc builds, links, and compiles a trivial `void main(void){}`
+without crashing, producing a .z object file. NOT yet verified: that
+the .z object it produces actually assembles/links/runs correctly
+through za/zl, or that any real (non-trivial) C construct codegens
+correctly -- zc's own cgen.c/reg.c/peep.c/mul.c are untouched beyond
+the two signature fixes above, unlike vc's, which went through actual
+bring-up debugging to get real programs running.
+
 What's actually verified vs. still open
 -------------------------------------------
 
@@ -212,10 +253,10 @@ tests/s/exit/exit_linux_alpha.s produces a real qemu-alpha-executable
 binary exiting 42, and tests/s/mini/hello_linux_alpha.s exercises
 .data placement and SB-relative addressing (the setSB/gp bug above)
 end to end, printing "Hello, world" under qemu-alpha. Both pass via
-`mk test` in tests/s/exit and tests/s/mini respectively.
+`mk test` in tests/s/exit and tests/s/mini respectively. zc builds and
+compiles trivial input (see its own section above) but is otherwise
+unexercised.
 
-Not yet done: zc (the C compiler) hasn't been brought up or exercised
-at all -- only the assembler+linker path has working end-to-end tests.
 HEADTYPE 0-3 (the native Plan9/Unix-alpha a.out formats) compile but
 have no test exercising them at runtime -- there's no alpha hardware
 or Plan9-native-alpha emulator available to run them under, unlike
