@@ -16,8 +16,7 @@ OFILES=\
         \
 	enam.$O\
 	elf.$O\
-
-#	compat.$O\
+	compat.$O\
 
 HFILES=	l.h $TOP/include/obj/z.out.h
 

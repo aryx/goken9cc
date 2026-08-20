@@ -8,6 +8,14 @@
 #define	EXTERN	extern
 #endif
 
+/* claude: elf.c (linkers/lk/elf.c) calls cput() as a real function call,
+ * so this macro (matching 6l/l.h's) has to be visible from l.h, not just
+ * as the CPUT() macro asm.c already had locally for its own use. */
+#define	cput(c)\
+	{ *cbp++ = c;\
+	if(--cbc <= 0)\
+		cflush(); }
+
 typedef	struct	Adr	Adr;
 typedef	struct	Sym	Sym;
 typedef	struct	Autom	Auto;
@@ -156,7 +164,7 @@ enum
 	MAXHIST		= 20,				/* limit of path elements for history symbols */
 };
 
-union
+EXTERN union
 {
 	struct
 	{
@@ -257,7 +265,6 @@ int	asmout(Prog*, Optab*);
 void	asmsym(void);
 long	atolwhex(char*);
 Prog*	brloop(Prog*);
-Biobuf	bso;
 void	buildop(void);
 void	buildrep(int, int);
 void	cflush(void);
@@ -321,6 +328,7 @@ int	relinv(int);
 long	rnd(long, long);
 void	sched(Prog*, Prog*);
 void	span(void);
+void	strnput(char*, int);
 void	vlput(vlong);
 void	undef(void);
 void	xdefine(char*, int, long);

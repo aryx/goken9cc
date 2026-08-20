@@ -8,7 +8,7 @@
 
 char	*noname		= "<none>";
 char	symname[]	= SYMDEF;
-char	thechar		= '7';
+char	thechar		= 'z';
 char	*thestring 	= "alpha";
 
 /*
@@ -31,6 +31,7 @@ main(int argc, char *argv[])
 	curtext = P;
 	HEADTYPE = -1;
 	INITTEXT = -1;
+	INITTEXTP = -1;
 	INITDAT = -1;
 	INITRND = -1;
 	INITENTRY = 0;
@@ -54,6 +55,11 @@ main(int argc, char *argv[])
 		if(a)
 			INITTEXT = atolwhex(a);
 		break;
+	case 'P':
+		a = ARGF();
+		if(a)
+			INITTEXTP = atolwhex(a);
+		break;
 	case 'D':
 		a = ARGF();
 		if(a)
@@ -75,7 +81,7 @@ main(int argc, char *argv[])
 	USED(argc);
 
 	if(*argv == 0) {
-		diag("usage: 7l [-options] objects");
+		diag("usage: zl [-options] objects");
 		errorexit();
 	}
 	if(!debug['9'] && !debug['B'] && !debug['U'])
@@ -131,6 +137,8 @@ main(int argc, char *argv[])
 			INITRND = 8;
 		break;
 	}
+	if (INITTEXTP == -1)
+		INITTEXTP = INITTEXT;
 	if(INITDAT != 0 && INITRND != 0)
 		print("warning: -D0x%lux is ignored because of -R0x%lux\n",
 			INITDAT, INITRND);
@@ -151,7 +159,7 @@ main(int argc, char *argv[])
 	pc = 0;
 	dtype = 4;
 	if(outfile == 0)
-		outfile = "7.out";
+		outfile = "z.out";
 	cout = create(outfile, 1, 0775);
 	if(cout < 0) {
 		diag("%s: cannot create", outfile);
@@ -658,7 +666,7 @@ loop:
 	o = bloc[0];		/* as */
 	if(o <= AXXX || o >= ALAST) {
 		diag("%s: line %ld: opcode out of range %d", pn, pc-ipc, o);
-		print("	probably not a .7 file\n");
+		print("	probably not a .z file\n");
 		errorexit();
 	}
 	if(o == ANAME) {

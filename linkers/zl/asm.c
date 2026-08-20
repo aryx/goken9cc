@@ -251,6 +251,61 @@ vlput(vlong l)
 	VLPUT(l);
 }
 
+/* claude: elf.c (linkers/lk/elf.c, shared across all linkers) picks its
+ * byte-order pair by symbol name (putl = lput / lputl, etc.), not via a
+ * parameter -- so both the BE and LE names must exist even though alpha
+ * is always ELFDATA2LSB and only the *l ones actually run. lput() above
+ * predates this and is little-endian (LPUT) despite the "BE-slot" name;
+ * left as-is since case 0-3 header emission above already depends on
+ * that behavior. wput/llput genuinely implement big-endian for symbol
+ * completeness only. */
+void
+wput(int32 w)
+{
+	CPUT(w>>8);
+	CPUT(w);
+}
+
+void
+wputl(int32 w)
+{
+	CPUT(w);
+	CPUT(w>>8);
+}
+
+void
+lputl(int32 l)
+{
+	LPUT(l);
+}
+
+void
+llput(vlong v)
+{
+	lputbe(v>>32);
+	lputbe(v);
+}
+
+void
+llputl(vlong v)
+{
+	lputl(v);
+	lputl(v>>32);
+}
+
+void
+strnput(char *s, int n)
+{
+	for(; *s && n > 0; s++){
+		cput(*s);
+		n--;
+	}
+	while(n > 0){
+		cput(0);
+		n--;
+	}
+}
+
 void
 cflush(void)
 {
