@@ -1,7 +1,12 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
-#include	"../7c/7.out.h"
+#include	<obj/z.out.h>
+#include	"../lk/elf.h"
+
+#ifndef	EXTERN
+#define	EXTERN	extern
+#endif
 
 typedef	struct	Adr	Adr;
 typedef	struct	Sym	Sym;
