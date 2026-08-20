@@ -26,7 +26,13 @@ test:V:
            echo $arch
            mk clean
            mk 'objtype='$arch
-           $TOP/scripts/qemu-runner $arch ./helloprintf.exe | cmp /dev/stdin helloprintf.expected.txt
+           $TOP/scripts/qemu-runner $arch ./helloprintf.exe > got_$arch.txt
+           if(! cmp -s got_$arch.txt helloprintf.expected.txt) {
+              echo 'FAIL '^$arch^': got vs expected diff below'
+              diff helloprintf.expected.txt got_$arch.txt
+           }
+           cmp got_$arch.txt helloprintf.expected.txt
+           rm -f got_$arch.txt
         }
 
 
