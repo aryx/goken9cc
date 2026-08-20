@@ -1,39 +1,42 @@
-</$objtype/mkfile
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
 
-TARG=7c
+TARG=zc
+LDLIBS=-lbio $BOOTLIBS
+
 OFILES=\
 	cgen.$O\
-	enam.$O\
 	list.$O\
 	machcap.$O\
 	peep.$O\
-	pgen.$O\
-	pswt.$O\
 	reg.$O\
 	sgen.$O\
 	swt.$O\
 	txt.$O\
 	mul.$O\
+        \
+	pgen.$O\
+	pswt.$O\
+	$TOP/linkers/zl/enam.$O\
 
-HFILES=\
-	gc.h\
-	7.out.h\
-	../cc/cc.h\
+HFILES=	gc.h $TOP/include/obj/z.out.h $TOP/compilers/cck/cc.h
 
-LIB=../cc/cc.a$O
+LIB= $TOP/compilers/cck/cc.a$O
 
-BIN=/$objtype/bin
-</sys/src/cmd/mkone
+<$TOP/mkfiles/mkone
 
 $LIB:
 	cd ../cc
-	mk install
-	mk clean
+	mk all
 
-%.$O: ../cc/%.c
-	$CC $CFLAGS ../cc/$stem.c
+# see 7c/mkfile for more info
+p%.$O: $TOP/compilers/cck/p%.c
+	$CC $CFLAGS $TOP/compilers/cck/p$stem.c
 
-t:V:	$O.out
-	$O.out -S t
-	$LD -o t.out t.$O
-	t.out
+#%.$O: ../cc/%.c
+#	$CC $CFLAGS ../cc/$stem.c
+
+#t:V:	$O.out
+#	$O.out -S t
+#	$LD -o t.out t.$O
+#	t.out

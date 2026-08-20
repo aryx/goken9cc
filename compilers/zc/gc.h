@@ -1,8 +1,8 @@
-#include	"../cc/cc.h"
-#include	"../7c/7.out.h"
+#include	"../cck/cc.h"
+#include	<obj/z.out.h>
 
 /*
- * 7c/alpha
+ * zc/alpha
  * DEC Alpha
  */
 #define	SZ_CHAR		1
