@@ -18,7 +18,7 @@ all:V: hello.exe io.exe dir.exe fd.exe mem.exe proc.exe args.exe env.exe ctime.e
 # the next run. stat_tmp.txt is stat.c's equivalent; dirread_tmp_d/ is
 # dirread.c's (a directory with two files and a subdirectory).
 clean:V:
-	rm -f *.[5678ijv] *.exe hello_macos_arm64.exe hello_macos_amd64.exe io_macos_arm64.exe io_macos_amd64.exe dir_macos_arm64.exe dir_macos_amd64.exe fd_macos_arm64.exe fd_macos_amd64.exe mem_macos_arm64.exe mem_macos_amd64.exe proc_macos_arm64.exe proc_macos_amd64.exe args_macos_arm64.exe args_macos_amd64.exe stat_macos_arm64.exe stat_macos_amd64.exe dir_tmp.txt stat_tmp.txt
+	rm -f *.[5678ijvz] *.exe hello_macos_arm64.exe hello_macos_amd64.exe io_macos_arm64.exe io_macos_amd64.exe dir_macos_arm64.exe dir_macos_amd64.exe fd_macos_arm64.exe fd_macos_amd64.exe mem_macos_arm64.exe mem_macos_amd64.exe proc_macos_arm64.exe proc_macos_amd64.exe args_macos_arm64.exe args_macos_amd64.exe stat_macos_arm64.exe stat_macos_amd64.exe dir_tmp.txt stat_tmp.txt
 	rm -rf dir_tmp_d dirread_tmp_d
 # claude: stat.exe/dirread.exe/fork.exe are deliberately NOT in all:V:
 # above -- unlike every other binary here, none of the three can be
