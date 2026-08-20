@@ -528,6 +528,73 @@ Verified: `mk 'objtype=alpha' 'cputype=alpha' install` in lib_core/libc
 completes cleanly; tests/c/hello_libc/hello.exe links, runs under
 qemu-alpha, and matches expected.txt; tests/c/mini and tests/c/mini2's
 own alpha targets re-verified with no regression from either fix
-above. The rest of tests/c/hello_libc's many other binaries (io/dir/
-fd/mem/proc/args/env/ctime/atexit/utfmisc/notify/alarm/stat/dirread/
-fork) have not been attempted yet for alpha -- todo.org has this.
+above.
+
+tests/c/hello_libc: all 16 binaries pass, four more real bugs found
+-------------------------------------------------------------------
+
+Extended coverage from just hello.exe to the whole suite (io/dir/fd/
+mem/proc/args/env/ctime/atexit/utfmisc/notify/alarm/stat/dirread/
+fork), added alpha to this mkfile's own ARCHS so `mk test` covers it
+going forward. Went from 6/16 to 16/16 passing, via four more bugs --
+all Alpha-ABI-specific, not codegen bugs like the ncast[] one above:
+
+1. arch/alpha/rt0.s: argc/argv were read at the wrong stack offset
+   (0(R30)/8(R30) instead of 8(R30)/16(R30)). zl's own noop.c
+   unconditionally inserts an 8-byte SUBQ+RA-save prologue for any
+   non-leaf TEXT function (its LEAF auto-detection only tracks JSRs,
+   and _main calls main/exit) -- silently shifting the kernel-provided
+   stack by 8 bytes before a single instruction of this file's own
+   code ran. hello.exe never caught this (it ignores its own argc);
+   args.exe (argc=4 expected) printed argc=0 and exposed it. Found via
+   qemu-alpha -d in_asm on the actual entry point: the first two real
+   instructions are the auto-inserted prologue, not this file's own
+   MOVQ. Same root cause, same fix shape, as arch/riscv64/rt0.s's own
+   "argc at 8(R2), not 0(R2)" comment (that arch's linker, ja, has an
+   analogous one-slot auto-push). Fixed by shifting this file's own
+   offsets by 8 to account for it.
+
+2. arch/alpha/sigrestore.s: same auto-prologue mechanism, but instead
+   of an offset bug it corrupted the real kernel-supplied return
+   address (there is no SA_RESTORER on this arch, so R26 at handler
+   entry IS the kernel's own default sigreturn trampoline address --
+   see this file's own comment), segfaulting notify.exe/alarm.exe.
+   Fixed by declaring `TEXT sigentry(SB), 1, $-8` instead of plain
+   `$0` -- the exact escape hatch arch/alpha/div.s's own _divq (etc,
+   also non-leaf) already uses: a $-8 frame makes noop.c's own
+   autosize computation (p->to.offset + 8) come out to exactly 0,
+   which forces the LEAF mark on regardless of the function's real
+   JSRs and skips the auto-prologue/epilogue entirely.
+
+3. syscall/os/linux/svc_alpha.s: alpha inherited not just OSF/1's
+   syscall *numbering* (see numbers_alpha.h's own header comment) but
+   also its legacy BSD-style *error-signaling convention* -- same
+   family as o32 mips (already documented and fixed in svc_mips.s):
+   on error, CALL_PAL leaves a POSITIVE errno in v0/R0 and signals
+   failure out-of-band in a3/R19 (0 success, nonzero error), not a
+   negative return value the way every other arch here works. Without
+   converting this, access() on a missing file, getwd() with a
+   too-small buffer, and open() on a just-removed file all silently
+   "succeeded" (dir.c/fd.c/proc.c, the first tests in this tree to
+   check a *failing* syscall's return value on alpha -- hello.c/io.c
+   never do). Fixed with the same a3-check-and-negate BEQ/SUBQ pattern
+   svc_mips.s already has, just under alpha's own register names (a3
+   = R19, one of a0-a5 = R16-R21, so it doubles as this function's own
+   incoming 4th syscall argument AND the kernel's post-syscall error
+   flag -- same dual-purpose-register shape as mips's a5/a3).
+
+4. pipe(2) on this same legacy-ABI family returns its two fds directly
+   in registers (v0/a4), not through the pointer argument every
+   generic-ABI arch's sys_pipe writes to -- _syscall6 only ever
+   surfaces v0/R0, so raw SYS_pipe can't go through it at all (fork.c's
+   pipe+fork+wait sub-test got 9 NUL bytes instead of the child's
+   "hello from child\n"). Same fix as numbers_mips.h/syscall_linux_
+   mips.h's own SYS_pipe2 substitute: switched to SYS_pipe2 (confirmed
+   at __NR_pipe2=488 in the same installed alpha-linux-gnu kernel
+   header this file's other numbers came from), a normal pointer+flags
+   syscall, wrapped in a _syspipe(fd) shim that calls it with flags=0.
+
+Verified: fresh `mk clean && mk 'objtype=alpha' 'cputype=alpha' install`
+in lib_core/libc, then tests/c/hello_libc's own `mk 'ARCHS=alpha' test`
+(the exact target `mk test` drives, including its own from-scratch
+libc.a rebuild) -- all 16 binaries pass end to end.
