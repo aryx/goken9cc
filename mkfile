@@ -15,7 +15,7 @@ DIRS= BOOT/lib9 \
   assemblers/7a linkers/7l compilers/7c \
   assemblers/va linkers/vl compilers/vc   machines/vi \
   assemblers/ia linkers/il compilers/ic \
-  assemblers/za linkers/zl \
+  assemblers/za linkers/zl compilers/zc \
   assemblers/ea linkers/el \
   debuggers/acid \
   utilities typesetting \
