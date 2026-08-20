@@ -281,6 +281,106 @@ all (unlike the dual-width ic/il), and blindly reusing that formula
 would have guessed 8 (matching arm64's own pointer width) when the
 real answer is 4.
 
+tests/c/mini2: SZ_IND=4, a genuine 64-bit-pointer bug inherited from the original source
+--------------------------------------------------------------------------------------------
+
+tests/c/mini2/helloprintf.c is the first real test with actual pointer
+arithmetic and multi-level function calls (printf's classic K&R
+varargs trick: `arg = (byte*)(&s+1);` in print_nofloat_no64.c, reading
+subsequent varargs by walking a raw byte pointer across the stack).
+Building it surfaced a chain of real 64-bit-pointer bugs in zc,
+starting with the same shape as the setSB/gp bug (notes above) but
+worse: this time in the *compiler*, not the linker, and load-bearing
+for any C code that does pointer arithmetic or passes pointers as
+non-first (stack) arguments -- not a narrow one-symbol special case.
+
+Root cause, found by re-tracing the exact same "truncated pointer,
+missing high bits vs. the real ~0x2000_00800xxx stack address"
+symptom with `qemu-alpha -d in_asm,cpu` again: compilers/zc/gc.h had
+`#define SZ_IND 4` -- pointers declared 4 bytes wide, on a machine
+where they're 8. Compare compilers/7c/gc.h (arm64, also 64-bit
+pointers): `SZ_IND 8`. compilers/vc/gc.h (mips32) and compilers/ic/
+gc.h (riscv32, `ic`'s SZ_IND is compile-time 4 for its rv32 default,
+with ginit() patching pointer-specific codegen at runtime for -j/rv64
+-- see below) are correctly 4, because THEIR pointers really are 4
+bytes; alpha's genuinely aren't.
+
+`git show f47294078:compilers/zc/gc.h` (the very first "Reintroducing
+alpha toolchain from Plan 9 4th ed" commit, before any work this
+project did) already has SZ_IND=4 -- this is not something introduced
+by za/zc/zl's bring-up here, it's inherited as-is from the original
+Plan 9 4th edition source. Best-evidence theory for why a real,
+hardware-testable bug like this could survive: Plan 9's own native
+formats (HEADTYPE 0-3 above) use small, fixed load addresses chosen by
+Plan 9's own kernel (HEADTYPE 2's INITTEXT=8224, for instance) --
+comfortably under 2^32 on any real process. This bug is only load-
+bearing once a pointer value needs its high 32 bits, which a classic
+Plan 9 process on real Alpha hardware plausibly never did. HEADTYPE 7
+(added in this bring-up, for Linux ELF) is the first thing that ever
+handed this compiler a modern-Linux-kernel-chosen stack address, which
+is why it surfaces only now, not because this bring-up broke something
+that used to work.
+
+Two more instances of the identical bug class, both in the same
+family as the setSB/gp fix (notes above): missing TIND from an
+`et == TVLONG || et == TUVLONG`-shaped check, so pointers fell through
+to the 32-bit path. compilers/zc/txt.c's gopcode() (OADD/OSUB and 8
+other arithmetic/shift/mul/div/mod cases -- fixed all 10 uniformly,
+following compilers/7c/txt.c's own isv() macro precedent, which
+explicitly folds TIND in alongside TVLONG/TUVLONG for this exact
+purpose) and gmove()'s memory load/store switches (fixed by adding
+`case TIND:` alongside `case TVLONG: case TUVLONG:` in both). Also
+directly precedented in compilers/ic/txt.c's own load/store switches
+-- `case TIND: a = thechar == 'j' ? AMOV : AMOVW;` -- ic needs the
+*same* fix conditionally, because rv64 (thechar=='j') has 64-bit
+pointers too; zc's version is unconditional since alpha is never
+anything but 64-bit. None of this is Alpha-specific special-casing:
+it's the same fix every 64-bit-pointer arch in this codebase already
+carries, just not yet ported to zc when it was reintroduced.
+
+Fixing SZ_IND and the gopcode()/gmove() TIND gaps did NOT fully
+resolve tests/c/mini2 by themselves -- two more sites needed the same
+class of fix before it passed:
+
+- compilers/zc/reg.c's own addmove() (the register allocator's spill/
+  fill instruction generator -- a THIRD codegen path, separate from
+  both gopcode() and gmove(), confirmed by finding `MOVL arg+8(FP),R4`
+  in `zc -S` output for a minimal repro even after the gopcode()/
+  gmove() fixes) had the identical missing-TIND bug at its own
+  `v->etype == TVLONG || v->etype == TUVLONG` check. Directly
+  precedented too: compilers/7c/reg.c's own addmove() already includes
+  TIND in the identical check.
+- tests/c/mini2/minilibc.h's `uintptr`/`intptr` typedefs were behind an
+  `#ifdef arm64 / amd64 / riscv64 / else-32-bit` chain with no `alpha`
+  branch at all, so alpha fell into the 32-bit `else` and got
+  `uintptr = uint32`. This is why %t/%d/%x (fixed-4-byte varargs, sized
+  by a literal `4` in print_nofloat_no64.c's vprintf()) worked once the
+  compiler-side bugs above were fixed, while %s/%p (pointer-sized
+  varargs, sized by `sizeof(uintptr)`) still crashed until this was
+  added -- a test-harness-side gap, not a zc bug, but the same root
+  cause (alpha's 64-bit pointers not being told apart from the 32-bit
+  archs) showing up a third, unrelated way.
+
+Also had to re-derive tests/c/mini/xwrite_alpha.s's and tests/c/mini2/
+linux_alpha.s's own hand-written FP offsets and widths (re-running
+`zc -S` on minimal repros) once SZ_IND was fixed: fixing the
+compiler's pointer width changed its own frame layout (a pointer
+argument now reserves/consumes a real 8-byte slot instead of 4), so
+offsets read off `zc -S` *before* the SZ_IND fix (int count+4(FP) in
+xwrite_alpha.s, char*buf+4(FP)/int count+8(FP) in linux_alpha.s) were
+stale afterward -- became +8(FP) and +8(FP)/+16(FP) respectively, the
+second one now also needing MOVQ instead of MOVL for the pointer.
+Concrete lesson: a hand-written asm stub's FP offsets are pinned to
+one specific compiler build's frame layout, not a property of the C
+signature alone -- re-verify with `zc -S` after any change to the
+compiler's own type-width tables, don't assume "it was confirmed
+correct" survives across a fix on the compiler side.
+
+All fixed: tests/c/mini2/helloprintf.exe now produces byte-for-byte
+correct output (matching helloprintf.expected.txt) under qemu-alpha,
+`mk test` in tests/c/mini2 passes for alpha alongside every other arch
+in ARCHS.
+
 What's actually verified vs. still open
 -------------------------------------------
 

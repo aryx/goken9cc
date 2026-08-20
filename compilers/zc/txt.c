@@ -604,6 +604,17 @@ gmove(Node *f, Node *t)
 			break;
 		case TVLONG:
 		case TUVLONG:
+		case TIND:
+			/* claude: TIND (pointer) was missing from this group,
+			 * same bug class as gopcode()'s isv()-less checks above
+			 * -- a pointer loaded from memory (e.g. a function's
+			 * incoming stack-passed pointer argument, or a spilled
+			 * local) got truncated to 32 bits via AMOVL. Found via
+			 * the mirror bug below (storing a pointer argument for
+			 * an outgoing call): printf()'s own "arg = &s+1" value,
+			 * computed correctly after the gopcode() fix, was then
+			 * stored via AMOVL when passed to vprintf() as its
+			 * second (stack) argument, truncating it right back. */
 			/* todo: optimise freg case? */
 			a = AMOVQ;
 #ifdef is_this_right
@@ -676,6 +687,7 @@ gmove(Node *f, Node *t)
 			break;
 		case TVLONG:
 		case TUVLONG:
+		case TIND:
 			a = AMOVQ;
 			break;
 		}
@@ -919,6 +931,17 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 			et = f1->type->etype;
 	}
 	a = AGOK;
+	/* claude: every "et == TVLONG || et == TUVLONG" check below picks
+	 * the 64-bit opcode variant; none of them included TIND (pointer),
+	 * so pointer arithmetic (e.g. printf()'s own "arg = &s+1" in
+	 * tests/c/mini2/print_nofloat_no64.c) compiled to the 32-bit ADDL,
+	 * which on Alpha sign-extends its 32-bit result into the 64-bit
+	 * register -- silently truncating any pointer/stack address that
+	 * doesn't fit in 32 bits (real stack addresses here are ~0x2000_
+	 * 00800xxx) into garbage, a segfault the moment that pointer got
+	 * dereferenced. compilers/7c/txt.c's own isv() macro
+	 * (TVLONG||TUVLONG||TIND) already treats pointers as needing the
+	 * 64-bit width for this exact set of ops; matched that here. */
 	switch(o) {
 	case OAS:
 		gmove(f1, t);
@@ -933,7 +956,7 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 		if(et == TDOUBLE)
 			a = AADDT;
 		else
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = AADDQ;
 		break;
 
@@ -946,7 +969,7 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 		if(et == TDOUBLE)
 			a = ASUBT;
 		else
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = ASUBQ;
 		break;
 
@@ -968,21 +991,21 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 	case OASLSHR:
 	case OLSHR:
 		a = ASRLL;
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = ASRLQ;
 		break;
 
 	case OASASHR:
 	case OASHR:
 		a = ASRAL;
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = ASRAQ;
 		break;
 
 	case OASASHL:
 	case OASHL:
 		a = ASLLL;
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = ASLLQ;
 		break;
 
@@ -1001,7 +1024,7 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 		if(et == TDOUBLE)
 			a = AMULT;
 		else
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = AMULQ;
 		break;
 
@@ -1014,28 +1037,28 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 		if(et == TDOUBLE)
 			a = ADIVT;
 		else
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = ADIVQ;
 		break;
 
 	case OASMOD:
 	case OMOD:
 		a = AMODL;
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = AMODQ;
 		break;
 
 	case OASLMOD:
 	case OLMOD:
 		a = AMODLU;
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = AMODQU;
 		break;
 
 	case OASLDIV:
 	case OLDIV:
 		a = ADIVLU;
-		if(et == TVLONG || et == TUVLONG)
+		if(et == TVLONG || et == TUVLONG || et == TIND)
 			a = ADIVQU;
 		break;
 

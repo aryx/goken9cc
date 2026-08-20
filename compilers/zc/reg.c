@@ -506,7 +506,15 @@ addmove(Reg *r, int bn, int rn, int f)
 		p1->as = AMOVB;
 	if(v->etype == TSHORT || v->etype == TUSHORT)
 		p1->as = AMOVW;
-	if(v->etype == TVLONG || v->etype == TUVLONG)
+	/* claude: TIND (pointer) was missing here too -- same bug class as
+	 * gopcode()/gmove() in txt.c (see their own comments and
+	 * docs/claude_notes/notes_arch_alpha.txt). This is reg.c's own
+	 * register-allocator spill/fill instruction generator (addmove(),
+	 * used for both directions via the f/!f split below), a separate
+	 * codegen path from gmove()'s -- fixing gmove() alone did not fix
+	 * this one. compilers/7c/reg.c's own addmove() already includes
+	 * TIND in the identical check, confirming this isn't optional. */
+	if(v->etype == TVLONG || v->etype == TUVLONG || v->etype == TIND)
 		p1->as = AMOVQ;
 	if(v->etype == TFLOAT)
 		p1->as = AMOVS;

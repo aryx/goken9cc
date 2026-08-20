@@ -1184,6 +1184,101 @@ speculatively -- it answers "what did this actually become" in one
 command, where source-reading only answers "what was this supposed to
 become".
 
+A worked example: a truncated pointer, from raw log to root cause
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Concretely, here's the actual sequence used to chase down zc's
+SZ_IND=4 bug (notes_arch_alpha.txt has the full story; this is the
+*mechanics* of finding it, generalizable to any "a pointer got
+corrupted somewhere" bug on any arch). The symptom: tests/c/mini2's
+helloprintf.exe (built for alpha) printed partial output then
+SIGSEGV'd. No compiler warning, no linker diagnostic -- it just
+crashed on dereferencing something.
+
+Step 1 -- capture a full trace to a file (never to the terminal; these
+run to hundreds or thousands of blocks and you'll want to grep/sed
+across the whole thing repeatedly):
+
+    rm -f /tmp/trace.log
+    qemu-alpha -d in_asm,cpu -D /tmp/trace.log ./helloprintf.exe
+
+Step 2 -- find where it actually faulted. `-d in_asm,cpu` doesn't print
+a "SIGSEGV here" marker; the log just stops at the last block that ran
+before the host kernel killed the process. So the crashing instruction
+is whatever the *last* `IN:` block in the file contains:
+
+    grep -c 'IN:' /tmp/trace.log        # how many blocks ran
+    tail -30 /tmp/trace.log             # the last block + final regs
+
+That last block ended on:
+
+    0x00010764:  ldl	v0,0(t6)
+    0x00010768:  beq	v0,0x1077c
+
+    PC     0000000000010764 ...
+    t6     0000000000800714 ...
+    sp     00000200008006a8 ...
+
+Step 3 -- decide whether the *value*, not just the instruction, is the
+bug. `ldl v0,0(t6)` is a completely ordinary load -- nothing wrong
+with the instruction itself. What's wrong is the address it's reading
+from: t6=0x0000000000800714, right next to sp=0x0000020000800...6a8.
+Same low bits (`...800714` vs `...8006xx`), missing high bits (sp has
+`0x2000` where t6 is `0x0000`). That similarity is the tell: t6 is
+*supposed to be* a real stack-relative address in the same region as
+sp, and it's been truncated to its low 32 bits. (If the two addresses
+looked unrelated, the theory would be different -- e.g. reading
+through a wild/uninitialized pointer instead of a truncated one; the
+"same low bits, different high bits" pattern specifically implicates a
+32-bit truncation.)
+
+Step 4 -- find where that value came from. Grep the *same* trace file
+for whatever set t6 (or in this case, the register it was copied
+from -- `or t4,zero,t6` a few lines earlier), and walk backward block
+by block:
+
+    grep -n 't6\|t4' /tmp/trace.log | less
+
+This walks back through `or v0,zero,t6` (a plain copy) to a `bsr`
+(call) into a small leaf function, and eventually to the actual
+producer:
+
+    0x000107c8:  lda	t4,48(sp)
+    0x000107cc:  addl	t4,0x4,t4
+
+`lda t4,48(sp)` computes t4 = sp+48 -- a full, correct 64-bit address
+(lda is a plain 64-bit add-immediate on Alpha, no truncation risk).
+The very next instruction, `addl t4,0x4,t4`, is the bug: `ADDL` is
+Alpha's 32-bit add, which sign-extends its 32-bit result into the full
+64-bit register -- silently discarding everything above bit 31. This
+is source-level `arg = (byte*)(&s+1);` in print_nofloat_no64.c's
+printf(): pointer arithmetic that should have compiled to `ADDQ`
+(64-bit add) or another `lda` (add-immediate), and instead compiled to
+`ADDL`.
+
+Step 5 -- confirm the fix by re-running the *same* recipe, not by
+reasoning that it "should" work. After fixing the compiler
+(compilers/zc/txt.c's gopcode(), see notes_arch_alpha.txt), rebuild,
+rebuild the test binary, retrace, and check that the exact same
+instruction site now reads `lda t4,4(t4)` instead of `addl t4,0x4,t4`
+-- and that the register no longer shows the truncated-vs-real-sp
+pattern from step 3. (In this specific bug, fixing this one site
+didn't fully fix the crash -- there were two more sites with the
+identical missing-TIND shape, found by repeating exactly this same
+five-step process against the new crash location each time. Expect a
+bug class like this to have more than one instance; re-run the whole
+procedure after each fix rather than assuming one instance found is
+the only one.)
+
+The reusable shape of this technique: (1) full trace to a file, (2)
+tail the file to find the fault site, (3) compare the bad value
+against a register you know is correct (sp, a known small text
+address, etc.) to classify *what kind* of corruption it is before
+guessing where, (4) grep-and-walk-backward through the *same trace*
+(not the source) to find the producing instruction, (5) re-verify
+after the fix by re-running steps 1-3, not by reading the diff and
+declaring victory.
+
 Trust a live trace over the source once the two disagree, and verify with instrumentation, not re-reading
 --------------------------------------------------------------------------------------------------------------
 

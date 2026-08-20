@@ -9,7 +9,8 @@
 #define	SZ_SHORT	2
 #define	SZ_INT		4
 #define	SZ_LONG		4
-#define	SZ_IND		4
+// was 4 in 4th edition! but an alpha is 64 bits pointer!
+#define	SZ_IND		8
 #define	SZ_FLOAT	4
 #define	SZ_VLONG	8
 #define	SZ_DOUBLE	8

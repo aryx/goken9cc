@@ -32,9 +32,14 @@ typedef	int64		intptr;
 typedef	uint64		uintptr;
 typedef	int64		intptr;
 #else
+#ifdef alpha
+typedef	uint64		uintptr;
+typedef	int64		intptr;
+#else
 // arm, arm_, mips, 386, riscv (rv32)
 typedef	uint32		uintptr;
 typedef int32		intptr;
+#endif
 #endif
 #endif
 #endif
