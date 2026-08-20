@@ -1,5 +1,5 @@
 #include	"l.h"
-#include	<ar.h>
+#include	<obj/ar.h>
 
 #ifndef	DEFAULT
 #define	DEFAULT	'9'
