@@ -39,10 +39,12 @@ struct  Exec
 
 #define HDR_MAGIC   0x00008000      /* header expansion */
 
+//coupling: a.out.h, TODO? factorize?
 #define _MAGIC(f, b)    ((f)|((((4*(b))+0)*(b))+7))
 #define I_MAGIC     _MAGIC(0, 11)       /* intel 386 */
 #define V_MAGIC     _MAGIC(0, 16)       /* mips 3000 BE */
 #define E_MAGIC     _MAGIC(0, 20)       /* arm */
+#define	L_MAGIC		_MAGIC(0, 23)		/* dec alpha */
 #define S_MAGIC     _MAGIC(HDR_MAGIC, 26)   /* amd64 */
 #define R_MAGIC     _MAGIC(HDR_MAGIC, 28)   /* arm64 */
 
@@ -68,11 +70,12 @@ struct  Sym
 
 /*
  *  Supported architectures:
- *      mips,
- *      i386,
- *      amd64,
+ *      mips
+ *      i386
+ *      amd64
  *      arm
  *      arm64
+ *		alpha
  *      TODO: riscv
  */
 //TODO: split in different enums with different names so clearer
@@ -85,6 +88,7 @@ enum
     MARM,
     MAMD64,
     MARM64,
+	MALPHA,
 
     /* types of executables */
     FNONE = 0,      /* unidentified */
@@ -98,6 +102,8 @@ enum
     FAMD64B,        /* 6.out bootable */
     FARM64, // arm64
     FARM64B, // arm64 bootable
+	FALPHA,			/* z.out */
+	FALPHAB,		/* DEC Alpha bootable */
 
     /* dissembler types */
     ANONE = 0,
@@ -106,6 +112,7 @@ enum
     AARM,
     AAMD64,
     AARM64,
+	AALPHA,
 
     /* object file types */
     ObjMips = 0,        /* .v */
@@ -114,6 +121,7 @@ enum
     ObjAmd64,       /* .6 */
     ObjArm64, // .7
     ObjRiscv, // .i
+    ObjAlpha, // .z
     Maxobjtype,
 
     /* symbol table classes */

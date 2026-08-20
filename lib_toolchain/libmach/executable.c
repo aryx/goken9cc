@@ -69,6 +69,7 @@ extern	Mach	mi386;
 extern	Mach	mamd64;
 extern	Mach	marm;
 extern	Mach	marm64;
+extern	Mach	malpha;
 //TODO: riscv?
 
 ExecTable exectab[] =
@@ -157,6 +158,15 @@ ExecTable exectab[] =
 		sizeof(Exec)+8,
 		nil,
 		commonllp64 },
+	{ L_MAGIC,			/* alpha z.out (used to be 7.out) */
+		"alpha plan 9 executable",
+		"alpha plan 9 dlm",
+		FALPHA,
+		1,
+		&malpha,
+		sizeof(Exec),
+		beswal,
+		common },
 	{ 0 },
 };
 
@@ -306,6 +316,12 @@ commonboot(Fhdr *fp)
 		fp->txtaddr = fp->entry;
 		fp->name = "amd64 plan 9 boot image";
 		fp->dataddr = _round(fp->txtaddr+fp->txtsz, mach->pgsize);
+		break;
+	case FALPHA:
+		fp->type = FALPHAB;
+		fp->txtaddr = (uint32)fp->entry;
+		fp->name = "alpha plan 9 boot image";
+		fp->dataddr = fp->txtaddr+fp->txtsz;
 		break;
 	default:
 		return;
