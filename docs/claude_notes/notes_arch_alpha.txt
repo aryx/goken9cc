@@ -440,3 +440,94 @@ single 13-byte string) has been exercised; anything requiring C_SECON/
 C_LECON/C_LACON's own bound-checked-but-uncached paths (large .data,
 .bss, or stack-frame offsets genuinely near the +-32KB BIG boundary)
 is unverified.
+
+tests/c/hello_libc: lib_core/libc builds for alpha, hello.exe passes
+----------------------------------------------------------------------
+
+Got lib_core/libc/ to build cleanly with objtype=alpha cputype=alpha
+(dozens of files across fmt/, utf/, math/, port/, os/linux/,
+syscall/os/linux/, arch/alpha/), and tests/c/hello_libc/hello.exe now
+links and runs correctly under qemu-alpha, matching expected.txt.
+Real per-arch files added: arch/alpha/setjmp.s (SP/RA only, matches
+include/core/exn.h's Jmpbuf, cross-checked against the real Plan9 4th
+edition ~/xxx/plan9/SRC/libc/alpha/setjmp.s for register choice),
+arch/alpha/rt0.s (argc/argv read directly off the raw kernel stack, no
+riscv64-style offset correction needed), arch/alpha/div.s (software
+_divq/_divqu/_modq/_modqu/_divl/_divlu/_modl/_modlu -- real Alpha
+hardware has no integer divide instruction -- ported near-verbatim
+from the real Plan9 divq.s/divl.s), arch/alpha/sigrestore.s,
+syscall/os/linux/numbers_alpha.h + svc_alpha.s (OSF/1-derived syscall
+numbers, individually verified against this host's installed
+alpha-linux-gnu cross headers), os/linux/stat_alpha.c (Kstat padding
+inferred, unverified beyond compile+link -- see that file's own
+comment). include/arch/alpha/u.h needed uintptr/intptr/usize widened
+to vlong (same class of bug as SZ_IND below) and the s8/u8/.../s64/u64
+family added (missing from the original import entirely).
+
+Two compiler/linker bugs found here are worth remembering beyond this
+one bring-up, since both are "a table that assumed int and pointer are
+the same width" mistakes -- the same root cause as the SZ_IND=4 bug
+higher up in this file, just recurring in two places that fix hadn't
+reached:
+
+1. compilers/zc/txt.c's ncast[] table (nocast()'s no-op-cast lookup)
+   still had TINT/TUINT/TLONG/TULONG carrying |BIND, and TIND's own row
+   was BLONG|BULONG|BIND -- i.e. it claimed int<->pointer needs no real
+   code, true back when SZ_IND was 4 (int and pointer both 32 bits) but
+   wrong once SZ_IND became 8. Symptom: `a[na]` (na a plain int index)
+   compiled to a bare 64-bit `MOVQ na-N(SP),R` instead of a 32-bit
+   MOVL+widen -- cgen.c's OCAST case (inserted by arith()'s own
+   int->pointer promotion for pointer arithmetic, sub.c) took nocast()'s
+   "no code needed" fast path straight into gmove() with the SOURCE
+   int's real memory operand but the DESTINATION pointer's width, so
+   the top 32 bits of the loaded register were whatever garbage
+   happened to be there. This one took a long debugging session (see
+   notes_debug_techniques.txt for the method: print()-based node
+   tracing rather than gdb, since it was chasing a Node's ->type field
+   through 3 layers of shared cc/ typecheck code before finding the
+   backend-local table). Fixed by matching compilers/7c/txt.c's own
+   ncast[]: TIND joins TVLONG/TUVLONG's class (all genuinely 64-bit
+   here), not TINT/TLONG's. Two earlier fix attempts in this same
+   session turned out to be real but insufficient on their own: txt.c's
+   gmove() load-branch temp-register mistyping (regalloc(&nod,t,t) vs
+   f) and reg.c's paint3() AMOVL->AMOVQ upgrade being gated on
+   typechlp[] (chars/shorts/ints/longs/pointers) instead of just TIND
+   -- both were real bugs (now fixed, matching 7c), just not the one
+   actually firing for this specific construct.
+
+2. linkers/zl/obj.c's `main()`: real Alpha hardware has no integer
+   divide, so zc emits ADIVQ/AMODQ/etc pseudo-ops that zl's noop.c
+   initdiv()/divsubr() expand into calls to div.s's _divq and 7
+   siblings -- but loadlib()'s archive-scanning loop (objfile() on
+   each -lXXX/`#pragma lib` library) only pulls in a .a member that
+   resolves an ALREADY-SXREF symbol, and it runs before noops() (which
+   is the only thing that ever lookup()s these 8 names for real). Fix
+   needs two halves, not one: (a) pre-mark all 8 SXREF before the
+   first loadlib() call, mirroring INITENTRY's own marking just above
+   it, so a real divide's div.z gets pulled from libc.a in time for
+   initdiv() to find it -- initdiv() itself doesn't lazily resolve;
+   it walks the already-linked firstp list for a matching ATEXT and
+   diag()s "undefined: _divq" immediately if the code isn't already
+   there. (b) right after noops() returns, if prog_divq (l.h's own
+   EXTERN, set by initdiv() the first time ANY of the 8 pseudo-ops is
+   seen) is still P, reset all 8 symbols' ->type back to 0 -- a
+   program that never divides never calls initdiv() at all, and
+   without this the pre-marking from (a) sits there as an unresolved
+   SXREF forever, which undef() (the final pass) then rejects even on
+   links with no division and no libc.a to resolve it from at all
+   (broke tests/c/mini2's helloprintf.exe, a libprint.a-only test,
+   as a regression while chasing (a) in isolation -- fixed by adding
+   (b), not by reverting (a)). Also fixed, same file: the `-lXXX`
+   command-line-flag path in objfile() was still guessing
+   /usr/%clib/lib%s.a or /%s/lib/lib%s.a instead of using findlib()
+   (the -L search list) the way addlib()'s own #pragma-lib path
+   already had been fixed to -- needed for `zl ... -lc` to find
+   ROOT/arch/alpha/lib/libc.a at all.
+
+Verified: `mk 'objtype=alpha' 'cputype=alpha' install` in lib_core/libc
+completes cleanly; tests/c/hello_libc/hello.exe links, runs under
+qemu-alpha, and matches expected.txt; tests/c/mini and tests/c/mini2's
+own alpha targets re-verified with no regression from either fix
+above. The rest of tests/c/hello_libc's many other binaries (io/dir/
+fd/mem/proc/args/env/ctime/atexit/utfmisc/notify/alarm/stat/dirread/
+fork) have not been attempted yet for alpha -- todo.org has this.
