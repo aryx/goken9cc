@@ -1056,7 +1056,20 @@ paint3(Reg *r, int bn, long rb, int rn)
 			if(debug['R'])
 				print("%P", p);
 			addreg(&p->from, rn);
-			if(p->as == AMOVL && typechlp[var[bn].etype])
+			/* claude: was `typechlp[var[bn].etype]`, which fires for
+			 * TCHAR/TSHORT/TINT/TLONG (and their unsigned variants) as
+			 * well as TIND -- so ANY narrow int variable's AMOVL got
+			 * upgraded to a 64-bit AMOVQ, not just pointers. Found via
+			 * a[na] (plain int na) getting loaded as `MOVQ na-N(SP)`
+			 * and landing at a non-8-byte-aligned frame offset zl's
+			 * alignment check correctly rejected. This mechanism only
+			 * exists in zc/reg.c (checked: 7c/6c/8c/5c/vc/ic have no
+			 * such upgrade in their own paint3()); the addmove() fix a
+			 * few dozen lines up in this same file already narrowed
+			 * an identical historical typechlp-vs-TIND confusion to
+			 * `== TIND` alone (see its own comment) -- matching that
+			 * here instead of widening every char/short/int/long. */
+			if(p->as == AMOVL && var[bn].etype == TIND)
 				p->as = AMOVQ;
 			if(debug['R'])
 				print("\t.c%P\n", p);
@@ -1065,7 +1078,7 @@ paint3(Reg *r, int bn, long rb, int rn)
 			if(debug['R'])
 				print("%P", p);
 			addreg(&p->to, rn);
-			if(p->as == AMOVL && typechlp[var[bn].etype])
+			if(p->as == AMOVL && var[bn].etype == TIND)
 				p->as = AMOVQ;
 			if(debug['R'])
 				print("\t.c%P\n", p);

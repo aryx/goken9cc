@@ -1,0 +1,95 @@
+// Declarative syscall spec for linux/alpha, in the spirit of
+// GO/pkg/syscall's "//sys name(args) (ret) = SYS_NAME" comments (see
+// GO/pkg/syscall/syscall_linux.go), parsed by scripts/mksyscall.sh into
+// zsyscall_linux_alpha.c. Every wrapper just calls the one generic
+// _syscall6 trampoline (lib_core/libc/syscall/os/linux/svc_alpha.s), so
+// adding a syscall here is the only step needed -- no new assembly.
+//
+// Same syscall SET as syscall_linux_amd64.decl (see numbers_alpha.h's
+// own header comment for why: alpha kept every legacy syscall it ever
+// had, unlike arm64/riscv64's generic-ABI-only shims), just alpha's
+// own numbers underneath. lib_core/libc/mkfile builds this one with
+// SYSCALLARG=vlong too (see scripts/mksyscall.sh's own comment, and
+// syscall_linux_alpha.h's): a plain `long` is only 4 bytes even on
+// this 64-bit arch, so a pointer argument (e.g. write()'s buf) cast
+// through `(long)` would be silently truncated before ever reaching
+// _syscall6.
+
+//sys write(int fd, void *buf, long n) long = SYS_write
+//sys read(int fd, void *buf, long n) long = SYS_read
+//sys close(int fd) int = SYS_close
+// lseek's return value is a real 64-bit off_t, so this one routes
+// through _syscall6v (rettype vlong), not the default _syscall6 -- see
+// syscall_linux_amd64.decl's identical comment.
+//sys lseek(int fd, vlong offset, int whence) vlong = SYS_lseek:_syscall6v
+// _sysopen, not open: named apart from Plan9's own 2-arg open(char*,int)
+// (see include/os/file.h) since this is the raw 3-arg POSIX shape
+// (path,flags,mode) the kernel actually expects -- os/linux/open.c
+// translates Plan9's OREAD/OWRITE/OTRUNC/... bits into O_* flags and
+// calls this.
+//sys _sysopen(void *path, int flags, int mode) long = SYS_open
+// see syscall_linux_386.decl's identical comment: chdir needs no glue,
+// while _sysunlink/_sysrmdir/_sysmkdir are raw shapes that port/remove.c
+// and os/$GOOS/open.c bridge into Plan9's remove() and create().
+//sys _sysunlink(char *path) int = SYS_unlink
+//sys _sysrmdir(char *path) int = SYS_rmdir
+//sys _sysmkdir(char *path, int mode) int = SYS_mkdir
+// access: Plan9's mode bits (AEXIST/AEXEC/AWRITE/AREAD = 0/1/2/4,
+// include/os/file.h) are numerically identical to POSIX's
+// F_OK/X_OK/W_OK/R_OK, so like chdir this needs no translation and is
+// generated straight into its public name.
+//sys access(char *path, int mode) int = SYS_access
+// dup is _sys-prefixed because Plan9's dup(oldfd, newfd) is ONE call
+// covering what POSIX splits in two: newfd == -1 means "lowest free
+// fd" (POSIX dup), anything else is dup2. port/dup.c bridges them.
+//sys _sysdup(int fd) int = SYS_dup
+//sys _sysdup2(int oldfd, int newfd) int = SYS_dup2
+//sys chdir(char *path) int = SYS_chdir
+//sys exit(int code) void = SYS_exit
+// brk: the raw kernel primitive -- see syscall_linux_386.decl's comment
+// for the return-convention story (os/linux/brk.c bridges it to
+// include/os/mem.h's Plan9-shaped 0/-1 brk(), and port/sbrk.c sits on
+// top of that). _syscall6v for the same reason lseek above needs it.
+//sys _sysbrk(void *addr) uintptr = SYS_brk:_syscall6v
+// the "small tier": getpid, getwd, time/nsec, sleep.
+//sys getpid(void) int = SYS_getpid
+// getcwd is _sys-prefixed because the shapes differ twice over: POSIX
+// returns the LENGTH written (or -errno), Plan9's getwd() returns the
+// buffer (or nil). os/linux/getwd.c bridges it.
+//sys _sysgetcwd(char *buf, ulong size) long = SYS_getcwd
+// clock_gettime/clock_nanosleep rather than gettimeofday/nanosleep --
+// see syscall_linux_amd64.decl's identical comment for why (an 8+8
+// vlong-shaped timespec on every arch, y2038-correct).
+//sys _sysclockgettime(int clockid, void *ts) int = SYS_clock_gettime
+//sys _sysclocknanosleep(int clockid, int flags, void *req, void *rem) int = SYS_clock_nanosleep
+// the stat family (Tier 3). alpha is 64-bit-native throughout, so like
+// amd64 (and unlike 386/arm/mips), ftruncate takes its length as one
+// plain vlong argument -- no register-pair split needed.
+//sys _sysfstat(int fd, void *buf) int = SYS_fstat
+//sys _sysfchmod(int fd, int mode) int = SYS_fchmod
+//sys _sysftruncate(int fd, vlong length) int = SYS_ftruncate
+// dirread's two raw calls (Tier 3.5) -- see syscall_linux_386.decl's
+// identical comment on the openat naming.
+//sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
+//sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
+// renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
+//sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2
+// Tier 4 process control -- see syscall_linux_386.decl's identical
+// comment on why these stay _sys-prefixed.
+//sys _sysfork(void) int = SYS_fork
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+//sys _syspipe(int *fd) int = SYS_pipe
+
+// Tier 6 notification (docs/claude_notes/plan_syscalls.txt). See
+// numbers_alpha.h's own header comment: the syscall numbers below are
+// confirmed, but Ksigaction's exact field layout is not -- unverified
+// beyond "compiles, links, and doesn't obviously crash".
+//sys _syskill(int pid, int sig) int = SYS_kill
+//sys _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize) int = SYS_rt_sigaction
+
+// rc self-hosting's Isatty() (os/linux/isatty.c).
+//sys _sysioctl(int fd, ulong request, void *arg) int = SYS_ioctl
+
+// alarm() (os/linux/alarm.c).
+//sys _syssetitimer(int which, void *new, void *old) int = SYS_setitimer

@@ -562,11 +562,11 @@ HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 # output is what lets goken cross-compile syscall wrappers for an OS
 # you don't have. After editing a .decl, regenerate and commit the
 # diff in the same change.
-# arm64/amd64/riscv64 need vlong-cast syscall args (see
+# arm64/amd64/riscv64/alpha need vlong-cast syscall args (see
 # scripts/mksyscall.sh's own comment). This is NOT just a riscv64
 # quirk, despite how it was first described here: every compiler in
 # this tree defines `long` as 4 bytes (SZ_LONG in compilers/*c/gc.h),
-# on every arch, including these three -- it's only the ones whose
+# on every arch, including these four -- it's only the ones whose
 # pointers are ALSO 4 bytes (386/arm/mips/riscv32: SZ_IND==SZ_LONG)
 # that get away with the plain `long` prototype below. arm64 and
 # amd64 have 8-byte pointers (SZ_IND=8) with that same 4-byte `long`,
@@ -576,11 +576,14 @@ HFILES=$TOP/include/libc.h $TOP/include/arch/$cputype/u.h
 # slot XNU/dyld doesn't happen to leave zeroed, where a fresh Linux
 # process stack did by luck), not via -S inspection; see
 # docs/claude_notes/notes_libc_selfhost.txt for the write-up, including
-# why this was masked on Linux this whole time. mips/riscv/386/arm's
-# `long` is genuinely pointer-wide (SZ_IND==SZ_LONG==4 for all of
-# them), so they're unaffected and keep the plain `long` prototype.
+# why this was masked on Linux this whole time. alpha's own SZ_IND=8
+# bug (compilers/zc/gc.h, once wrongly 4 -- see
+# docs/claude_notes/notes_arch_alpha.txt) is now fixed the same way,
+# so it joins this list too. mips/riscv/386/arm's `long` is genuinely
+# pointer-wide (SZ_IND==SZ_LONG==4 for all of them), so they're
+# unaffected and keep the plain `long` prototype.
 syscall/os/$GOOS/zsyscall_${GOOS}_$cputype.c:	syscall/os/$GOOS/syscall_${GOOS}_$cputype.decl
-	if(~ $cputype riscv64 arm64 amd64)
+	if(~ $cputype riscv64 arm64 amd64 alpha)
 		$TOP/scripts/mksyscall.sh $prereq vlong > $target
 	if not
 		$TOP/scripts/mksyscall.sh $prereq > $target

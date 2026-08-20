@@ -230,6 +230,36 @@ main(int argc, char *argv[])
 	} else
 		lookup(INITENTRY, 0)->type = SXREF;
 
+	/* claude: force _divq/_divqu/_modq/_modqu/_divl/_divlu/_modl/
+	 * _modlu (arch/alpha/div.s, real Alpha hardware has no integer
+	 * divide) to look like ordinary undefined references BEFORE any
+	 * archive gets scanned below -- same shape as INITENTRY's own
+	 * SXREF marking just above. This has to happen before loadlib(),
+	 * not after: noops()'s own initdiv() (noop.c) doesn't lazily
+	 * lookup()+resolve these the way an ordinary undefined reference
+	 * does -- it walks the ALREADY-linked firstp list for a matching
+	 * ATEXT and diag()s immediately if one isn't already there, so
+	 * div.z's code has to already be part of the program by the time
+	 * initdiv() runs. loadlib()'s own archive-scanning loop only pulls
+	 * in .a members that resolve an already-SXREF symbol, so without
+	 * this upfront marking div.z inside libc.a was never selected and
+	 * every real division/modulo in the program linked as "undefined:
+	 * _divq" and 7 siblings. See the cleanup after noops() below for
+	 * the other half of this fix: undoing this mark on programs that
+	 * never actually divide, so it doesn't turn into a spurious
+	 * undef() error on links (e.g. tests/c/mini2's, no -lc at all)
+	 * that have nothing to resolve it from. Found building
+	 * tests/c/hello_libc's hello.exe (fmt/*.c's own integer-formatting
+	 * code divides). */
+	lookup("_divq", 0)->type = SXREF;
+	lookup("_divqu", 0)->type = SXREF;
+	lookup("_modq", 0)->type = SXREF;
+	lookup("_modqu", 0)->type = SXREF;
+	lookup("_divl", 0)->type = SXREF;
+	lookup("_divlu", 0)->type = SXREF;
+	lookup("_modl", 0)->type = SXREF;
+	lookup("_modlu", 0)->type = SXREF;
+
 	while(*argv)
 		objfile(*argv++);
 	if(!debug['l'])
@@ -247,6 +277,31 @@ main(int argc, char *argv[])
 	if(firstp == P)
 		goto out;
 	noops();
+	/* claude: undo the _divq/etc SXREF pre-marking above for programs
+	 * that never actually divide. initdiv() (noop.c) only ever runs
+	 * (setting prog_divq et al away from its P/nil initial value) the
+	 * first time noops() encounters a real ADIVQ/AMODQ/... pseudo-op;
+	 * if that never happened, these 8 symbols are still sitting SXREF
+	 * purely from this file's own pre-marking, with nothing in the
+	 * program that will ever resolve or even look at them again --
+	 * undef() below would otherwise reject e.g. tests/c/mini2's
+	 * helloprintf.exe (no -lc, no division, nothing to pull div.z
+	 * from) even though it never needed these at all. If initdiv() DID
+	 * run, leave things as they are: on success the symbols are
+	 * already properly defined (non-SXREF) from the archive pull-in
+	 * above, and on failure initdiv() has already diag()'d its own
+	 * clearer "undefined: _divq"-style message, so there's nothing
+	 * useful to undo. */
+	if(prog_divq == P) {
+		lookup("_divq", 0)->type = 0;
+		lookup("_divqu", 0)->type = 0;
+		lookup("_modq", 0)->type = 0;
+		lookup("_modqu", 0)->type = 0;
+		lookup("_divl", 0)->type = 0;
+		lookup("_divlu", 0)->type = 0;
+		lookup("_modl", 0)->type = 0;
+		lookup("_modlu", 0)->type = 0;
+	}
 	dodata();		/* is before follow() on other arch */
 	span();
 	asmb();
@@ -345,10 +400,19 @@ objfile(char *file)
 	char *e, *start, *stop;
 
 	if(file[0] == '-' && file[1] == 'l') {
-		if(debug['9'])
-			snprint(name, sizeof name, "/%s/lib/lib%s.a", thestring, file+2);
-		else
-			snprint(name, sizeof name, "/usr/%clib/lib%s.a", thechar, file+2);
+		/* claude: search the -L list (findlib(), same as addlib()'s
+		 * own fix a few lines up in this file) instead of guessing
+		 * /usr/%clib or /%s/lib -- matching vl/il's own objfile().
+		 * Found building tests/c/hello_libc/hello.exe: `zl -lc`
+		 * needs to find ROOT/arch/alpha/lib/libc.a via -L, not a
+		 * hardcoded path that doesn't exist on this host. */
+		snprint(pname, sizeof pname, "lib%s.a", file+2);
+		e = findlib(pname);
+		if(e == nil) {
+			diag("cannot find library: %s", file);
+			errorexit();
+		}
+		snprint(name, sizeof name, "%s/%s", e, pname);
 		file = name;
 	}
 	if(debug['v'])

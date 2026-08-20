@@ -8,5 +8,17 @@ AR=iar
 
 CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/alpha
 
-# see mkfiles/386/mkfile's identical ARCHEXTRAOFILES comment.
-ARCHEXTRAOFILES=arch/alpha/getcallerpc.$O arch/alpha/setjmp.$O
+# see mkfiles/386/mkfile's identical ARCHEXTRAOFILES comment. No
+# getcallerpc.$O (unlike the original import's ARCHEXTRAOFILES, which
+# listed one that never existed): alpha isn't excluded from
+# port/getcallerpc.c's own #ifdef (only cputype386/amd64/arm get a
+# real per-arch implementation there), so the portable `return 0;`
+# fallback already applies here, same as arm64/mips/riscv/riscv64.
+#
+# div.$O: real Alpha hardware has no integer divide instruction at
+# all (unlike arm, whose own div.$O is the same kind of gap but for a
+# different reason -- see that mkfile's own comment), so zc's ADIVQ/
+# AMODQ/ADIVL/AMODL pseudo-ops get expanded by linkers/zl/noop.c's own
+# divsubr() into a JSR to _divq/_modq/_divl/_modl (etc, looked up by
+# name) -- see arch/alpha/div.s's own header comment.
+ARCHEXTRAOFILES=arch/alpha/setjmp.$O arch/alpha/div.$O

@@ -651,10 +651,34 @@ gmove(Node *f, Node *t)
 			a = AMOVWU;
 			break;
 		}
-		if(typechlp[ft] && typeilp[tt])
-			regalloc(&nod, t, t);
-		else
-			regalloc(&nod, f, t);
+		/* claude: was `if(typechlp[ft] && typeilp[tt]) regalloc(&nod,
+		 * t, t); else regalloc(&nod, f, t);` -- allocating the temp
+		 * register typed as the DESTINATION (t) instead of the
+		 * SOURCE (f) whenever ft/tt fell in these (overlapping,
+		 * long-vs-pointer-conflating) classes. `a` above is already
+		 * correctly chosen from ft (the real source width, e.g.
+		 * AMOVL for a plain int), but reg.c's own register-allocator
+		 * pass later upgrades any AMOVL targeting a register it
+		 * tracks as "typechlp" (long/pointer-class, its own
+		 * TVLONG||TUVLONG||TIND check -- see that file's own
+		 * comment) to AMOVQ, using the DESTINATION's forced type.
+		 * For plain int-to-int loads ft==tt so this was invisible;
+		 * it broke the moment a narrower int got loaded into a
+		 * temp deliberately mistyped as a pointer for register-class
+		 * reasons ("l used for type, so shifts work", cgen.c's own
+		 * OADD/OMUL comment) -- e.g. `a[na]` (char* + int): na's
+		 * 4-byte value got read via an 8-byte MOVQ, sometimes at a
+		 * non-8-aligned stack offset the linker then refused
+		 * outright ("bad alignment"). compilers/7c/txt.c's own
+		 * gmove() has no such branch at all -- always regalloc(&nod,
+		 * f, t) -- confirmed via a direct 7c -S probe on the exact
+		 * same construct emitting the correct MOVW. Matched that
+		 * here: the temp register that receives the freshly-loaded
+		 * value must be typed like what's actually being loaded (f),
+		 * not like the eventual destination (t) -- the second
+		 * gmove(&nod, t) call right below already handles widening
+		 * nod into t's real type correctly. */
+		regalloc(&nod, f, t);
 		gins(a, f, &nod);
 		gmove(&nod, t);
 		regfree(&nod);
@@ -1304,6 +1328,22 @@ schar	ewidth[NTYPE] =
 	SZ_INT,		/* [TENUM] */
 };
 
+/* claude: [TINT]/[TUINT]/[TLONG]/[TULONG] used to also carry |BIND, and
+ * [TIND] was BLONG|BULONG|BIND (no BVLONG/BUVLONG) -- i.e. this table
+ * treated int/long and pointer as the SAME, no-op-castable width class.
+ * That was true under the original import's SZ_IND=4 (32-bit pointers),
+ * but this session's own SZ_IND=4->8 fix (see u.h's own comment,
+ * docs/claude_notes/notes_arch_alpha.txt) made TIND an 8-byte type while
+ * TLONG/TINT stayed 4 bytes -- this table was never updated to match,
+ * so nocast(TINT, TIND) still claimed "no code needed" for a real
+ * 4-byte-to-8-byte widening. Found via a[na] (na a plain int index):
+ * cgen.c's OCAST case took the nocast() fast path straight to
+ * cgen(l, nn) with nn typed TIND, emitting a bare 32-bit MOVL into a
+ * register the rest of the pointer-arithmetic code then treated as a
+ * full 64-bit value -- upper 32 bits whatever garbage was already
+ * there. Matched compilers/7c/txt.c's own ncast[] here: TIND joins
+ * TVLONG/TUVLONG's class (all real 64-bit-wide on this arch), not
+ * TINT/TLONG's. */
 long	ncast[NTYPE] =
 {
 	0,				/* [TXXX] */
@@ -1311,15 +1351,15 @@ long	ncast[NTYPE] =
 	BCHAR|BUCHAR,			/* [TUCHAR] */
 	BSHORT|BUSHORT,			/* [TSHORT] */
 	BSHORT|BUSHORT,			/* [TUSHORT] */
-	BINT|BUINT|BLONG|BULONG|BIND,	/* [TINT] */
-	BINT|BUINT|BLONG|BULONG|BIND,	/* [TUINT] */
-	BINT|BUINT|BLONG|BULONG|BIND,	/* [TLONG] */
-	BINT|BUINT|BLONG|BULONG|BIND,	/* [TULONG] */
-	BVLONG|BUVLONG,			/* [TVLONG] */
-	BVLONG|BUVLONG,			/* [TUVLONG] */
+	BINT|BUINT|BLONG|BULONG,	/* [TINT] */
+	BINT|BUINT|BLONG|BULONG,	/* [TUINT] */
+	BINT|BUINT|BLONG|BULONG,	/* [TLONG] */
+	BINT|BUINT|BLONG|BULONG,	/* [TULONG] */
+	BVLONG|BUVLONG|BIND,		/* [TVLONG] */
+	BVLONG|BUVLONG|BIND,		/* [TUVLONG] */
 	BFLOAT,				/* [TFLOAT] */
 	BDOUBLE,			/* [TDOUBLE] */
-	BLONG|BULONG|BIND,		/* [TIND] */
+	BVLONG|BUVLONG|BIND,		/* [TIND] */
 	0,				/* [TFUNC] */
 	0,				/* [TARRAY] */
 	0,				/* [TVOID] */

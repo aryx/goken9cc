@@ -95,6 +95,9 @@
 #ifdef riscv64
 #include "syscall/os/linux/numbers_riscv64.h"
 #endif
+#ifdef alpha
+#include "syscall/os/linux/numbers_alpha.h"
+#endif
 
 extern int _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize);
 extern int _syskill(int pid, int sig);
