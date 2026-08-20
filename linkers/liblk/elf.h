@@ -46,6 +46,12 @@ enum {
 	MIPS = 8,		/* Mips R2000 */
 	S370 = 9,		/* Amdhal	*/
 	MIPSR4K = 10,		/* Mips R4000 */
+	/* claude: NOT the officially-registered EM_ALPHA (41) -- Linux's
+	 * Alpha port (and so qemu-alpha) actually expects this legacy
+	 * pre-standardization value (glibc's elf.h calls 41 EM_FAKE_ALPHA
+	 * and this one EM_ALPHA); using 41 produces a binary qemu-alpha
+	 * rejects as "Invalid ELF image for this architecture". */
+	ALPHA = 0x9026,		/* Alpha (Linux/glibc's EM_ALPHA, not the registered 41) */
 	SPARC64 = 18,		/* Sun SPARC v9 */
 	POWER = 20,		/* PowerPC */
 	POWER64 = 21,		/* PowerPC64 */

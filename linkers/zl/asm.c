@@ -120,6 +120,13 @@ asmb(void)
 	case 3:
 		seek(cout, HEADR+textsize, 0);
 		break;
+	case 7:
+		/* claude: ELF Linux requires vaddr mod page == file offset
+		 * mod page, so the data segment starts at a page boundary
+		 * (matching il/vl's own HEADTYPE 7 -- see elf.c's phdr call
+		 * below for the paired computation). */
+		seek(cout, rnd(HEADR+textsize, INITRND), 0);
+		break;
 	}
 	for(t = 0; t < datsize; t += sizeof(buf)-100) {
 		if(datsize-t > sizeof(buf)-100)
@@ -142,6 +149,9 @@ asmb(void)
 		case 1:
 		case 3:
 			seek(cout, HEADR+textsize+datsize, 0);
+			break;
+		case 7:
+			seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
 			break;
 		}
 		if(!debug['s'])
@@ -228,6 +238,10 @@ asmb(void)
 		lputbe(entryvalue());		/* va of entry */
 		lputbe(0L);
 		lputbe(lcsize);
+		break;
+	case 7:
+		debug['S'] = 1;			/* symbol table */
+		elf64(ALPHA, ELFDATA2LSB, 0, nil);
 		break;
 	}
 	cflush();

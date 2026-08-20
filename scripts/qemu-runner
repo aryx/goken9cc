@@ -20,11 +20,11 @@
 # Usage: qemu-runner <arch> <binary> [args...]
 #
 # <arch> is one of goken's arch tokens, as used for $objtype or as the
-# _<arch> suffix on tests/s/*/*.s file names: 386 386_ amd64 amd64_ arm
-# arm_ arm64 mips riscv riscv64. The '_' suffixed variants select a different
-# toolchain lineage (the goken/src-cmd lineage, built as 5ag/5lg etc.)
-# but produce code for the same real machine, so they share a qemu
-# binary with their base arch.
+# _<arch> suffix on tests/s/*/*.s file names: 386 386_ amd64 amd64_ alpha
+# arm arm_ arm64 mips riscv riscv64. The '_' suffixed variants select a
+# different toolchain lineage (the goken/src-cmd lineage, built as
+# 5ag/5lg etc.) but produce code for the same real machine, so they
+# share a qemu binary with their base arch.
 
 set -e
 
@@ -34,6 +34,7 @@ shift
 case $arch in
 386|386_)       qemu=qemu-i386 ;;
 amd64|amd64_)   qemu=qemu-x86_64 ;;
+alpha)          qemu=qemu-alpha ;;
 arm|arm_)       qemu=qemu-arm ;;
 arm64)          qemu=qemu-aarch64 ;;
 mips)           qemu=qemu-mips ;;

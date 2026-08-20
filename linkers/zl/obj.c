@@ -136,6 +136,17 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 8;
 		break;
+	case 7:	/* elf executable (linux) -- claude: same layout as il/vl's
+		 * own HEADTYPE 7, see linkers/lk/elf.c. alpha linux's page
+		 * size is 8192, not the 4096 il/vl default to. */
+		HEADR = rnd(Ehdr64sz+3*Phdr64sz, 16);
+		if(INITTEXT == -1)
+			INITTEXT = 0x120000000LL + HEADR;
+		if(INITDAT == -1)
+			INITDAT = 0;
+		if(INITRND == -1)
+			INITRND = 8192;
+		break;
 	}
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;
