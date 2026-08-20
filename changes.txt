@@ -313,9 +313,8 @@
   by the "unification" of the many kencc-derived repo (especially 9front)
 - multi-os testing thanks to wine (see tests/s/mini and hello_windows_xxx tests)
 - wasm testing thanks to node (see tests/s/mini and scripts/wasm-runner)
-- start benchmarking infra with https://github.com/AbsInt/CompCert-small-tests
-  test files; for now just testing gcc as goken can't compile such code yet
-  (need APE-like lib or minimal libc/libos support in goken)
+- benchmarking infra with https://github.com/AbsInt/CompCert-small-tests
+  test files (needed small APE-like lib and libc/libos support in goken)
 
 ** docs
 - add docs/claude_notes/, Claude-authored engineering notes gathered

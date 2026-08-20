@@ -3,21 +3,31 @@
 ** TODO changes.txt
 
 ** Overview
-- benchmarks on compcert! with minimal libc/ape
-- libsyscall (thin wrappers around syscalls) for linux/macos/windows/wasm/plan9/xv6
-- libc (or libos), again working for linux/macos/windows/wasm/plan9/xv6 (different from lib9,
-  rely instead on libsyscall)
-- bootstrap itself!!! (need libsyscall/libos first)
-=> simpler alt to gcc/clang for cross compiling C code! (ex: xv6-{x86,arm,riscv}!)
+=> simpler alt to gcc/clang for cross compiling C code! 
+ ex: xv6-{x86,arm,riscv}!
 
 ** Later
+
+*** LATER profiling tools (the one that are portable at least?)
 
 *** LATER acid working on linux
 incorportate plan9port libmach so can get acid to work on Linux
 also DWARF binaries!
 plan9port use linux interception proc mechanism (ptrace?) similar to plan9
 
+*** LATER devdraw from plan9port to goken? can draw ? can port
+more stuff to unix? doomplan9?
+
+maybe most of Graphics.nw can be tested on Linux?
+at least testdraw.c ?
+
+see plan9port/src/cmd/devdraw/ and also drawterm and more
+
+*** LATER lib_core/libthread, also working on multiple OS!
+
 *** LATER dwarf support working for all elf targets, ported from 6c?
+
+*** ----------------------------------------------------------------
 
 *** LATER SEMI try to unify all the kencc/inferno/plan9 for 5a/5c/5l
 diff5a diff5c diff5l are quite small across kencc/inferno/plan9 and goken
@@ -35,31 +45,15 @@ update: better ../lk/
 
 but better wait to avoid diff.rc to show big diffs
 
-*** LATER LONG try to boostrap itself; can compile 5c with 5c?
-need full libc and ELF in 5c/5l working for big C project, not just helloprintf.c
-
-*** LATER devdraw from plan9port to goken? can draw ? can port
-more stuff to unix? doomplan9?
-
-maybe most of Graphics.nw can be tested on Linux?
-at least testdraw.c ?
-
-see plan9port/src/cmd/devdraw/ and also drawterm and more
-
 *** LATER add cii (now MIT license) containers and more generally all cii
 it's good simple C code, and especially address something Plan 9 developers
 avoid (reusable containers lib).
-
-*** LATER? add the alpha architecture? was 7a/7c/8l but can rename to aa/ac/al
-import from 9front 2016 which removed support for it.
-could not find it in plan9 4th edition either
 
 *** LATER? add the 68000? historically interesting, amiga/atari used it!
 also apple so interesting to study?
 
 hmm but actually 2a/2c/2l seems to be more for 68020 not 68000
 that was the amiga/atari
-
 
 *** LATER? add pdp11 archi :) or ask claude
 ack amsterdam toolkit has support for pdp11
@@ -844,26 +838,7 @@ see comment in configure:
 at the same time nice to see explicitely the build-mk.sh in Dockerfile
 for iwp9 goken paper
 
-*** add back -X to vc, ic, 7c? and also 5c/8c?
-or update to -O0 better
-
 ** Last1
-
-*** other goken PBS:
-
-**** still? principia x goken x macos: compilation error "out of memory" on libsec/aes.c :(
-
-***** WAITING run qemu with mkconfig.pc on clang and macos
-
-**** still? principia x goken x thinkstation: pb mk nuke and bug in free() in rc
-weird pbs when running 'mk nuke'
-free(): invalid size
-
-what is causing this error? rm? mk? rc?
-seems to be pb with 'rc' because export MKSHELL=/opt/plan9/bin/rc
-fixed the issue
-
-does not have the problem in docker
 
 *** bug: why mk pdf in principia/linkers does not do the full
 recipe and does not mv to generate Linker-7.pdf?
@@ -2178,8 +2153,6 @@ and lp and tr2post
 
 ** Test infra
 
-*** LATER: try to compile goken with goken9cc!!!
-
 *** More workflows! build_amd64_linux.yaml, build_amd64_windows
 and test_xxx too ? alla semgrep workflows
 start use jsonnet?
@@ -2187,9 +2160,6 @@ start use jsonnet?
 start multi GOOS and GOARCH in CI? in Docker can try all combinations?
 
 ** Build infra
-
-*** switch to GOHOST and GOTARGET instead of GOARCH?
-or GOARCHHOST, GOARCHTARGET, GOOSTARGET ?
 
 *** LATER: try to compile goken9cc on plan9!!!!!
 need VM then ... and need to find a way to transfer data from one to the other
@@ -2206,8 +2176,6 @@ was fixed in inferno-os but caused some segfaults?
 because stdin already defined elsewhere in goken lib9?
 
 it was before -Wl,--allow-multiple-def
-
-*** less: .gitignore inspired from DELETED/.hgignore
 
 *** LATER betterfix the hack I put
 
