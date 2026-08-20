@@ -1,28 +1,24 @@
 # -*- sh -*-
 
-#LATER? for now we install libs and bins under ROOT/ to separate
-# them from GO stuff but at some point we may want ROOT=$TOP and install in
-# $TOP/bin and $TOP/lib? but will need $TOP/bin/amd64/ at least?
 ROOT=$TOP/ROOT
 
 #
 # common mkfile parameters shared by all architectures
 #
 
-OS=5678ijve
-CPUS=arm arm64 386 amd64 riscv riscv64 mips wasm
+OS=5678ijvze
+CPUS=arm arm64 386 amd64 riscv riscv64 mips alpha wasm 
 
 # -I$TOP/include, -I$TOP/include/ALL and -I. are understood both by the
 # host bootstrap compiler (gcc/clang) and by goken's own Xc compilers
-# (-I is parsed in compilers/cc/lex.c, shared by all of them), so they
-# stay here as CFLAGS_COMMON for a future self-hosted 'mk objtype=$cputype'
+# so they stay here as CFLAGS_COMMON for self-hosted 'mk objtype=$cputype'
 # build to reuse. The rest of CFLAGS (-O0/-ggdb/--std=gnu89/... and
 # -I$TOP/BOOT/include, the host libc-adaptation headers) is gcc/clang
 # (host bootstrap) specific and lives in mkfiles/boot-gcc/mkfile and
-# mkfiles/boot-clang/mkfile instead. LDFLAGS's -L is likewise generic:
-# understood by both the host linker and goken's own linkers
-# (5l/6l/7l/8l/...).
+# mkfiles/boot-clang/mkfile instead. 
 CFLAGS_COMMON=-I$TOP/include -I$TOP/include/ALL -I.
+# LDFLAGS's -L is likewise generic: understood by both the host linker
+# and goken's own linkers (5l/6l/7l/8l/...).
 #note: SANITIZE is optionally set by ./configure --asan
 LDFLAGS=-L$ROOT/arch/$objtype/lib $SANITIZE
 

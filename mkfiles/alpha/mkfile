@@ -1,0 +1,12 @@
+<$TOP/mkfiles/mkfile.proto
+
+O=z
+CC=zc
+LD=zl
+AS=za
+AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/alpha
+
+# see mkfiles/386/mkfile's identical ARCHEXTRAOFILES comment.
+ARCHEXTRAOFILES=arch/alpha/getcallerpc.$O arch/alpha/setjmp.$O

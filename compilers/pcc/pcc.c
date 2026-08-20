@@ -13,7 +13,9 @@ typedef struct Objtype {
 Objtype objtype[] = {
 	{"arm",		"5c", "5l", "5", "5.out"},
 	{"amd64",	"6c", "6l", "6", "6.out"},
+	{"arm64",	"7c", "7l", "7", "7.out"},
 	{"386",		"8c", "8l", "8", "8.out"},
+	{"alpha",	"zc", "zl", "z", "z.out"},
 	{"mips",	"vc", "vl", "v", "v.out"},
 };
 
@@ -29,7 +31,7 @@ typedef struct List {
 
 List	srcs, objs, cpp, cc, ld, ldargs;
 int	cflag, vflag, Eflag, Pflag;
-char	*allos = "568v";
+char	*allos = "5668vz";
 
 void	append(List *, char *);
 char	*changeext(char *, char *);

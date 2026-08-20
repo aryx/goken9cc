@@ -39,6 +39,7 @@ struct	Exec
 /*e: constant [[E_MAGIC]] */
 
 #define	V_MAGIC		_MAGIC(0, 16)		/* mips 3000 BE */
+#define	L_MAGIC		_MAGIC(0, 23)		/* dec alpha */
 
 /*s: constant [[MIN_MAGIC]] */
 #define	MIN_MAGIC	11
