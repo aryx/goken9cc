@@ -91,6 +91,37 @@ targets, took several separate passes, each with its own lesson:
   past index 3 until Maxobjtype grew without the array declaration
   growing to match.
 
+The alpha/'z' entry pointed at arm64's reader: a rename that didn't propagate here
+---------------------------------------------------------------------------------------
+
+Found August 2026 wiring up tests/c/mini for the reintroduced alpha
+toolchain (see notes_arch_alpha.txt for the rest of that bring-up):
+`[ObjAlpha] "alpha .7", _is7, _read7,` in obj.c's dispatch table --
+using arm64's own `_is7`/`_read7` functions (and even arm64's ".7"
+extension in the display string) for alpha, instead of zobj.c's own
+`_isz`/`_readz` (which existed and were declared, just never wired into
+the table). Exactly the same class of leftover as zl's/zc's own
+`thechar = '7'` bugs documented in notes_arch_alpha.txt -- alpha used
+to be '7' before this project repurposed that letter for arm64 -- just
+one layer further out, in a shared library this session's earlier
+za/zc/zl passes hadn't touched at all.
+
+Symptom was indirect and easy to misattribute: `iar rc libmini.a
+start_alpha.z ...` produced an archive with no `__.SYMDEF` member at
+all (confirmed by hexdumping it -- the first member was the raw object
+file, not a symbol table), and zl's own `objfile()` then failed with
+"first entry not symbol header" trying to read it back. The actual
+cause was upstream of zl entirely: `readobj()`/`readar()` (this file)
+silently found the alpha `.z` files unrecognized by arm64's reader (a
+completely different object format under the hood) and so extracted no
+symbols for `iar` to write a symdef from. Nothing crashed, no arch-
+mismatch diagnostic -- just an archive that looked superficially fine
+(right member names, right sizes) but was missing the one member every
+consumer actually depends on. Confirmed by fixing the table entry,
+rebuilding libmach.a *and* relinking iar against it (a stale iar binary
+against a freshly rebuilt libmach.a would have kept failing identically
+-- rebuilding the library alone is not enough, iar itself must relink).
+
 executable.c: the change that looked done but wasn't
 ------------------------------------------------------------
 

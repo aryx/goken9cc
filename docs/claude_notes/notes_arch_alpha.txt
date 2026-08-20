@@ -244,6 +244,43 @@ correctly -- zc's own cgen.c/reg.c/peep.c/mul.c are untouched beyond
 the two signature fixes above, unlike vc's, which went through actual
 bring-up debugging to get real programs running.
 
+tests/c/mini: zc actually compiling and running real C, plus two more gaps
+---------------------------------------------------------------------------------
+
+Getting tests/c/mini/helloc.c (a real two-call, two-arg C program,
+compiled by zc rather than hand-written assembly) working end to end
+found two more gaps, neither in zc/za/zl's own C sources this time:
+
+- zl had no `-L` flag at all (no addlibpath()/findlib(), unlike
+  vl/il): a bare `#pragma lib "libmini.a"` (no leading '/' or '.')
+  always fell through addlib()'s hardcoded /usr/%clib or /%s/lib
+  guess, silently ignoring -L. Ported vl/il's addlibpath()/findlib()
+  and the corresponding search-vs-guess branch in addlib() (zl/obj.c).
+- lib_toolchain/libmach/obj.c's per-arch object-dispatch table had a
+  '7'-vs-'z' leftover pointing alpha at arm64's object reader instead
+  of zobj.c's own _isz/_readz -- see notes_libmach.txt's own section
+  on this, it's a bug in a shared library, not in zc/za/zl themselves,
+  and cost `iar` its ability to build a real archive symbol table for
+  alpha objects ("first entry not symbol header" from zl, several
+  layers downstream of the actual cause).
+- mkfiles/alpha/mkfile's LD was plain "zl", but zl's own no-flag
+  default (no -U/-B/-9 given) is Plan 9 native format, not ELF (see
+  the HEADTYPE 7 section above) -- tests/c/mini's generic recipe never
+  passes -H itself, unlike tests/s/exit's/tests/s/mini's own recipes.
+  Fixed the same way arm's own mkfiles/arm/mkfile does it: bake "-H7"
+  into $LD itself ("LD=zl -H7"), rather than changing zl's own
+  argument-less default (il/vl instead default unconditionally to
+  HEADTYPE 7, a different, equally valid convention -- picked the
+  arm-style fix here as the smaller, more localized change).
+
+xwrite_alpha.s's second (stack) parameter offset (count+4(FP)) was
+read directly off `zc -S`'s own generated assembly for an equivalent
+two-arg function, not derived from the autosize+offset+ptrsize formula
+the riscv/arm64 xwrite_*.s comments use -- zc has no ptrsize concept at
+all (unlike the dual-width ic/il), and blindly reusing that formula
+would have guessed 8 (matching arm64's own pointer width) when the
+real answer is 4.
+
 What's actually verified vs. still open
 -------------------------------------------
 
@@ -253,9 +290,11 @@ tests/s/exit/exit_linux_alpha.s produces a real qemu-alpha-executable
 binary exiting 42, and tests/s/mini/hello_linux_alpha.s exercises
 .data placement and SB-relative addressing (the setSB/gp bug above)
 end to end, printing "Hello, world" under qemu-alpha. Both pass via
-`mk test` in tests/s/exit and tests/s/mini respectively. zc builds and
-compiles trivial input (see its own section above) but is otherwise
-unexercised.
+`mk test` in tests/s/exit and tests/s/mini respectively. zc now
+compiles and runs a real two-function-call C program correctly
+(tests/c/mini/helloc.c, via `mk test` with alpha added to that
+mkfile's ARCHS) -- the setSB/gp path, the two-arg calling convention,
+and -L-based autolib resolution are all exercised together here.
 
 HEADTYPE 0-3 (the native Plan9/Unix-alpha a.out formats) compile but
 have no test exercising them at runtime -- there's no alpha hardware
