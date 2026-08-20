@@ -1,3 +1,4 @@
+#define	EXTERN
 #include	"l.h"
 #include	<obj/ar.h>
 

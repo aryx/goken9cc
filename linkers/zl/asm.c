@@ -234,7 +234,7 @@ asmb(void)
 }
 
 void
-lput(long l)
+lput(int32 l)
 {
 	LPUT(l);
 }

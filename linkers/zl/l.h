@@ -166,68 +166,69 @@ union
 	char	dbuf[1];
 } buf;
 
-long	HEADR;			/* length of header */
-int	HEADTYPE;		/* type of header */
-long	INITDAT;		/* data location */
-long	INITRND;		/* data round above text location */
-long	INITTEXT;		/* text location */
-char*	INITENTRY;		/* entry point */
-long	autosize;
-Biobuf	bso;
-long	bsssize;
-int	cbc;
-uchar*	cbp;
-int	cout;
-Auto*	curauto;
-Auto*	curhist;
-Prog*	curp;
-Prog*	curtext;
-Prog*	datap;
-long	datsize;
-char	debug[128];
-Prog*	etextp;
-Prog*	firstp;
-char	fnuxi8[8];
-char*	noname;
-Sym*	hash[NHASH];
-Sym*	histfrog[MAXHIST];
-int	histfrogp;
-int	histgen;
-char*	library[50];
-char*	libraryobj[50];
-int	libraryp;
-int	xrefresolv;
-char*	hunk;
-char	inuxi1[1];
-char	inuxi2[2];
-char	inuxi4[4];
-Prog*	lastp;
-long	lcsize;
-char	literal[32];
-int	nerrors;
-long	nhunk;
-vlong	offset;
-Opcross	opcross[7];
-Oprang	oprange[ALAST];
-char*	outfile;
-long	pc;
-Prog	*prog_divq;
-Prog	*prog_divqu;
-Prog	*prog_modq;
-Prog	*prog_modqu;
-Prog	*prog_divl;
-Prog	*prog_divlu;
-Prog	*prog_modl;
-Prog	*prog_modlu;
-uchar	repop[ALAST];
-long	symsize;
-Prog*	textp;
-long	textsize;
-long	thunk;
-int	version;
-char	xcmp[32][32];
-Prog	zprg;
-int	dtype;
+EXTERN	long	HEADR;			/* length of header */
+EXTERN	int	HEADTYPE;		/* type of header */
+EXTERN	long	INITDAT;		/* data location */
+EXTERN	long	INITRND;		/* data round above text location */
+EXTERN	long	INITTEXT;		/* text location */
+EXTERN	long	INITTEXTP;		/* text location (physical) */
+EXTERN	char*	INITENTRY;		/* entry point */
+EXTERN	long	autosize;
+EXTERN	Biobuf	bso;
+EXTERN	long	bsssize;
+EXTERN	int	cbc;
+EXTERN	uchar*	cbp;
+EXTERN	int	cout;
+EXTERN	Auto*	curauto;
+EXTERN	Auto*	curhist;
+EXTERN	Prog*	curp;
+EXTERN	Prog*	curtext;
+EXTERN	Prog*	datap;
+EXTERN	long	datsize;
+EXTERN	char	debug[128];
+EXTERN	Prog*	etextp;
+EXTERN	Prog*	firstp;
+EXTERN	char	fnuxi8[8];
+EXTERN	char*	noname;
+EXTERN	Sym*	hash[NHASH];
+EXTERN	Sym*	histfrog[MAXHIST];
+EXTERN	int	histfrogp;
+EXTERN	int	histgen;
+EXTERN	char*	library[50];
+EXTERN	char*	libraryobj[50];
+EXTERN	int	libraryp;
+EXTERN	int	xrefresolv;
+EXTERN	char*	hunk;
+EXTERN	char	inuxi1[1];
+EXTERN	char	inuxi2[2];
+EXTERN	char	inuxi4[4];
+EXTERN	Prog*	lastp;
+EXTERN	long	lcsize;
+EXTERN	char	literal[32];
+EXTERN	int	nerrors;
+EXTERN	long	nhunk;
+EXTERN	vlong	offset;
+EXTERN	Opcross	opcross[7];
+EXTERN	Oprang	oprange[ALAST];
+EXTERN	char*	outfile;
+EXTERN	long	pc;
+EXTERN	Prog	*prog_divq;
+EXTERN	Prog	*prog_divqu;
+EXTERN	Prog	*prog_modq;
+EXTERN	Prog	*prog_modqu;
+EXTERN	Prog	*prog_divl;
+EXTERN	Prog	*prog_divlu;
+EXTERN	Prog	*prog_modl;
+EXTERN	Prog	*prog_modlu;
+EXTERN	uchar	repop[ALAST];
+EXTERN	long	symsize;
+EXTERN	Prog*	textp;
+EXTERN	long	textsize;
+EXTERN	long	thunk;
+EXTERN	int	version;
+EXTERN	char	xcmp[32][32];
+EXTERN	Prog	zprg;
+EXTERN	int	dtype;
 
 extern	char*	anames[];
 extern	Optab	optab[];
@@ -291,8 +292,13 @@ void	ldobj(int, long, char*);
 void	loadlib(void);
 void	listinit(void);
 Sym*	lookup(char*, int);
-void	lput(long);
+void	lput(int32);
 void	lputbe(long);
+void	lputl(int32);
+void	llput(vlong);
+void	llputl(vlong);
+void	wput(int32);
+void	wputl(int32);
 void	mkfwd(void);
 void*	mysbrk(ulong);
 void	names(void);
