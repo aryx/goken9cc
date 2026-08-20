@@ -138,10 +138,32 @@ main(int argc, char *argv[])
 		break;
 	case 7:	/* elf executable (linux) -- claude: same layout as il/vl's
 		 * own HEADTYPE 7, see linkers/lk/elf.c. alpha linux's page
-		 * size is 8192, not the 4096 il/vl default to. */
+		 * size is 8192, not the 4096 il/vl default to.
+		 *
+		 * INITTEXT deliberately does NOT reuse HEADTYPE 0's
+		 * 0x120000000 (the real, conventional non-PIE Alpha/Linux
+		 * base, but that HEADTYPE's own INITTEXT already carried a
+		 * "BUG" comment from the original Plan 9 source): span.c's
+		 * aclass() "botch" case for the setSB/gp symbol permanently
+		 * decides its instruction encoding (2 vs. 5 real
+		 * instructions -- see optab.c's C_LCON/C_QCON rows) while
+		 * scanning at a point where INITDAT is not computed yet
+		 * (span()'s own INITDAT assignment runs only after that
+		 * scan), so it always picks the narrow 2-instruction
+		 * (32-bit-only) form regardless of the real, final address
+		 * -- p->optab then caches that choice, so even a later
+		 * correct classification of the same symbol can no longer
+		 * change the instruction shape, only the (now silently
+		 * truncated) immediate value written into it. A base
+		 * requiring the full 64-bit form was never actually
+		 * reachable through this path. Using a small, low base
+		 * (matching il/vl's own HEADTYPE 7 convention) keeps
+		 * INITDAT+BIG inside the 32-bit range that 2-instruction
+		 * form can actually encode, sidestepping the bug rather
+		 * than fixing the underlying span()/oplook() staleness. */
 		HEADR = rnd(Ehdr64sz+3*Phdr64sz, 16);
 		if(INITTEXT == -1)
-			INITTEXT = 0x120000000LL + HEADR;
+			INITTEXT = 0x10000LL + HEADR;
 		if(INITDAT == -1)
 			INITDAT = 0;
 		if(INITRND == -1)

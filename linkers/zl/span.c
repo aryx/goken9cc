@@ -192,7 +192,32 @@ aclass(Adr *a)
 			offset = s->value + a->offset - BIG;
 			if (offset == 0L) {
 				offset = s->value + a->offset + INITDAT;
-				return C_LCON;		/* botch */
+				/* claude: this "botch" (original comment) is
+				 * setSB's own resolution: BIG+INITDAT, the
+				 * actual gp value. The bound check below is
+				 * correct in isolation (mirrors the one a few
+				 * lines down for the non-botch case) but is
+				 * NOT a full fix by itself: oplook() caches
+				 * the resulting instruction shape (2 vs. 5
+				 * real instructions, C_LCON/case 15 vs.
+				 * C_QCON/case 16, see optab.c) in p->optab the
+				 * FIRST time it classifies this symbol, which
+				 * for setSB happens during span()'s own sizing
+				 * pass -- before span() has computed the real
+				 * INITDAT (its own INITDAT assignment runs
+				 * only after that same scan). So this branch
+				 * always sees INITDAT==0 in practice and always
+				 * picks C_LCON; a later, correct reclassification
+				 * can no longer widen the already-cached
+				 * instruction shape, only the (silently
+				 * truncated) immediate value asmb() writes into
+				 * it. Real fix for HEADTYPE 7: keep INITTEXT
+				 * small enough that INITDAT+BIG never leaves
+				 * the 32-bit range this bound already checks --
+				 * see zl/obj.c's own HEADTYPE 7 comment. */
+				if (offset >= -0x80000000LL && offset < 0x7fff8000LL)
+					return C_LCON;
+				return C_QCON;
 			}
 			if(offset >= -BIG && offset < BIG && offset != 0L)
 				return C_SECON;
