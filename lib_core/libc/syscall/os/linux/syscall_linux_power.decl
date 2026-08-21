@@ -65,12 +65,13 @@
 //sys _sysfork(void) int = SYS_fork
 //sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
 //sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
-// claude: no _syspipe here yet, unlike every other 32-bit arch's own
-// decl -- PowerPC Linux's raw sys_pipe() ABI (register-pair return
-// like mips's o32, or pointer-write like arm's/386's?) is not
-// confirmed against real kernel source yet. port/pipe.c declares
-// _syspipe's extern itself, so leaving it out here only defers
-// pipe.c/tests/c/hello_libc/pipe.exe, not this file's own build.
+// _syspipe: confirmed against real kernel source (this host's copy of
+// arch/powerpc/kernel/syscalls/syscall.tbl marks pipe "common", i.e.
+// the GENERIC fs/pipe.c sys_pipe(int __user *fildes), not an arch
+// override) that PowerPC's raw sys_pipe() writes both fds through the
+// pointer argument, the same arm/386-style shape as syscall_linux_arm.decl's
+// own _syspipe -- NOT mips's o32-specific register-pair sysm_pipe.
+//sys _syspipe(int *fd) int = SYS_pipe
 
 // Tier 6 notification -- see syscall_linux_amd64.decl's identical
 // comment. See numbers_power.h's own comment on the Ksigaction shape

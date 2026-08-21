@@ -1316,3 +1316,66 @@ says is suspicious, rebuild, and let the second trace disambiguate
 between competing theories. This is cheaper than it feels: each round
 here was a one-line edit, rebuild, and rerun, cheaper than the reading
 time already spent forming an incorrect theory.
+
+Prefer a real debugger (qemu gdbstub) over hand-parsing a singlestep trace log
+--------------------------------------------------------------------------------------------------------------
+
+While bisecting a PowerPC getenv() bug (notes_arch_power.txt's env.exe
+section), the first instinct was `qemu-ppc -d in_asm,cpu -singlestep
+-D trace.log`, then a hand-rolled Python script to parse the resulting
+text log (pairing each `IN:`/`OBJD-T:` block with the following `NIP`/
+`GPR*` register-dump block) to reconstruct what a specific branch
+actually did. This produced an internally-inconsistent picture: a
+`CMP`+`BNE` sequence appeared, from the parsed log, to fall through
+when the compared register was plainly nonzero -- looking exactly like
+a genuine CPU/emulation bug. It wasn't one: the parser's block-boundary
+detection assumed every disassembled instruction's text occupied a
+fixed number of lines, but qemu's `-d in_asm` output emits TWO hex
+words on one line for some instruction forms (visible as e.g.
+`ffffffff89090000 7d080774` in the raw log) -- silently shifting every
+subsequent line-offset-based register read by one line for the rest of
+that trace. The result reads exactly like a real bug (plausible
+register values, a coherent-looking but wrong control-flow story) and
+is easy to trust because it's "real data from a real trace," not a
+guess.
+
+Switched instead to attaching an actual debugger over qemu's gdbstub:
+    qemu-ppc -g <port> ./binary.exe &
+    gdb-multiarch -q -batch \
+      -ex "set endian big" -ex "set architecture powerpc:common" \
+      -ex "target remote localhost:<port>" \
+      -ex "break *0x<addr>" -ex "continue" \
+      -ex "info registers r7 cr" -ex "stepi" \
+      -ex "info registers pc r11"
+A few gotchas specific to this setup: (1) `set endian big` MUST come
+before `set architecture` / `target remote`, or register/PC values
+print byte-reversed (e.g. `0xdc0c4000` instead of `0x00400cdc`) with
+no error -- an easy trap since the garbled value still LOOKS like a
+plausible address; (2) gdb will warn `not in executable format: file
+format not recognized` trying to read the binary from the remote target
+for symbols -- harmless, this toolchain's own ELF variant just isn't
+one gdb's local file-format sniffer recognizes, but PC-relative
+breakpoints/stepping by raw address still works fine; (3) `x/s $reg`
+prints memory AT the register's value as a string -- if the register
+holds the ADDRESS OF A POINTER ARRAY (e.g. `&envp[i]`, not `envp[i]`
+itself), this walks off the end of one 4-byte pointer slot into the
+next one and prints several concatenated raw pointers' bytes as if
+they were one string; dereference explicitly first
+(`x/s *(char**)$reg` or an intermediate `print *(char**)$reg`) when in
+doubt about which level of indirection a register holds; (4) a batch
+script's `commands N` block (attached to breakpoint N, to auto-print
+and `continue` past it in a loop) DOES work non-interactively via `-x
+scriptfile`, but was NOT reliable when passed as a single multi-line
+`-ex "commands 1\n...\nend"` string -- use a `-x <file>` script file
+for anything involving `commands`.
+
+This is not just "a debugger is more accurate than a trace log" in the
+abstract -- it's specifically that hand-parsing a large singlestep
+trace has a failure mode (silent misalignment) that produces
+CONFIDENT-LOOKING WRONG DATA rather than an error, so it can send a
+whole investigation down a fabricated dead end (in this case, briefly
+suspecting a genuine qemu-ppc BC/CR-flag decode bug that did not
+exist). Reach for the gdbstub first for anything beyond "does this one
+value look right at this one address" -- singlestep-log parsing is
+fine for that narrower question, but not for reconstructing a live
+control-flow decision.

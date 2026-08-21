@@ -502,3 +502,217 @@ What's still unverified (see todo.org for priority, not this file)
 - power is not added to tests/c/hello_libc/mkfile's own $ARCHS or
   test:V: target -- intentionally, since that target builds and runs
   every one of the files above, not just hello.exe.
+
+tests/c/hello_libc bring-up for power (full suite, follow-up session)
+----------------------------------------------------------------------
+
+power was added to tests/c/hello_libc/mkfile's $ARCHS and to
+test_one's stat/dirread/fork block. 12 of 15 binaries pass
+(hello/io/dir/fd/mem/proc/args/atexit/notify/alarm/stat/dirread/fork
+-- that's 13, env/ctime/utfmisc are the 3 that don't). Three real bugs
+found and fixed; two more found and NOT fixed (documented below for a
+future session, since both turned into much deeper rabbit holes than
+their symptoms suggested).
+
+Fixed: _syspipe wired up (syscall_linux_power.decl) -- confirmed
+against this host's own arch/powerpc/kernel/syscalls/syscall.tbl that
+PowerPC's pipe(2) is the generic (non-mips) fs/pipe.c sys_pipe(int
+__user*), the same arm/386-shaped single-pointer-arg convention
+syscall_linux_arm.decl already uses, not mips's register-pair
+sysm_pipe. Needed because fork.c calls pipe() directly (not just the
+separate, plan9-only pipe.exe test).
+
+Fixed: arch/power/sigrestore.s's sigentry rewritten from a plain
+tail-branch ("BR signotify(SB)") to "BL signotify(SB)" + manual
+MOVW LR,R4/MOVW R4,LR save-restore. The tail-branch failed to
+assemble ("illegal combination BR NONE NONE NONE LEXT") because
+linkers/ql/optab.c's ABR has no C_LEXT (long-external-symbol) optab
+row, even though ABL shares the SAME oprange table
+(oprange[ABL]=oprange[ABR] in span.c) and cross-file BL calls (to
+exit(SB), main(SB)) already work fine elsewhere in this tree. Root
+cause not chased (looks like an archive-symbol-resolution-order quirk
+specific to BR, since BL already proves cross-file linking works in
+general) -- worked around instead, since LR must survive unclobbered
+across signotify() for the noted(NCONT) case anyway (no SA_RESTORER
+here), so BL+restore achieves the same net effect from primitives
+already proven to work. See that file's own header comment for the
+full reasoning.
+
+Fixed (the important one): arch/power/rt0.s's argc/argv bridge had an
+off-by-one-word bug in the OUTGOING argv slot for main(argc, argv),
+identical in shape to the bug arch/arm/rt0.s's own header comment
+already documents and fixes for arm. Every 0-argument main() in this
+suite (hello.c, env.c, etc.) worked fine regardless, which is exactly
+why this went unnoticed during the hello.c-only bring-up: nothing
+exercised main(argc, char*argv[]) until args.c and fork.c (which
+re-execs itself with argv) were added. Symptom: args.exe printed
+"argc=4" correctly (argc arrives in R3, no bridging needed) but
+segfaulted the instant it read argv[1] -- even a bare `argv[1]` access
+with no further dereference crashed, confirmed with a minimal repro.
+
+Root cause, traced via `ql -a` disassembly + hand-decoding the actual
+PowerPC branch/load-immediate encodings (see notes_debug_techniques.txt's
+new section on this): ql's own D_PARAM (FP-relative argument) offset
+formula in linkers/ql/span.c is
+    instoffset = autosize + a->offset + 4L
+The "+4L" is deliberate and correct in general -- it's the same
+"phantom pushed-return-address slot" convention every register-call
+arch here needs (arm, mips, alpha, riscv64), compensating for the fact
+that PowerPC's BL doesn't push a return address to the stack the way
+x86's CALL does, so the FP-relative addressing scheme (designed
+assuming one architecture-wide convention across all backends) needs
+the CALLER to manufacture that missing word itself. arch/power/rt0.s's
+original version only accounted for ONE such adjustment (subtracting 8
+before storing argv at 4(R1)), but the real bridge chain has TWO
+prologues between the raw kernel stack and main()'s own argv+4(FP)
+read: _main's own auto-prologue (-8) and main()'s own auto-prologue
+(-16) BOTH have to be summed against the +4 formula, working out to an
+outgoing slot at 8(R1), not the naively-expected 4(R1) -- exactly the
+same "+4 beyond the naive expectation" arm's own header comment
+already found and confirmed via qemu-arm's gdbstub. Confirmed via a
+qemu-ppc + gdb (gdbstub) session stepping through the actual value
+written and the actual offset main()'s own prologue-adjusted
+`argv+4(FP)` read resolved to (R1+24 needed to reach where argv was
+stored, not R1+20) -- not re-derived from the formula alone, per this
+project's own "verify via a live debugger" rule.
+
+Fix: arch/power/rt0.s's outgoing-argv sequence changed from
+"ADD $-8,R1,R1" / "MOVW R4,4(R1)" to "ADD $-12,R1,R1" /
+"MOVW R4,8(R1)". This alone additionally fixed args.exe, fork.exe (its
+own child re-exec passes argv through the exact same path),
+stat.exe and dirread.exe (both of which happened to be silently
+relying on some now-corrected stack layout too, though neither reads
+argv directly -- worth re-confirming if either regresses later,
+since their earlier "passing" status before this fix was never
+independently explained).
+
+NOT fixed -- env.exe/ctime.exe: getenv("PATH") returns nil
+----------------------------------------------------------------------
+
+env.c and ctime.c both fail with a bare `exit(1)`/no output, the
+observable shape being "getenv did not find PATH" even though PATH is
+demonstrably present and correctly reachable by the exact same
+environ()/getenv() code in other, smaller test programs (a minimal
+getenv("PATH")+print() repro succeeds every time). This is NOT the
+"successive print() calls in one function get corrupted" bug the
+previous bring-up session's notes speculated (a `long nstring`/
+`outstring()` host-arithmetic-width bug in compilers/qc/{gc.h,swt.c},
+analogous to the already-fixed `struct ieee` bug) -- that theory was
+directly disproved this session: `qc -S` and a byte-for-byte hexdump
+of the linked .data segment's `.string<>` pool (computed by hand by
+decoding the actual `lis`/`ori`/gp-relative-load instruction encodings
+qc/ql emitted, not assumed) showed EVERY string constant's bytes and
+computed address were exactly correct, in both a working 2-string
+repro and a 3+-getenv-call repro that failed the same way env.c does.
+compilers/qc/gc.h's `EXTERN long nstring;` (vs vc's already-correct
+`int32`) is still real and still worth fixing for hygiene/cross-arch
+consistency (compilers/zc/gc.h has the identical latent bug), but it
+is NOT what breaks env.c on power.
+
+What was actually confirmed, via a qemu-ppc gdbstub + gdb session
+(the ONLY reliable way found this session to inspect live PowerPC
+register/CR state -- a hand-parsed `qemu-ppc -d in_asm,cpu -singlestep`
+text trace was tried first and produced internally-inconsistent
+register readings, later traced to a line-counting bug in the ad hoc
+Python parser, not a real CPU/emulation anomaly; see
+notes_debug_techniques.txt):
+  - rt0.s's argc/argv/_mainargv/_mainargc capture is correct (already
+    fixed above) and getenv()'s own `environ()` computation
+    (_mainargv + _mainargc + 1) is correct -- confirmed by
+    single-stepping to the exact loop-head instruction and printing
+    the real envp base address and its first few dereferenced
+    pointers.
+  - The getenv() loop genuinely walks EVERY entry in what it believes
+    is the environment array, from a correctly-computed envp base,
+    all the way to a `*e == nil` it (also genuinely) finds -- without
+    that comparison ever matching "PATH=". This was confirmed by
+    breakpointing the loop head and printing every $r11 (entry slot
+    address) and its dereferenced value for the entire walk.
+  - The env-string CONTENT values qemu-ppc-user hands this process sit
+    at addresses in the low 0x408xxx range -- i.e. inside the SAME
+    small virtual-address neighborhood as this binary's own ELF-loaded
+    .data segment (which starts at 0x408000 for this H7/-0400000-based
+    linker layout). This is suspicious on its face (real env/argv
+    string content should live on the process's stack, not inside the
+    executable's own static data range) but turned out NOT to be
+    simply "our .data overlaps qemu's stack" in the way first
+    hypothesized:
+      - Adding an unrelated `malloc(1)` call to env.c (pulling in
+        port/minimal_malloc.c's own ~64KB `heap[]` BSS array) reliably
+        and reproducibly fixes it -- confirmed on both a hand-reduced
+        repro AND on an instrumented copy of the real env.c.
+      - But adding an equivalent (or much larger -- tried 256KB and
+        4MB) block of BSS padding via a hand-written GLOBL pseudo-op
+        in arch/power/rt0.s (to sidestep a SEPARATE bug found along
+        the way, below) did NOT fix it, despite growing the binary's
+        total declared .data+.bss (ELF p_memsz) by far more than
+        minimal_malloc.c's own heap ever does relative to env.c's tiny
+        baseline. So the fix is not simply "more BSS headroom" --
+        something more specific to minimal_malloc.o being linked in
+        (its exact position in archive link order? some other symbol
+        it drags in transitively? not yet identified) is what matters,
+        and this was not chased further given the time already spent.
+  - Editing env.c/ctime.c themselves to call malloc() is NOT an
+    acceptable fix even though it "works" -- both files are shared,
+    unmodified verbatim across every arch in $ARCHS, and a
+    power-only malloc() call would be exactly the kind of arch-special-
+    cased test content this project's tests are supposed to avoid.
+  - A separate, smaller bug was found (not the main one) while testing
+    the "add padding" theory: declaring a large `static char pad[N]`
+    directly inside env.c (i.e. in the SAME compilation unit as its
+    own `.string<>` literal pool) does not just fail to help -- it
+    corrupts CODEGEN entirely, causing a totally unrelated string (a
+    fragment of the ELF's own .strtab section content) to be printed
+    in place of an actual string literal. This did NOT happen when
+    the equivalent padding lived in its own separate, code-only .s
+    file (arch/power/rt0.s) linked alongside an otherwise-unmodified
+    env.c. So there is a genuine, separate ql/qc power bug in how a
+    single compilation unit's data-segment symbol addresses get
+    computed once there is more than one top-level data/bss symbol in
+    it -- distinct from (but likely related in spirit to) the
+    already-documented "-s is load-bearing" asmsym()/asmlc() bug
+    mkfiles/power/mkfile's own comment describes. Neither root-caused.
+
+Next steps for whoever picks this back up: (1) try reordering/
+isolating exactly which symbol from minimal_malloc.o (heap[] itself,
+heapnext<>, or the mallocz() call site's own codegen) is load-bearing,
+by linking in ONLY that piece; (2) get a byte-level dump of what
+qemu-ppc-user's own linux-user/elfload.c ACTUALLY computes for its
+initial stack top address for this exact binary shape, rather than
+inferring it from qemu-ppc-supplied virtual addresses observed from
+inside the guest -- that would settle definitively whether this is a
+qemu placement quirk or a real bug in how ql (or rt0.s) computes
+_mainargv/envp; (3) the multi-data-symbol corruption bug above is
+probably the more tractable, more clearly-in-scope one to root-cause
+first, since it doesn't depend on qemu's own internal placement logic
+at all.
+
+NOT fixed -- utfmisc.exe: segfaults, but ONLY when linked with -s
+----------------------------------------------------------------------
+
+utfmisc.exe segfaults (SIGSEGV) under qemu-ppc when linked the normal
+way (mkfiles/power/mkfile's `ql -0 -s -H7`). Bisected the source
+(strrchr/strncpy/utfrrune/two dirmodefmt-via-%M calls) down to needing
+the FULL original file, with its real if/exit(1)-with-message-string
+branches intact -- every smaller reduction that dropped some of that
+structure (even ones keeping all four functions exercised, just
+without the surrounding if-checks) passed. This is very likely the
+same class of "compiled-code-size/layout-dependent" fragility as the
+env.exe bug above, though not confirmed to be the identical root
+cause.
+
+The one clean, reproducible, surprising fact found: rebuilding the
+EXACT SAME utfmisc.q WITHOUT `-s` (`ql -0 -H7`, no strip) makes it
+pass consistently (confirmed 3/3 runs each way). This is the OPPOSITE
+of what mkfiles/power/mkfile's own header comment documents for
+tests/c/float's helloprintf.exe, where `-s` is what FIXES an
+ELF-symbol-table-corrupts-.data bug. Both are almost certainly the
+same underlying ql HEADTYPE-7 asmsym()/asmlc() bug for power (still
+not root-caused there either), manifesting on opposite sides of
+some exact-symbol-count or exact-offset threshold depending on the
+binary -- not two different bugs. Since flipping the mkfile's global
+`-s` would trade this failure for reintroducing float's, the correct
+fix is rooting out the real asmsym()/asmlc() bug, not toggling the
+flag. Left as-is (still `-s`, still failing) rather than adding a
+per-target flag override, since a real fix is worth more than papering
+over one side of a two-sided bug.
