@@ -130,6 +130,13 @@ asmb(void)
 	case 4:
 		seek(cout, rnd(HEADR+textsize, 4096), 0);
 		break;
+	case 7:
+		/* claude: must match the PT_LOAD file offset elf32()
+		 * (linkers/lk/elf.c) computes for the data segment -- see
+		 * this file's own case 7 in the header-write switch below,
+		 * and ql/obj.c's case 7 comment. */
+		seek(cout, rnd(HEADR+textsize, INITRND), 0);
+		break;
 	}
 
 	if(dlm){
@@ -165,6 +172,9 @@ asmb(void)
 			break;
 		case 4:
 			seek(cout, rnd(HEADR+textsize, 4096)+datsize, 0);
+			break;
+		case 7:
+			seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
 			break;
 		}
 		if(!debug['s'])
@@ -335,6 +345,11 @@ asmb(void)
 		debug['S'] = 1;			/* symbol table */
 		elf32(POWER, ELFDATA2MSB, 1, elf32jmp);
 		break;
+	case 7:
+		/* linux, matching il/vl/zl's own HEADTYPE 7 */
+		debug['S'] = 1;			/* symbol table */
+		elf32(POWER, ELFDATA2MSB, 0, nil);
+		break;
 	}
 	cflush();
 }
@@ -351,13 +366,13 @@ strnput(char *s, int n)
 }
 
 void
-cput(long l)
+cput(int32 l)
 {
 	CPUT(l);
 }
 
 void
-wput(long l)
+wput(int32 l)
 {
 	cbp[0] = l>>8;
 	cbp[1] = l;
@@ -368,7 +383,7 @@ wput(long l)
 }
 
 void
-wputl(long l)
+wputl(int32 l)
 {
 	cbp[0] = l;
 	cbp[1] = l>>8;
@@ -379,13 +394,13 @@ wputl(long l)
 }
 
 void
-lput(long l)
+lput(int32 l)
 {
 	LPUT(l);
 }
 
 void
-lputl(long c)
+lputl(int32 c)
 {
 	cbp[0] = (c);
 	cbp[1] = (c)>>8;

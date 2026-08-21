@@ -9,7 +9,7 @@
 # that mkfile for the toolchain-flag rationale (-H7 etc.).
 
 EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe \
-              exit_linux_mips.exe \
+              exit_linux_mips.exe exit_linux_power.exe \
               exit_linux_riscv.exe exit_linux_riscv64.exe \
               exit_linux_alpha.exe
 
@@ -40,7 +40,7 @@ test:V: all
       }
 
 clean:V:
-	rm -f *.[5678ivjz] *.exe
+	rm -f *.[5678ivjzq] *.exe
 
 exit_linux_arm.exe: exit_linux_arm.s
    5a -c $prereq
@@ -51,6 +51,9 @@ exit_linux_arm64.exe: exit_linux_arm64.s
 exit_linux_mips.exe: exit_linux_mips.s
    va -c $prereq
    vl -o $target -E _start exit_linux_mips.v
+exit_linux_power.exe: exit_linux_power.s
+   qa -c $prereq
+   ql -0 -H7 -o $target -E _start exit_linux_power.q
 exit_linux_riscv.exe: exit_linux_riscv.s
    ia -c $prereq
    il -o $target -E _start exit_linux_riscv.i

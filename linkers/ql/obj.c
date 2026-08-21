@@ -226,6 +226,21 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 0;
 		break;
+	case 7:	/* elf executable (linux) -- claude: same layout as
+		 * il/vl/7l/zl's own HEADTYPE 7, see linkers/lk/elf.c.
+		 * Unlike case 5 (blue gene, INITRND=0 -- its own loader
+		 * doesn't need page-aligned PT_LOAD segments), a real
+		 * Linux kernel ELF loader requires each PT_LOAD segment's
+		 * vaddr and file offset to agree modulo the page size, so
+		 * INITRND must be a real page size here. */
+		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+		if(INITTEXT == -1)
+			INITTEXT = 0x00400000L+HEADR;
+		if(INITDAT == -1)
+			INITDAT = 0;
+		if(INITRND == -1)
+			INITRND = 4096;
+		break;
 	}
 	if (INITTEXTP == -1)
 		INITTEXTP = INITTEXT;
