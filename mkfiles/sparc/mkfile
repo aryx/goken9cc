@@ -1,0 +1,9 @@
+<$TOP/mkfiles/mkfile.proto
+
+O=q
+CC=qc
+LD=ql -H7
+AS=qa
+AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/power
