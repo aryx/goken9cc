@@ -4,14 +4,17 @@ The powerpc toolchain (qa/qc/ql/qi): first Linux ELF exit/hello/C bring-up
 Notes from bringing up qa/ql/qc (emulator qi untouched so far) far
 enough to run tests/s/exit/exit_linux_power.s, tests/s/mini/
 hello_linux_power.s, tests/c/mini/helloc.exe, tests/c/vlong/
-helloprintf.exe, tests/c/float/helloprintf.exe, and tests/c/mini2/
-helloprintf.exe (all byte-matching their expected.txt) under qemu-ppc.
-Source is Plan 9 4th edition's powerpc port (see
+helloprintf.exe, tests/c/float/helloprintf.exe, tests/c/mini2/
+helloprintf.exe, and tests/c/hello_libc/hello.exe -- the last one
+linked against a real, self-built lib_core/libc/arch/power port, not a
+hand-rolled per-test stub (all byte-matching their expected.txt) under
+qemu-ppc. Source is Plan 9 4th edition's powerpc port (see
 cf54e8364/359281e56/53b0b0882 for the import and initial "make it
 compile" commits); this session is the first real runtime exercise of
 any of these tools. See assemblers/qa/, linkers/ql/, compilers/qc/,
 include/objexec/q.out.h, tests/s/exit/, tests/s/mini/, tests/c/mini/,
-tests/c/vlong/, tests/c/float/, tests/c/mini2/.
+tests/c/vlong/, tests/c/float/, tests/c/mini2/, tests/c/hello_libc/,
+lib_core/libc/arch/power/.
 
 lput/wput/cput: long -> int32 parity fix
 -----------------------------------------
@@ -369,20 +372,133 @@ latent bug there wouldn't necessarily surface here). Verified: full
 the shared helloprintf.expected.txt; full top-level `mk test` re-run
 afterward, no regressions.
 
+tests/c/hello_libc/hello.exe: a real lib_core/libc/arch/power port
+------------------------------------------------------------------------
+
+Scoped deliberately to hello.c (print()+exit() only -- see
+tests/c/hello_libc/mkfile's own header comment for what the rest of
+that test directory needs), not the whole hello_libc suite, on
+explicit instruction. Ported the arch/OS glue lib_core/libc needs:
+
+- include/arch/power/u.h: was missing s8/u8/s16/u16/s32/u32/s64/u64
+  (required by include/core/types.h -- every other arch's u.h already
+  has these; this file only had the older u8int/u32int/... aliases)
+  and `intptr` (missing entirely -- only `uintptr` existed), had a
+  duplicate `#define nil` (already in include/core/macros.h; a second
+  definition is a hard compiler error here, not a warning) and a
+  duplicate/conflicting `jmp_buf[2]`/JMPBUFSP/PC/DPC (include/core/
+  exn.h already provides the real Jmpbuf{sp,pc} every arch shares).
+  All four gaps are the exact same class alpha's own u.h bring-up hit
+  (see that commit) -- this header was imported alongside qa/ql/qc but
+  never brought up to the same baseline the newer arches (arm64/
+  riscv64/alpha) already share.
+- lib_core/libc/arch/power/rt0.s: process entry, argc/argv bridge.
+  Confirmed via a real 'ql -a' + qemu-ppc -d in_asm trace (not assumed
+  by analogy with alpha/riscv64's own different-offset findings) that
+  ql's noop.c auto-prologue shifts the kernel's raw argc/argv from
+  0(R1)/4(R1) to 8(R1)/12(R1), the same class of shift those two
+  arches' own rt0.s already document.
+- lib_core/libc/arch/power/setjmp.s: the usual two-field
+  {sp,pc}-only jmp_buf (see include/core/exn.h's own comment on why
+  this compiler needs no real callee-saved-register preservation).
+  Genuine leaf functions, R1=sp, LR read/written via the special-
+  register MOVW forms already established in tests/s/exit's own _main
+  prologues.
+- lib_core/libc/arch/power/sigrestore.s: a trivial tail-branch
+  (`BR signotify(SB)`), like arm's own -- REGARG=R3 already matches
+  the kernel's own sig-in-r3 signal-handler convention, so no real ABI
+  bridging is needed (see os/linux/notify.c's own header comment for
+  the general design and why amd64/386/mips/riscv/riscv64 needed real
+  bridging while arm/arm64 didn't). NOT independently verified with a
+  real kill(2)+notify() probe the way arm's own comment describes --
+  reasoned by analogy only.
+- lib_core/libc/arch/power/vlop.s: the 64-bit multiply helper (_mulv)
+  qc's frontend calls for `vlong * vlong` -- classic 32-bit PowerPC has
+  no 64x64 multiply, only MULLW/MULHWU (32x32->64, low/high halves),
+  so this builds the truncated 64-bit product the standard way (see
+  arm's own vlop.s for the general algorithm). No div.s needed (real
+  divw/divwu hardware instructions exist, unlike arm/riscv's software
+  divide helpers) and no getcallerpc.s (power isn't special-cased in
+  port/getcallerpc.c, so it falls into that file's portable `return 0;`
+  fallback like arm64/mips/riscv/riscv64).
+- lib_core/libc/syscall/os/linux/{numbers,syscall_linux,svc}_power.*:
+  the raw syscall layer. Numbers are the classic/legacy table (same as
+  386/arm, confirmed against this host's installed powerpc-linux-gnu
+  cross headers) -- NOT mips's o32 +4000-offset scheme. svc_power.s's
+  error convention needed real derivation, not copying: PowerPC's `sc`
+  signals failure via CR0's SO (Summary Overflow) bit, not a GPR flag
+  like mips's/alpha's a3/a4 -- confirmed by decoding linkers/ql/
+  asmout.c's own ABVS/ABVC encoding (BI=3 selects CR0 bit 3 = SO,
+  matching real PowerPC ABI) rather than assumed from the mnemonic
+  name alone. NEG (a real PowerPC instruction) negates the syscall's
+  positive errno into the return register on error -- no hardwired-
+  zero-register trick needed here, unlike alpha's/mips's SUBQ/SUBU
+  (PowerPC has no such register). Deliberately narrower than every
+  other arch's own decl: no _syspipe yet (PowerPC's raw sys_pipe
+  return convention -- register pair like mips, or pointer-write like
+  arm/386? -- not confirmed against real kernel source), left as a
+  documented gap (port/pipe.c declares _syspipe's extern itself, so
+  omitting it here only defers pipe.c, not this file's own build).
+- lib_core/libc/os/linux/stat_power.c: Kstat struct confirmed against
+  real kernel source on this host (arch/powerpc/include/uapi/asm/
+  stat.h's own "struct stat64", explicitly commented "matches struct
+  stat64 in glibc2.1") -- a simpler, single-`ino`-field shape than
+  arm's own EABI struct_stat64 (no leading pad/dual-ino). The two
+  padding gaps (before st_size, before st_blocks) are inferred from
+  natural 8-byte alignment, same as stat_alpha.c's own __pad0, written
+  as explicit uchar[] so the byte offsets don't depend on qc's own
+  struct-layout rules matching the real ABI.
+- lib_core/libc/os/linux/isatty.c: TCGETS is not the generic 0x5401 on
+  PowerPC (arch/powerpc/include/uapi/asm/ioctl.h overrides
+  _IOC_SIZEBITS=13/_IOC_DIRBITS=3, a BSD/SunOS-style encoding like
+  mips's own divergence) -- confirmed empirically by compiling and
+  running a real probe with the installed powerpc-linux-gnu-gcc cross
+  compiler under qemu-ppc (`printf("%x",TCGETS)`), not computed by
+  hand from the encoding macros (judged too error-prone to trust
+  blind, unlike the numbers above which came straight from a header).
+- lib_core/libc/os/linux/notify.c and port/vlrt.c: needed only an
+  `#ifdef power` branch each (numbers_power.h's own include, and the
+  big-endian Vlong field order respectively) -- the identical fix
+  already applied to tests/c/vlong/vlrt.c's own copy this session, now
+  ported to the shared port/vlrt.c too. os/linux/open.c's O_CREAT/
+  O_EXCL split needed no new branch: confirmed against real kernel
+  source that PowerPC uses the generic (non-mips) fcntl.h values
+  already in that file's `#else` branch.
+
+Verified: lib_core/libc built and installed cleanly for
+objtype=power/cputype=power on the FIRST attempt (every port/*.c and
+os/linux/*.c file compiled without error) -- the only failure was a
+missing ROOT/arch/power/lib/ directory `iar`'s own output copy needed,
+not a code bug. hello.exe then linked and ran correctly under qemu-ppc
+on the first attempt too, byte-matching expected.txt exactly, with no
+further debugging needed beyond that one mkdir. Full top-level `mk
+test` re-run afterward, no regressions from the shared u.h/vlrt.c/
+notify.c/isatty.c changes.
+
 What's still unverified (see todo.org for priority, not this file)
 ----------------------------------------------------------------------
 
 - machines/qi (the powerpc emulator; contains power.h) is untouched --
   not even confirmed to build.
-- No lib_core/libc/arch/power/ port -- qc can only build code with no
-  libc dependency yet (tests/c/mini's helloc.c has none by design).
-  mkfiles/power/mkfile has no ARCHEXTRAOFILES for this reason.
 - gins4()'s unconditional `p->reg = REGZERO` (compilers/qc/txt.c, right
   below the now-fixed gins3()) is the same bug class, untouched because
-  nothing in tests/c/{mini,vlong,float} reached it -- worth checking
-  first if a future power bring-up hits another unexplained "wrong
-  register" result in shift/rotate-heavy code (gins4 backs
-  ARLWNM/ARLWMI, used by the 64-bit shift codegen in txt.c).
+  nothing in tests/c/{mini,vlong,float,hello_libc's hello.c} reached
+  it -- worth checking first if a future power bring-up hits another
+  unexplained "wrong register" result in shift/rotate-heavy code
+  (gins4 backs ARLWNM/ARLWMI, used by the 64-bit shift codegen in
+  txt.c).
 - The ql HEADTYPE 7 symbol-table/.data corruption bug worked around by
   mkfiles/power/mkfile's `-s` (see that file's own comment) is still
   not root-caused, and may be latent in vl/il/zl too.
+- The rest of tests/c/hello_libc (io/dir/fd/mem/proc/args/env/ctime/
+  atexit/utfmisc/notify/alarm.exe) is untouched -- deliberately, this
+  session's own scope was hello.c only. _syspipe (pipe.exe) has a
+  documented, unresolved calling-convention gap (see the svc_power.s
+  entry above); sigentry's no-bridging-needed assumption (sigrestore.s)
+  and stat_power.c's Kstat padding are reasoned from real
+  header/analogy but not yet exercised by a real notify.exe/stat.exe
+  run; the rest should mostly be "wire it up and see" given how much
+  of the underlying syscall table is already ported.
+- power is not added to tests/c/hello_libc/mkfile's own $ARCHS or
+  test:V: target -- intentionally, since that target builds and runs
+  every one of the files above, not just hello.exe.

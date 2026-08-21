@@ -1,4 +1,27 @@
-#define nil		((void*)0)
+/* claude: nil NOT defined here -- it's already in
+ * include/core/macros.h, included generically for every arch; a
+ * second #define here (even an identical one) is a hard error for
+ * this compiler ("macro redefined: nil"), not a warning. Same fix
+ * already applied to arm64/riscv64/alpha's own u.h. */
+
+/* claude: s8/u8/s16/u16/s32/u32/s64/u64 -- required by
+ * include/core/types.h ("typedef s8 int8;" etc), which every other
+ * arch's u.h already defines these for. Missing from the original
+ * import entirely (it only had the older u8int/u32int/... aliases
+ * below), so port/*.c and fmt/*.c fail to parse with "not a function
+ * ... last name: int8" without these. */
+typedef signed char s8;
+typedef unsigned char u8;
+typedef signed short s16;
+typedef unsigned short u16;
+typedef signed int s32;
+typedef unsigned int u32;
+typedef signed long long s64;
+typedef unsigned long long u64;
+
+typedef float float32;
+typedef double float64;
+
 typedef	unsigned short	ushort;
 typedef	unsigned char	uchar;
 typedef	unsigned long	ulong;
@@ -6,14 +29,16 @@ typedef	unsigned int	uint;
 typedef	  signed char	schar;
 typedef	long long	vlong;
 typedef	unsigned long long uvlong;
+typedef long		intptr;
 typedef unsigned long	uintptr;
 typedef unsigned long	usize;
 typedef	uint		Rune;
 typedef union FPdbleword FPdbleword;
-typedef long		jmp_buf[2];
-#define	JMPBUFSP	0
-#define	JMPBUFPC	1
-#define	JMPBUFDPC	0
+/* claude: jmp_buf NOT defined here -- include/core/exn.h already
+ * provides the real one (Jmpbuf{sp,pc}, see setjmp.s's own comment),
+ * shared across every arch; this file's own jmp_buf[2]/JMPBUFSP/PC/DPC
+ * were leftovers from the original import and conflict with it. Same
+ * fix already applied to alpha's own u.h. */
 typedef unsigned int	mpdigit;	/* for /sys/include/mp.h */
 typedef unsigned char	u8int;
 typedef unsigned short	u16int;

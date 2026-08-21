@@ -37,8 +37,11 @@ CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/power
 # unexercised by their own tests/c/* content so far. See
 # docs/claude_notes/notes_arch_power.txt.
 
-# claude: no ARCHEXTRAOFILES yet (unlike every sibling mkfile here) --
-# lib_core/libc has no lib_core/libc/arch/power/ port yet, so nothing
-# here builds against it. tests/c/mini's helloc.exe (the first real
-# exercise of qc) links its own minimal xwrite/xexit syscall stubs
-# instead, no libc needed.
+# claude: no div.$O (unlike arm/riscv's own ARCHEXTRAOFILES) -- real
+# 32-bit PowerPC has hardware divw/divwu, so qc never emits calls to a
+# software divide helper the way 5c/ic do. No getcallerpc.$O either:
+# port/getcallerpc.c's own #ifdef doesn't special-case power, so it
+# falls into that file's portable `return 0;` fallback (same as
+# arm64/mips/riscv/riscv64) rather than getting a real per-arch
+# implementation here.
+ARCHEXTRAOFILES=arch/power/setjmp.$O arch/power/vlop.$O

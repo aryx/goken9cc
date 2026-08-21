@@ -1,0 +1,89 @@
+// Declarative syscall spec for linux/power, in the spirit of
+// GO/pkg/syscall's "//sys name(args) (ret) = SYS_NAME" comments (see
+// GO/pkg/syscall/syscall_linux.go), parsed by scripts/mksyscall.sh into
+// zsyscall_linux_power.c. Every wrapper just calls the one generic
+// _syscall6 trampoline (lib_core/libc/syscall/os/linux/svc_power.s), so
+// adding a syscall here is the only step needed -- no new assembly.
+
+//sys write(int fd, void *buf, long n) long = SYS_write
+//sys read(int fd, void *buf, long n) long = SYS_read
+//sys close(int fd) int = SYS_close
+//sys lseek(int fd, vlong offset, int whence) long = SYS_lseek
+// _sysopen, not open: see syscall_linux_amd64.decl's identical comment --
+// this is the raw 3-arg POSIX shape, distinct from Plan9's 2-arg
+// open(char*,int) (include/os/file.h), which os/linux/open.c builds
+// on top of this.
+//sys _sysopen(void *path, int flags, int mode) long = SYS_open
+// see syscall_linux_386.decl's identical comment: chdir needs no glue,
+// while _sysunlink/_sysrmdir/_sysmkdir are raw shapes that port/remove.c
+// and os/$GOOS/open.c bridge into Plan9's remove() and create().
+//sys _sysunlink(char *path) int = SYS_unlink
+//sys _sysrmdir(char *path) int = SYS_rmdir
+//sys _sysmkdir(char *path, int mode) int = SYS_mkdir
+// access: Plan9's mode bits (AEXIST/AEXEC/AWRITE/AREAD = 0/1/2/4,
+// include/os/file.h) are numerically identical to POSIX's
+// F_OK/X_OK/W_OK/R_OK, so like chdir this needs no translation and is
+// generated straight into its public name.
+//sys access(char *path, int mode) int = SYS_access
+// dup is _sys-prefixed because Plan9's dup(oldfd, newfd) is ONE call
+// covering what POSIX splits in two: newfd == -1 means "lowest free
+// fd" (POSIX dup), anything else is dup2. port/dup.c bridges them.
+//sys _sysdup(int fd) int = SYS_dup
+//sys _sysdup2(int oldfd, int newfd) int = SYS_dup2
+//sys chdir(char *path) int = SYS_chdir
+//sys exit(int code) void = SYS_exit
+// brk: the raw kernel primitive, _sys-prefixed like the others because
+// its shape is NOT the public one. Linux's brk(2) returns the NEW break
+// and reports failure by returning the UNCHANGED old one -- no errno at
+// all -- whereas include/os/mem.h's brk() is Plan9-shaped (0/-1).
+// os/linux/brk.c bridges the two, and port/sbrk.c sits on top of that.
+//sys _sysbrk(void *addr) uintptr = SYS_brk
+// the "small tier": getpid, getwd, time/nsec, sleep.
+//sys getpid(void) int = SYS_getpid
+// getcwd is _sys-prefixed because the shapes differ twice over: POSIX
+// returns the LENGTH written (or -errno), Plan9's getwd() returns the
+// buffer (or nil). os/linux/getwd.c bridges it.
+//sys _sysgetcwd(char *buf, ulong size) long = SYS_getcwd
+// clock_gettime/clock_nanosleep rather than gettimeofday/nanosleep --
+// see numbers_power.h's own comment for why (the *_time64 forms, an
+// 8+8 vlong-shaped timespec on every arch, y2038-correct).
+//sys _sysclockgettime(int clockid, void *ts) int = SYS_clock_gettime
+//sys _sysclocknanosleep(int clockid, int flags, void *req, void *rem) int = SYS_clock_nanosleep
+// the stat family (Tier 3) -- see syscall_linux_386.decl's identical
+// comment, including why _sysftruncate64 takes a pre-split lo/hi pair.
+//sys _sysfstat(int fd, void *buf) int = SYS_fstat64
+//sys _sysfchmod(int fd, int mode) int = SYS_fchmod
+//sys _sysftruncate64(int fd, ulong lo, ulong hi) int = SYS_ftruncate64
+// dirread's two raw calls (Tier 3.5) -- see syscall_linux_386.decl's
+// identical comment on the openat naming.
+//sys openat(int dirfd, void *path, int flags, int mode) long = SYS_openat
+//sys _sysgetdents64(int fd, void *buf, uint count) long = SYS_getdents64
+// renameat2(2) -- os/linux/dirwstat.c's dirwstat() name-change support
+//sys _sysrenameat2(int olddirfd, void *oldpath, int newdirfd, void *newpath, uint flags) long = SYS_renameat2
+// Tier 4 process control -- see syscall_linux_386.decl's identical
+// comment on why these stay _sys-prefixed.
+//sys _sysfork(void) int = SYS_fork
+//sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
+//sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
+// claude: no _syspipe here yet, unlike every other 32-bit arch's own
+// decl -- PowerPC Linux's raw sys_pipe() ABI (register-pair return
+// like mips's o32, or pointer-write like arm's/386's?) is not
+// confirmed against real kernel source yet. port/pipe.c declares
+// _syspipe's extern itself, so leaving it out here only defers
+// pipe.c/tests/c/hello_libc/pipe.exe, not this file's own build.
+
+// Tier 6 notification -- see syscall_linux_amd64.decl's identical
+// comment. See numbers_power.h's own comment on the Ksigaction shape
+// (confirmed against real kernel source) and the missing-SA_RESTORER
+// axis (reasoned by analogy with arm, not independently probed).
+//sys _syskill(int pid, int sig) int = SYS_kill
+//sys _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize) int = SYS_rt_sigaction
+
+// rc self-hosting's Isatty() (os/linux/isatty.c). arg stays void*
+// like _sysrtsigaction's act/oact above -- the raw layer stays free
+// of struct definitions.
+//sys _sysioctl(int fd, ulong request, void *arg) int = SYS_ioctl
+
+// alarm() (os/linux/alarm.c). new/old stay void* like every other raw
+// stub here.
+//sys _syssetitimer(int which, void *new, void *old) int = SYS_setitimer

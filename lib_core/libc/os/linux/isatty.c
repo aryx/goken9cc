@@ -36,7 +36,20 @@
 #ifdef mips
 #define TCGETS 0x540d
 #else
+#ifdef power
+/* claude: PowerPC uses the BSD/SunOS-style ioctl encoding (like mips),
+ * not the generic 0x5401 -- confirmed by actually compiling+running a
+ * probe with the real powerpc-linux-gnu-gcc cross compiler under
+ * qemu-ppc (`printf("%x", TCGETS)` against
+ * <asm/ioctls.h>/<asm/termios.h>), not computed by hand from the
+ * encoding macros (arch/powerpc/include/uapi/asm/ioctl.h's own
+ * _IOC_SIZEBITS=13/_IOC_DIRBITS=3, non-default, made a manual
+ * computation error-prone enough not to trust blindly).
+ */
+#define TCGETS 0x402c7413
+#else
 #define TCGETS 0x5401
+#endif
 #endif
 
 extern int _sysioctl(int fd, ulong request, void *arg);
