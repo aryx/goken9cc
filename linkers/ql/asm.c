@@ -347,7 +347,45 @@ asmb(void)
 		break;
 	case 7:
 		/* linux, matching il/vl/zl's own HEADTYPE 7 */
-		debug['S'] = 1;			/* symbol table */
+		/* claude: only ask elf32() for a section-header table (debug['S'])
+		 * when we're NOT stripping. linkers/lk/elf.c's elf32sectab() (and
+		 * elf32()'s own "offset to first shdr" field) compute where to
+		 * seek using the UNROUNDED HEADR+textsize+datsize+symsize, but
+		 * the data (and, when present, symbol table) content actually
+		 * gets written starting at the PAGE-ROUNDED
+		 * rnd(HEADR+textsize,INITRND)+datsize+symsize -- the same
+		 * class of bug d5cfb36f0 already root-caused and fixed for 8l/
+		 * 8lk's own (non-shared) ELF writer. Whenever that rounding gap
+		 * exceeds symsize (always true once -s makes symsize 0), the
+		 * mis-seeked write lands inside the tail of the just-written
+		 * .data content instead of past it, silently corrupting real
+		 * program data with section-header-table/.shstrtab bytes.
+		 * Confirmed via a byte-for-byte readelf/hexdump comparison
+		 * against the actual (correct) rnd()-based offset ql's own
+		 * pre-asmsym() seek a few lines up in asmb() already uses.
+		 * mkfiles/power/mkfile always links with -s, so this
+		 * unconditional debug['S']=1 made every power binary pay this
+		 * cost, and only some of them (tests/c/hello_libc's
+		 * utfmisc.exe, whose particular textsize/datsize combination
+		 * happens to produce a big rounding gap that reaches all the
+		 * way back into its own early, load-bearing string-literal
+		 * data) actually crashed from it -- others just carried
+		 * harmlessly-corrupted trailing bytes nothing ever reads. A
+		 * stripped ELF has no legitimate use for section headers
+		 * either way (the kernel loader reads only the PROGRAM
+		 * headers to run it), so skipping elf32sectab() entirely when
+		 * debug['s'] is set removes the whole corruption path rather
+		 * than trying to keep it byte-accurate. See
+		 * docs/claude_notes/notes_arch_power.txt for the full
+		 * writeup, including why the shared linkers/lk/elf.c file
+		 * itself was deliberately left untouched: every other HEADTYPE-7
+		 * arch sharing it (vl/il/zl) builds its own tests/c/vlong and
+		 * tests/c/float WITHOUT stripping, so symsize there is
+		 * normally big enough to absorb the same rounding gap and
+		 * never trips this -- power is the one arch whose own mkfile
+		 * always strips, making symsize unconditionally 0. */
+		if(!debug['s'])
+			debug['S'] = 1;		/* symbol table */
 		elf32(POWER, ELFDATA2MSB, 0, nil);
 		break;
 	}

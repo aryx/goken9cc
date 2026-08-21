@@ -586,7 +586,66 @@ argv directly -- worth re-confirming if either regresses later,
 since their earlier "passing" status before this fix was never
 independently explained).
 
-NOT fixed -- env.exe/ctime.exe: getenv("PATH") returns nil
+FIXED (follow-up session) -- env.exe/ctime.exe/utfmisc.exe, all one root cause
+----------------------------------------------------------------------
+
+All three of the failures below turned out to be the SAME bug,
+root-caused and fixed in a later session after the writeup below was
+already on disk (kept verbatim, since the investigation trail -- and
+the two theories it disproves -- is worth keeping): linkers/ql/asm.c's
+HEADTYPE-7 case unconditionally set `debug['S'] = 1` (i.e. "always
+emit an ELF section-header table"), which makes the shared
+linkers/lk/elf.c's elf32()/elf32sectab() seek to
+`HEADR+textsize+datsize+symsize` to write that table -- an UNROUNDED
+offset. But the data (and, when present, symbol-table) content right
+before it was actually written starting at the PAGE-ROUNDED
+`rnd(HEADR+textsize,INITRND)+datsize+symsize` (ELF requires
+vaddr-mod-page == file-offset-mod-page, so ql/asm.c's own asmb() -- the
+one write path that's already correct -- has to round there). Whenever
+that rounding gap exceeds symsize (ALWAYS true once `-s` makes symsize
+0, which mkfiles/power/mkfile's LD flags always do for every power
+binary), the mis-seeked section-header-table + .shstrtab write lands
+INSIDE the tail of the already-written .data content instead of past
+it, silently overwriting real program data with section-header/string
+bytes.
+
+This is the exact same bug class commit d5cfb36f0 already root-caused
+and fixed for 8l/8lk's own (separate, non-shared) ELF writer --
+found only because the user pointed at that commit as "a fix we did
+in another toolchain during goken integration" worth checking for an
+analogous fix here, not re-derived independently. The fix landed in
+linkers/ql/asm.c itself (only set debug['S'] when NOT stripping), not
+in the shared linkers/lk/elf.c: since power's own mkfile always links
+with -s, and a stripped ELF has no legitimate use for section headers
+anyway (the kernel loader reads only PROGRAM headers to run it),
+skipping elf32sectab() entirely whenever debug['s'] is set removes the
+whole corruption path with no loss. The shared elf.c was deliberately
+left untouched even though it has the identical unrounded-offset
+code (confirmed by hand-computing the exact byte offset the bug would
+land at for a real utfmisc.exe build, before finding the real fix,
+matching a `.strtab` fragment printed where a string literal should
+have been) -- vl/il/zl, the other HEADTYPE-7 arches sharing it, build
+their own tests/c/vlong and tests/c/float WITHOUT stripping, so their
+symsize is normally big enough to absorb the same rounding gap and
+never trips it. Power is the one arch whose mkfile always strips,
+making symsize unconditionally 0, which is why this was ever
+observable here at all.
+
+All 15 tests/c/hello_libc binaries pass with this one-line fix (plus
+the earlier rt0.s argv/argc fix): env.exe and ctime.exe's
+getenv("PATH") failures (below) and utfmisc.exe's segfault (further
+below) were ALL this same corruption hitting different, unlucky
+offsets within each binary's own .data -- not three separate bugs.
+The malloc(1)-fixes-env.c clue below now also makes sense in
+retrospect: pulling in port/minimal_malloc.c's own heap[] array grew
+symsize's effective replacement (well, grew datsize/bsssize, which
+isn't quite the same lever, but shifted the corrupted-byte-range far
+enough past env.c's own small, early string pool to stop mattering)
+by accident, without addressing the real cause -- exactly the kind of
+fragile, binary-size-dependent "sometimes it's fine" behavior a real
+unrounded-offset bug produces.
+
+Original (pre-fix) investigation, kept for the record
 ----------------------------------------------------------------------
 
 env.c and ctime.c both fail with a bare `exit(1)`/no output, the
@@ -687,7 +746,7 @@ probably the more tractable, more clearly-in-scope one to root-cause
 first, since it doesn't depend on qemu's own internal placement logic
 at all.
 
-NOT fixed -- utfmisc.exe: segfaults, but ONLY when linked with -s
+(Also fixed by the same root cause above.) utfmisc.exe: segfaults, but ONLY when linked with -s
 ----------------------------------------------------------------------
 
 utfmisc.exe segfaults (SIGSEGV) under qemu-ppc when linked the normal
