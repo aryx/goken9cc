@@ -1,5 +1,4 @@
 #include	"l.h"
-#define	r0iszero	1
 
 void
 span(void)

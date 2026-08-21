@@ -1,13 +1,13 @@
-The powerpc toolchain (qa/qc/ql/qi): first Linux ELF exit(42) bring-up
-========================================================================
+The powerpc toolchain (qa/qc/ql/qi): first Linux ELF exit/hello bring-up
+=========================================================================
 
 Notes from bringing up qa/ql (compiler qc and emulator qi untouched so
-far) far enough to run tests/s/exit/exit_linux_power.s under qemu-ppc.
-Source is Plan 9 4th edition's powerpc port (see
-cf54e8364/359281e56/53b0b0882 for the import and initial "make it
-compile" commits); this session is the first real runtime exercise of
-either tool. See assemblers/qa/, linkers/ql/, include/objexec/q.out.h,
-tests/s/exit/.
+far) far enough to run tests/s/exit/exit_linux_power.s and
+tests/s/mini/hello_linux_power.s under qemu-ppc. Source is Plan 9 4th
+edition's powerpc port (see cf54e8364/359281e56/53b0b0882 for the
+import and initial "make it compile" commits); this session is the
+first real runtime exercise of either tool. See assemblers/qa/,
+linkers/ql/, include/objexec/q.out.h, tests/s/exit/, tests/s/mini/.
 
 lput/wput/cput: long -> int32 parity fix
 -----------------------------------------
@@ -52,12 +52,13 @@ the page size, which needs a real INITRND (4096) and the matching
 HEADTYPE 7 (see linkers/zl/asm.c), which hit this exact requirement
 during its own Linux ELF bring-up.
 
-Not yet exercised: exit(42) has no .data segment, so this rnd()
-alignment path is unverified beyond "produces a byte-identical file
-offset to what elf32() computed" -- a real .data-touching test (the
-tests/s/mini equivalent) would be the next real exercise of it, the
-same way zl's own mini.s test was what actually caught its setSB/gp
-bug (see notes_arch_alpha.txt) that exit(42) alone never could.
+exit(42) alone never exercised this rnd() alignment path (no .data
+segment); tests/s/mini/hello_linux_power.s (added later this session,
+see below) does, and produces correct output under qemu-ppc, so the
+page-alignment computation is now verified against a real .data
+segment too -- the same way zl's own mini.s test was what actually
+caught its setSB/gp bug (see notes_arch_alpha.txt) that exit(42) alone
+never could.
 
 r0iszero: PowerPC's RA=0-means-literal-0 quirk, and why -0 is needed
 -----------------------------------------------------------------------
@@ -84,6 +85,50 @@ legitimately needs R0's real hardware value (as the Linux syscall ABI
 does) must pass `ql -0` to disable the check. tests/s/exit/mkfile's
 power recipe does this: `ql -0 -H7 -o $target -E _start ...`.
 
+span.c's hardcoded `#define r0iszero 1` silently defeated `-0`
+--------------------------------------------------------------------
+
+`ql -0` (above) is necessary but was NOT sufficient: with only that
+flag, tests/s/mini/hello_linux_power.s ran, printed "Hello, world"
+correctly, but called exit(4) instead of exit(0) --
+`qemu-ppc -strace` showed the actual syscall trace:
+
+    write(1,0x401000,13)Hello, world
+     = 13
+    exit(4)
+
+`4` is exactly the write() syscall number, i.e. R0's value from three
+instructions earlier -- meaning `MOVW $0, R3` (meant to zero the exit
+status) assembled to `or r3,r0,r0` (0x7c030378, a register-to-register
+move copying R0's current value into R3) instead of `addi r3,0,0`
+(0x38600000, the correct "li r3,0"). This is the exact same
+RA==0-means-literal-0 hardware trick described above, but applied in
+the *other* direction: ql's own instruction selection was using
+`$0`-as-a-constant interchangeably with "read R0" -- valid only on a
+machine where R0 is truly hardware-zero (MIPS), which PowerPC is not,
+and definitely not valid once hand-written code has repurposed R0 to
+hold a real value (here, still 4 from the write() syscall two
+instructions earlier).
+
+Root cause: linkers/ql/span.c had its own file-scope
+`#define r0iszero 1` (line 2, present unmodified since the original
+Plan 9 4th edition import -- `git show cf54e8364:linkers/ql/span.c`
+already has it), which shadows the real `EXTERN int r0iszero` from
+l.h that obj.c's `-0` flag actually sets. So `-0` correctly disabled
+the asmout.c diagnostic (r0iszero read from the real global there) but
+had *no effect at all* on span.c's own aclass()/cmp() (both in the same
+file, both silently seeing the macro's constant `1` instead of the
+real variable), which is what decides that `$0` may be encoded as "mv
+from R0" in the first place. Safe for qc-generated code (qc never
+reassigns R0, so treating it as a permanent hardware zero is harmless
+there) but wrong for any hand-written code that uses R0 as a real
+register, which the Linux syscall ABI requires. Fixed by deleting the
+`#define` so span.c falls through to the real global. Verified:
+hello_linux_power.exe now traces as `exit(0)`, and the full tests/s
+suite (all archs, not just power) still passes -- this is shared
+classification logic (aclass()/cmp()), so worth re-checking sanity
+after any future edit near it.
+
 qemu-runner: 'power' -> qemu-ppc
 ---------------------------------
 
@@ -100,8 +145,6 @@ What's still unverified (see todo.org for priority, not this file)
 
 - compilers/qc has not been run at all this session (SZ_IND checked by
   inspection only, matches vc's 4-byte pointers).
-- No .data/SB-relative test yet (the tests/s/mini equivalent) -- see
-  the HEADTYPE 7 section above for why that matters.
 - machines/qi (the powerpc emulator; contains power.h) is untouched --
   not even confirmed to build.
 - tests/c/* (anything requiring qc + lib_core/libc for power) not
