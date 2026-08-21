@@ -1423,13 +1423,33 @@ nuxiinit(void)
 {
 	int i, c;
 
+	/* claude: this loop originally read `if(i <= 4) inuxi4[i] = c;`
+	 * and `if(i <= 2) inuxi2[i] = c;` -- off-by-one bounds (should be
+	 * `<`, matching every sibling linker's nuxiinit(), e.g. il/vl/6l's
+	 * `if(i < 2) inuxi2[i] = c;`). inuxi2 is declared `char inuxi2[2]`
+	 * (l.h), so the i==2 iteration wrote one byte past its end. l.h
+	 * declares inuxi1/inuxi2/inuxi4 back to back as EXTERN globals, so
+	 * that stray write landed on inuxi4[0] whenever the host C
+	 * compiler happened to lay those three arrays out contiguously in
+	 * that order -- undefined behavior, so whether it actually
+	 * clobbers inuxi4[0] depends on the *host* toolchain building zl
+	 * itself, not on anything alpha-specific. Symptom: inuxi4 (the
+	 * little-endian byte-order table datblk() uses for every 4-byte
+	 * DATA write, e.g. tests/c/mini2/print_nofloat_no64.c's
+	 * `static int32 fd = 1;`) came out as {2,1,2,3} instead of
+	 * {0,1,2,3} when zl was built by gcc on amd64, silently writing
+	 * `fd`'s initializer as 0 instead of 1 and sending every
+	 * printf-via-write() call to fd 0 -- but not when zl was built on
+	 * an arm64 host, where the same UB happened not to overlap. Root-
+	 * caused with qemu-alpha -strace (every write() going to fd 0)
+	 * plus temporary print()s in dodata()/datblk() tracing inuxi4's
+	 * actual contents at the point of the wrong write. */
 	for(i=0; i<4; i++) {
 		c = find1(0x04030201L, i+1);
-		if(i <= 4)
-			inuxi4[i] = c;
-		if(i <= 2)
+		inuxi4[i] = c;
+		if(i < 2)
 			inuxi2[i] = c;
-		if(i <= 1)
+		if(i < 1)
 			inuxi1[i] = c;
 	}
 	for (i = 0; i < 4; i++) {
