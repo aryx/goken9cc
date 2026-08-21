@@ -1041,20 +1041,43 @@ void
 gins3(int a, Node *f1, Node *f2, Node *t)
 {
 	Adr ta;
+	Node ztmp;
+	int hasf2, zreg;
+
+	/*
+	 * claude: on power R0 is never a hardware zero register (unlike
+	 * MIPS's $zero, which R0ISZERO models); with -0 (see gc.h's
+	 * R0ISZERO), a bare "$0" f2 operand here needs a real register
+	 * materializing it, not REGZERO. Must happen before nextpc() below
+	 * starts the real instruction p, since the MOVW that loads the
+	 * zero has to precede it in program order.
+	 */
+	hasf2 = f2 != Z && (f2->op != OREGISTER || !samaddr(f2, t));
+	zreg = -1;
+	if(hasf2) {
+		ta = zprog.from;	/* TO DO */
+		naddr(f2, &ta);
+		if(ta.type == D_CONST && ta.offset == 0 && !R0ISZERO) {
+			regalloc(&ztmp, &regnode, Z);
+			gins(AMOVW, nodconst(0), &ztmp);
+			zreg = ztmp.reg;
+			regfree(&ztmp);
+		}
+	}
 
 	nextpc();
 	p->as = a;
 	if(f1 != Z)
 		naddr(f1, &p->from);
-	if(f2 != Z && (f2->op != OREGISTER || !samaddr(f2, t))) {
+	if(hasf2) {
 		ta = zprog.from;	/* TO DO */
 		naddr(f2, &ta);
 		p->reg = ta.reg;
 		if(ta.type == D_CONST && ta.offset == 0) {
-			if(R0ISZERO)
-				p->reg = REGZERO;
+			if(zreg >= 0)
+				p->reg = zreg;
 			else
-				diag(Z, "REGZERO in gins3 %A", a);
+				p->reg = REGZERO;
 		}else if(ta.type == D_CONST)
 			p->from3 = ta;
 	}

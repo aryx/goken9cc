@@ -3,18 +3,39 @@
 # the goken cross-toolchain itself: used by tests/ (mk objtype=power) and,
 # once self-hosting is viable, as CC/AS/LD for the top-level build too.
 O=q
-CC=qc
-LD=ql -0 -H7
+CC=qc -0
+LD=ql -0 -s -H7
 AS=qa
 AR=iar
 
 CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/power
 
-# claude: -0 disables ql's r0iszero convention (R0 conventionally held
-# zero by qc-generated code, like MIPS's $zero) -- needed because the
+# claude: -0 disables the R0-conventionally-holds-zero optimization --
+# on ql, its r0iszero (asmout.c/span.c); on qc, its own identically-
+# named R0ISZERO (gc.h: `#define R0ISZERO (debug['0']==0)`), which
+# without -0 emits "MOVW $0, mem" stores assuming they assemble via a
+# hardware-zero R0 (real for MIPS's $zero, never true for PowerPC's
+# R0). Needed on both tools for the same underlying reason: the
 # PowerPC Linux syscall ABI requires r0=syscall number, a real,
-# possibly-nonzero value. See docs/claude_notes/notes_arch_power.txt.
-# -H7 selects Linux ELF output, same as every other arch's LD here.
+# possibly-nonzero value, so nothing in this link can assume R0 stays
+# zero. Without qc's own -0, linking fails with ql's "illegal
+# combination MOVW SCON NONE NONE S*OREG/SAUTO" -- there is no
+# PowerPC store-immediate instruction, so once r0iszero-as-source is
+# off, ql has nothing left to encode that store with. -H7 selects
+# Linux ELF output, same as every other arch's LD here.
+#
+# claude: -s (strip the symbol table) is load-bearing here, not just
+# a size optimization: ql's HEADTYPE 7 asmsym()/asmlc() output
+# corrupts the tail of .data once a build carries enough symbols
+# (tests/c/float's helloprintf.exe, but not tests/c/mini's or tests/c/
+# vlong's smaller ones) -- confirmed by hexdumping the linked ELF's
+# .data section directly: a static `int32 fd = 1` read back as 1792
+# with the symbol table left in, exactly right with -s. Root cause
+# not fully isolated (the ELF phdrs/shdrs computed sizes/offsets that
+# looked internally consistent on inspection); vl/il/zl share this
+# HEADTYPE 7 machinery and may carry the same latent bug, just
+# unexercised by their own tests/c/* content so far. See
+# docs/claude_notes/notes_arch_power.txt.
 
 # claude: no ARCHEXTRAOFILES yet (unlike every sibling mkfile here) --
 # lib_core/libc has no lib_core/libc/arch/power/ port yet, so nothing

@@ -3,13 +3,14 @@ The powerpc toolchain (qa/qc/ql/qi): first Linux ELF exit/hello/C bring-up
 
 Notes from bringing up qa/ql/qc (emulator qi untouched so far) far
 enough to run tests/s/exit/exit_linux_power.s, tests/s/mini/
-hello_linux_power.s, and tests/c/mini/helloc.exe (compiled by qc, not
-hand-written) under qemu-ppc. Source is Plan 9 4th edition's powerpc
-port (see cf54e8364/359281e56/53b0b0882 for the import and initial
-"make it compile" commits); this session is the first real runtime
-exercise of any of these tools. See assemblers/qa/, linkers/ql/,
-compilers/qc/, include/objexec/q.out.h, tests/s/exit/, tests/s/mini/,
-tests/c/mini/.
+hello_linux_power.s, tests/c/mini/helloc.exe, tests/c/vlong/
+helloprintf.exe, and tests/c/float/helloprintf.exe (all byte-matching
+their expected.txt) under qemu-ppc. Source is Plan 9 4th edition's
+powerpc port (see cf54e8364/359281e56/53b0b0882 for the import and
+initial "make it compile" commits); this session is the first real
+runtime exercise of any of these tools. See assemblers/qa/,
+linkers/ql/, compilers/qc/, include/objexec/q.out.h, tests/s/exit/,
+tests/s/mini/, tests/c/mini/, tests/c/vlong/, tests/c/float/.
 
 lput/wput/cput: long -> int32 parity fix
 -----------------------------------------
@@ -247,6 +248,107 @@ original Plan 9 4th edition source drop but missed by the cf54e8364
 import commit's `git add`. Added to git alongside this session's
 changes rather than left stranded.
 
+tests/c/vlong: big-endian Vlong struct order (matches mips's own bug)
+------------------------------------------------------------------------
+
+tests/c/vlong/helloprintf.exe's "%d" line printed "002" instead of
+"42". Root cause: vlrt.c's `struct Vlong {ulong lo; ulong hi;}` field
+order assumes a little-endian target (the file's own comment already
+documents this, added during mips's bring-up: "big-endian mips stores
+the high word first... this file was copied from the little-endian
+arm vlrt.c"). Power is also big-endian and hit the identical bug
+class -- _modvu/_divvu's `n.lo`/`n.hi` read the wrong halves of the
+64-bit value qc actually passed, so `v % 10` operated on the wrong
+32 bits. Fixed by adding `#ifdef power` alongside the existing
+`#ifdef mips` branch (nested, not `mips || power`, since this
+project's own preprocessors have no #if expression support). Cross-
+checked against the real Plan 9 4th edition source at
+~/xxx/plan9/SRC/libc/power/vlrt.c (a genuine reference the user
+pointed at mid-session): its own `struct Vlong` is unconditionally
+`{ulong hi; ulong lo;}` (no ifdef needed there since that file is
+power-only), confirming hi-first is the correct big-endian order.
+tests/c/vlong now passes for power with no other zc/za/zl-class fixes
+needed, matching alpha's own "both pass first try" experience for
+this specific test once its one endianness bug was found.
+
+tests/c/float: three more real bugs, each found by peeling the last one
+----------------------------------------------------------------------------
+
+Getting tests/c/float working took four real, distinct bugs -- vlong's
+above, plus three more this test uniquely exercises (real .data
+symbol-table interaction, arbitrary float literals, and int<->float
+conversion -- none of which vlong or mini touch). Found in this order,
+each fix exposing the next failure underneath it:
+
+1. compilers/qc/txt.c's gins3() had no fallback when !R0ISZERO for an
+   operand that's a bare `$0` needing a real register (used by 64-bit
+   negate/shift codegen, not just the store-immediate case already
+   fixed in ql/asmout.c): it just `diag()`'d out ("REGZERO in gins3
+   SUBC") building tests/c/vlong/print.c's `v = -v;` (int64 negate).
+   Fixed by materializing 0 into a real scratch register when
+   R0ISZERO is off, computed *before* nextpc() starts the real
+   instruction (the MOVW loading zero must precede it in program
+   order) -- see the fix's own comment in gins3() for why gins4()
+   right below it (unconditional `p->reg = REGZERO`) wasn't touched:
+   nothing in this session's test content reached it, so it's
+   flagged as a matching latent bug rather than guessed at blind.
+
+2. include/objexec/q.out.h's `struct ieee {long l, h;}` was still
+   `long` -- the exact same bug class already fixed via the shared
+   include/objexec/common.out.h (whose own comment literally says
+   "must be int32, not long: the linkers copy the raw bytes of this
+   struct into the data segment... 64-bit longs corrupt the emitted
+   doubles") and already applied independently to i.out.h, just never
+   ported to q.out.h. On this LP64 host, `long` is 8 bytes, so the
+   struct was 16 bytes instead of 8 -- every byte-offset computation
+   in linkers/ql/asm.c's D_FCONST case (hardcoded assuming a tightly
+   packed 2×4-byte struct) silently read/wrote 4 bytes to one side of
+   where the real data actually was. Symptom: any DATA-declared 8-byte
+   float constant read back as zero (tests/c/float/linux_power.s's
+   own `const_half`, and every non-special-cased C float literal qc
+   emits via its own literal-pool mechanism, ql/obj.c's AFMOVD case).
+   Found by direct field-by-field instrumentation (temporary print()
+   calls at each pipeline stage: qa's ieeedtof() encoding -> ql's
+   decode into Adr.ieee -> the datblk() byte-copy loop) after ruling
+   out the DATA-writing byte-order table (fnuxi8[]) as a red herring --
+   its "big-endian" formula matches vl's (mips) own identically-shaped
+   formula, so if it were wrong for the {ieee.l; ieee.h;} field order,
+   mips would show it too; mips's own float test avoids ever exercising
+   this path (va has a MOVD-immediate pseudo-op, so it never needs a
+   DATA-based float constant), which is presumably why the shared
+   fnuxi8 formula was never actually verified against a real 8-byte
+   float write before now. Fixed q.out.h to `int32 l, h;`, matching
+   the already-fixed sibling headers.
+
+3. FREGCVI (F27, q.out.h) was never initialized in tests/c/float/
+   linux_power.s -- only F28-31 (the ZERO/HALF/ONE/TWO literal
+   constants) were. F27 plays a different role: it's the magic bias
+   (2^52 + 2^31 = 4503601774854144.0) compilers/qc/txt.c's gmove()
+   "fxtofl" path subtracts to convert a 32-bit int/uint to double
+   without a native int->float instruction (build a double with bit
+   pattern 0x43300000_(f^0x80000000) in memory, load it, subtract
+   FREGCVI to cancel the bias). Left uninitialized, every such
+   conversion subtracted ~0 instead, off by the full magnitude --
+   e.g. tests/c/float/print.c's digit-extraction loop (`s = v; ...;
+   v -= s;`, an implicit int->double widening of the truncated digit)
+   turned 2.2 into roughly -4e15 after one iteration, printing
+   "2.000000" instead of "2.200000" (only the FIRST digit, computed
+   before this path ever ran, came out right). Every other constant
+   in the test (0.0, 2.0, 3.0, NaN) happened to avoid this path
+   entirely (handled by the FREGZERO/HALF/ONE/TWO special-casing or
+   isNaN's own bit manipulation), which is why the bug hid behind bug
+   #2 until 2.2 -- the one literal with no register short-cut -- was
+   the last thing left failing. Fixed by adding the same
+   MOVW-then-FMOVD init sequence as const_half, with its own
+   DATA-declared 4503601774854144.0 constant.
+
+Verified: tests/c/vlong and tests/c/float's full `mk test` (all
+ARCHS, power now included in both) pass with byte-identical output to
+their respective helloprintf.expected.txt; re-ran tests/c/mini,
+tests/s/exit, tests/s/mini's own `mk test` afterward to confirm the
+q.out.h/gins3 changes (both touch code every power program goes
+through) didn't regress the earlier, simpler bring-up work.
+
 What's still unverified (see todo.org for priority, not this file)
 ----------------------------------------------------------------------
 
@@ -255,5 +357,12 @@ What's still unverified (see todo.org for priority, not this file)
 - No lib_core/libc/arch/power/ port -- qc can only build code with no
   libc dependency yet (tests/c/mini's helloc.c has none by design).
   mkfiles/power/mkfile has no ARCHEXTRAOFILES for this reason.
-- Floating point untouched (mpower/powermach's szfloat/szdouble fields
-  are filled in from q.c but never exercised by a real FP program).
+- gins4()'s unconditional `p->reg = REGZERO` (compilers/qc/txt.c, right
+  below the now-fixed gins3()) is the same bug class, untouched because
+  nothing in tests/c/{mini,vlong,float} reached it -- worth checking
+  first if a future power bring-up hits another unexplained "wrong
+  register" result in shift/rotate-heavy code (gins4 backs
+  ARLWNM/ARLWMI, used by the 64-bit shift codegen in txt.c).
+- The ql HEADTYPE 7 symbol-table/.data corruption bug worked around by
+  mkfiles/power/mkfile's `-s` (see that file's own comment) is still
+  not root-caused, and may be latent in vl/il/zl too.

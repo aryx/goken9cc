@@ -16,19 +16,29 @@ typedef struct  Vlong   Vlong;
 // claude: the field order must match how the target compiler lays out a
 // native 64-bit value in memory, because the vlrt helpers reinterpret this
 // struct as the compiler's vlong (and vice versa). Little-endian arches
-// store the low word first; big-endian mips stores the high word first.
-// With the wrong order every conversion comes out word-swapped -- e.g. a
-// widened 42 became 0x2a00000000, so printf %x/%d printed "0x00" / '*' on
-// mips. (This file was copied from the little-endian arm vlrt.c, hence the
-// original lo/hi order was only right for little-endian targets.)
+// store the low word first; big-endian archs (mips, power) store the high
+// word first. With the wrong order every conversion comes out word-swapped
+// -- e.g. a widened 42 became 0x2a00000000, so printf %x/%d printed "0x00"
+// / '*' on mips (and, before power was added here, "002" instead of "42"
+// on power's %d, which routes through _modvu -- %x/%hex happened to still
+// look plausible since printhex never divides). (This file was copied from
+// the little-endian arm vlrt.c, hence the original lo/hi order was only
+// right for little-endian targets.) No #if expression support in this
+// project's preprocessors (only plain #ifdef/#ifndef/#else, nested), hence
+// the nesting below instead of one "mips || power" condition.
 struct  Vlong
 {
-#ifdef mips	// the only big-endian target here; add other BE archs as needed
+#ifdef mips	// big-endian
+    ulong   hi;
+    ulong   lo;
+#else
+#ifdef power	// also big-endian
     ulong   hi;
     ulong   lo;
 #else
     ulong   lo;
     ulong   hi;
+#endif
 #endif
 };
 
