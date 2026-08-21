@@ -7,7 +7,7 @@
 *.o
 
 # goken/kencc object files
-*.[5678evijz]
+*.[5678evijqz]
 
 # gcc and goken libs
 *.a
@@ -17,9 +17,9 @@
 # same letter set as the *.[5678evijz] object-file line above. Needed
 # once anything is built for a non-boot objtype: the top-level
 # `bootstrap` target leaves a compilers/cck/cc.a7 on an arm64 host.
-*.a[5678evijz]
+*.a[5678evijqz]
 
-[5678ovijz].out
+[5678ovijqz].out
 _testmain.go
 o.*
 a.out

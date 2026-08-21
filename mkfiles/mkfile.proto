@@ -6,8 +6,8 @@ ROOT=$TOP/ROOT
 # common mkfile parameters shared by all architectures
 #
 
-OS=5678ijvze
-CPUS=arm arm64 386 amd64 riscv riscv64 mips alpha wasm 
+OS=5678ijqvze
+CPUS=arm arm64 386 amd64 riscv riscv64 power mips alpha wasm 
 
 # -I$TOP/include, -I$TOP/include/ALL and -I. are understood both by the
 # host bootstrap compiler (gcc/clang) and by goken's own Xc compilers
