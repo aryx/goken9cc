@@ -104,6 +104,7 @@ Each tool is prefixed with this code:
 | i | riscv | ic | ia | il | .i |
 | j | riscv64 | jc | ja | jl | .j |
 | v | mips | vc | va | vl | .v |
+| z | alpha | zc | za | zl | .z |
 
 Pipeline: `.c` → compiler (`Xc`) → assembler (`Xa`) → linker (`Xl`) → `X.out`
 
