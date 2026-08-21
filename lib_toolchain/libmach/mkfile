@@ -12,11 +12,13 @@ OFILES=\
 	8.$O\
 	v.$O\
 	z.$O\
+	q.$O\
 	5db.$O\
 	7db.$O\
 	8db.$O\
 	vdb.$O\
 	zdb.$O\
+	qdb.$O\
 	5obj.$O\
 	6obj.$O\
 	7obj.$O\
@@ -25,6 +27,7 @@ OFILES=\
 	vobj.$O\
 	vcodas.$O\
 	zobj.$O\
+	qobj.$O\
         \
 	obj.$O\
 	swap.$O\

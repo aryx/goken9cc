@@ -4,7 +4,7 @@ TOP=../../..
 
 all:V: helloc.exe
 clean:V:
-        rm -f *.[5678ijvz] *.exe *.a
+        rm -f *.[5678ijqvz] *.exe *.a
 test_one:V:
         mk 'objtype='$cputype all
         ./helloc.exe | cmp /dev/stdin helloc.expected.txt
@@ -20,7 +20,7 @@ helloc.exe: helloc.c
    $AR rc libmini.a start_$objtype.$O xwrite_$objtype.$O xexit_$objtype.$O
    $LD -L. -o $target -E _start helloc.$O
 
-ARCHS=386 amd64 arm arm64 mips riscv alpha
+ARCHS=386 amd64 arm arm64 mips riscv alpha power
 test:V:
         for (arch in $ARCHS) {
            echo $arch

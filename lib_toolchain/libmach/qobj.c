@@ -6,7 +6,7 @@
 #include <libc.h>
 #include <bio.h>
 #include <mach.h>
-#include "qc/q.out.h"
+#include <obj/q.out.h>
 #include "obj.h"
 
 typedef struct Addr	Addr;

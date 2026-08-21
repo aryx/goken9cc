@@ -1,13 +1,15 @@
-The powerpc toolchain (qa/qc/ql/qi): first Linux ELF exit/hello bring-up
-=========================================================================
+The powerpc toolchain (qa/qc/ql/qi): first Linux ELF exit/hello/C bring-up
+===========================================================================
 
-Notes from bringing up qa/ql (compiler qc and emulator qi untouched so
-far) far enough to run tests/s/exit/exit_linux_power.s and
-tests/s/mini/hello_linux_power.s under qemu-ppc. Source is Plan 9 4th
-edition's powerpc port (see cf54e8364/359281e56/53b0b0882 for the
-import and initial "make it compile" commits); this session is the
-first real runtime exercise of either tool. See assemblers/qa/,
-linkers/ql/, include/objexec/q.out.h, tests/s/exit/, tests/s/mini/.
+Notes from bringing up qa/ql/qc (emulator qi untouched so far) far
+enough to run tests/s/exit/exit_linux_power.s, tests/s/mini/
+hello_linux_power.s, and tests/c/mini/helloc.exe (compiled by qc, not
+hand-written) under qemu-ppc. Source is Plan 9 4th edition's powerpc
+port (see cf54e8364/359281e56/53b0b0882 for the import and initial
+"make it compile" commits); this session is the first real runtime
+exercise of any of these tools. See assemblers/qa/, linkers/ql/,
+compilers/qc/, include/objexec/q.out.h, tests/s/exit/, tests/s/mini/,
+tests/c/mini/.
 
 lput/wput/cput: long -> int32 parity fix
 -----------------------------------------
@@ -140,12 +142,118 @@ the FPU-emulation gaps hit by qemu-mips/qemu-arm (see
 notes_arch_mips.txt / qemu-fpu-emulation-gaps memory), nothing here
 touches floating point yet.
 
+qc: align()/maxround() long -> int32, swcmp/hintabsize (matches zc)
+---------------------------------------------------------------------
+
+Getting compilers/qc/mkfile to build hit the *exact* same two errors
+zc hit during its own bring-up (523eadaad), fixed the same way:
+
+- swt.c's align()/maxround() took `long` where the shared
+  compilers/cck/cc.h prototypes declare `int32` -- "conflicting types"
+  from gcc, since the two are different widths on this LP64 host.
+  Changed both functions' parameter/return/local types to int32,
+  matching zc/vc's own swt.c.
+- gc.h's `swcmp` prototype was unqualified (`void*, void*`) but the
+  actual definition lives in the shared compilers/cck/pswt.c as
+  `swcmp(const void *a1, const void *a2)` (a real qsort comparator).
+  Const-qualified the prototype. Same file's `hintabsize` was declared
+  `EXTERN int` (gc.h's own EXTERN macro, which list.c #define's away to
+  claim ownership of every other global) but mul.c already provides a
+  real, initialized definition (`int hintabsize = nelem(hintab);`) --
+  changed to a plain `extern int` matching zc/vc's own gc.h, avoiding a
+  conflicting tentative definition in list.c.
+
+Unlike zc, qc's SZ_IND is already 4 (power is 32-bit, not 64-bit like
+alpha), so the pointer-width bug class that also hit zc's txt.c/reg.c
+does not apply here -- confirmed by qc successfully compiling and
+correctly framing a real two-argument function (see next section).
+
+qc's calling convention, confirmed with `qc -S`
+--------------------------------------------------
+
+Rather than guess from q.out.h's REGARG/REGRET=3 comment, compiled a
+throwaway two-arg function and read the actual codegen: qc passes the
+first argument in R3 (confirmed) and any further arguments on the
+stack, readable in the callee as `argname+4(FP)` for a 4-byte-wide
+arg (int, pointer) -- same offset convention as arm/mips's own
+xwrite_*.s, since power's pointers/ints are 4 bytes here. Used this to
+write tests/c/mini/{start,xwrite,xexit}_power.s: start_power.s sets up
+R2 (setSB, same role as setR30 in start_mips.s) before `BL main(SB)`;
+xwrite_power.s must move the incoming buf pointer out of R3 into R4
+before overwriting R3 with the syscall's fd argument (same reason
+xwrite_arm.s/xwrite_alpha.s move their own incoming arg register
+first) -- same -0/r0-as-real-register story as tests/s/exit and
+tests/s/mini above.
+
+lib_toolchain/libmach and iar had no power/'q' support at all
+------------------------------------------------------------------
+
+`ql -L` (linking against the iar-built libmini.a) failed with
+"first entry not symbol header" -- the exact same message and root
+cause zl hit during its own tests/c/mini bring-up (fc257505a):
+lib_toolchain/libmach's object-dispatch machinery had no entry at all
+for power's '.q' objects (unlike zl's case, this wasn't a wrong
+leftover entry pointing at another arch -- power's ObjPower case was
+simply never added), so iar could read the archive members but never
+built a real symbol table for them.
+
+lib_toolchain/libmach/q.c, qobj.c, and qdb.c already existed (imported
+alongside qa/ql/qc in cf54e8364) but were never wired up or built:
+
+- include/arch/mach.h needed six new enum constants: MPOWER (machine
+  type), FPOWER (executable type -- no bootable variant, like arm's
+  FNONE), APOWER/APOWER64 (disassembler types -- qdb.c's decode()
+  already referenced APOWER64 to pick 32- vs. 64-bit instruction
+  decoding, matching this Plan 9 4th edition power port's dual-width
+  heritage), and ObjPower (object-file type).
+- lib_toolchain/libmach/obj.c's dispatch table (the same "explicit
+  [Maxobjtype] size" array whose comment already warns about
+  under-sized-array OOB reads) needed a `[ObjPower] "power .q", _isq,
+  _readq` row.
+- lib_toolchain/libmach/setmach.c's `machines[]` table (selects Mach/
+  Machdata by name or by executable type) needed a "power" row, plus
+  the `extern Mach mpower;` / `extern Machdata powermach;` declarations
+  those structs (already defined in q.c/qdb.c) need to be visible.
+- lib_toolchain/libmach/mkfile's OFILES was missing q.$O, qdb.$O, and
+  qobj.$O entirely -- they were never compiled into libmach.a at all.
+- Two leftover absolute/relative paths, present unmodified since the
+  original import, needed the same treatment as z.c's/zobj.c's own
+  once-leftover paths: q.c's `#include "/power/include/ureg.h"`
+  (Plan-9-native absolute path) -> `<arch/power/ureg.h>`; qobj.c's
+  `#include "qc/q.out.h"` (assumed-adjacent-source-tree relative path)
+  -> `<obj/q.out.h>`.
+
+Verified: rebuilt libmach.a, iar, qa, ql, qc from clean; tests/c/mini's
+helloc.exe (real qc-compiled C, not hand assembly) now links and runs
+under qemu-ppc, `-strace` shows two correctly-sized write() calls and
+a clean exit(0), and its output byte-matches the shared
+helloc.expected.txt like every other arch in tests/c/mini's ARCHS.
+Re-verified debuggers/acid, machines/5i, machines/vi (all link
+libmach.a) still build and pass their own smoke tests after these
+mach.h/libmach changes -- shared code, worth re-checking. Also added
+compilers/qc to the top-level mkfile's DIRS (assemblers/qa and
+linkers/ql were already there; qc was not) and mkfiles/power/mkfile
+(CC=qc, AS=qa, LD="ql -0 -H7", AR=iar -- no ARCHEXTRAOFILES yet, see
+that file's own comment) so `mk objtype=power` works like every other
+arch.
+
+etc/acid/power found already present, untracked
+-------------------------------------------------
+
+A real, non-trivial etc/acid/power (acid's per-arch startup/debug
+script, same role as etc/acid/{386,arm,mips,alpha,port}) was already
+sitting in the working tree, untracked -- evidently part of the
+original Plan 9 4th edition source drop but missed by the cf54e8364
+import commit's `git add`. Added to git alongside this session's
+changes rather than left stranded.
+
 What's still unverified (see todo.org for priority, not this file)
 ----------------------------------------------------------------------
 
-- compilers/qc has not been run at all this session (SZ_IND checked by
-  inspection only, matches vc's 4-byte pointers).
 - machines/qi (the powerpc emulator; contains power.h) is untouched --
   not even confirmed to build.
-- tests/c/* (anything requiring qc + lib_core/libc for power) not
-  attempted.
+- No lib_core/libc/arch/power/ port -- qc can only build code with no
+  libc dependency yet (tests/c/mini's helloc.c has none by design).
+  mkfiles/power/mkfile has no ARCHEXTRAOFILES for this reason.
+- Floating point untouched (mpower/powermach's szfloat/szdouble fields
+  are filled in from q.c but never exercised by a real FP program).

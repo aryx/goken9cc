@@ -143,7 +143,7 @@ EXTERN	long	curarg;
 EXTERN	long	cursafe;
 EXTERN	Prog*	firstp;
 EXTERN	Prog*	lastp;
-EXTERN	int	hintabsize;
+extern	int	hintabsize; // defined in mul.c
 EXTERN	long	maxargsafe;
 EXTERN	Multab	multab[20];
 EXTERN	int	mnstring;
@@ -271,7 +271,7 @@ void	gpseudo(int, Sym*, Node*);
 /*
  * swt.c
  */
-int	swcmp(void*, void*);
+int	swcmp(const void*, const void*);
 void	doswit(Node*);
 void	swit1(C1*, int, long, Node*);
 void	swit2(C1*, int, long, Node*, Node*);

@@ -1,0 +1,23 @@
+<$TOP/mkfiles/mkfile.proto
+
+# the goken cross-toolchain itself: used by tests/ (mk objtype=power) and,
+# once self-hosting is viable, as CC/AS/LD for the top-level build too.
+O=q
+CC=qc
+LD=ql -0 -H7
+AS=qa
+AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/power
+
+# claude: -0 disables ql's r0iszero convention (R0 conventionally held
+# zero by qc-generated code, like MIPS's $zero) -- needed because the
+# PowerPC Linux syscall ABI requires r0=syscall number, a real,
+# possibly-nonzero value. See docs/claude_notes/notes_arch_power.txt.
+# -H7 selects Linux ELF output, same as every other arch's LD here.
+
+# claude: no ARCHEXTRAOFILES yet (unlike every sibling mkfile here) --
+# lib_core/libc has no lib_core/libc/arch/power/ port yet, so nothing
+# here builds against it. tests/c/mini's helloc.exe (the first real
+# exercise of qc) links its own minimal xwrite/xexit syscall stubs
+# instead, no libc needed.

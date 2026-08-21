@@ -89,6 +89,7 @@ enum
     MAMD64,
     MARM64,
 	MALPHA,
+	MPOWER,
 
     /* types of executables */
     FNONE = 0,      /* unidentified */
@@ -104,6 +105,7 @@ enum
     FARM64B, // arm64 bootable
 	FALPHA,			/* z.out */
 	FALPHAB,		/* DEC Alpha bootable */
+	FPOWER,			/* q.out */
 
     /* dissembler types */
     ANONE = 0,
@@ -113,6 +115,8 @@ enum
     AAMD64,
     AARM64,
 	AALPHA,
+	APOWER,
+	APOWER64,
 
     /* object file types */
     ObjMips = 0,        /* .v */
@@ -122,6 +126,7 @@ enum
     ObjArm64, // .7
     ObjRiscv, // .i
     ObjAlpha, // .z
+    ObjPower, // .q
     Maxobjtype,
 
     /* symbol table classes */

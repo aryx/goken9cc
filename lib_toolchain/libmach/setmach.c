@@ -16,8 +16,8 @@ struct machtab
 	Machdata	*machdata;		/* machine functions */
 };
 
-extern	Mach		mmips, mi386, marm, malpha, mamd64; // ? marm64?
-extern	Machdata	mipsmach, i386mach, armmach, alphamach;
+extern	Mach		mmips, mi386, marm, malpha, mamd64, mpower; // ? marm64?
+extern	Machdata	mipsmach, i386mach, armmach, alphamach, powermach;
 
 /*
  *	machine selection table.  machines with native disassemblers should
@@ -56,6 +56,12 @@ Machtab	machines[] =
 		AALPHA,
 		&malpha,
 		&alphamach,	},
+	{	"power",			/*PowerPC*/
+		FPOWER,
+		FNONE,
+		APOWER,
+		&mpower,
+		&powermach,	},
 	{	0		},		/*the terminator*/
 };
 
