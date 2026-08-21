@@ -1,4 +1,4 @@
-ed - ../qc/q.out.h <<'!'
+ed - ../../include/obj/q.out.h <<'!'
 v/^	A/d
 g/^	AEND/s//&,/
 g/^	ALAST/s//&,/

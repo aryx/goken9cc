@@ -1,8 +1,8 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
-#include	"../qc/q.out.h"
-#include	"../8l/elf.h"
+#include	<obj/q.out.h>
+#include	"../lk/elf.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -87,7 +87,7 @@ struct	Optab
 	char	size;
 	char	param;
 };
-struct
+EXTERN struct
 {
 	Optab*	start;
 	Optab*	stop;
@@ -291,7 +291,7 @@ long	entryvalue(void);
 void	errorexit(void);
 void	exchange(Prog*);
 void	export(void);
-int	fileexists(char*);
+//int	fileexists(char*);
 int	find1(long, int);
 char*	findlib(char*);
 void	follow(void);
