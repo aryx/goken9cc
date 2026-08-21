@@ -220,6 +220,9 @@
 - fully bootstrapped, with mk bootstrap target inspired by OCaml
   bootstrap fixpoint process, with lots of bugfixes and extensions
   to the multiplatform libc (big thx to Claude)
+- import alpha toolchain from old Plan 9 4th edition. Was called 7a/7c/7l
+  at the time but got retired and 9front even later reused the '7'
+  for arm64 hence the new character for alpha 'z' with za/zc/zl
 
 ** os
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
@@ -233,7 +236,7 @@
   with more tests (float and vlong and basic helloprintf working, thx Claude)
 
 ** arch
-- real support for 386, amd64, arm, arm64, riscv, riscv64, mips
+- real support for 386, amd64, arm, arm64, riscv, riscv64, mips, alpha
   with basic helloprintf.exe working on all those archs, across many OSes
 - experimental support for riscv64
 - experimental support for wasm: assembler+linker only (ea/el),
