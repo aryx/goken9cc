@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "../qc/q.out.h"
+#include <obj/q.out.h>
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -56,7 +56,7 @@ struct	Sym
 };
 #define	S	((Sym*)0)
 
-struct
+EXTERN struct
 {
 	char*	p;
 	int	c;
@@ -72,7 +72,7 @@ struct	Io
 };
 #define	I	((Io*)0)
 
-struct
+EXTERN struct
 {
 	Sym*	sym;
 	short	type;
@@ -145,7 +145,7 @@ void	newfile(char*, int);
 Sym*	slookup(char*);
 Sym*	lookup(void);
 void	syminit(Sym*);
-long	yylex(void);
+int	yylex(void);
 int	getc(void);
 int	getnsc(void);
 void	unget(int);
