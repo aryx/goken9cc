@@ -400,6 +400,38 @@ indirection the way 6c does. Worth checking whether 5c has the same
 gotcha as 6c next time either is touched, rather than assuming 8c's
 straightforward rebuild generalizes.
 
+Equality comparison of a high-bit char against a runtime-computed cast (ic, qc; unfixed)
+------------------------------------------------------------------------------------------------
+
+claude: found while writing demos/hello_unix.c's sbrk() write+readback
+check (a byte-pattern loop close in shape to tests/c/hello_libc/mem.c's
+own, except mem.c's own pattern deliberately stays under 128 and this
+one didn't). On riscv (ic) and power (qc) only, `v == (char)(i + 1)` /
+`v != (char)(i + 1)` gives the WRONG answer whenever the compared value
+is >= 128 as an int (i.e. negative as a signed char) AND the cast's
+operand (`i` here) is a runtime value, not a compile-time constant --
+even though both sides hold the identical bit pattern and print
+identically via `%d`. No loop is needed to reproduce it; see
+tests/c/regressions/char_cmp_high_bit_ic_qc.c for the minimal isolated
+repro (down to a single `if`, no loop) and its own header comment for
+the exact verify-by-hand recipe.
+
+    confirmed broken: ic (riscv), qc (power)
+    confirmed correct: 7c (arm64), 8c (386), 6c (amd64)
+    not checked: 5c (arm), vc (mips) -- this session's own qemu-arm/
+      qemu-mips runs either crashed or hung when probed the same way,
+      an environment issue unrelated to 5c/vc's own correctness, not
+      evidence either way
+
+Root cause not yet isolated inside ic/cgen.c's or qc/cgen.c's
+boolgen()/relational-operator codegen -- worth checking whether it
+shares a cause with this file's own separate boolgen()-related entry
+above (floating-point comparisons unsound under NaN, also confirmed on
+exactly these same two backends), since both live in the vc/ic-specific
+comrel()/boolgen() machinery, but that connection is a hypothesis, not
+a source-level finding. **Status: confirmed present, unfixed, in ic and
+qc**; not checked in 5c/vc.
+
 What's deliberately NOT on this list
 ------------------------------------------
 

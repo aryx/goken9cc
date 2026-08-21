@@ -1,0 +1,96 @@
+TOP=..
+<$TOP/mkfiles/$objtype/mkfile
+
+# A quick, human-facing tour of goken -- NOT part of `make test` (see
+# tests/c/mkfile's own DIRS, which does not list demos/): this prints a
+# report meant to be read, not diffed against an expected.txt the way
+# tests/c/hello_libc/mkfile's test/test_one targets do. Run `mk demo`
+# (or `make demo` from $TOP) for the multi-arch tour, or plain `mk` to
+# just build+run hello_unix.exe for the host's own $cputype.
+#
+# Same real-libc.a story as tests/c/hello_libc/mkfile: hello_unix.c
+# links against lib_core/libc/'s actual libc.a, not a hand-rolled stub,
+# so each arch in ARCHS below needs it freshly rebuilt first -- see that
+# mkfile's own header comment and lib_core/libc/mkfile's mksyslib
+# comment for why a stale/mixed-arch libc.a corrupts otherwise.
+all:V: hello.exe hello_unix.exe
+
+clean:V:
+	rm -f *.[5678ijqvz] *.exe
+	rm -f hello_unix_tmp.txt
+	rm -rf hello_unix_tmp_d
+
+hello.exe: hello.c
+	$CC $CFLAGS -D$objtype -c hello.c
+	$LD $LDFLAGS -H7 -o $target -E _main hello.$O -lc
+
+hello_unix.exe: hello_unix.c
+	$CC $CFLAGS -D$objtype -c hello_unix.c
+	$LD $LDFLAGS -H7 -o $target -E _main hello_unix.$O -lc
+
+# claude: same 9 archs as tests/c/hello_libc/mkfile's own ARCHS -- every
+# one of them already builds+runs args.exe/env.exe/proc.exe/mem.exe/
+# dir.exe/ctime.exe/atexit.exe there (hello_unix.c's own ingredient
+# list), so this loop is not exploring new ground, just showing off
+# already-verified coverage in one readable run. riscv (rv32) is
+# included here (unlike hello_libc's stat/dirread/fork carve-out --
+# nothing hello_unix.c uses needs fstat/wait4, see that mkfile's own
+# all:V: comment on why those three are the only exclusions).
+ARCHS=386 amd64 arm arm64 mips riscv riscv64 alpha power
+demo:V:
+	for (arch in $ARCHS) {
+		echo ''
+		echo '################ '$arch' (linux, qemu-user) ################'
+		mk clean
+		@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype='$arch 'cputype='$arch install }
+		mk 'objtype='$arch 'cputype='$arch hello.exe hello_unix.exe
+		$TOP/scripts/qemu-runner $arch ./hello.exe
+		echo ''
+		$TOP/scripts/qemu-runner $arch ./hello_unix.exe one two
+	}
+	mk demo_plan9
+
+# claude: Plan9 (GOOS=plan9) arm+mips, run under machines/5i and
+# machines/vi -- see tests/c/hello_libc/mkfile's own test_plan9 target
+# for why -H 2 and 5c/5l/vc/vl are used directly here rather than via
+# $CC/$LD ($objtype's own tools, wrong arch/GOOS), and for the per-call
+# emulator gaps (no /env, no #c/pid -- see machines/5i, machines/vi)
+# that make env's/proc's output on this GOOS look empty rather than
+# wrong. Standalone target too, not just chained from `demo` above.
+#
+# claude: each arch's build is dispatched through its own `mk
+# 'objtype='...` child invocation, exactly like test_plan9 does, rather
+# than compiling inline in THIS recipe -- $CFLAGS_COMMON/$ROOT (used by
+# the two .exe rules below) only exist once some non-empty $objtype has
+# made it to the top of a mkfile's own `<$TOP/mkfiles/$objtype/mkfile`
+# include line (mkfiles/mkfile.proto's own definitions); running `mk
+# demo_plan9` directly (no objtype on ITS OWN command line, as `mk
+# demo`'s own trailing call does) leaves that include silently empty
+# (mk's "skipping missing include file" warning) and both variables
+# undefined in this recipe's own shell -- confirmed by hand: inlining
+# the 5c/5l calls straight into this recipe failed with "5c: No such
+# file or directory: libc.h" (CFLAGS_COMMON's -I flags missing), a
+# pre-existing quirk of invoking any of hello_libc/mkfile's own
+# hello_plan9_*.exe rules the same undispatched way, not something new
+# introduced here.
+demo_plan9:V:
+	echo ''
+	echo '################ arm (plan9, 5i) ################'
+	mk clean
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=arm' 'cputype=arm' 'GOOS=plan9' install }
+	mk 'objtype=arm' hello_unix_plan9_arm.exe
+	printf ':c\n$q\n' | 5i ./hello_unix_plan9_arm.exe one two | sed -n '2,$p'
+	echo ''
+	echo '################ mips (plan9, vi) ################'
+	mk clean
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=mips' 'cputype=mips' 'GOOS=plan9' install }
+	mk 'objtype=mips' hello_unix_plan9_mips.exe
+	printf ':c\n$q\n' | vi ./hello_unix_plan9_mips.exe one two | sed -n '2,$p'
+
+hello_unix_plan9_arm.exe: hello_unix.c
+	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o hello_unix_plan9_arm.5 -c hello_unix.c
+	5l -L$ROOT/arch/arm/lib -H 2 -o $target -E _main hello_unix_plan9_arm.5 -lc
+
+hello_unix_plan9_mips.exe: hello_unix.c
+	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o hello_unix_plan9_mips.v -c hello_unix.c
+	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main hello_unix_plan9_mips.v -lc

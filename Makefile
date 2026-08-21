@@ -17,6 +17,10 @@ clean:
 test:
 	mk test
 
+# quick multi-arch/multi-OS tour of goken -- see demos/mkfile
+demo:
+	cd demos; mk demo
+
 hellotest:
 	echo TODO
 
