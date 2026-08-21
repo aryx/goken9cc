@@ -26,7 +26,7 @@ LIB= $TOP/compilers/cck/cc.a$O
 <$TOP/mkfiles/mkone
 
 $LIB:
-	cd ../cc
+	cd ../cck
 	mk all
 
 # see 7c/mkfile for more info

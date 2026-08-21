@@ -1,5 +1,5 @@
-#include	"../cc/cc.h"
-#include	"../qc/q.out.h"
+#include	"../cck/cc.h"
+#include	<obj/q.out.h>
 
 /*
  * qc/power
