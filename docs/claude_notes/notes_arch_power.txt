@@ -4,13 +4,14 @@ The powerpc toolchain (qa/qc/ql/qi): first Linux ELF exit/hello/C bring-up
 Notes from bringing up qa/ql/qc (emulator qi untouched so far) far
 enough to run tests/s/exit/exit_linux_power.s, tests/s/mini/
 hello_linux_power.s, tests/c/mini/helloc.exe, tests/c/vlong/
-helloprintf.exe, and tests/c/float/helloprintf.exe (all byte-matching
-their expected.txt) under qemu-ppc. Source is Plan 9 4th edition's
-powerpc port (see cf54e8364/359281e56/53b0b0882 for the import and
-initial "make it compile" commits); this session is the first real
-runtime exercise of any of these tools. See assemblers/qa/,
-linkers/ql/, compilers/qc/, include/objexec/q.out.h, tests/s/exit/,
-tests/s/mini/, tests/c/mini/, tests/c/vlong/, tests/c/float/.
+helloprintf.exe, tests/c/float/helloprintf.exe, and tests/c/mini2/
+helloprintf.exe (all byte-matching their expected.txt) under qemu-ppc.
+Source is Plan 9 4th edition's powerpc port (see
+cf54e8364/359281e56/53b0b0882 for the import and initial "make it
+compile" commits); this session is the first real runtime exercise of
+any of these tools. See assemblers/qa/, linkers/ql/, compilers/qc/,
+include/objexec/q.out.h, tests/s/exit/, tests/s/mini/, tests/c/mini/,
+tests/c/vlong/, tests/c/float/, tests/c/mini2/.
 
 lput/wput/cput: long -> int32 parity fix
 -----------------------------------------
@@ -348,6 +349,25 @@ their respective helloprintf.expected.txt; re-ran tests/c/mini,
 tests/s/exit, tests/s/mini's own `mk test` afterward to confirm the
 q.out.h/gins3 changes (both touch code every power program goes
 through) didn't regress the earlier, simpler bring-up work.
+
+tests/c/mini2: passed first try, no new fixes needed
+-------------------------------------------------------
+
+Added tests/c/mini2/linux_power.s (same shape as tests/c/vlong's own,
+minus abort() -- nothing here links vlrt.c) and power to ARCHS.
+Passed immediately: this test's print_nofloat_no64.c only exercises
+32-bit int/bool/hex/pointer/string formatting (deliberately avoiding
+the 64-bit/float printing paths tests/c/vlong and tests/c/float cover,
+per its own name and comment), so it landed on ground the prior three
+bring-ups had already hardened -- gins3's R0 fix, the q.out.h Ieee
+struct fix, and the vlrt.c endianness fix are all specific to codepaths
+this test doesn't reach (test.c's test_float()/uvnan exercise the
+compiler's float/int64 codegen paths structurally, by compiling and
+calling them, but their results are never printed or compared, so a
+latent bug there wouldn't necessarily surface here). Verified: full
+`mk test` (all ARCHS including power) passes byte-identical against
+the shared helloprintf.expected.txt; full top-level `mk test` re-run
+afterward, no regressions.
 
 What's still unverified (see todo.org for priority, not this file)
 ----------------------------------------------------------------------
