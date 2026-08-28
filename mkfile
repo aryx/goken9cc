@@ -49,15 +49,25 @@ test:
 # amd64 ones. Use test_macos_arm64 / test_macos_amd64 to force one.
 test_macos:V:
 	if(~ `{uname -m} arm64)
-		@{ cd tests; mk test_macos_arm64 }
+		mk test_macos_arm64
 	if not
-		@{ cd tests; mk test_macos_amd64 }
+		mk test_macos_amd64
 #`
 
+# Each also runs benchs/compcert's own macOS-native goken bench check
+# (test_goken_macos_arm64/amd64 -- already self-sufficient, no qemu,
+# same "rebuild lib_core/libc for GOOS=darwin first" shape as tests/
+# c/hello_libc's own test_macos_arm64/amd64 above), mirroring how the
+# plain (qemu-based) 'test:' target above already chains tests/ then
+# benchs/compcert -- these targets existed already but were never
+# wired into test_macos, so the bench corpus silently got zero macOS
+# coverage even on the two hosts able to run it natively.
 test_macos_arm64:V:
-	cd tests; mk test_macos_arm64
+	@{ cd tests; mk test_macos_arm64 }
+	@{ cd benchs/compcert; mk test_goken_macos_arm64 }
 test_macos_amd64:V:
-	cd tests; mk test_macos_amd64
+	@{ cd tests; mk test_macos_amd64 }
+	@{ cd benchs/compcert; mk test_goken_macos_amd64 }
 
 # Windows-native regression tests (run directly, no wine/qemu, since the
 # host running this target IS Windows). Mirrors test_macos above.
