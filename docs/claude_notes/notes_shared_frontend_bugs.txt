@@ -432,6 +432,41 @@ comrel()/boolgen() machinery, but that connection is a hypothesis, not
 a source-level finding. **Status: confirmed present, unfixed, in ic and
 qc**; not checked in 5c/vc.
 
+Non-const qsort() comparator prototype (ocmp/rcmp): broke the whole `mk` build (qc/ql, zc/zl; now fixed)
+------------------------------------------------------------------------------------------------------------
+
+claude: found 2026-08-28 when a plain top-level `mk` failed outright --
+not a missed-optimization or a wrong-answer bug like the rest of this
+file, but a hard compile error that stopped the build from completing
+at all. `compilers/*c/reg.c`'s `rcmp()` and `linkers/*l/span.c`'s
+`ocmp()` are the qsort() comparators used to sort the register-
+allocation region table and the assembler optab, respectively. Every
+long-established backend already declares both as `int
+cmp(const void*, const void*)`, matching `<stdlib.h>`'s
+`qsort()` prototype exactly (confirmed: 5c/6c/7c/8c/8ck/5ck/ic/vc for
+rcmp; 5lk/7l/il/vl/5l for ocmp). Only the two most recently
+reintroduced backends -- qc/ql (power) and zc/zl (alpha), landed via
+the "import powerpc toolchain" and "Reintroducing alpha toolchain"
+commits -- still had the old K&R-style `int cmp(void*, void*)` shape
+(both the .c definition and the gc.h/l.h prototype). This apparently
+compiled fine for a long time; something in the local toolchain now
+treats passing a `void*`-parameter comparator to `qsort()` as a hard
+error (`-Wincompatible-function-pointer-types`) rather than a warning,
+so it's unclear exactly when this became build-breaking rather than
+just latent.
+
+**Status: fixed in all four (compilers/qc/reg.c, compilers/zc/reg.c,
+linkers/ql/span.c, linkers/zl/span.c)**, by changing both the
+definition and header prototype to `const void*` and adding the same
+`(Rgn*)`/`(Optab*)` cast on assignment that every other backend already
+uses (see e.g. compilers/5c/reg.c, linkers/5lk/span.c) -- purely a
+signature/cast change, the comparison logic itself was already correct
+and untouched. Verified by a full top-level `mk` completing with exit
+0 afterward. If qc/zc/ql/zl ever grow more qsort()-based sorts, or if
+another not-yet-fully-modernized backend is reintroduced the same way,
+check its comparator prototypes against this pattern before assuming a
+build failure is something more interesting.
+
 What's deliberately NOT on this list
 ------------------------------------------
 

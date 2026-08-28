@@ -231,6 +231,31 @@ shadow-definition bug above: a go-era-only wire-format detail can hide
 in code copied from src/libmach and only surface once something stops
 feeding it go-era-produced input.
 
+Prog.sig leswal() calls added without including mach.h (broke the top-level `mk` build; now fixed)
+--------------------------------------------------------------------------------------------------------
+
+claude: found 2026-08-28 debugging a plain `mk` failure from the repo
+root. Commit cd2a3546f ("libmach: re introduce Prog.sig in obj.h and
+fix compilation zobj.c and more") added `p->sig = leswal(p->sig);` to
+5obj.c/6obj.c/7obj.c/8obj.c/vobj.c/zobj.c, but none of those files
+`#include` the header that declares `leswal()` (mach.h) -- they only
+pull in `obj.h`, which knows nothing about it. This built anyway at
+the time (implicit-function-declaration is only a warning by default),
+but is a real latent bug independent of whatever later turned it into
+a hard `-Werror` build failure: the implicit declaration assumes
+`leswal` returns `int`, while the real prototype (`uint32
+leswal(uint32)` in include/arch/mach.h) doesn't match, which is
+undefined behavior even when it happens to work.
+
+**Status: fixed in all six files**, by adding `#include "mach.h"`
+(resolved via each file's existing `-I../../include/ALL` compile flag,
+which symlinks to include/arch/mach.h -- the same convention
+machdata.c in this same directory already uses) right before `#include
+"obj.h"`. Verified by a full top-level `mk` completing with exit 0
+afterward. If Prog.sig grows more uses of libmach's byte-order helpers
+in these six obj-reader files, no further header work should be
+needed -- mach.h is now included in each of them.
+
 Still not ported
 ---------------------
 

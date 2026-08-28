@@ -317,7 +317,7 @@ void	noops(void);
 void	nopout(Prog*);
 void	nuxiinit(void);
 void	objfile(char*);
-int	ocmp(void*, void*);
+int	ocmp(const void*, const void*);
 long	opcode(int);
 Optab*	oplook(Prog*);
 void	patch(void);

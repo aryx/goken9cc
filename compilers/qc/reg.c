@@ -16,13 +16,13 @@ rega(void)
 }
 
 int
-rcmp(void *a1, void *a2)
+rcmp(const void *a1, const void *a2)
 {
 	Rgn *p1, *p2;
 	int c1, c2;
 
-	p1 = a1;
-	p2 = a2;
+	p1 = (Rgn*)a1;
+	p2 = (Rgn*)a2;
 	c1 = p2->cost;
 	c2 = p1->cost;
 	if(c1 -= c2)
