@@ -1,19 +1,13 @@
 * Big plan
 
 ** TODO changes.txt
+- lib_graphics/
 
 ** Overview
-=> simpler alt to gcc/clang for cross compiling C code! 
- ex: xv6-{x86,arm,riscv}!
+=> simpler alt to gcc/clang for cross compiling C code!
+ ex: xv6-{x86,arm,riscv64}! also could be used for c--!
 
 ** Later
-
-*** LATER profiling tools (the one that are portable at least?)
-
-*** LATER acid working on linux
-incorportate plan9port libmach so can get acid to work on Linux
-also DWARF binaries!
-plan9port use linux interception proc mechanism (ptrace?) similar to plan9
 
 *** LATER devdraw from plan9port to goken? can draw ? can port
 more stuff to unix? doomplan9?
@@ -24,6 +18,15 @@ at least testdraw.c ?
 see plan9port/src/cmd/devdraw/ and also drawterm and more
 
 *** LATER lib_core/libthread, also working on multiple OS!
+ q
+*** ----------------------------------------------------------
+
+*** LATER profiling tools (the one that are portable at least?)
+
+*** LATER acid working on linux
+incorportate plan9port libmach so can get acid to work on Linux
+also DWARF binaries!
+plan9port use linux interception proc mechanism (ptrace?) similar to plan9
 
 *** LATER dwarf support working for all elf targets, ported from 6c?
 
@@ -49,11 +52,25 @@ but better wait to avoid diff.rc to show big diffs
 it's good simple C code, and especially address something Plan 9 developers
 avoid (reusable containers lib).
 
+
+** Other archs
+
 *** LATER? add the 68000? historically interesting, amiga/atari used it!
 also apple so interesting to study?
 
 hmm but actually 2a/2c/2l seems to be more for 68020 not 68000
 that was the amiga/atari
+
+68k back? 68000 is more legendary than 68000
+1a/1c/1l (and 2a/2c/2l for 68020)
+
+*** still? generate 0a/0c/0l from mips va/vc/vl?
+little vs big endian mips. Which one is most famous?
+ps1 was ?
+
+*** LATER? add 9a/9c/9l for power64? and ua/uc/ul for sparc64
+ka/kc/kl? and ua/uc/ul? like riscv i/j ? didn't find way to produce ua/uc/ul
+weird
 
 *** LATER? add pdp11 archi :) or ask claude
 ack amsterdam toolkit has support for pdp11
