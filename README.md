@@ -52,7 +52,7 @@ See [changes.txt](changes.txt) for the detailed changelog.
 - **Multi-OS support:** 
   Link C and assembly programs that can *run* on Linux, macOS, Windows, and Plan 9 (TODO xv6)
 - **Multi-architecture support:**
-  Build C and assembly programs *targeting* the 386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm, arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, mips, alpha, and powerpc architectures, plus experimental WebAssembly (wasm) support
+  Build C and assembly programs *targeting* the i386 (a.k.a. x86), amd64 (a.k.a. x86_64), arm, arm64 (a.k.a. aarch64), riscv (a.k.a. riscv32), riscv64, mips, alpha, sparc, powerpc, and m68k architectures, plus experimental WebAssembly (wasm) support
 - **Cross-compilers:**
   Build C programs targeting different platforms from different platforms
   (e.g., you can build from a Linux x86 machine a binary for macOS arm64)
