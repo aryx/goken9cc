@@ -2,6 +2,7 @@
 #include	<libc.h>
 #include	<bio.h>
 #include	<obj/k.out.h>
+#include	"../lk/elf.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -196,6 +197,7 @@ EXTERN	int	HEADTYPE;		/* type of header */
 EXTERN	long	INITDAT;		/* data location */
 EXTERN	long	INITRND;		/* data round above text location */
 EXTERN	long	INITTEXT;		/* text location */
+EXTERN	long	INITTEXTP;		/* text location (physical) */
 EXTERN	char*	INITENTRY;		/* entry point */
 EXTERN	long	autosize;
 EXTERN	Biobuf	bso;
@@ -281,6 +283,7 @@ void	buildop(void);
 void	cflush(void);
 int	cmp(int, int);
 int	compound(Prog*);
+void	cput(int32);
 double	cputime(void);
 void	datblk(long, long);
 void	diag(char*, ...);
@@ -303,7 +306,10 @@ void	loadlib(void);
 void	listinit(void);
 void	initmuldiv(void);
 Sym*	lookup(char*, int);
-void	lput(long);
+void	llput(vlong);
+void	llputl(vlong);
+void	lput(int32);
+void	lputl(int32);
 void	mkfwd(void);
 void*	mysbrk(ulong);
 void	names(void);
@@ -325,6 +331,9 @@ int	relinv(int);
 long	rnd(long, long);
 void	sched(Prog*, Prog*);
 void	span(void);
+void	strnput(char*, int);
 void	undef(void);
+void	wput(int32);
+void	wputl(int32);
 void	xdefine(char*, int, long);
 void	xfol(Prog*);

@@ -1,0 +1,101 @@
+sparc (kl/kc/ka): getting `mk objtype=boot-gcc` to build linkers/kl
+=====================================================================
+
+Starting point: `mk objtype=boot-gcc` from linkers/kl/ failed with dozens
+of "undeclared identifier" errors compiling ../lk/elf.c (Progbits, Salloc,
+Sexec, Strtab, ELFDATA2MSB, wput, ELFCLASS32, EXEC, PT_LOAD, R, X, ...).
+kc and ka already built cleanly under boot-gcc -- kl was the only broken
+piece of the sparc triad.
+
+Root cause: kl/l.h simply never included "../lk/elf.h", even though
+kl/mkfile already compiles linkers/lk/elf.c into kl (elf.$O is in
+OFILES, via the generic `%.$O: ../lk/%.c` rule). Grepping every linker's
+l.h (`grep -l elf.h */l.h`) shows 6l/7l/il/ql/vl/zl/5lk/8lk all include
+it; kl/5l/8l/2l/el don't (el is wasm, genuinely doesn't need ELF; 5l/8l
+have separate 5lk/8lk siblings that do; 2l is still mid-bring-up). kl has
+no such sibling -- it's expected to emit ELF itself -- so the missing
+include was a real gap, not an intentional split.
+
+But the include was only the first layer: kl had NEVER been wired up to
+emit ELF at all, unlike ql before its own similar fix (19940257, "power:
+wire up ql -H7 (Linux ELF)"), which already had two other ELF-emitting
+HEADTYPEs (5, 6) before that commit added a third (7). kl/asm.c only had
+`lput` defined -- no cput/wput/wputl/lputl/llput/llputl/strnput at all --
+and kl/obj.c's HEADTYPE switch only covered 0 (boot)/1 (garbage)/2 (plan9)/
+3 (javastation boot), no ELF case whatsoever. Ported wholesale from
+ql/vl's own working HEADTYPE-7 machinery (see linkers/lk/elf.c, the
+shared elf32()/elf32phdr()/elf32shdr() emitter):
+
+- kl/l.h: added `#include "../lk/elf.h"`; added `EXTERN long INITTEXTP`
+  (physical text address, elf32()'s own PT_LOAD field -- every HEADTYPE-7
+  arch has this, kl didn't); retyped lput's prototype long->int32 and
+  added cput/wput/wputl/lputl/llput/llputl/strnput prototypes, matching
+  every ELF-emitting sibling's l.h.
+- kl/obj.c: added a `-P` flag (sets INITTEXTP, mirrors -T/-D/-R/-H
+  parsing already there) and `if(INITTEXTP==-1) INITTEXTP=INITTEXT;`
+  after the HEADTYPE switch; added `case 7:` with the same sizing every
+  HEADTYPE-7 arch uses (HEADR = rnd(Ehdr32sz+3*Phdr32sz,16), INITTEXT
+  default 0x00400000+HEADR, INITRND 4096 -- Linux's ELF loader needs
+  PT_LOAD vaddr and file offset to agree mod page size, same reasoning
+  as ql/vl's own case 7 comments).
+- kl/asm.c: retyped lput long->int32; added cput/wput/wputl/lputl/
+  llput/llputl/strnput (byte-for-byte copied from ql/vl's own, using
+  this file's existing big-endian LPUT macro -- sparc is big-endian,
+  same as power/mips); added `case 7:` to both mid-function seek()
+  switches (data-segment seek, symtab seek -- `rnd(HEADR+textsize,
+  INITRND)`, matching elf32()'s own PT_LOAD offset math) and to the
+  final header-write switch, calling `elf32(SPARC, ELFDATA2MSB, 0, nil)`
+  (SPARC=2, linkers/lk/elf.h's own e_machine constant).
+
+Applied ql's OWN later-learned lesson up front, rather than
+rediscovering it: ql's HEADTYPE-7 case originally set `debug['S']=1`
+unconditionally, which corrupted the tail of .data whenever a build
+stripped symbols (mkfiles/power/mkfile always does) -- see the "FIXED
+(follow-up session)" section of notes_arch_power.txt for the full
+root-cause writeup (elf32sectab()'s unrounded seek offset landing inside
+the page-rounded, already-written .data). kl's own case 7 guards this
+with `if(!debug['s']) debug['S']=1;` from the start, matching ql's fixed
+version, not its original buggy one.
+
+enam.c generation: separate pre-existing bug, same fix pattern as ql
+------------------------------------------------------------------------
+
+Once elf.c compiled, enam.c generation itself failed: `ed`'s substitution
+in kl/mkenam never terminated the last string ("LAST) because
+include/obj/k.out.h's final enum entry (ALAST) has no trailing comma, so
+the `v/^	A/d` / `,s/,.*$/",/` pipeline had nothing to match on that
+line. Diffing kl/mkenam against ql/mkenam (which builds fine) found the
+fix already invented there: an extra `g/^	ALAST/s//&,/` line that
+synthesizes the missing comma before the rest of the script runs. Copied
+verbatim into kl/mkenam.
+
+Verified: clean `mk objtype=boot-gcc` (rm *.o o.out enam.c first) builds
+kl with no errors or warnings, links a working o.out, and running it with
+no args prints the expected usage message. kc and ka already built clean
+under boot-gcc before this session; not touched.
+
+What's still unverified / out of scope for this session
+------------------------------------------------------------
+
+- mkfiles/sparc/mkfile is a leftover, unedited copy of power's mkfile
+  from the original import (cf54e8364) -- literally `CC=qc LD="ql -H7"
+  AS=qa` and `-I$TOP/include/arch/power`, i.e. it points `mk
+  objtype=sparc` at the POWER toolchain, not kc/kl/ka. Left unfixed
+  deliberately: swapping in kc/kl/ka would immediately hit a much bigger
+  gap than this session's scope -- lib_core/libc/arch/sparc/ doesn't
+  exist at all yet (no rt0.s/setjmp.s/vlop.s, unlike power's own, see
+  notes_arch_power.txt's "hello_libc" section for the shape of that
+  work), so `mk objtype=sparc` can't actually link a runnable binary yet
+  regardless of the mkfile fix. Fixing the mkfile without that runtime
+  support would just trade one broken build for a different one.
+- No actual ELF binary has been produced and run under qemu-sparc yet --
+  this session only got kl itself to compile and confirmed it starts up
+  and parses args (prints usage with no arguments). The full exit(42)-
+  style bring-up (tests/s/exit/exit_linux_sparc.s, wiring 'sparc' into
+  scripts/qemu-runner, an r0iszero-equivalent check if sparc's ISA has
+  one) is unstarted.
+- kl/asmout.c and kl/span.c (the actual instruction-selection/encoding
+  logic) were not touched or audited this session -- only the ELF
+  *header/output* plumbing (asm.c/obj.c/l.h) that every HEADTYPE-7 arch
+  shares was ported. Whether kl correctly encodes real sparc
+  instructions for a Linux target is completely unverified.

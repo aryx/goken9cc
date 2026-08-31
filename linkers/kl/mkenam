@@ -1,6 +1,7 @@
 ed - ../../include/obj/k.out.h <<'!'
 v/^	A/d
 g/^	AEND/s//&,/
+g/^	ALAST/s//&,/
 g/[ 	]*=.*,/s//,/
 v/,/p
 ,s/^	A/	"/

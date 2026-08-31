@@ -19,6 +19,7 @@ static	int	maxlibdir = 0;
  *	-H0 -T0x200000 -R0		is boot
  *	-H2 -T4128 -R4096		is plan9 format
  *	-H3 -T0xE0004000 -R4		is javastation boot format
+ *	-H7				is elf executable (linux)
  */
 
 void
@@ -43,6 +44,7 @@ main(int argc, char *argv[])
 	curtext = P;
 	HEADTYPE = -1;
 	INITTEXT = -1;
+	INITTEXTP = -1;
 	INITDAT = -1;
 	INITRND = -1;
 	INITENTRY = 0;
@@ -65,6 +67,11 @@ main(int argc, char *argv[])
 		a = ARGF();
 		if(a)
 			INITTEXT = atolwhex(a);
+		break;
+	case 'P':
+		a = ARGF();
+		if(a)
+			INITTEXTP = atolwhex(a);
 		break;
 	case 'D':
 		a = ARGF();
@@ -149,7 +156,22 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4;
 		break;
+	case 7:	/* elf executable (linux) -- claude: same layout as
+		 * il/vl/ql/zl's own HEADTYPE 7, see linkers/lk/elf.c. The
+		 * Linux ELF loader requires each PT_LOAD segment's vaddr
+		 * and file offset to agree modulo the page size, so
+		 * INITRND must be a real page size here. */
+		HEADR = rnd(Ehdr32sz+3*Phdr32sz, 16);
+		if(INITTEXT == -1)
+			INITTEXT = 0x00400000L+HEADR;
+		if(INITDAT == -1)
+			INITDAT = 0;
+		if(INITRND == -1)
+			INITRND = 4096;
+		break;
 	}
+	if(INITTEXTP == -1)
+		INITTEXTP = INITTEXT;
 	if(INITDAT != 0 && INITRND != 0)
 		print("warning: -D0x%lux is ignored because of -R0x%lux\n",
 			INITDAT, INITRND);
