@@ -1,7 +1,7 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
-#include	"../kc/k.out.h"
+#include	<obj/k.out.h>
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -290,7 +290,7 @@ void	doprof2(void);
 long	entryvalue(void);
 void	errorexit(void);
 void	exchange(Prog*);
-int	fileexists(char*);
+//int	fileexists(char*);
 int	find1(long, int);
 char*	findlib(char*);
 void	follow(void);

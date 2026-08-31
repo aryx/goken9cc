@@ -1,4 +1,4 @@
-ed - ../kc/k.out.h <<'!'
+ed - ../../include/obj/k.out.h <<'!'
 v/^	A/d
 g/^	AEND/s//&,/
 g/[ 	]*=.*,/s//,/
