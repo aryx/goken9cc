@@ -127,6 +127,7 @@ enum
     ObjRiscv, // .i
     ObjAlpha, // .z
     ObjPower, // .q
+    ObjSparc, // .k
     Maxobjtype,
 
     /* symbol table classes */

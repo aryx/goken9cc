@@ -239,3 +239,157 @@ large-offset addressing) is still completely unaudited and unexercised --
 both bring-ups so far deliberately picked the smallest test that could
 validate one more layer of the ELF/addressing plumbing without touching
 any of that.
+
+kc: getting it to compile, link, and pass tests/c/mini
+========================================================
+
+Starting point: compilers/kc almost compiled (a prior commit,
+c7d3b10ea, had already gotten most of it building) but two real bugs
+remained, both compile/link-time, not codegen:
+
+- swt.c's align()/maxround() were declared returning `long`/taking
+  `long` params, but cc.h's own prototypes (shared by every arch) say
+  `int32`. Every other arch's swt.c (5c/6c/7c/8c/vc) matches cc.h
+  exactly (no explicit return-type keyword mismatch); kc's didn't.
+  qc(compile-time) rejected this as "function inconsistently declared".
+  Fixed by matching cc.h: `int32 align(int32, Type*, int)` / `int32
+  maxround(int32, int32)`.
+- gc.h declared `EXTERN int hintabsize;` where every other arch's gc.h
+  (qc/7c/ic/vc, diffed directly) uses `extern int hintabsize; //
+  defined in mul.c`. EXTERN expands to nothing in the one file that
+  #defines it plain (see mul.c's own `int hintabsize = nelem(hintab);`
+  at file scope), so kc's gc.h was silently creating a SECOND
+  definition of the same global -- harmless under old-style C tentative
+  definitions, but a hard "multiple definition" link error under
+  modern gcc's default -fno-common. Fixed by matching the other archs'
+  plain `extern`.
+
+Also found and fixed a real config bug unrelated to kc's own sources:
+mkfiles/sparc/mkfile was a stale, unedited copy of mkfiles/power/mkfile
+(O=q, CC=qc, LD=ql -H7, AS=qa, CFLAGS -I.../arch/power) -- copy-pasted
+during the initial sparc toolchain import and never adapted. Fixed to
+O=k, CC=kc, LD=kl -H7, AS=ka, CFLAGS -I.../arch/sparc, matching the
+arch-letter table (compilers/kc, assemblers/ka, linkers/kl all already
+use 'k'). This file governs `mk objtype=sparc` (cross-building test
+programs, tests/c/mini included) -- NOT how kc/ka/kl get built in the
+first place, which is `mk objtype=boot-gcc` (uses the host gcc, see
+mkfiles/boot-gcc/mkfile's own comment on the bootstrap chicken-and-egg).
+Confusing the two costs a real debugging detour: running `mk
+objtype=sparc` inside compilers/kc itself (before this fix) silently
+compiled kc's OWN sources with the not-yet-built `qc` binary (leftover
+from the copy-paste) rather than gcc, and the resulting `.q`-suffixed
+objects/errors have nothing to do with kc at all.
+
+kc -S on a hand-written two-arg function confirms the calling
+convention entirely empirically rather than by inspecting cgen.c: the
+first arg arrives in R7 (REGARG=REGRET=7), the second on the stack at
+`count+4(FP)` -- same FP-relative convention xwrite_power.s /
+xwrite_arm.s already use, so xwrite_sparc.s could be modeled directly
+on xwrite_power.s. One real difference from power: kc lowers a C
+function call to AJMPL (real SPARC "jmpl"/"call"), NOT ABL -- unlike
+qc, where txt.c reuses ABL as the call pseudo-op, kc's ABL is a
+genuine conditional branch (OLT's "branch if less", txt.c's own OLT
+case), so reusing it for calls would collide with real Bicc branches.
+Confirmed by grepping kc/txt.c's OFUNC case (`a = AJMPL`) versus
+qc/txt.c's OFUNC case (`a = ABL`).
+
+Wiring `.k` files into `iar`/ar archives (needed for tests/c/mini's
+`iar rc libmini.a start_sparc.k xwrite_sparc.k xexit_sparc.k`) exposed
+a separate, real gap: lib_toolchain/libmach already had kobj.c
+(_isk/_readk, parses .k object files) sitting unused -- never wired
+into obj.c's per-arch dispatch table (`static Obj obj[Maxobjtype]`),
+never added to libmach/mkfile's OFILES, and its own `#include
+"kc/k.out.h"` was already a dangling path (no such subdirectory --
+should be `<obj/k.out.h>`, matching qobj.c's `#include <obj/q.out.h>`).
+Without this, iar silently produced a libmini.a with no valid SYMDEF
+header ("first entry not symbol header" from kl, since kl couldn't
+resolve start_sparc.k's/xwrite_sparc.k's/xexit_sparc.k's symbols
+through the archive at all). Fixed: added ObjSparc to mach.h's
+Maxobjtype enum, `[ObjSparc] "sparc .k", _isk, _readk,` to obj.c's
+table, kobj.$O to libmach/mkfile's OFILES, and the include path.
+Rebuilt lib_toolchain/libmach and linkers/ar (`mk objtype=boot-gcc
+install` in each) before iar could produce valid sparc archives.
+Note this only wires up archive support (needed by ar/iar); kobj.c
+does NOT give acid/5i-equivalent disassembly of .k files -- there is
+no kdb.c/k.c yet, out of scope here.
+
+The two hardest bugs were pure register-convention mismatches, found
+by running under `qemu-sparc -strace` (immediate SIGSEGV, no syscalls
+attempted) and `qemu-sparc -d cpu -one-insn-per-tb` (dumps full
+register state after every single translated block -- essential here,
+since this backend's REGSP has nothing to do with any real hardware
+register the usual `-d in_asm` alone would explain):
+
+1. REGSP=1=%g1 (this backend's own logical stack pointer, used for
+   every C-generated function's frame) is NEVER initialized by the
+   Linux kernel at process entry -- only the real hardware %sp (%o6,
+   =R14 in this port's flat numbering) is. Confirmed R14 is otherwise
+   just this backend's REGTMP ("used by the loader", i.e. genuinely
+   free for the compiler to use as sethi/add scratch for large
+   constants -- see the setSB decode note above), meaning the OS's
+   initial %sp is simply never preserved by any kc-generated code
+   either; it's fair game to read exactly once, at the top of _start,
+   before it gets clobbered. This is genuinely sparc-specific: every
+   other arch's start_$objtype.s (mips/alpha/riscv/...) needs no such
+   copy because their own REGSP already IS the OS-initialized
+   register. Symptom without the fix: main's own auto-generated
+   prologue's first store ("SUB $8,R1" / "MOVW R15,0(R1)") underflows
+   R1 from 0 to 0xfffffff8 and segfaults on the very first instruction
+   of the whole program, before any syscall.
+2. Getting the R14->R1 copy to actually run FIRST turned out to need
+   its own fix: kl's noop.c inserts its own "SUB $frame,R1 / MOVW
+   R15,0(R1)" prologue immediately after ATEXT, unconditionally, for
+   any non-leaf TEXT (checked via `curtext->mark & LEAF`, cleared by
+   ANY AJMPL in the TEXT regardless of its operands) -- BEFORE any
+   hand-written instructions in that TEXT, regardless of their source
+   order. So a straightforward `TEXT _start(SB),$0 / MOVW R14,R1 /
+   MOVW $setSB(SB),R2 / JMPL main(SB)` still got the auto-prologue
+   spliced in ahead of the R14->R1 copy, because the JMPL made _start
+   non-leaf. Fixed by keeping _start genuinely leaf: load main's
+   address into a register, then transfer control with the
+   register-indirect AJMP form (`JMP (R8)`) instead of AJMPL --  AJMP
+   does NOT clear LEAF (noop.c's switch just does branch-delay-slot
+   bookkeeping for it, same bucket as the real Bicc branches), and
+   _start never needs to return to itself anyway. AJMP has no
+   symbol/C_LBRA addressing form in optab.c (only C_SBRA/C_SOREG), so
+   this needs the explicit two-instruction load-then-jump-indirect
+   form, not a bare `JMP main(SB)`.
+3. R1 (REGSP) and the Linux SPARC32 syscall ABI's own %g1
+   (syscall-number register) are the SAME physical register -- a
+   genuine, unavoidable ABI collision specific to this backend's
+   register choice. exit_linux_sparc.s/hello_linux_sparc.s (tests/s)
+   never hit this because they're leaf code with no live stack across
+   the trap. xwrite_sparc.s does have a live caller stack (main's own
+   frame, needed again after xwrite returns) -- clobbering R1 with the
+   syscall number and never restoring it corrupts main's REGSP for
+   good, surfacing several instructions later as a segfault in main's
+   *epilogue* (`MOVW 0(R1),R8` reading the saved link register from a
+   garbage address) -- looks unrelated to the syscall at first glance.
+   Fixed by saving R1 into a scratch out-register (R12) before setting
+   up the syscall and restoring it right after the trap, before
+   RETURN. xexit_sparc.s deliberately does NOT restore R1 -- exit()
+   never returns, so REGSP never needs to be valid again.
+
+Verified: `mk objtype=boot-gcc` builds and installs kc cleanly (both
+from a stale tree and `mk clean` from scratch); `kc -S` inspection
+matches the fixes above; tests/c/mini's sparc target
+(start_sparc.s/xwrite_sparc.s/xexit_sparc.s, wired into ARCHS= and the
+clean rule's glob) builds and passes byte-exact under qemu-sparc
+(`Hello C World` / `It works!`, matching helloc.expected.txt) via both
+`mk objtype=sparc` directly and `mk test`'s full per-arch loop; full
+top-level `mk test` (tests/s) and tests/c/mini's own `mk test` across
+ALL other arches (386/amd64/arm/arm64/mips/riscv/alpha/power) re-run
+afterward with no regressions from the libmach/obj.c/mach.h changes.
+
+What's STILL unverified after kc's mini bring-up
+--------------------------------------------------
+
+Only a two-call, no-locals, no-arithmetic C program has exercised kc
+end-to-end. Anything involving kc's own register allocator across
+multiple live values, floating point, structs/unions, switch
+statements, or a SECOND non-leaf call depth (main calling something
+that itself calls something) is still unverified. The REGSP/%g1
+syscall-number collision found in xwrite_sparc.s is specific to
+hand-written syscall stubs, not kc-generated code -- but any future
+hand-written sparc asm making a Linux syscall from a context with a
+live kc-managed stack should watch for the same trap.

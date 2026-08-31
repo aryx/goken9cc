@@ -505,10 +505,10 @@ zaddr(Biobuf *b, Adr *a, int s)
 	}
 }
 
-long
-align(long i, Type *t, int op)
+int32
+align(int32 i, Type *t, int op)
 {
-	long o;
+	int32 o;
 	Type *v;
 	int w;
 
@@ -572,8 +572,8 @@ align(long i, Type *t, int op)
 	return o;
 }
 
-long
-maxround(long max, long v)
+int32
+maxround(int32 max, int32 v)
 {
 	v = round(v, SZ_LONG);
 	if(v > max)

@@ -1,9 +1,9 @@
 <$TOP/mkfiles/mkfile.proto
 
-O=q
-CC=qc
-LD=ql -H7
-AS=qa
+O=k
+CC=kc
+LD=kl -H7
+AS=ka
 AR=iar
 
-CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/power
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/sparc

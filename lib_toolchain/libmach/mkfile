@@ -28,6 +28,7 @@ OFILES=\
 	vcodas.$O\
 	zobj.$O\
 	qobj.$O\
+	kobj.$O\
         \
 	obj.$O\
 	swap.$O\
