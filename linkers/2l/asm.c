@@ -85,6 +85,13 @@ asmb(void)
 	case 4:	/* preprocess pilot */
 		seek(cout, HEADR+textsize, 0);
 		break;
+	case 7:
+		/* claude: must match the PT_LOAD file offset elf32()
+		 * (linkers/lk/elf.c) computes for the data segment -- see
+		 * this file's own case 7 in the header-write switch below,
+		 * and 2l/obj.c's case 7 comment. */
+		seek(cout, rnd(HEADR+textsize, INITRND), 0);
+		break;
 	}
 
 	if(debug['v'])
@@ -116,6 +123,9 @@ asmb(void)
 		break;
 	case 3:	/* next boot */
 		seek(cout, HEADR+rnd(textsize, INITRND)+datsize, 0);
+		break;
+	case 7:
+		seek(cout, rnd(HEADR+textsize, INITRND)+datsize, 0);
 		break;
 	}
 	if(!debug['s']) {
@@ -262,6 +272,17 @@ asmb(void)
 		lput(symsize);				/* nsyms */
 		lput(spsize);				/* sp offsets */
 		lput(lcsize);				/* line offsets */
+		break;
+	case 7:
+		/* linux, matching every other HEADTYPE-7 arch */
+		/* claude: only ask elf32() for a section-header table
+		 * (debug['S']) when we're NOT stripping -- see ql/asm.c's
+		 * own case 7 comment (docs/claude_notes/notes_arch_power.txt)
+		 * for the full root-cause writeup of the .data corruption
+		 * this avoids when a build strips symbols. */
+		if(!debug['s'])
+			debug['S'] = 1;		/* symbol table */
+		elf32(M68K, ELFDATA2MSB, 0, nil);
 		break;
 	}
 	cflush();
@@ -1353,13 +1374,68 @@ bad:
 }
 
 void
-lput(long l)
+strnput(char *s, int n)
+{
+	for(; *s; s++){
+		CPUT(*s)
+		n--;
+	}
+	for(; n > 0; n--)
+		CPUT(0)
+}
+
+void
+cput(int32 l)
+{
+	CPUT(l)
+}
+
+void
+wput(int32 l)
+{
+	CPUT(l>>8)
+	CPUT(l)
+}
+
+void
+wputl(int32 l)
+{
+	CPUT(l)
+	CPUT(l>>8)
+}
+
+void
+lput(int32 l)
 {
 
 	CPUT(l>>24)
 	CPUT(l>>16)
 	CPUT(l>>8)
 	CPUT(l)
+}
+
+void
+lputl(int32 l)
+{
+
+	CPUT(l)
+	CPUT(l>>8)
+	CPUT(l>>16)
+	CPUT(l>>24)
+}
+
+void
+llput(vlong v)
+{
+	lput(v>>32);
+	lput(v);
+}
+
+void
+llputl(vlong v)
+{
+	lputl(v);
+	lputl(v>>32);
 }
 
 void

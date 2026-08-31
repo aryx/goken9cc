@@ -1,0 +1,124 @@
+m68k (2l/2a/2c): ELF HEADTYPE-7 wiring + exit_linux_m68k.s, first real bring-up
+================================================================================
+
+Unlike sparc's kl (see notes_arch_sparc.txt), 2l's `mk objtype=boot-gcc`
+already compiled cleanly BEFORE this session (from the earlier "m68k: make
+2l compile" / "m68k: add 2l in toplevel mkfile" commits) -- but that only
+got the linker's OWN sources building, not producing any real Linux ELF
+output. This session added that: HEADTYPE 7 wiring (matching every other
+HEADTYPE-7 arch) plus a real hand-assembled exit(42) test verified under
+qemu-m68k end-to-end. See linkers/2l/, assemblers/2a/, tests/s/exit/
+exit_linux_m68k.s.
+
+2l had no ELF support at all, same underlying gap as kl had
+-----------------------------------------------------------------
+
+2l/l.h never included "../lk/elf.h", and 2l/asm.c had only a bare `lput`
+(no cput/wput/wputl/lputl/strnput/llput/llputl) -- 2l's own byte-output
+convention is the CPUT(c) macro (`*cbp++ = c; if(--cbc<=0) cflush();`)
+used inline everywhere rather than through named functions, so none of
+elf.c's expected function names existed at all, not even by a different
+name. 2l/obj.c's HEADTYPE switch only covered 0 (garbage unix)/1 (plan9
+boot, data-in-text)/2 (plan9)/3 (NeXT boot, real Mach-O for 68040 --
+confirmed by the 0xfeedface magic and segment/section command layout in
+asm.c's case 3, matching NeXTSTEP's mach_header, not to be confused with
+macOS's own later, different-arch Mach-O)/4 (pilot preprocess). No case 7.
+
+Ported the same HEADTYPE-7 machinery already established for every other
+Linux-targeting arch (elf32(M68K, ELFDATA2MSB, ...) -- m68k is big-endian):
+
+- 2l/l.h: added `#include "../lk/elf.h"`; added `EXTERN long INITTEXTP`;
+  retyped `lput`'s prototype long->int32 (matching every sibling linker,
+  the same "long is 64-bit on this LP64 host" parity fix already applied
+  elsewhere) and added cput/wput/wputl/lputl/llput/llputl/strnput
+  prototypes.
+- 2l/obj.c: added a `-P` flag (INITTEXTP, mirrors -T/-D/-R/-H already
+  there) and the `if(INITTEXTP==-1) INITTEXTP=INITTEXT;` default after
+  the switch; added `case 7:` with the standard HEADTYPE-7 sizing
+  (HEADR=rnd(Ehdr32sz+3*Phdr32sz,16), INITTEXT default 0x00400000+HEADR,
+  INITRND 4096).
+- 2l/asm.c: added cput/wput/wputl/lputl/llput/llputl/strnput as thin
+  wrappers around the existing CPUT macro (matching this file's own
+  byte-at-a-time style rather than the LPUT-macro style kl/vl use);
+  retyped lput long->int32; added `case 7:` to both mid-function seek()
+  switches (matching elf32()'s own page-rounded PT_LOAD offset math,
+  `rnd(HEADR+textsize,INITRND)`) and to the final header-write switch,
+  guarding `debug['S']=1` with `if(!debug['s'])` from the start --
+  applying ql's own later-learned lesson (see notes_arch_power.txt) up
+  front rather than rediscovering the .data-corruption bug this session,
+  same as kl's own bring-up did.
+- 2l/mkfile: added `elf.$O` to OFILES (it compiles linkers/lk/*.c files
+  generically via the `%.$O: ../lk/%.c` rule already present, but elf.$O
+  was never actually listed as a real dependency, so `mk` never linked
+  it in -- the build failed with "undefined reference to elf32" until
+  this was added). Also fixed a stale `enam.c: $TOP/include/obj/z.out.h`
+  dependency (copy-paste leftover naming alpha's z.out.h instead of this
+  arch's own 2.out.h -- harmless for a fresh build since mkenam itself
+  already correctly reads 2.out.h, but meant `mk` never noticed when
+  2.out.h changed and wouldn't regenerate enam.c).
+
+exit_linux_m68k.s: real ELF exit(42), verified under qemu-m68k
+------------------------------------------------------------------
+
+Wrote tests/s/exit/exit_linux_m68k.s and wired it into that mkfile's
+EXITLINUXBINS + scripts/qemu-runner (`m68k) qemu=qemu-m68k`), same shape
+as every other arch's exit(42) test.
+
+Linux m68k syscall ABI (confirmed against a real glibc checkout found on
+this machine, sysdeps/unix/sysv/linux/m68k/sysdep.h, and its bundled
+m68k-linux-any/asm/unistd_32.h kernel header): syscall number in %d0,
+args in %d1-%d5/%a0, trap via `trap #0`, errors signaled by a return
+value in -4095..-1 rather than a separate carry-style flag. __NR_exit is
+1, the same legacy/x86-style numbering every other arch in this session's
+bring-ups has used.
+
+This backend's assembler (assemblers/2a/lex.c) names the data registers
+R0-R7 (not D0-D7) and address registers A0-A7 -- but unlike sparc's kl,
+there is no renaming/flat-numbering indirection: these map straight onto
+the real hardware d0-d7/a0-a7 registers, since m68k has no windowed-
+register complication to abstract away. ATRAP's optab row (linkers/2l/
+optab.c: `{ATRAP, AXXX, 0, 0, 30, 0x4e40}`) requires a D_CONST operand
+(asm.c's case 30: `t |= p->to.offset & 0xf`), directly ORing the trap
+vector into the base 0x4e40 (`trap #0`) opcode -- so `TRAP $0` assembles
+to exactly the instruction Linux needs, no scratch-register workaround
+required (unlike kl's TA, which only has a register-operand form -- see
+notes_arch_sparc.txt).
+
+Verified: `2a -c` + `2l -H7` produce a genuine 32-bit big-endian m68k ELF
+(readelf confirms "Motorola m68k, 68020", ELFDATA2MSB, entry point set
+correctly), `qemu-m68k ./exit_linux_m68k.exe` exits 42 on the first try
+(no register-mapping puzzle to work through, unlike sparc's TA). Full
+tests/s suite re-run afterward with m68k included: no regressions.
+
+compilers/2c/mkfile: same stale-mkfile gap as compilers/kc
+------------------------------------------------------------------
+
+compilers/2c/mkfile is the identical pattern already found and left
+unfixed for compilers/kc (see notes_arch_sparc.txt): a stale, never-
+ported Plan-9-native mkfile (`</$objtype/mkfile`, `</sys/src/cmd/mkone`)
+that `mk objtype=boot-gcc` silently no-ops on instead of erroring, so no
+2c binary exists yet. Not fixed this session, same reasoning as kc: this
+session's exit_linux_m68k.s is hand-written assembly and never needed
+it. Whoever next wants a compiled-C m68k test should port 2c/mkfile to
+the `<$TOP/mkfiles/...` style the way ka/kl/2a/2l's own mkfiles already
+use -- both kc and 2c need the identical fix, so doing them together
+(rather than as two separate investigations) is probably the efficient
+path.
+
+What's still unverified / out of scope for this session
+------------------------------------------------------------
+
+- 2l only has ONE real instruction verified end-to-end (MOVL
+  $smallconst,Rx, exercised twice by exit_linux_m68k.s) plus TRAP. The
+  much larger asmins()/optab.c surface (addressing modes, branches,
+  floating point, the NeXT boot HEADTYPE 3 mach-o path) is completely
+  unaudited and unexercised.
+- No `-P`/INITTEXTP round-trip has been tested (no test in this repo
+  passes -P to any HEADTYPE-7 linker yet, sparc included) -- added
+  purely for structural parity with every sibling linker's l.h/obj.c,
+  matching what elf32() itself requires.
+- mkfiles/68020/ (or whatever the eventual objtype directory name
+  becomes) does not exist yet -- no `mk objtype=68020` (or m68k) build
+  has been attempted, only the boot-gcc-hosted 2a/2l/2c triad. Unlike
+  sparc, there isn't even a stale mkfiles/sparc-style leftover to find
+  and flag here -- this is simply unstarted.

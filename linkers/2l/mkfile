@@ -13,6 +13,7 @@ OFILES=\
 	span.$O\
         \
 	enam.$O\
+	elf.$O\
 	compat.$O\
 
 HFILES=	l.h $TOP/include/obj/2.out.h
@@ -20,7 +21,7 @@ HFILES=	l.h $TOP/include/obj/2.out.h
 <$TOP/mkfiles/mkone
 
 CLEANFILES=enam.c
-enam.c: $TOP/include/obj/z.out.h
+enam.c: $TOP/include/obj/2.out.h
 	sh mkenam
 
 %.$O:	../lk/%.c
