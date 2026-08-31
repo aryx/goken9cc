@@ -7,7 +7,7 @@
 
 extern ulong	textbase;
 
-ulong
+u32int
 ifetch(ulong addr)
 {
 	uchar *va;
@@ -28,10 +28,10 @@ ifetch(ulong addr)
 	return va[0]<<24 | va[1]<<16 | va[2]<<8 | va[3];
 }
 
-ulong
+u32int
 getmem_4(ulong addr)
 {
-	ulong val;
+	u32int val;
 	int i;
 
 	val = 0;
@@ -51,7 +51,7 @@ getmem_2(ulong addr)
 	return val;
 }
 
-ulong
+u32int
 getmem_w(ulong addr)
 {
 	uchar *va;
@@ -66,7 +66,21 @@ getmem_w(ulong addr)
 	va = vaddr(addr);
 	va += addr&(BY2PG-1);
 
-	return va[0]<<24 | va[1]<<16 | va[2]<<8 | va[3];;
+	return va[0]<<24 | va[1]<<16 | va[2]<<8 | va[3];
+}
+
+// claude: added -- ki/syscall.c's sysseek()/syspread()/syspwrite() (see
+// machines/vi/syscall.c, which this was ported from) need a real vlong
+// accessor instead of the hand-rolled `union { vlong v; ulong u[2]; }`
+// the original ki/syscall.c used, which assumed `ulong` is 32 bits (true
+// on the original 32-bit Plan9 hosts, false here). SPARC is big-endian
+// like MIPS/PowerPC, so the high word is at addr, low word at addr+4 --
+// see machines/vi/mem.c's getmem_v() comment for why 5i (little-endian
+// ARM) is the mirror image.
+uvlong
+getmem_v(ulong addr)
+{
+	return ((uvlong)getmem_w(addr) << 32) | getmem_w(addr+4);
 }
 
 ushort
@@ -120,6 +134,16 @@ putmem_w(ulong addr, ulong data)
 	if(membpt)
 		brkchk(addr, Write);
 }
+
+// claude: added -- see getmem_v()'s comment above; matching big-endian
+// word order (high word first, at addr).
+void
+putmem_v(ulong addr, uvlong data)
+{
+	putmem_w(addr, data>>32);
+	putmem_w(addr+4, data);
+}
+
 void
 putmem_b(ulong addr, uchar data)
 {

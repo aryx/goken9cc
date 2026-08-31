@@ -89,7 +89,7 @@ void	subfc(ulong);
 void	subfe(ulong);
 void	subfme(ulong);
 void	subfze(ulong);
-void	sync(ulong);
+void	psync(ulong);
 void	tlbie(ulong);
 void	tw(ulong);
 void	xor(ulong);
@@ -172,7 +172,7 @@ Inst	op31[] = {
 [567] {lfsx, "lfsux", Ifloat},
 [595] {0, "mfsr", Iarith},
 [597] {lswi, "lswi", Iarith},
-[598] {sync, "sync", Iarith},
+[598] {psync, "sync", Iarith},
 [599] {lfdx, "lfdx", Ifloat},
 [631] {lfdx, "lfdux", Ifloat},
 [659] {0, "mfsrin", Ireg},
@@ -1943,7 +1943,7 @@ tw(ulong ir)
 }
 
 void
-sync(ulong ir)
+psync(ulong ir)
 {
 	USED(ir);
 	if(trace)

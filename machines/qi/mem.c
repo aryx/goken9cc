@@ -7,7 +7,7 @@
 
 extern ulong	textbase;
 
-ulong
+u32int
 ifetch(ulong addr)
 {
 	uchar *va;
@@ -31,10 +31,10 @@ ifetch(ulong addr)
 	return va[0]<<24 | va[1]<<16 | va[2]<<8 | va[3];
 }
 
-ulong
+u32int
 getmem_4(ulong addr)
 {
-	ulong val;
+	u32int val;
 	int i;
 
 	val = 0;
@@ -65,7 +65,7 @@ getmem_v(ulong addr)
 	return ((uvlong)getmem_w(addr) << 32) | getmem_w(addr+4);
 }
 
-ulong
+u32int
 getmem_w(ulong addr)
 {
 	uchar *va;

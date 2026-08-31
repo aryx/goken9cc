@@ -12,7 +12,8 @@ LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
 MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe \
           hello_macos_libc_amd64.exe
 WINDOWSBINS=hello_windows_386.exe hello_windows_amd64.exe
-PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe
+PLAN9BINS=hello_plan9_386.exe hello_plan9_arm.exe hello_plan9_mips.exe \
+          hello_plan9_power.exe hello_plan9_sparc.exe
 #TODO: hello_xv6_386.exe hello_xv6_riscv.exe and possibly hello_xv6_arm.exe
 XV6BINS=
 # claude: .wasm, not .exe -- unlike every other target here this isn't
@@ -55,23 +56,28 @@ test:V: all
       }
       # Plan9 executables don't run on the host OS (different ABI/exec
       # format from Linux/macOS/Windows), so there's no qemu-user
-      # equivalent for them; run them under machines/5i and machines/vi
-      # instead (assumed already built+installed on $PATH, same as the
-      # wine/qemu-user assumption above). Both are interactive
-      # debuggers, not one-shot interpreters: ':c' continues execution
-      # from the entry point main() already set up, and '$q' exits once
-      # stopped. Line 2 of the output is the program's own "Hello,
-      # world\n" (line 1 is the "5i"/"vi" startup banner); see
-      # tests/5i/smoke.sh and tests/vi/smoke.sh for more thorough
-      # (but less strict) coverage of these two emulators.
+      # equivalent for them; run them under machines/5i, machines/vi,
+      # machines/qi and machines/ki instead (assumed already
+      # built+installed on $PATH, same as the wine/qemu-user assumption
+      # above). All four are interactive debuggers, not one-shot
+      # interpreters: ':c' continues execution from the entry point
+      # main() already set up, and '$q' exits once stopped. Line 2 of
+      # the output is the program's own "Hello, world\n" (line 1 is the
+      # "5i"/"vi"/"qi"/"ki" startup banner); see tests/5i/smoke.sh,
+      # tests/vi/smoke.sh, tests/qi/smoke.sh and tests/ki/smoke.sh for
+      # more thorough (but less strict) coverage of these emulators.
       for (i in $PLAN9BINS) {
          echo $i
          if(~ $i hello_plan9_arm.exe)
             printf ':c\n$q\n' | 5i ./$i | sed -n 2p | cmp /dev/stdin hello.expected.txt
          if not if(~ $i hello_plan9_mips.exe)
             printf ':c\n$q\n' | vi ./$i | sed -n 2p | cmp /dev/stdin hello.expected.txt
+         if not if(~ $i hello_plan9_power.exe)
+            printf ':c\n$q\n' | qi ./$i | sed -n 2p | cmp /dev/stdin hello.expected.txt
+         if not if(~ $i hello_plan9_sparc.exe)
+            printf ':c\n$q\n' | ki ./$i | sed -n 2p | cmp /dev/stdin hello.expected.txt
          if not
-            echo 'skipping '$i': no plan9/386 emulator available (only 5i/vi exist)'
+            echo 'skipping '$i': no plan9/386 emulator available (only 5i/vi/qi/ki exist)'
       }
 
 # macOS-native run tests (no qemu): unlike `test` above, which only
@@ -193,6 +199,18 @@ hello_plan9_arm.exe: hello_plan9_arm.s
 hello_plan9_mips.exe: hello_plan9_mips.s
    va -c $prereq
    vl -o $target -H 2 -E _main hello_plan9_mips.v
+# claude: no -T/-R override -- ql's own -H2 defaults (INITTEXT=0x100020,
+# INITRND=0x100000, see linkers/ql/obj.c) are what lib_toolchain/
+# libmach/q.c's mpower.pgsize (already 0x100000) expects; overriding
+# -T/-R to a plain 4K-rounded address (as tried while bringing this up)
+# reproduces the same class of txtaddr mismatch vi's mmips.pgsize bug
+# caused, ending in qi's "data_access_MMU_miss".
+hello_plan9_power.exe: hello_plan9_power.s
+   qa -c $prereq
+   ql -o $target -H 2 -E _main hello_plan9_power.q
+hello_plan9_sparc.exe: hello_plan9_sparc.s
+   ka -c $prereq
+   kl -o $target -H 2 -E _main hello_plan9_sparc.k
 
 # Windows (PE). Both link a kernel32.dll .idata (GetStdHandle, WriteFile,
 # ExitProcess) and expose the thunks as __imp_* symbols so the program can

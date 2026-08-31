@@ -8,7 +8,10 @@
  * bits of floating point in memory may be reversed lsw/msw
  * unions of double & 2*float & 2*long have no padding
  */
-#include "/sparc/include/ureg.h"
+// claude: was "/sparc/include/ureg.h" (an absolute host path from
+// Plan9's own tree) -- goken's own copy lives in include/arch/sparc/,
+// matching machines/vi/mips.h's <arch/mips/ureg.h> for the same reason.
+#include <arch/sparc/ureg.h>
 #define	USERADDR	0xC0000000
 #define	UREGADDR	(USERADDR+BY2PG-4-0xA0)
 #define USER_REG(x)	(UREGADDR+(ulong)(x))
@@ -76,9 +79,20 @@ struct Inst
 struct Registers
 {
 	ulong	pc;
-	ulong	ir;
+	// claude: u32int, not ulong -- a SPARC instruction word is always
+	// 32 bits; ulong is 64 bits on this host and dispatch on ir has no
+	// re-masking, so a sign-extended ir would misdecode -- see
+	// machines/vi/mips.h's identical fix on Registers.ir.
+	u32int	ir;
 	Inst	*ip;
-	long	r[32];
+	// claude: u32int, not long -- a SPARC register is always 32 bits;
+	// storing it in a 64-bit `long` on this 64-bit host let shift
+	// helpers (run.c's sraw()-equivalent arithmetic-right-shift path,
+	// "reg.r[rd] = reg.r[rs1]>>v | ~((1<<(32-v))-1)") compute a
+	// 32-bit result over 64 bits instead, leaking garbage into bits
+	// 32..63 -- see machines/qi/power.h's Registers comment and arm.h/
+	// run.c's Idp3() for the identical class of bug on other arches.
+	u32int	r[32];
 	ulong	Y;
 	ulong	psr;
 	ulong	fpsr;
@@ -146,13 +160,15 @@ void		itrace(char *, ...);
 void		segsum(void);
 void		ta(ulong);
 char*		memio(char*, ulong, int, int);
-ulong		getmem_w(ulong);
-ulong		ifetch(ulong);
+u32int		getmem_w(ulong);
+u32int		ifetch(ulong);
 ushort		getmem_h(ulong);
 void		putmem_w(ulong, ulong);
 uchar		getmem_b(ulong);
 void		putmem_b(ulong, uchar);
-ulong		getmem_4(ulong);
+uvlong		getmem_v(ulong);
+void		putmem_v(ulong, uvlong);
+u32int		getmem_4(ulong);
 ulong		getmem_2(ulong);
 void		putmem_h(ulong, short);
 Mul		mul(long, long);

@@ -3,11 +3,12 @@ lib_toolchain/libmach: two lineages, and the object-format porting story
 
 Scope: lib_toolchain/libmach (moved from debuggers/libmach in July
 2026), the object-file/executable-format/debug-info parsing library
-shared by linkers/ar (iar), debuggers/acid, and the machines/5i and
-machines/vi emulators. Not the executable-format-*production* side
-(that's docs/claude_notes/notes_exec_{macho,pe,elf}.txt) -- this file
-is about the code that *reads* object files and executables back, for
-archiving, debugging, and emulation.
+shared by linkers/ar (iar), debuggers/acid, and the machines/5i,
+machines/vi, machines/qi and machines/ki emulators. Not the
+executable-format-*production* side (that's docs/claude_notes/
+notes_exec_{macho,pe,elf}.txt) -- this file is about the code that
+*reads* object files and executables back, for archiving, debugging,
+and emulation.
 
 Two independent libmach implementations, and which one is authoritative
 --------------------------------------------------------------------------------
@@ -265,3 +266,65 @@ architecture, a pre-existing oddity unrelated to any of the work
 above, not yet fixed) and darwin.c/windows.c/cygwin.c (the other-OS
 process-attach stubs paralleling linux.c) remain unported, simply
 because no current lib_toolchain/libmach consumer needs them yet.
+
+machines/qi and machines/ki bring-up (2026-08-31): sparc's Fhdr
+wiring was never done, power's magic-table wiring was missing too
+-------------------------------------------------------------------------------------------------
+
+qi (PowerPC) and ki (SPARC) were freshly imported (see machines/qi,
+machines/ki) but never brought up as buildable/runnable tools, unlike
+machines/5i and machines/vi which went through this same porting
+pass earlier (register-width retyping, ureg.h path fix, syscall.c
+POSIX-vs-Plan9 offset handling -- see git log for those commits).
+Applying the identical fix pattern to qi/ki surfaced a *libmach* gap
+that had nothing to do with either emulator's own source:
+
+- **k.c/kdb.c (msparc/sparcmach) were never added to
+  lib_toolchain/libmach/mkfile's OFILES**, even though q.c/qdb.c
+  (mpower/powermach) already were -- so `-lmach` never actually
+  contained a SPARC Mach/Machdata table at all. Fixed by adding
+  `k.$O`/`kdb.$O` alongside the existing `q.$O`/`qdb.$O`.
+- **Neither Q_MAGIC (power) nor K_MAGIC (sparc) existed anywhere** --
+  not in include/arch/mach.h's `_MAGIC()`-derived constant list, and
+  not in executable.c's `exectab[]` (the table crackhdr() scans to
+  recognize a file's format). Confirmed the actual magic values by
+  reading what linkers/ql/asm.c and linkers/kl/asm.c literally emit
+  for their own -H2 (Plan9) case: `4*21*21+7` (1771, power) and
+  `4*13*13+7` (683, sparc) -- both fit the same `_MAGIC(f,b)` formula
+  already used for every other arch here (I_MAGIC=_MAGIC(0,11),
+  V_MAGIC=_MAGIC(0,16), etc.), just never added as `Q_MAGIC`/`K_MAGIC`
+  constants or registered as exectab[] rows. Without this, crackhdr()
+  returned 0 (failure) on an otherwise byte-for-byte-correct q.out/
+  k.out header -- qi/ki's own inithdr() surfaced this as "read text
+  header", easy to mistake for a real header-format bug in qi.c/ki.c
+  when the actual gap was one layer down, in libmach never having
+  been told these formats exist.
+- k.c ALSO had the same `#include "/sparc/include/ureg.h"` absolute
+  Plan9-host-path bug that machines/vi's mips.h had before its own fix
+  (q.c already used `<arch/power/ureg.h>` correctly, so only k.c
+  needed this).
+- FSPARC, MSPARC, ASPARC and ASUNSPARC (the disassembler-syntax-
+  variant constant ki.c's own inithdr() references) didn't exist in
+  mach.h's enum at all -- FPOWER/MPOWER/APOWER did (from whatever
+  earlier pass wired power in partially), but the equivalent sparc
+  constants were simply missing, not just unregistered.
+
+Net effect: **crackhdr() could never recognize a q.out OR a k.out file
+before this fix**, independent of anything in qi.c/ki.c/mem.c/
+syscall.c. mpower.pgsize (lib_toolchain/libmach/q.c) was already
+correct (0x100000, matching linkers/ql's own -H2 INITRND default) from
+whatever earlier partial power work set it; msparc.pgsize (k.c) was
+already correct too (0x1000, matching linkers/kl's own -H2 INITRND
+default of 4096) -- neither needed the mmips.pgsize-style fix vi
+needed. The lesson for the next arch: when crackhdr() fails on a file
+whose magic bytes you've independently verified are correct (dump the
+first 4 bytes and compare against `_MAGIC(0,N)` by hand), check
+exectab[]/mach.h's enum before assuming the bug is in the emulator's
+own header-parsing code -- it likely just was never told this arch's
+magic number exists.
+
+Verified via tests/qi/smoke.sh and tests/ki/smoke.sh (both disassemble
+a real entry instruction with correct symbol resolution AND run a real
+Plan9 executable -- tests/s/mini/hello_plan9_power.s and
+hello_plan9_sparc.s -- to completion through the CPU emulator +
+syscall.c), and a full top-level `mk test`.

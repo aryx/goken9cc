@@ -1,7 +1,10 @@
-</$objtype/mkfile
+TOP=../../
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=ki
-OFILES= ki.$O\
+LDLIBS=-lmach -lbio $BOOTLIBS
+
+OFILES=	ki.$O\
 	run.$O\
 	mem.$O\
 	syscall.$O\
@@ -12,16 +15,9 @@ OFILES= ki.$O\
 	bpt.$O\
 	float.$O\
 
-HFILES=sparc.h\
+HFILES=sparc.h
 
-BIN=/$objtype/bin
+<$TOP/mkfiles/mkone
 
-UPDATE=\
-	mkfile\
-	$HFILES\
-	${OFILES:%.$O=%.c}\
-
-</sys/src/cmd/mkone
-
-acid:	
+acid:
 	$CC -a run.c > acid.def

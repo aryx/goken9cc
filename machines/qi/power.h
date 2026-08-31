@@ -8,7 +8,10 @@
  *	unions of double & vlong have no padding
  *	vlongs provide at least 64 bits precision
  */
-#include "/power/include/ureg.h"
+// claude: was "/power/include/ureg.h" (an absolute host path from
+// Plan9's own tree) -- goken's own copy lives in include/arch/power/,
+// matching machines/vi/mips.h's <arch/mips/ureg.h> for the same reason.
+#include <arch/power/ureg.h>
 #define	USERADDR	0xC0000000
 #define	UREGADDR	(USERADDR+BY2PG-4-0xA0)
 #define USER_REG(x)	(UREGADDR+(ulong)(x))
@@ -82,9 +85,26 @@ struct Inst
 struct Registers
 {
 	ulong	pc;
-	ulong	ir;
+	// claude: u32int, not ulong -- a PowerPC instruction word is
+	// always 32 bits; ulong is 64 bits on this host, and dispatch on
+	// ir (getop()/getxo() in run.c) has no re-masking, so a
+	// sign-extended ir would misdecode -- see machines/vi/mips.h's
+	// identical fix on Registers.ir for the concrete failure mode
+	// (ifetch()/getmem_w()/getmem_4() in mem.c compose the word as a
+	// 32-bit int and can look "negative" once returned through a
+	// wider type).
+	u32int	ir;
 	Inst	*ip;
-	long	r[32];
+	// claude: u32int, not long -- a PowerPC GPR is always 32 bits;
+	// storing it in a 64-bit `long` on this 64-bit host let rotate
+	// helpers (iu.c's rotl(), used by rlwinm/rlwimi/rlwnm -- gcc's
+	// usual lowering for shifts, bitfield extracts, and even plain
+	// register moves) compute "(v<<sh) | (v>>(32-sh))" over 64 bits
+	// instead of 32, leaking the rotate's carry-out into bits 32..63
+	// instead of wrapping it back into bits 0..sh-1 -- see arm.h's
+	// Registers comment and run.c's Idp3() in 5i for the identical
+	// class of bug on ARM's rotated-immediate operand.
+	u32int	r[32];
 	ulong	ctr;
 	ulong	cr;
 	ulong	xer;
@@ -144,14 +164,14 @@ void		itrace(char *, ...);
 void		segsum(void);
 void		sc(ulong);
 char*		memio(char*, ulong, int, int);
-ulong		getmem_w(ulong);
-ulong		ifetch(ulong);
+u32int		getmem_w(ulong);
+u32int		ifetch(ulong);
 ushort		getmem_h(ulong);
 void		putmem_w(ulong, ulong);
 uchar		getmem_b(ulong);
 void		putmem_b(ulong, uchar);
 uvlong	getmem_v(ulong);
-ulong		getmem_4(ulong);
+u32int		getmem_4(ulong);
 ulong		getmem_2(ulong);
 void	putmem_v(ulong, uvlong);
 void		putmem_h(ulong, short);
@@ -276,6 +296,30 @@ enum {
 #define	FPS_ZE	(1<<4)	/* enable zero divide */
 #define	FPS_XE	(1<<3)	/* enable inexact exceptions */
 #define	FPS_RN	(3<<0)	/* rounding mode */
+
+#define	FPAOVFL	FPS_OX
+#define	FPAINEX	FPS_XX
+#define	FPAUNFL	FPS_UX
+#define	FPAZDIV	FPS_ZX
+
+// claude: added -- include/arch/power/u.h has an identical union, but
+// it's meant for cross-compiling *target* PowerPC code, where its
+// `ulong hi/lo` fields are 32 bits each (target ulong). qi is a host
+// tool built with the host's own u.h, where ulong is 64 bits -- pulling
+// in that header wholesale would make `ulong hi; ulong lo;` 16 bytes
+// total, breaking the union's aliasing with `double x` (8 bytes). Using
+// u32int here instead keeps each half a real 32-bit word regardless of
+// host word size, matching PowerPC's big-endian in-register double
+// layout (hi word first) that qi.c/float.c's FPdbleword users assume.
+union FPdbleword
+{
+	double	x;
+	struct {
+		u32int hi;
+		u32int lo;
+	};
+};
+typedef union FPdbleword FPdbleword;
 
 #define	XER_SO	(1<<31)
 #define	XER_OV	(1<<30)

@@ -1,6 +1,6 @@
 TOP=..
 
-DIRS=5i vi
+DIRS=5i vi qi ki
 
 <$TOP/mkfiles/mkdirs
 

@@ -1,7 +1,10 @@
-</$objtype/mkfile
+TOP=../../
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=qi
-OFILES= qi.$O\
+LDLIBS=-lmach -lbio $BOOTLIBS
+
+OFILES=	qi.$O\
 	run.$O\
 	mem.$O\
 	syscall.$O\
@@ -14,16 +17,9 @@ OFILES= qi.$O\
 	branch.$O\
 	iu.$O\
 
-HFILES=power.h\
+HFILES=power.h
 
-BIN=/$objtype/bin
+<$TOP/mkfiles/mkone
 
-UPDATE=\
-	mkfile\
-	$HFILES\
-	${OFILES:%.$O=%.c}\
-
-</sys/src/cmd/mkone
-
-acid:	
+acid:
 	$CC -a run.c > acid.def

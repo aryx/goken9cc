@@ -701,6 +701,19 @@ farith2(ulong ir)
 		itrace("%s%s\tfr%d,fr%d", ci->name, cc, rd, rb);
 }
 
+// claude: the original Plan9 qi ran natively on PowerPC hardware and
+// getfsr() (in /sys/src/libc/power/, real asm reading the host chip's
+// own FPSCR) reflected the real FPU's exception flags into the
+// emulated program's fpscr. There's no such register to read on this
+// host arch, so stub it to 0 -- FPSCR sticky-exception bits just won't
+// get set from real host FP traps, which doesn't affect ordinary
+// arithmetic emulation (see run.c/iu.c, which do the actual op).
+static ulong
+getfsr(void)
+{
+	return 0;
+}
+
 ulong
 setfpscr(void)
 {

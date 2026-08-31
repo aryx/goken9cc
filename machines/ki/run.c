@@ -1291,7 +1291,7 @@ bicc(ulong ir)
 	ulong npc, anul, ba;
 	int takeit, z, v, n, c;
 
-	SET(op, takeit);
+	SET(op); SET(takeit);
 	ba = 0;
 	switch((ir>>25)&0x0F) {
 	case 0:

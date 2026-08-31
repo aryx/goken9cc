@@ -47,6 +47,13 @@ struct  Exec
 #define	L_MAGIC		_MAGIC(0, 23)		/* dec alpha */
 #define S_MAGIC     _MAGIC(HDR_MAGIC, 26)   /* amd64 */
 #define R_MAGIC     _MAGIC(HDR_MAGIC, 28)   /* arm64 */
+// claude: added -- matches linkers/ql/asm.c's/kl/asm.c's own -H2 case
+// ("lput(4*21*21+7)" / "lput(4*13*13+7)"), which never went through
+// this _MAGIC() table (see machines/qi,ki's own missing FSPARC/exectab
+// wiring -- libmach never recognized either arch's Plan9-native format
+// before now, unlike the linkers that already emit it).
+#define Q_MAGIC     _MAGIC(0, 21)       /* power */
+#define K_MAGIC     _MAGIC(0, 13)       /* sparc */
 
 #define MIN_MAGIC   8
 #define MAX_MAGIC   28          /* <= 90 */
@@ -90,6 +97,7 @@ enum
     MARM64,
 	MALPHA,
 	MPOWER,
+	MSPARC,
 
     /* types of executables */
     FNONE = 0,      /* unidentified */
@@ -106,6 +114,7 @@ enum
 	FALPHA,			/* z.out */
 	FALPHAB,		/* DEC Alpha bootable */
 	FPOWER,			/* q.out */
+	FSPARC,			/* k.out */
 
     /* dissembler types */
     ANONE = 0,
@@ -117,6 +126,8 @@ enum
 	AALPHA,
 	APOWER,
 	APOWER64,
+	ASPARC,
+	ASUNSPARC,	/* sun assembler syntax, vs. plan9 native ASPARC */
 
     /* object file types */
     ObjMips = 0,        /* .v */

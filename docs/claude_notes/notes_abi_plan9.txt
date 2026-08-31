@@ -264,3 +264,131 @@ only bite once a real format-consuming va_arg() is hit. Not yet wired
 into tests/c/hello_libc's mkfile or the mk test infra pending this fix
 -- hello.c/io.c both use %d-style print() calls, so neither can pass as
 a real regression gate yet.
+
+machines/qi (PowerPC) and machines/ki (SPARC) bring-up (2026-08-31)
+------------------------------------------------------------------------
+
+Same bring-up pass as 5i/vi above, applied to the freshly-imported qi/
+ki emulators, which had never been built or run at all (see
+docs/claude_notes/notes_libmach.txt's own section on this bring-up for
+the libmach-side half of the story -- crackhdr() couldn't even
+recognize a q.out/k.out file before this work, independent of anything
+below). The exact same bug *classes* 5i/vi already hit reappeared,
+confirming these aren't one-off ARM/MIPS bugs but a real "porting an
+old 32-bit-host Plan9 emulator to a 64-bit host" pattern worth checking
+for on any future arch:
+
+- **Registers.ir and Registers.r[32] were `ulong`/`long` (64 bits on
+  this host) instead of a real 32-bit type**, in both power.h and
+  sparc.h -- identical to arm.h/mips.h before their own fix. Retyped
+  to `u32int` in both headers, plus ifetch()/getmem_4()/getmem_w() in
+  both mem.c files. Confirmed by grep before fixing, not just by
+  analogy: qi/iu.c's `rotl()` (used by rlwinm/rlwimi/rlwnm, gcc's usual
+  lowering for PowerPC bitfield extracts and even plain register moves)
+  computed `(v<<sh) | (v>>(32-sh))` -- the exact shape of 5i's Idp3()
+  bug -- and ki/run.c's arithmetic-right-shift path had the matching
+  `reg.r[rd] = reg.r[rs1]>>v | ~((1<<(32-v))-1)`. Unlike 5i's Idp3, the
+  rlwinm-family bug happened to be masked in practice by rlwinm's own
+  `& m` (m never has bits set above 31, so 64-bit leakage above bit 31
+  gets masked away regardless) -- but Registers.r[] being the wrong
+  width is still the right thing to fix everywhere, not something to
+  leave in place because one particular caller happens to tolerate it.
+- **ki/syscall.c and qi/syscall.c were still on the OLD syscall
+  numbering** (`/sys/src/libc/9syscall/sys.h`, `_READ`/`_WRITE`/
+  `OSEEK`/etc.) instead of lib_core/libc/syscall/os/plan9/sys.h's
+  modern PREAD/PWRITE/SEEK numbering -- i.e. the exact pre-fix state
+  5i/vi's syscall.c was in before its own port. Rather than re-deriving
+  every fix independently, both were replaced wholesale with
+  machines/vi/syscall.c's own already-fixed content (offset==-1
+  "current position" handling, fd 0/1/2 routed through plain write(),
+  getmem_v()/putmem_v() instead of the hand-rolled `union { vlong v;
+  ulong u[2]; }` that assumed a 32-bit host), just substituting each
+  arch's own REGSP/REGRET (qi: R1/R3, ki: R1/R7 -- already correct in
+  the original files, unlike the syscall numbering) and trap-dispatch
+  function name (`sc` for qi, `ta` for ki, matching each arch's own
+  run.c decode table -- NOT `Ssyscall`, that's 5i/vi's own name).
+  ki/mem.c had no getmem_v()/putmem_v() at all before this (qi/mem.c
+  already had them, correctly ordered for big-endian) -- added,
+  matching SPARC's big-endian word order (high word at addr, low at
+  addr+4, same as MIPS/PowerPC -- the mirror image of 5i/mem.c's
+  little-endian ARM version). Both syscall.c files also needed
+  `#undef NOP` immediately before including sys.h: power.h/sparc.h
+  each already define their own NOP (an opcode encoding, 0x80300000,
+  live code in ki/run.c's nop-skip check, dead in qi's C sources but
+  not worth removing from the header) which collides with sys.h's NOP
+  (syscall number 0) if not undefined first.
+- **Two qi-only build breaks, neither related to the syscall/register
+  work above**: (1) `sync(ulong)` (a real PowerPC opcode, `sync`)
+  collided with POSIX's own `sync(void)` pulled in via unistd.h on
+  this host -- renamed to `psync` (declaration, decode-table entry,
+  and definition; the *disassembled mnemonic string* stays "sync",
+  only the C function renamed, same spirit as the pre-existing
+  `sysbrk_` avoiding a `brk()` collision). (2) float.c/qi.c used
+  `FPdbleword` and `FPAOVFL`/`FPAINEX`/`FPAUNFL`/`FPAZDIV`, which exist
+  in include/arch/power/u.h -- but that header is for cross-compiling
+  *target* PowerPC code, where its `ulong hi/lo` fields are 32 bits
+  each (target ulong); qi is a *host* tool built with the host's own
+  u.h, where `ulong` is 64 bits, so pulling that union in wholesale
+  would silently double its size and break the `double x` aliasing.
+  Added a host-safe copy locally to power.h using `u32int hi/lo`
+  instead, plus the four FPA* macros as aliases of power.h's own
+  existing FPS_OX/XX/UX/ZX. Also stubbed `getfsr()` (real hardware
+  FPSCR read, meaningless off real PowerPC silicon) to return 0.
+- **ki-only build break**: float.c/run.c both called `SET(op,
+  takeit)`, a two-argument Plan9 idiom (mark both vars as
+  intentionally-set, silencing an old compiler's "may be used
+  uninitialized" warning) -- this codebase's own libc.h defines a
+  different one-argument `SET(x)` (`((x)=0)`). Fixed as
+  `SET(op); SET(takeit);`, which does what the two-arg form intended
+  (pre-initialize both) using the macro that's actually available.
+
+Trap instruction differs by arch -- there is no universal "SYSCALL"
+mnemonic
+------------------------------------------------------------------------------
+
+Writing tests/s/mini/hello_plan9_power.s and hello_plan9_sparc.s (same
+role as hello_plan9_{arm,mips}.s -- raw-syscall Plan9 hello-worlds,
+run via `:c` under qi/ki respectively) surfaced that the "number in a
+register, args on the stack, trap" shape above holds, but the trap
+*instruction itself* is not uniform:
+
+  - power: syscall number in R3 (REGRET), args at 4(R1), 8(R1), ...
+    (R1 is SP), trap via the assembler's `SYSCALL` pseudo-op (real
+    PowerPC `sc`).
+  - sparc: syscall number in R7 (REGRET), args at 4(R1), 8(R1), ...
+    (R1 is SP), trap via `TA <reg>` (real SPARC "trap always", operand
+    is a software-visible trap vector, e.g. `MOVW $0x10,R11; TA R11`,
+    matching the convention tests/s/mini/hello_linux_sparc.s already
+    uses) -- assemblers/ka has no bare `SYSCALL` mnemonic at all,
+    unlike every other arch's assembler here. ki decodes any `TA`
+    (regardless of the trap-vector operand) as a syscall, so the exact
+    vector value doesn't matter to the emulator, only to matching real
+    hardware convention.
+
+Also: **qi's -H2 default `-T`/`-R` matter, unlike the other arches
+tried here** -- `ql`'s own -H2 defaults are INITTEXT=0x100020,
+INITRND=0x100000 (1MB, not the usual 4K -- see linkers/ql/obj.c),
+matching lib_toolchain/libmach/q.c's mpower.pgsize (already 0x100000).
+Overriding `-T`/`-R` to a plain 4K-rounded address (tried first, by
+analogy with the arm/mips recipes which don't need -T/-R at all)
+reproduced the exact same class of txtaddr mismatch as vi's historical
+mmips.pgsize bug (see the "Four bugs" section above), ending in qi's
+"data_access_MMU_miss" instead of a clean run. Fixed by simply not
+passing -T/-R at all and letting ql use its own defaults, same as the
+arm/mips recipes already do. ki's own -H2 defaults are a plain 4K
+(INITRND=4096, matching msparc.pgsize), so this particular gotcha is
+power-specific.
+
+Verification: both hello_plan9_power.exe and hello_plan9_sparc.exe run
+to completion under qi/ki respectively (real "Hello, world" +
+"exits(0)"), confirmed via tests/qi/smoke.sh, tests/ki/smoke.sh, and a
+full top-level `mk test`. As with 5i/vi above, only PWRITE and EXITS
+have been exercised end to end for either arch -- everything else in
+sysctab[] is unverified for qi/ki specifically, same caveat as the
+"What's not exercised at all" section above. lib_core/libc itself has
+no GOOS=plan9 support for power/sparc at all yet (no svc_power.s/
+svc_sparc.s, no zsyscall_plan9_power.c/zsyscall_plan9_sparc.c) -- that
+would be the natural next step to reach hello_unix.c-level parity with
+arm/mips (see demos/mkfile's demo_plan9 target, which runs power/sparc
+at the raw-.s level for exactly this reason, one step behind arm/mips'
+full-libc demo entries).

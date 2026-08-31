@@ -70,6 +70,8 @@ extern	Mach	mamd64;
 extern	Mach	marm;
 extern	Mach	marm64;
 extern	Mach	malpha;
+extern	Mach	mpower;
+extern	Mach	msparc;
 //TODO: riscv?
 
 ExecTable exectab[] =
@@ -164,6 +166,29 @@ ExecTable exectab[] =
 		FALPHA,
 		1,
 		&malpha,
+		sizeof(Exec),
+		beswal,
+		common },
+	// claude: added -- Q_MAGIC/K_MAGIC (see mach.h's own comment on
+	// them) were never in this table before now, so crackhdr() could
+	// never recognize a q.out/k.out file; power and sparc are both
+	// 32-bit big-endian like arm/mips just above, so the same Exec
+	// layout, beswal byte-swap, and common() header parser apply.
+	{ Q_MAGIC,			/* power q.out */
+		"power plan 9 executable",
+		"power plan 9 dlm",
+		FPOWER,
+		1,
+		&mpower,
+		sizeof(Exec),
+		beswal,
+		common },
+	{ K_MAGIC,			/* sparc k.out */
+		"sparc plan 9 executable",
+		"sparc plan 9 dlm",
+		FSPARC,
+		1,
+		&msparc,
 		sizeof(Exec),
 		beswal,
 		common },

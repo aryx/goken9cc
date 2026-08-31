@@ -1,0 +1,6 @@
+TOP=../..
+
+test:V:
+	@{cd $TOP/machines/qi; mk}
+	@{cd ../s/mini; mk hello_plan9_power.exe}
+	QI=$TOP/machines/qi/o.out bash smoke.sh

@@ -227,7 +227,7 @@ fbcc(ulong ir)
 
 	fc = (reg.fpsr>>10)&3;
 	ba = 0;
-	SET(op, takeit);
+	SET(op); SET(takeit);
 	switch((ir>>25)&0x0F) {
 	case 0:
 		op = "fbn";
