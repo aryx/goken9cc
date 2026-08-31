@@ -105,16 +105,57 @@ use -- both kc and 2c need the identical fix, so doing them together
 (rather than as two separate investigations) is probably the efficient
 path.
 
+tests/s/mini/hello_linux_m68k.s: A6/static-base addressing, first try
+------------------------------------------------------------------------
+
+Follow-up session (same "do the same tests/s/mini bring-up" request
+already applied to sparc): wrote tests/s/mini/hello_linux_m68k.s
+(write()+exit(), the standard hello-world shape) and wired it into that
+mkfile's LINUXBINS. Passed on the FIRST assembly/link/run attempt.
+
+This exercises A6-relative addressing, m68k's counterpart to sparc's
+REGSB (see notes_arch_sparc.txt): `MOVL $a6base(SB), A6` bootstraps A6
+to `INITDAT+A6OFFSET` (A6OFFSET=32766, l.h) -- the exact idiom already
+used, unmodified, by assemblers/2a/l.s's own "start" routine (a real,
+working reference bundled with this port since the original import).
+`LEA msg(SB), A1` then computes msg's real address: asmea()'s bare
+D_STATIC/D_EXTERN case (linkers/2l/asm.c) encodes `msg(SB)` used WITHOUT
+a `$` prefix as a signed 16-bit displacement off A6 (`sym->value +
+offset - A6OFFSET`), so LEA resolves it to A6 + displacement =
+`INITDAT + msg's data-segment offset` -- the real address, without ever
+dereferencing (LEA's whole purpose). The address then has to move from
+address register A1 into a data register (`MOVL A1, R2`) before the
+syscall trap, since the raw Linux syscall ABI takes all five register
+args in the data registers (%d1-%d5), never the address registers.
+
+Note there IS a simpler alternative this test deliberately did NOT use:
+`MOVL $msg(SB), R2` (WITH the `$`) hits asmea()'s I_ADDR|D_STATIC/
+D_EXTERN case instead, which embeds msg's absolute address directly as
+a 32-bit immediate -- no A6 or LEA needed at all. That form works too,
+but going through A6/LEA instead was the deliberate choice here, to
+actually exercise the SAME addressing convention 2c-generated code (and
+the SB-relative convention every other HEADTYPE-7 arch's own hand-tests
+already exercise) would really use for ordinary small-offset data
+references, rather than taking the simpler-but-different absolute-
+immediate shortcut.
+
+Verified: `2a -c` + `2l -H7` build a working ELF, `qemu-m68k
+./hello_linux_m68k.exe` prints "Hello, world" byte-matching
+hello.expected.txt, full tests/s suite and top-level `mk test` re-run
+afterward with m68k included in tests/s/mini's LINUXBINS: no
+regressions.
+
 What's still unverified / out of scope for this session
 ------------------------------------------------------------
 
-- 2l only has ONE real instruction verified end-to-end (MOVL
-  $smallconst,Rx, exercised twice by exit_linux_m68k.s) plus TRAP. The
-  much larger asmins()/optab.c surface (addressing modes, branches,
-  floating point, the NeXT boot HEADTYPE 3 mach-o path) is completely
+- 2l now has real instructions verified end-to-end: MOVL with small
+  constants and address-register moves, LEA (A6-relative addressing),
+  TRAP. The much larger asmins()/optab.c surface (branches, floating
+  point, the NeXT boot HEADTYPE 3 mach-o path, large/negative
+  displacements past the ±32768 A6-relative window) is completely
   unaudited and unexercised.
 - No `-P`/INITTEXTP round-trip has been tested (no test in this repo
-  passes -P to any HEADTYPE-7 linker yet, sparc included) -- added
+  passes -P to any HEADTYPE-7 linker yet, sparc/m68k included) -- added
   purely for structural parity with every sibling linker's l.h/obj.c,
   matching what elf32() itself requires.
 - mkfiles/68020/ (or whatever the eventual objtype directory name
