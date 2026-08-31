@@ -24,6 +24,8 @@ See https://www.youtube.com/watch?v=E3iUpyqKvgk for a presentation of the projec
   - fixed the arm and mips emulators (5i/vi) so they actually run their Plan 9 hello-world tests
   - much richer test infra: tests now run for many architectures under qemu/Linux, and many operating systems with wine (for Windows) and Node (for wasm) all from Linux CI; also check output against expected.txt instead of just checking the build succeeds; new tests/s/variants and tests/c/variants compare the object files and executables produced by the principia vs. kencc lineages to catch mismatches
   - bootstrapped: you can compile goken using goken on arm64 (7a/7c/7l)
+  - imported and brought up to date the alpha, powerpc, sparc, and m68k
+    toolchains from Plan 9 4th edition supporting now ELF and Linux
 - **Q2 2026** &mdash; v0.3: presented goken9cc at IWP9, the International Workshop on Plan 9.
 - **Q1 2026** &mdash; v0.2: added Plan 9 `pcc` to compile legacy Unix programs (called APE in Plan 9); started using AddressSanitizer (configure -asan) to catch memory bugs in the toolchain itself; wrote up the project for an IWP9 paper submission.
 - **Q4 2025** &mdash; v0.1: first working release &mdash; a Plan 9-style toolchain (compilers, assemblers, linkers for arm, x86, mips, and early riscv, plus an arm/mips emulator and the acid debugger) able to cross compile Principia Softwarica's own `pc`/`pi` operating system targets from Linux and macOS.
