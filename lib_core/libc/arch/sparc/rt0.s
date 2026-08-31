@@ -18,17 +18,13 @@
 // reproducing the exact segfault notes_arch_sparc.txt's tests/c/mini
 // section documents.
 //
-// claude: TODO -- only tail-calls main() (JMP, not JMPL), so it never
-// returns here and there is NO exit(0) fallback if a future test's
-// main() just falls off the end without calling exit() itself (unlike
-// arch/power/rt0.s/arch/mips/rt0.s, which can safely call+return since
-// their own REGSP already IS the real hardware register, no leaf
-// constraint). hello.c calls exit(0) itself, so this is fine for now.
-// Fixing this properly needs a SECOND, non-leaf TEXT block that this
-// one tail-jumps into once R1 is valid -- kl's own LEAF-clearing only
-// looks at the CURRENT TEXT, so a separate block can safely contain
-// the real JMPL-to-main()-then-exit(0) sequence. Not done: no test
-// exercised so far needs it.
+// _main itself only tail-calls into _realmain below (JMP, not JMPL),
+// once R1 is valid -- kl's own LEAF-clearing only looks at the CURRENT
+// TEXT, so a separate, non-leaf block can safely contain the real
+// JMPL-to-main()-then-exit(0) fallback that arch/power/rt0.s's/
+// arch/mips/rt0.s's own single-block BL+fallthrough already have
+// (their own REGSP already IS the real hardware register, no leaf
+// constraint to route around in the first place).
 //
 // argc/argv bridge: the kernel's raw argc/argv block is NOT at 0(R1)/
 // 4(R1) the way it is on every other arch here -- SPARC32 Linux's
@@ -49,13 +45,12 @@
 // Every OTHER hello_libc test passed without this fix simply because
 // none of them read argv/envp at all.
 //
-// The SUB $8,R1 below carves out a safe outgoing-arg slot for main()'s
-// own call (kc's convention: a 2nd/stack argument is written by the
-// caller at (R1 at call time)+8, confirmed empirically with 'kc -S' on
-// a hand-written 2-arg function, same as xwrite_sparc.s's own count
-// arg) -- landing well inside the 64-byte reserved window-save area
-// below the real argc/argv/envp block, not on anything the kernel
-// still needs.
+// _main hands off argc(R7)/argv(R9) to _realmain below unchanged (a
+// plain JMP, not a call, so registers just carry over) -- the outgoing
+// arg slot for main()'s OWN call can't be set up here: it needs to
+// land relative to R1 as _realmain's own auto-inserted prologue will
+// leave it, not as _main's leaf-only R1 has it now (see _realmain's
+// own comment).
 TEXT _main(SB), $0
 	MOVW	R14, R1
 	MOVW	$setSB(SB), R2
@@ -65,8 +60,31 @@ TEXT _main(SB), $0
 	MOVW	R9, _mainargv+0(SB)	// see port/mainargs.c
 	MOVW	R7, _mainargc+0(SB)	// see port/mainargs.c's own _mainargc comment
 
+	MOVW	$_realmain(SB), R8
+	JMP	(R8)
+
+// Separate, non-leaf TEXT block -- kl's own LEAF-clearing (noop.c) only
+// looks at the CURRENT TEXT, so putting the real JMPL-to-main() call
+// here, instead of in _main above, keeps _main itself leaf (still
+// required: R1 isn't valid yet at _main's own entry) while still
+// getting a real call+return here, where R1 already IS valid by the
+// time this block starts. kl auto-inserts its usual "SUB $frame,R1 /
+// MOVW R15,0(R1)" prologue at the top of this block regardless of the
+// $0 declared here (confirmed via 'kl -a', same as every other arch's
+// own rt0.s note on this) -- safe this time, since unlike _main's own
+// story, R1 is already correct when it runs. The SUB $8,R1 below (kc's
+// convention: a 2nd/stack argument is written by the caller at (R1 at
+// call time)+8, confirmed empirically with 'kc -S' on a hand-written
+// 2-arg function, same as xwrite_sparc.s's own count arg) carves out
+// main()'s own outgoing argv slot on top of whatever that auto-prologue
+// already reserved -- deliberately NOT done back in _main, where R1
+// doesn't yet reflect this block's own auto-prologue shift.
+TEXT _realmain(SB), $0
 	SUB	$8, R1
 	MOVW	R9, 8(R1)		// outgoing argv slot for main(argc, argv)
+	JMPL	main(SB)
 
-	MOVW	$main(SB), R8
-	JMP	(R8)
+	MOVW	$0, R7
+	JMPL	exit(SB)
+loop:
+	JMP	loop

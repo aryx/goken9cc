@@ -16,7 +16,7 @@ TOP=..
 all:V: hello.exe hello_unix.exe
 
 clean:V:
-	rm -f *.[5678ijqvz] *.exe
+	rm -f *.[25678eijkqvz] *.exe
 	rm -f hello_unix_tmp.txt
 	rm -rf hello_unix_tmp_d
 
@@ -28,7 +28,7 @@ hello_unix.exe: hello_unix.c
 	$CC $CFLAGS -D$objtype -c hello_unix.c
 	$LD $LDFLAGS -H7 -o $target -E _main hello_unix.$O -lc
 
-# claude: same 9 archs as tests/c/hello_libc/mkfile's own ARCHS -- every
+# claude: same archs as tests/c/hello_libc/mkfile's own ARCHS -- every
 # one of them already builds+runs args.exe/env.exe/proc.exe/mem.exe/
 # dir.exe/ctime.exe/atexit.exe there (hello_unix.c's own ingredient
 # list), so this loop is not exploring new ground, just showing off
@@ -36,7 +36,14 @@ hello_unix.exe: hello_unix.c
 # included here (unlike hello_libc's stat/dirread/fork carve-out --
 # nothing hello_unix.c uses needs fstat/wait4, see that mkfile's own
 # all:V: comment on why those three are the only exclusions).
-ARCHS=386 amd64 arm arm64 mips riscv riscv64 alpha power
+#
+# sparc and m68k are both here too, EVEN THOUGH sparc is still missing
+# from hello_libc/mkfile's own ARCHS -- that exclusion is specifically
+# about notify.exe/alarm.exe (a confirmed qemu-sparc signal-return
+# gap, see docs/claude_notes/notes_arch_sparc.txt), and hello_unix.c
+# uses neither notify() nor alarm() at all, so nothing here actually
+# exercises that gap. m68k has no such gap on either front.
+ARCHS=386 amd64 arm arm64 mips riscv riscv64 alpha power sparc m68k
 demo:V:
 	for (arch in $ARCHS) {
 		echo ''
