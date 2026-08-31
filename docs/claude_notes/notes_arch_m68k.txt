@@ -320,3 +320,38 @@ flags, a library that ISN'T found (fallback-to-relative-name behavior),
 or a `#pragma lib` path that begins with `.` or `/` (the two OTHER
 branches of addlib's three-way split, both pre-existing and unchanged
 by this session).
+
+2c: tests/c/mini2 (recursion, floats, 64-bit, printf varargs) -- passed unmodified
+---------------------------------------------------------------------------------------
+
+Follow-up session, same request already applied to sparc's kc
+(notes_arch_sparc.txt). Unlike kc, which needed a real fix (`-M` on kl,
+see that file) for `fact()`'s variable multiply, m68k needed NOTHING
+extra: wrote tests/c/mini2/linux_m68k.s (exit/panic/write, `_main`
+entry) directly reusing tests/c/mini's own start_m68k.s/xwrite_m68k.s/
+xexit_m68k.s conventions (A6/a6base static-base setup, all args on the
+stack via FP-relative offsets -- `2c -S` on a hand-written 3-arg
+function confirms the pattern extends cleanly: fd+0(FP)/buf+4(FP)/
+count+8(FP), each stack arg simply +4 from the last, no FP-bias
+surprise the way sparc's kc has), and `helloprintf.exe` built, linked,
+and passed byte-exact under qemu-m68k on the FIRST attempt -- no
+undefined `_mul`/`_div`/etc, unlike kc. Real 68020 hardware has genuine
+integer multiply/divide instructions (MULS/MULU/DIVS/DIVU), so 2c's own
+mul.c apparently never routes variable multiply through a software-
+call pseudo-op the way kc's AMUL/noop.c does -- consistent with this
+being an older-generation, more directly-hardware-mapped compiler
+throughout (see the earlier "2c: getting it to compile" section above
+on 2c's stack-based calling convention, itself simpler/closer to real
+hardware than kc's REGARG scheme).
+
+Verified: `mk objtype=m68k` in tests/c/mini2 builds and passes byte-
+exact against helloprintf.expected.txt (recursion, float64, 64-bit
+constant, and varargs printf all produce correct output) on the first
+try; tests/s and tests/c/mini's own full per-arch `mk test` re-run
+afterward: no regressions.
+
+What's STILL unverified after 2c's mini2 bring-up
+------------------------------------------------------
+
+Same as kc's own mini2 note: structs/unions and switch statements
+(neither helloprintf.c nor test.c use either) remain the main gap.

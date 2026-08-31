@@ -393,3 +393,67 @@ syscall-number collision found in xwrite_sparc.s is specific to
 hand-written syscall stubs, not kc-generated code -- but any future
 hand-written sparc asm making a Linux syscall from a context with a
 live kc-managed stack should watch for the same trap.
+
+kc: tests/c/mini2 (recursion, floats, 64-bit, printf varargs) -- passed with one real fix
+---------------------------------------------------------------------------------------------
+
+Follow-up session. tests/c/mini2's helloprintf.c/test.c/
+print_nofloat_no64.c exercise everything the mini bring-up above
+flagged as unverified: recursion (fact()), a for-loop (fact_iter()),
+float64 (test_float() returns 2.2), a 64-bit constant (uvnan), and
+printf-style varargs (%t/%x/%s/%d). All of it worked completely
+unmodified except for one real gap: `fact`/`fact_iter`'s variable
+(non-constant) integer multiply hit `kc`'s generic AMUL opcode, which
+`kl`'s noop.c (initmuldiv()) tries to rewrite into a call to a software
+`_mul` helper -- and this port has never had one anywhere in this
+repo (confirmed by grepping for `TEXT.*_mul` across the whole tree; not
+even Plan9's own historical distribution shipped SPARC C runtime source
+here). Writing one from scratch turns out to be a trap: hand-writing
+`_mul`/`_div`/etc using the SAME `AMUL`/`ADIV` mnemonics ka/kl already
+support would recurse into itself, since noop.c's rewrite pass applies
+to EVERY occurrence of these opcodes in the linked program, hand-
+written or compiler-generated, with no way to distinguish the two.
+
+The actual fix needs no new code at all: SPARC v8 (this backend's real
+target) has genuine hardware smul/sdiv/udiv instructions, and kl/asm.c's
+own opcode encoder (cases 52-55, the sra+wry+div/mul sequence) already
+emits them correctly and UNCONDITIONALLY -- the only thing gating
+whether that encoding is reached at all is noop.c's OWN `if(!debug['M'])`
+check before triggering the call-rewrite in the first place. Passing
+`-M` to kl (added to mkfiles/sparc/mkfile's `LD=`, same idea as power's
+own `-0` on `LD=ql`) disables the rewrite entirely, so kc's AMUL/ADIV/
+ADIVL/AMOD/AMODL just assemble straight to real hardware instead of
+ever looking for `_mul`. Confirmed this is the right, permanent fix
+(not a workaround) -- SPARC genuinely never needs a software multiply/
+divide fallback the way ARM does (see tests/c/regressions/
+arm_div_from_lib.c's own _div/_mod, hand-written because ARM32 truly
+has no hardware divide).
+
+Wrote tests/c/mini2/linux_sparc.s (exit/panic/write, `_main` entry)
+directly reusing every convention already established and verified by
+tests/c/mini's own start_sparc.s/xwrite_sparc.s/xexit_sparc.s -- same
+R14->R1 copy + leaf-preserving register-indirect JMP at `_main`, same
+R1/REGSP save-around-syscall in write() (`kc -S` on a hand-written
+3-arg function confirms the 3rd arg's own FP-relative offset, `count+
+8(FP)`, following the same +4-per-stack-arg pattern already established).
+No new register-convention bugs turned up here -- once `-M` resolved
+the multiply gap, `helloprintf.exe` passed byte-exact under qemu-sparc
+on the very next build.
+
+Verified: `mk objtype=sparc` in tests/c/mini2 builds and passes byte-
+exact against helloprintf.expected.txt (recursion, float64, 64-bit
+constant, and varargs printf all produce correct output); both tests/s
+and tests/c/mini's own full per-arch `mk test` re-run afterward with
+`-M` added to mkfiles/sparc/mkfile's LD=: no regressions (mini has no
+multiply/divide of its own, so `-M` is a no-op there).
+
+What's STILL unverified after kc's mini2 bring-up
+------------------------------------------------------
+
+Structs/unions and switch statements (neither helloprintf.c nor test.c
+use either) remain the main gap. `-M`'s scope is now the WHOLE program
+linked with mkfiles/sparc/mkfile's default LD=, not just mini2's own
+multiply -- any future sparc test that GENUINELY wants the software-
+call path (there is currently no reason to, but if one ever needs to
+force it for comparison/debugging) would need to override LD= locally
+rather than relying on the default.

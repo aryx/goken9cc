@@ -2,8 +2,20 @@
 
 O=k
 CC=kc
-LD=kl -H7
+LD=kl -H7 -M
 AS=ka
 AR=iar
 
 CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/sparc
+
+# claude: -M tells kl not to rewrite kc's generic AMUL/ADIV/ADIVL/AMOD/
+# AMODL instructions into calls to software helpers (_mul/_div/_divl/
+# _mod/_modl -- linkers/kl/noop.c's initmuldiv()), which this port has
+# no implementation of anywhere. SPARC v8 (this backend's target) has
+# real smul/sdiv/udiv hardware instructions and kl/asm.c's own opcode
+# encoder (cases 52-55) already emits the correct sra+wry+div/mul
+# sequence unconditionally -- -M just stops noop.c from swapping that
+# real encoding out for a call in the first place. Needed once
+# tests/c/mini2's fact()/fact_iter() (genuine variable multiply, not a
+# compile-time constant Multab strength-reduction case) started
+# linking: without it, kl fails "undefined: _mul" and friends.
