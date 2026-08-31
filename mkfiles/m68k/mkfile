@@ -7,3 +7,12 @@ AS=2a
 AR=iar
 
 CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/m68k
+
+# ARCHEXTRAOFILES: setjmp.s (setjmp()/longjmp(), needed unconditionally
+# by os/linux/notify.c's own noted()) and vlop.s (_mulv, the 64-bit
+# multiply helper compilers/cck/com64.c emits calls to) -- same pair
+# every other 32-bit arch's own mkfile pulls in, see lib_core/libc/
+# mkfile's own comment on this variable. Both ported from the real
+# Plan9 68020 port (~/xxx/plan9/SRC/libc/68020/), not re-derived --
+# see each file's own header comment.
+ARCHEXTRAOFILES=arch/m68k/setjmp.$O arch/m68k/vlop.$O

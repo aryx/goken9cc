@@ -80,7 +80,15 @@ test_one:V:
 # tests/c/mkfile's DIRS and mkfiles/mkdirs' generic recursion -- no
 # per-arch objtype/cputype needs to be passed in from outside, unlike
 # test_one, which expects the caller to have already picked one.
-ARCHS=386 amd64 arm arm64 mips riscv riscv64 alpha power
+# claude: sparc deliberately NOT here yet, unlike m68k -- notify.exe/
+# alarm.exe are excluded even from ITS OWN test_one above (see that
+# exclusion's own comment and docs/claude_notes/notes_arch_sparc.txt)
+# because qemu-sparc's own signal-return emulation is confirmed
+# broken, and this loop has no per-test exclusion mechanism the way
+# test_one does -- adding sparc here would need one first. m68k has no
+# such gap (qemu-m68k's signal delivery/return works correctly, see
+# notes_arch_m68k.txt), so no exclusion is needed for it.
+ARCHS=386 amd64 arm arm64 mips riscv riscv64 alpha power m68k
 test:V:
 	for (arch in $ARCHS) {
 		echo $arch

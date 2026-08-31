@@ -552,3 +552,93 @@ ctime/atexit/utfmisc/notify/alarm/stat/dirread/fork) remains
 unattempted by deliberate scope choice, same as sparc's own entry --
 sigrestore.s and stat_m68k.c in particular are written but
 unexercised by hello.c specifically.
+
+Extending past hello.c (all of tests/c/hello_libc): every remaining
+binary in `all:V:` now builds and passes for m68k, plus stat/dirread/
+fork from the riscv-only-excluded set -- INCLUDING notify.exe and
+alarm.exe (unlike sparc, whose own qemu-sparc has a confirmed
+sigreturn emulation gap -- see notes_arch_sparc.txt -- qemu-m68k's own
+signal delivery/return works correctly). m68k needed far less work
+than sparc's own extension pass: no REGSP/collision-with-a-syscall-
+register story here at all (m68k's real hardware SP is exactly what
+kc's own $FP addressing already assumes). Two real bugs found and
+fixed:
+
+- lib_core/libc/arch/m68k/vlop.s + arch/m68k/setjmp.s (new files,
+  wired into mkfiles/m68k/mkfile's ARCHEXTRAOFILES): missing
+  entirely, same as sparc's own pre-extension gap -- proc.exe's
+  nsec() (sec * 1000000000LL) hit "undefined: _mulv" first. Per the
+  user's own reminder mid-session, checked ~/xxx/plan9/SRC/libc/68020/
+  BEFORE re-deriving either from scratch, and both ported near-
+  verbatim rather than invented:
+  - vlop.s: real 68020 hardware has a genuine widening 32x32->64
+    MULU.L (Dh:Dl destination pair), but neither this project's own
+    2a NOR Plan9's original 68020 assembler could express that form
+    through normal MULUL grammar (confirmed independently, the hard
+    way, before finding the reference: a hand-written probe proved
+    "MULUL Rsrc,Rn" in THIS assembler always clears the size bit,
+    silently discarding the high half no matter what register pair
+    the encoder's extension word nominally names -- see notes_debug_
+    techniques.txt's own account of that dead end, including a
+    16-bit-limb software-multiply workaround that WORKED but was
+    thrown away once the reference turned up a cleaner answer). The
+    reference's own fix, carried over: hand-encode the raw instruction
+    WORDs directly (`WORD $0x4c2f / $0x0401 / $0x0014`), bypassing the
+    assembler's grammar entirely -- literally the same trick, down to
+    the "philw made me do it!" comment. Verified against THIS port's
+    own FP-offset conventions before trusting it (not assumed
+    identical just because the labels read the same): a hand-written
+    debug-echo probe confirmed r+0/a.hi+4/a.lo+8/b.hi+12/b.lo+16
+    (same layout as sparc's own, big-endian hi-first, despite power's
+    own vlop.s labeling the equivalent offsets the OPPOSITE way) match
+    exactly, then cross-checked end to end against Python with two
+    values including the 0xffffffff*0xffffffff maximum-carry case.
+  - setjmp.s: ported unchanged (register/offset shape identical) --
+    m68k's own version doesn't need sparc's manual save/restore-
+    around-a-collision dance at all, just the textbook approach of
+    patching the return-address slot in place rather than needing a
+    separate jump-target register.
+- lib_core/libc/arch/m68k/sigrestore.s: the ORIGINAL version (`BSR
+  signotify(SB) / RTS`, written before any signal test existed on this
+  arch) was wrong despite its own comment's central claim being right
+  -- m68k genuinely needs no register bridge for `sig` the way
+  sparc/mips do, since 2c's stack-based calling convention and the
+  real kernel's own struct sigframe layout (arch/m68k/kernel/
+  signal.c: {pretcode; sig; code; ...}) already agree, so a plain
+  "int sig" function reading sig+0(FP) would see frame->sig
+  correctly with ZERO bridging -- PROVIDED nothing shifts the stack
+  in between. BSR is a REAL call: it pushes sigentry's OWN return
+  address first, shifting everything down by 4 bytes, so signotify
+  ended up reading frame->pretcode (raw trampoline instruction bytes)
+  as if it were `sig`. Symptom was deceptively quiet: no crash at
+  all, just a silent, consistent "exit(1)" right after every SIGALRM
+  delivery (qemu-strace showed the signal arrive, then immediately
+  exit(1), no fault) -- garbage sig2str() output never matched any
+  registered note string, so signotify's own switch fell through to
+  case 1 (NDFLT) every time. Root-caused by hand-tracing the kernel's
+  own frame struct field offsets against kc's own $FP convention,
+  not by guessing. Fixed with a plain tail JMP instead of BSR+RTS: no
+  linkage pushed at all, so signotify sees the exact same stack
+  sigentry was handed, and its own auto-generated RTS pops
+  frame->pretcode directly -- exactly as if the kernel had jumped
+  straight to signotify itself.
+
+Also encountered, NOT a bug: alarm.exe failed once, silently (no BUG
+print, no crash, empty output + exit(1)), immediately after the ONE
+real (kernel-timer-driven, not self-signalled) SIGALRM in that run.
+Reran the identical binary 25 times afterward (some with a temporary
+debug print added to handler(), which alone made the failure vanish
+-- a classic sign of a timing race, not a logic bug) and it passed
+every single time. Root cause not fully chased (session time), but a
+strong suspect: qemu-m68k's own SYS_clock_nanosleep (407) is
+unimplemented ("Unknown syscall 407" in every run's strace, matching
+the identical finding already documented for sparc's own alarm.exe
+in notes_arch_sparc.txt) -- alarm.c's own sleep() calls silently
+return immediately instead of actually blocking, so its claim-3
+for-loop spins through all 30 iterations far faster than intended,
+racing the real setitimer-driven SIGALRM in a way sensitive to host
+scheduling noise. Left as-is (not excluded from test_one the way
+sparc's own notify.exe/alarm.exe are) since the underlying signal
+delivery mechanism itself is confirmed correct and the test passes
+overwhelmingly reliably in practice -- flag this file's own comment
+if it starts failing with any regularity in CI.

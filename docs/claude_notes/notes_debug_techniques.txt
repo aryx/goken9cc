@@ -1555,3 +1555,51 @@ exactly on the trap instruction, which read as strong evidence at the
 time but was really just this stepping artifact -- the REAL crash,
 same underlying cause, was later confirmed independently via `continue`
 and the dependency-free repro, not via the stepi trace itself).
+
+=====================================================
+Check the real Plan9 reference source before re-deriving assembly
+=====================================================
+
+Context: m68k's own arch/m68k/vlop.s (docs/claude_notes/
+notes_arch_m68k.txt has the full account) needed a 32x32->64 widening
+multiply, and this project's own assembler (2a) turned out to have no
+way to express the real 68020 MULU.L's widening (Dh:Dl) form through
+its normal grammar -- confirmed the hard way, with a hand-written
+probe (poison a would-be high-result register beforehand, multiply,
+check it's still poisoned) proving the instruction silently discards
+the high half regardless of what the encoder's own extension word
+claims. From there, a full 16-bit-limb software multiply (four exact
+16x16->32 partial products, combined via shifts and BCC-based carry
+extraction, since ADDXL turned out to have no real encoding wired up
+either) was derived from scratch and verified correct against Python
+across three test cases including the 0xffffffff*0xffffffff
+maximum-carry edge case -- a good half hour of work.
+
+Only afterward did a user reminder point at ~/xxx/plan9/SRC/libc/
+68020/vlop.s, the real historical Plan9 68020 port. It has the exact
+same problem (its OWN period-correct assembler couldn't express the
+widening form either) and the exact same fix in spirit but far
+simpler in practice: hand-encode the raw instruction WORDs directly
+(three `WORD $0x....` directives), sidestepping the assembler's
+grammar entirely instead of building a software multiply on top of
+the assembler's more limited primitives. Verified working in this
+project with zero changes beyond relabeling the FP-offset operand
+names to match this port's own calling convention. The whole
+16-bit-limb version was thrown away.
+
+Lesson: for ANY arch-specific assembly this project needs (a vlop.s,
+a setjmp.s, a sigrestore.s, a syscall trampoline...), check
+~/xxx/plan9/SRC/ (and the arch-specific subdirectories under libc/,
+e.g. 68020/, sparc/) for the real historical Plan9 implementation
+BEFORE spending time re-deriving one from instruction-set first
+principles -- even when it looks like a from-scratch problem (this
+project's own assembler has genuinely diverged from Plan9's in some
+places, e.g. exactly this MULUL gap), the reference solved the SAME
+category of problem once already, often with a trick (raw WORD
+encoding, a clever register-restore ordering that avoids needing an
+extra scratch register -- see setjmp.s's own "patch the return slot
+in place" idiom in the same notes_arch_m68k.txt entry) that is faster
+to port and verify than to reinvent. This is a standing instruction
+(see CLAUDE.md and this session's own explicit reminders), not a
+one-off for this bug -- but worth restating here as a concrete
+example of the time it actually saves when followed.

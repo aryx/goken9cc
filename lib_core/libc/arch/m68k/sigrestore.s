@@ -3,24 +3,33 @@
 // arch/mips/sigrestore.s's own header comment for the general story
 // this file follows.
 //
-// Unlike sparc/mips's own sigrestore.s (both need to move `sig` from
-// a hardware first-argument REGISTER into the register/stack slot
-// their own compiler's calling convention expects), m68k needs no
-// such bridge: 2c's own calling convention already passes every
-// argument on the stack (no REGARG at all -- see docs/claude_notes/
-// notes_arch_m68k.txt), and the real m68k C ABI the Linux kernel's
-// own signal-frame setup targets is ALSO stack-based, so `sig` should
-// already land exactly where signotify(int sig) expects it (0(FP)) --
-// UNVERIFIED (no signal test has run on this arch yet), but this is
-// the natural, no-bridge-needed consequence of both sides already
-// agreeing on a stack-passed first argument, unlike sparc/mips where
-// the mismatch is real and confirmed.
+// claude: the ORIGINAL version of this file (BSR signotify(SB) / RTS)
+// was wrong, despite its own comment's reasoning being half right: it
+// IS true that m68k needs no register bridge for `sig` the way
+// sparc/mips do (2c's own calling convention is stack-based, and the
+// real kernel's signal-frame layout -- struct sigframe {pretcode;
+// sig; code; ...}, confirmed against arch/m68k/kernel/signal.c -- is
+// ALSO stack-based and lines up with kc's own $FP convention: A7 at
+// handler entry points at `pretcode` exactly the way it would point
+// at a real return address pushed by a caller, so a PLAIN function
+// with one "int sig" parameter would already read frame->sig
+// correctly via sig+0(FP)). The bug: this file used BSR, a REAL call,
+// which pushes SIGENTRY's OWN return address first -- shifting
+// EVERYTHING down by 4 bytes, so signotify(int sig) ended up reading
+// sig+0(FP) as *frame->pretcode* instead (the raw trampoline
+// instruction bytes the kernel wrote there, misread as an int).
+// Symptom: notify.exe's alarm test never crashed, just silently
+// exited 1 every time -- sig2str() converting garbage never matched
+// any registered handler's note string, so signotify's own switch
+// fell through to case 1 (NDFLT) unconditionally, confirmed via
+// qemu-strace showing a clean "exit(1)" right after the SIGALRM
+// delivery line, no crash to chase.
 //
-// No manual return-address save/restore needed around the BSR: real
-// m68k BSR/RTS already use the actual hardware stack, so the trailing
-// RTS correctly returns to whatever the kernel pushed there before
-// jumping here -- same "no manual restorer needed" assumption
-// arch/mips/sigrestore.s's own comment makes.
+// Fix: a plain tail JMP instead of BSR+RTS -- no linkage pushed at
+// all, so signotify sees the EXACT SAME stack sigentry was handed
+// (sig+0(FP) resolves correctly), and its own auto-generated epilogue
+// RTS pops *frame->pretcode* directly -- the kernel's own retcode
+// trampoline -- exactly as if the kernel had jumped to signotify
+// itself in the first place.
 TEXT sigentry(SB), $0
-	BSR	signotify(SB)
-	RTS
+	JMP	signotify(SB)
