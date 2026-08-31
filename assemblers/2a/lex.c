@@ -10,7 +10,7 @@ main(int argc, char *argv[])
 	int nout, nproc, status, i, c;
 
 	thechar = '2';
-	thestring = "68020";
+	thestring = "m68k";
 	memset(debug, 0, sizeof(debug));
 	cinit();
 	outfile = 0;

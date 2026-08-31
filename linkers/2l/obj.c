@@ -9,7 +9,15 @@
 char	*noname		= "<none>";
 char	symname[]	= SYMDEF;
 char	thechar		= '2';
-char	*thestring 	= "68020";
+char	*thestring 	= "m68k";
+
+// claude: ported from kl/obj.c (needed for '-L' library search paths,
+// see addlib()'s own new "search" case below) -- 2l's own history is
+// an older-generation linker that never got this, unlike every other
+// HEADTYPE-7-emitting arch here.
+char**	libdir;
+int	nlibdir	= 0;
+static	int	maxlibdir = 0;
 
 /*
  *	-H0 -T0x40004C -D0x10000000	is garbage unix
@@ -76,6 +84,11 @@ main(int argc, char *argv[])
 		a = ARGF();
 		if(a)
 			INITRND = atolwhex(a);
+		break;
+	case 'L':
+		a = ARGF();
+		if(a)
+			addlibpath(a);
 		break;
 	} ARGEND
 
@@ -552,14 +565,51 @@ dosym:
 }
 
 void
+addlibpath(char *arg)
+{
+	char **p;
+
+	if(nlibdir >= maxlibdir) {
+		if(maxlibdir == 0)
+			maxlibdir = 8;
+		else
+			maxlibdir *= 2;
+		p = malloc(maxlibdir*sizeof(*p));
+		if(p == nil) {
+			diag("out of memory");
+			errorexit();
+		}
+		memmove(p, libdir, nlibdir*sizeof(*p));
+		free(libdir);
+		libdir = p;
+	}
+	libdir[nlibdir++] = strdup(arg);
+}
+
+char*
+findlib(char *file)
+{
+	int i;
+	char name[1024];
+
+	for(i = 0; i < nlibdir; i++) {
+		snprint(name, sizeof(name), "%s/%s", libdir[i], file);
+		if(fileexists(name))
+			return libdir[i];
+	}
+	return nil;
+}
+
+void
 addlib(char *obj)
 {
 	char name[1024], comp[256], *p;
-	int i;
+	int i, search;
 
 	if(histfrogp <= 0)
 		return;
 
+	search = 0;
 	if(histfrog[0]->name[1] == '/') {
 		sprint(name, "");
 		i = 1;
@@ -568,11 +618,9 @@ addlib(char *obj)
 		sprint(name, ".");
 		i = 0;
 	} else {
-		if(debug['9'])
-			sprint(name, "/%s/lib", thestring);
-		else
-			sprint(name, "/usr/%clib", thechar);
+		sprint(name, "");
 		i = 0;
+		search = 1;
 	}
 
 	for(; i<histfrogp; i++) {
@@ -599,9 +647,22 @@ addlib(char *obj)
 			diag("library component too long");
 			return;
 		}
-		strcat(name, "/");
+		if(i > 0 || !search)
+			strcat(name, "/");
 		strcat(name, comp);
 	}
+
+	cleanname(name);
+
+	if(search) {
+		char resolved[1024];
+		p = findlib(name);
+		if(p != nil) {
+			snprint(resolved, sizeof(resolved), "%s/%s", p, name);
+			strcpy(name, resolved);
+		}
+	}
+
 	for(i=0; i<libraryp; i++)
 		if(strcmp(name, library[i]) == 0)
 			return;

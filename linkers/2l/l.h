@@ -215,6 +215,8 @@ int	Rconv(Fmt*);
 int	Sconv(Fmt*);
 int	Xconv(Fmt*);
 void	addhist(long, int);
+void	addlibpath(char*);
+char*	findlib(char*);
 int	andsize(Prog*, Adr*);
 Prog*	appendp(Prog*);
 void	asmb(void);

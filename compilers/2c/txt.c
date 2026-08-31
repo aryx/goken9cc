@@ -28,7 +28,7 @@ ginit(void)
 {
 	int i, j, si, sj;
 
-	thestring = "68020";
+	thestring = "m68k";
 	thechar = '2';
 	exregoffset = 7;
 	exaregoffset = 5;

@@ -163,3 +163,160 @@ What's still unverified / out of scope for this session
   has been attempted, only the boot-gcc-hosted 2a/2l/2c triad. Unlike
   sparc, there isn't even a stale mkfiles/sparc-style leftover to find
   and flag here -- this is simply unstarted.
+
+2c: getting it to compile, link, and pass tests/c/mini
+========================================================
+
+Follow-up session, same shape as kc's own bring-up (notes_arch_sparc.txt):
+compilers/2c/mkfile had already been ported to the modern
+`<$TOP/mkfiles/$objtype/mkfile` style by the time this session started
+(superseding this file's earlier claim above that it was still a stale
+Plan-9-native mkfile -- that part is done), and 2c almost compiled under
+`mk objtype=boot-gcc`. Two real bugs remained, the SAME class kc hit:
+
+- swt.c's align()/maxround() were `long`-typed against cc.h's `int32`
+  prototypes (identical mismatch to kc's own swt.c) -- fixed the same
+  way, matching cc.h exactly.
+- swt.c's outlstring() took `ushort*` and wrote 2 bytes/rune, but cc.h
+  declares `long outlstring(TRune*, long)` and every OTHER arch's rune
+  handling goes through cck/pswt.c's shared TRune*-based outlstring (4
+  bytes/rune, TRune=Rune=unsigned int, see cck/cc.h). 2c doesn't pull in
+  cck/pswt.c at all (OFILES has no pgen.$O/pswt.$O, unlike kc/7c/qc/...)
+  -- it's a self-contained, older ("cc2"-generation) compiler with its
+  own doswit/casf/nullwarn/ieeedtod, genuinely different from the
+  cck-sharing archs, not just a stale duplicate. So the fix was NOT
+  "wire in the shared version" (that would need a `g` register-variable
+  parameter threaded through doswit/swit1 too, real surgery) but to fix
+  outlstring's own signature+body in place to match cc.h's TRune* width,
+  same shape as cck/pswt.c's version but living locally in 2c/swt.c.
+- gc.h's `EXTERN int multabsize;` (mul.c's own multiply-strength-
+  reduction table size, `int multabsize = sizeof(multab)/sizeof(multab[0]);`)
+  hit the exact same EXTERN-vs-extern duplicate-definition bug kc's
+  hintabsize did -- same fix, `extern int multabsize; // defined in
+  mul.c`.
+
+Also found and fixed, all copy-paste-vintage bugs predating this
+session, same class as sparc's stale mkfiles/sparc/mkfile
+(notes_arch_sparc.txt):
+
+- mkfiles/mkfile.proto's CPUS list said `68020`, not `m68k` -- the name
+  every OTHER file in this port (compilers/2c, assemblers/2a, tests/s/
+  exit/exit_linux_m68k.s, tests/s/hello_arch/hello_linux_m68k.s, ...)
+  actually uses. Fixed to `m68k`.
+- mkfiles/m68k/ existed as an empty directory (no mkfile at all) --
+  `mk objtype=m68k` couldn't work. Created mkfiles/m68k/mkfile modeled
+  directly on the now-fixed mkfiles/sparc/mkfile: O=2, CC=2c, LD=2l -H7,
+  AS=2a, CFLAGS -I$TOP/include/arch/m68k.
+- `thestring` (this port's own arch-name string, used to build default
+  library search paths) was hardcoded to the Plan-9-original `"68020"`
+  in THREE places -- compilers/2c/txt.c, assemblers/2a/lex.c, linkers/
+  2l/obj.c -- inconsistent with everything else already using `"m68k"`.
+  Fixed all three to `"m68k"`.
+
+lib_toolchain/libmach: 2obj.c had the exact same unwired gap as kobj.c
+------------------------------------------------------------------------
+
+Same story as sparc's kobj.c: 2obj.c (_is2/_read2, parses .2 object
+files) already existed but was never added to obj.c's per-arch dispatch
+table, never added to libmach/mkfile's OFILES, and its own `#include
+"2c/2.out.h"` was a dangling path (no such subdirectory -- fixed to
+`<obj/2.out.h>`, matching every other *obj.c). Without this, `iar rc
+libmini.a start_m68k.2 ...` would have produced an archive 2l couldn't
+resolve symbols through (same "first entry not symbol header" failure
+mode as sparc, would have hit it here too). Fixed:
+added ObjM68k to mach.h's Maxobjtype enum (after ObjSparc), `[ObjM68k]
+"m68k .2", _is2, _read2,` to obj.c's table, 2obj.$O to libmach/mkfile's
+OFILES. Rebuilt lib_toolchain/libmach and linkers/ar (`mk
+objtype=boot-gcc install` in each) before iar could produce valid m68k
+archives.
+
+2l had NO `-L` library-search-path support at all -- a real, load-bearing gap
+---------------------------------------------------------------------------------
+
+Unlike kl (which already got a modern `libdir[]`/`addlibpath()`/
+`findlib()` mechanism during its own HEADTYPE-7 bring-up, apparently
+ported in at the same time as the ELF work described earlier in this
+file), 2l's `addlib()` -- the function that resolves a C source's
+`#pragma lib "libmini.a"` reference at link time -- still used ONLY the
+original, older Plan-9 mechanism: an object file's own embedded
+"history" of compile-time include-path components (`histfrog[]`,
+populated from ANAME records the assembler/compiler wrote into the .2
+file), falling back to a HARDCODED `/m68k/lib` (or `/usr/2lib`) system
+path whenever that embedded history didn't start with `/` or `.`.
+`tests/c/mini`'s own `helloc.c` (`#pragma lib "libmini.a"`, no leading
+`/` or `.`) hits exactly that fallback branch, and `2l -L. ...` silently
+ignored `-L` entirely -- there was no `case 'L':` in 2l/obj.c's
+ARGBEGIN at all. Result: "cannot open file: /68020/lib/libmini.a" (before
+the thestring fix above) / "/m68k/lib/libmini.a" (after it) -- neither
+existing on this machine, since the whole point of `-L.` is to point at
+the just-built libmini.a sitting in the test's own working directory.
+
+Fixed by porting kl/obj.c's own `-L`/`addlibpath()`/`findlib()` addition
+into 2l/obj.c verbatim (same global shapes: `char** libdir`, `int
+nlibdir`, `static int maxlibdir`, no l.h EXTERN needed -- kl doesn't
+EXTERN them either, they're plain file-scope globals) plus a `search`
+flag in `addlib()`: when the embedded history doesn't start with `/` or
+`.`, try `findlib()` against the `-L`-supplied directories first,
+falling back to the plain relative name (still checked against
+`library[]` for dedup) if nothing matches -- exactly kl's own fn1/fn2/
+search logic, adapted to 2l's own single-buffer `name[]` convention. Also
+added the matching `addlibpath`/`findlib` prototypes to l.h (kl has
+these too) since 2l/obj.c calls `addlibpath` from ARGBEGIN, textually
+BEFORE its own definition further down the file, which gcc flags as a
+conflicting-implicit-declaration warning without a prototype in scope
+first.
+
+tests/c/mini m68k bring-up: passed end-to-end on the FIRST try
+------------------------------------------------------------------
+
+`2c -S` on a hand-written two-arg function confirms this backend's own
+calling convention empirically: UNLIKE kc/qc/7c/etc's register-based
+first-arg convention (REGARG), 2c passes BOTH args on the stack
+(`buf+0(FP)`/`count+4(FP)`) and returns in R0 (D0) -- much closer to a
+textbook m68k C ABI, since args are PEA'd (pushed) by the caller and the
+callee reads them FP-relative, matching real hardware stack-based
+calling conventions rather than any register-window trick.
+
+start_m68k.s/xwrite_m68k.s/xexit_m68k.s modeled directly on tests/s/
+hello_arch/hello_linux_m68k.s's already-verified A6/a6base setup and
+tests/s/exit/exit_linux_m68k.s's already-verified syscall convention
+(d0=syscall#, d1-d5=args, `trap #0`). Unlike sparc's kc bring-up (three
+real runtime bugs, all from REGSP=%g1 having no relation to any real
+hardware register -- see notes_arch_sparc.txt), NONE of that class of
+problem exists here:
+
+- _start's `BSR main(SB)` is a genuine hardware call instruction that
+  pushes/pops the real %sp (%a7) automatically -- no fake "REGSP" to
+  initialize by hand, no auto-prologue-vs-hand-written-setup ordering
+  puzzle to work around (2l's own auto-inserted frame setup, if any,
+  never touches a register this file also needs to initialize first).
+- xwrite_m68k.s's syscall clobbers R0/d0 with the syscall number, but
+  R0/d0 is ALSO where 2c expects the C-level return value AND where the
+  Linux syscall ABI already places the raw return value -- so unlike
+  xwrite_sparc.s (whose REGSP/%g1 collision needed an explicit save-
+  before/restore-after), the "collision" here is actually a coincidence
+  that works in this stub's favor: the syscall's own return value in d0
+  IS exactly the value 2c's caller-side convention expects, no extra
+  move needed.
+
+Verified: `mk objtype=boot-gcc` builds and installs 2c/2a/2l cleanly
+from a clean tree; tests/c/mini's m68k target builds and passes byte-
+exact under qemu-m68k (`Hello C World` / `It works!`, matching
+helloc.expected.txt) on the first assembly/link/run attempt, both via
+`mk objtype=m68k` directly and `mk test`'s full per-arch loop (ARCHS=
+... m68k, clean rule's glob extended to include `2`); full top-level
+`mk test` (tests/s) and tests/c/mini's own `mk test` across ALL other
+arches (386/amd64/arm/arm64/mips/riscv/alpha/power/sparc) re-run
+afterward with no regressions from the libmach/2l/mkfile.proto changes.
+
+What's STILL unverified after 2c's mini bring-up
+----------------------------------------------------
+
+Same caveat as kc's own notes_arch_sparc.txt entry: only a two-call,
+no-locals, no-arithmetic C program has exercised 2c end-to-end.
+2l's `-L`/addlibpath/findlib path is now exercised for exactly one
+caller (tests/c/mini); it hasn't been exercised with multiple `-L`
+flags, a library that ISN'T found (fallback-to-relative-name behavior),
+or a `#pragma lib` path that begins with `.` or `/` (the two OTHER
+branches of addlib's three-way split, both pre-existing and unchanged
+by this session).

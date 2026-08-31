@@ -324,26 +324,27 @@ outstring(char *s, long n)
 }
 
 long
-outlstring(ushort *s, long n)
+outlstring(TRune *s, long n)
 {
-	char buf[2];
-	int c;
+	char buf[sizeof(TRune)];
+	uint c;
+	int i;
 	long r;
 
-	while(nstring & 1)
+	while(nstring & (sizeof(TRune)-1))
 		outstring("", 1);
 	r = nstring;
 	while(n > 0) {
 		c = *s++;
 		if(align(0, types[TCHAR], Aarg1)) {
-			buf[0] = c>>8;
-			buf[1] = c;
+			for(i = 0; i < sizeof(TRune); i++)
+				buf[i] = c>>(8*(sizeof(TRune) - i - 1));
 		} else {
-			buf[0] = c;
-			buf[1] = c>>8;
+			for(i = 0; i < sizeof(TRune); i++)
+				buf[i] = c>>(8*i);
 		}
-		outstring(buf, 2);
-		n -= sizeof(ushort);
+		outstring(buf, sizeof(TRune));
+		n -= sizeof(TRune);
 	}
 	return r;
 }
@@ -969,10 +970,10 @@ gextern(Sym *s, Node *a, long o, long w)
 	p->from.displace = w;
 }
 
-long
-align(long i, Type *t, int op)
+int32
+align(int32 i, Type *t, int op)
 {
-	long o;
+	int32 o;
 	Type *v;
 	int w;
 
@@ -1036,8 +1037,8 @@ align(long i, Type *t, int op)
 	return o;
 }
 
-long
-maxround(long max, long v)
+int32
+maxround(int32 max, int32 v)
 {
 	v += SZ_LONG-1;
 	if(v > max)

@@ -30,6 +30,7 @@ int /* in [$OS].c */
 	_isz(char*),
 	_isq(char*),
 	_isk(char*),
+	_is2(char*),
 	_read5(Biobuf*, Prog*),
 	_read6(Biobuf*, Prog*),
 	_read7(Biobuf*, Prog*),
@@ -38,7 +39,8 @@ int /* in [$OS].c */
 	_readv(Biobuf*, Prog*),
 	_readz(Biobuf*, Prog*),
 	_readq(Biobuf*, Prog*),
-	_readk(Biobuf*, Prog*);
+	_readk(Biobuf*, Prog*),
+	_read2(Biobuf*, Prog*);
 
 typedef struct Obj	Obj;
 typedef struct Symtab	Symtab;
@@ -70,6 +72,7 @@ static Obj	obj[Maxobjtype] =
 	[ObjAlpha]	"alpha .z",	_isz, _readz,
 	[ObjPower]	"power .q",	_isq, _readq,
 	[ObjSparc]	"sparc .k",	_isk, _readk,
+	[ObjM68k]	"m68k .2",	_is2, _read2,
 //	[Maxobjtype]	0, 0
 };
 

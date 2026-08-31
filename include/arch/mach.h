@@ -128,6 +128,7 @@ enum
     ObjAlpha, // .z
     ObjPower, // .q
     ObjSparc, // .k
+    ObjM68k, // .2
     Maxobjtype,
 
     /* symbol table classes */

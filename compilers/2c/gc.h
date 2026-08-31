@@ -179,7 +179,7 @@ EXTERN	int	changea;
 EXTERN	Txt	txt[NTYPE][NTYPE];
 EXTERN	short	opxt[ALLOP][NTYPE];
 EXTERN	Txt*	txtp;
-EXTERN	int	multabsize;
+extern	int	multabsize; // defined in mul.c
 
 EXTERN	Reg*	firstr;
 EXTERN	Reg*	lastr;

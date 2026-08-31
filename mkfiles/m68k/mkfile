@@ -1,0 +1,9 @@
+<$TOP/mkfiles/mkfile.proto
+
+O=2
+CC=2c
+LD=2l -H7
+AS=2a
+AR=iar
+
+CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/m68k

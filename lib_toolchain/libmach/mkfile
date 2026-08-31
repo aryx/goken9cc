@@ -29,6 +29,7 @@ OFILES=\
 	zobj.$O\
 	qobj.$O\
 	kobj.$O\
+	2obj.$O\
         \
 	obj.$O\
 	swap.$O\
