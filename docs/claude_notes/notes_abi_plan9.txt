@@ -383,12 +383,113 @@ Verification: both hello_plan9_power.exe and hello_plan9_sparc.exe run
 to completion under qi/ki respectively (real "Hello, world" +
 "exits(0)"), confirmed via tests/qi/smoke.sh, tests/ki/smoke.sh, and a
 full top-level `mk test`. As with 5i/vi above, only PWRITE and EXITS
-have been exercised end to end for either arch -- everything else in
-sysctab[] is unverified for qi/ki specifically, same caveat as the
-"What's not exercised at all" section above. lib_core/libc itself has
-no GOOS=plan9 support for power/sparc at all yet (no svc_power.s/
-svc_sparc.s, no zsyscall_plan9_power.c/zsyscall_plan9_sparc.c) -- that
-would be the natural next step to reach hello_unix.c-level parity with
-arm/mips (see demos/mkfile's demo_plan9 target, which runs power/sparc
-at the raw-.s level for exactly this reason, one step behind arm/mips'
-full-libc demo entries).
+have been exercised end to end via the raw-.s route -- everything else
+in sysctab[] beyond what hello_unix.c below exercises is unverified.
+
+lib_core/libc GOOS=plan9 support for power/sparc, and three more real
+bugs it surfaced
+------------------------------------------------------------------------------
+
+Added the same day as the qi/ki bring-up above: svc_power.s/
+svc_sparc.s (raw per-syscall stubs, one function per syscall, same
+shape as svc_arm.s/svc_mips.s -- see those files' own header comments)
+plus syscall_plan9_{power,sparc}.decl/.h (the empty-decl + hand-written
+read/write/exit wrapper pair every arch here needs, verbatim copies of
+syscall_plan9_arm.h's own read()/write()/exit()). Register conventions
+(power: REGARG==REGRET==R3; sparc: REGARG==REGRET==R7) and the seek()
+CMP+BNE write-back guard were NOT derived by analogy with arm/mips --
+they were transcribed directly from the real Plan9 4th edition source
+(~/xxx/plan9/SRC/libc/9syscall/mkfile's own `case power`/`case sparc`
+generator branches), and independently cross-checked against 'qc -S'/
+'kc -S' on real two-argument probe functions. One real difference from
+that transcription: sparc's real trap is `TA R0` (R0/%g0 is hardwired
+zero, giving trap vector 0) -- NOT `TA $0x10` the way linux/sparc's own
+svc_sparc.s traps; an earlier draft of tests/s/mini/hello_plan9_sparc.s
+had copied the Linux convention (harmless there only because ki's own
+ta() dispatch accepts any trap operand) and was fixed to match once the
+real mkfile was consulted.
+
+This uncovered three more genuine bugs, none related to syscall
+marshalling at all -- getting a full C program (hello_unix.c) running
+end to end exercises branches, comparisons and library-call chains a
+raw hello-world .s file never does, the same lesson 5i/vi's own
+register-width bugs (bdd07d321, "A genuine, previously-undiscovered
+bug in 5i itself") already taught:
+
+1. **qi: bx()/bcx() (machines/qi/branch.c) had the exact same missing-
+   sign-extension bug as 5i's historical Ib()/Ibl()** -- "imm |=
+   0xFC000000"/"0xFFFF0000" only set bits 25..31, leaving bits 32..63
+   zero on this 64-bit host, so a negative (backward) branch offset
+   read back as a huge positive number and reg.pc+imm landed nowhere
+   near the real target. hello_plan9_power.s never triggered it
+   (straight-line code, no backward branches); hello_unix.c's first
+   loop did. Fixed by declaring `imm` as `int32` directly (not `long`)
+   -- the OR then happens at genuine 32-bit width, and `ea = reg.pc +
+   imm` sign-extends correctly when widening to ulong for the add.
+
+2. **ki: call() (machines/ki/run.c) had a far more severe version of
+   the same bug class -- it broke EVERY function call, not just
+   backward ones.** The original "npc = (ir<<2) + reg.pc" neither
+   masked out CALL's own 2 opcode bits nor sign-extended the 30-bit
+   word displacement; on a 32-bit host both slips cancelled out via
+   natural wraparound, but on this 64-bit host the opcode bit (always
+   set, since CALL's own op is nonzero) survived into bit 32+,
+   computing a target ~4 billion bytes past the real one on literally
+   every call -- crashing on rt0.s's own first "call main". Fixed by
+   masking to the real 30-bit displacement field and computing the
+   shift in a genuine `int32`, matching the fix pattern above.
+
+3. **qi: every SIGNED-comparison-adjacent function that copied
+   reg.r[...] (u32int) into a `long` local had the mirror-image bug --
+   zero-extension instead of missing sign-extension.** setcr()
+   (int d, long r) -- called from ~15 record-form instruction sites to
+   set CR0's LT/GT/EQ bits -- read a negative 32-bit result as a huge
+   *positive* 64-bit number, so "r > 0" picked the wrong condition-code
+   bit. cmp()/cmpi() had the identical bug for PowerPC's own SIGNED
+   compare instructions (va/vb, v declared `long`, assigned straight
+   from reg.r[]); twi()/tw() (trap instructions) too. Found via a real
+   hang, not by audit: __fmtpad (int-to-decimal formatting's width-
+   padding loop) read a small negative "remaining width" as huge-
+   positive and looped until timeout instead of stopping immediately.
+   Fixed the same way as (1)/(2) -- retyped the affected locals to
+   `int32` (cmpl()/cmpli(), the UNSIGNED compare instructions, were
+   already correctly `ulong` and needed no change).
+
+4. **ki: SPARC v8's hardware umul/smul/udiv/sdiv (plus their .cc
+   variants) were simply never implemented** -- op2[]'s op3 slots
+   0x0A/0x0B/0x0E/0x0F and 0x1A/0x1B/0x1E/0x1F all carried a bare
+   `{ undef, "" }`. Not a bug in existing code, a real missing feature:
+   mkfiles/sparc/mkfile already documents passing kl `-M` specifically
+   so it emits real hardware smul/sdiv instead of calls into
+   nonexistent `_mul`/`_div` software helpers (see that mkfile's own
+   comment) -- kc/kl already assumed ki could execute them, nothing in
+   ki's own decode tables ever backed that assumption. Found via
+   hello_unix.c's first `print("...%d", argc)` (int-to-decimal
+   formatting divides by 10). Implemented directly in machines/ki/
+   run.c using the host's own 64-bit arithmetic (%Y:rd as a 64-bit
+   dividend/product) rather than writing a SPARC-assembly software
+   division library -- reg.Y is not computed by these, since kl's own
+   asm.c (cases 52-55) already emits the real "sra rs1,31,%y"/
+   "wr %g0,%y" prelude before every divide, so it's already correct by
+   the time udiv()/sdiv() run.
+
+Also needed: arch/sparc/rt0_plan9.s, a SEPARATE rt0.s from arch/
+sparc/rt0.s (which is genuinely Linux-specific, not just untested for
+Plan9 -- it copies the real hardware %sp out of R14 into R1 to work
+around a register-window save-area shift that only exists in the raw
+Linux SPARC32 kernel entry ABI; Plan9's own process-entry convention,
+already implemented in machines/ki/ki.c's initstk(), hands R1 a valid
+value directly with argc at 0(R1)/argv at 4(R1) -- the same simple
+shape arm/mips/power's own single rt0.s already read). Selected via
+`RT0OFILE=arch/sparc/rt0_plan9.$O` on the mk command line, the same
+override mechanism arch/amd64/rt0_darwin.s and arch/arm64/
+rt0_darwin.s already use (see lib_core/libc/mkfile's own RT0OFILE
+comment) -- see rt0_plan9.s's own header comment for why it still
+needs the same two-TEXT-block (_main/_realmain) split linux/sparc's
+rt0.s uses, for a completely different, GOOS-independent reason (kl's
+own auto-prologue insertion for any TEXT containing a JMPL).
+
+Net result: demos/mkfile's demo_plan9 target now runs hello_unix.c to
+full completion (args/env/proc/mem/file/dir/ctime, same report as
+arm/mips) under qi and ki both, matching arm/mips-level parity. Full
+top-level `mk test` passes clean throughout.

@@ -247,8 +247,22 @@ mspr(ulong ir)
 	}
 }
 
+// claude: int32, not long -- callers pass reg.r[...] (u32int, unsigned
+// 32 bits) here to test whether a record-form instruction's 32-bit
+// result was negative/zero/positive. Widening a u32int into a `long`
+// (64 bits on this host) ZERO-extends, since the source type is
+// unsigned -- so a genuinely negative 32-bit result (high bit set)
+// arrives here as a huge POSITIVE 64-bit number, and "r > 0" below
+// picks the wrong condition-code bit. int32 reinterprets the same bit
+// pattern as signed instead, which is what CR0's LT/GT/EQ bits are
+// actually supposed to reflect. Same class of bug as machines/5i/
+// run.c's runcmp() needing explicit (int32) casts once its own
+// registers were retyped to unsigned (bdd07d321) -- found here via a
+// real hello_unix.c hang in __fmtpad (a negative "remaining width"
+// read back as huge-positive, looping until timeout instead of
+// stopping immediately), not by static audit.
 static void
-setcr(int d, long r)
+setcr(int d, int32 r)
 {
 	int c;
 
@@ -386,7 +400,11 @@ cmp(ulong ir)
 {
 	int rd, ra, rb;
 	ulong c;
-	long va, vb;
+	// claude: int32, not long -- see setcr()'s identical comment. cmp
+	// is PowerPC's SIGNED word compare; assigning reg.r[ra]/reg.r[rb]
+	// (u32int) into a `long` zero-extends instead of sign-extending a
+	// negative operand, turning this into an unsigned comparison.
+	int32 va, vb;
 
 	getarrr(ir);
 	if(rd & 3)
@@ -414,7 +432,11 @@ cmpi(ulong ir)
 {
 	int rd, ra;
 	ulong c;
-	long imm, v;
+	long imm;
+	// claude: int32, not long -- see cmp()'s identical comment; v
+	// comes from reg.r[ra] (u32int), imm from a sign-extended 16-bit
+	// field (already safely representable in `long`, left alone).
+	int32 v;
 
 	getairr(ir);
 	if(rd & 3)
@@ -1905,7 +1927,10 @@ void
 twi(ulong ir)
 {
 	int rd, ra;
-	long a, imm;
+	long imm;
+	// claude: int32, not long -- see cmp()'s identical comment; a
+	// comes from reg.r[ra] (u32int).
+	int32 a;
 
 	getairr(ir);
 	a = reg.r[ra];
@@ -1925,7 +1950,9 @@ void
 tw(ulong ir)
 {
 	int rd, ra, rb;
-	long a, b;
+	// claude: int32, not long -- see cmp()'s identical comment; a/b
+	// come from reg.r[ra]/reg.r[rb] (u32int).
+	int32 a, b;
 
 	getarrr(ir);
 	a = reg.r[ra];

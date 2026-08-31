@@ -32,6 +32,14 @@ void orcc(ulong);
 void orncc(ulong);
 void xnorcc(ulong);
 void orn(ulong);
+void umul(ulong);
+void umulcc(ulong);
+void smul(ulong);
+void smulcc(ulong);
+void udiv(ulong);
+void udivcc(ulong);
+void sdiv(ulong);
+void sdivcc(ulong);
 
 Inst op2[] = {
 	{ add,		"add",	Iarith },
@@ -44,12 +52,12 @@ Inst op2[] = {
 	{ xnor,		"xnor", Iarith },
 	{ addx,		"addx", Iarith },
 	{ undef,	"" },
+	{ umul,		"umul",	Iarith },
+	{ smul,		"smul",	Iarith },
 	{ undef,	"" },
 	{ undef,	"" },
-	{ undef,	"" },
-	{ undef,	"" },
-	{ undef,	"" },
-	{ undef,	"" },
+	{ udiv,		"udiv",	Iarith },
+	{ sdiv,		"sdiv",	Iarith },
 	{ addcc, 	"addcc", Iarith },
 	{ andcc, 	"andcc", Iarith },
 	{ orcc,	 	"orcc",  Iarith },
@@ -60,12 +68,12 @@ Inst op2[] = {
 	{ xnorcc,	"xnorcc",Iarith },
 	{ addxcc,	"addxcc",Iarith },
 	{ undef,	"" },
+	{ umulcc,	"umulcc",Iarith },
+	{ smulcc,	"smulcc",Iarith },
 	{ undef,	"" },
 	{ undef,	"" },
-	{ undef,	"" },
-	{ undef,	"" },
-	{ undef,	"" },
-	{ undef,	"" },
+	{ udivcc,	"udivcc",Iarith },
+	{ sdivcc,	"sdivcc",Iarith },
 	{ undef,	"" },
 	{ undef,	"" },
 	{ undef,	"" },
@@ -303,6 +311,194 @@ delay(ulong npc)
 		reg.pc = opc;
 		break;
 	}
+}
+
+// claude: SPARC v8 hardware multiply/divide (umul/smul/udiv/sdiv, plus
+// their .cc-suffixed record-form variants) -- added because they were
+// simply never implemented (op2[] carried plain `{ undef, "" }` at
+// their op3 slots, 0x0A/0x0B/0x0E/0x0F and 0x1A/0x1B/0x1E/0x1F), not
+// because of a sign-extension bug like machines/qi/branch.c's bx()/
+// bcx() or ki/run.c's own call() above. This port targets v8 (real
+// hardware smul/sdiv, matching mkfiles/sparc/mkfile's own -M flag,
+// which tells kl to emit these instructions directly instead of
+// calls into nonexistent _mul/_div software helpers -- see that
+// mkfile's own comment), so kc/kl already assumed ki could execute
+// them; nothing in this emulator's own decode tables ever backed that
+// assumption until now. Found via hello_unix.c's first print("...%d",
+// argc) call -- int-to-decimal formatting divides by 10.
+//
+// %Y (reg.Y) is NOT computed here for the divide operand: kl's own
+// asm.c (cases 52-55, per that mkfile comment) always emits a
+// "sra rs1,31,%y" (sign-extend rs1 into %y) immediately before a
+// signed divide, or a "wr %g0,%y" (zero it) before unsigned -- both
+// already real instructions (wry()/rdy() are implemented above) that
+// run before udiv/sdiv ever does, so reg.Y is already correct by the
+// time these run; recomputing it here would just be redundant with,
+// and could disagree with, what the compiler's own emitted prelude
+// already set.
+void
+umul(ulong ir)
+{
+	int rd, rs1, rs2;
+	long v;
+	uvlong a, b, r;
+
+	getrop23(ir);
+	if(ir&IMMBIT) {
+		ximm(v, ir);
+		if(trace)
+			itrace("umul\tr%d,#0x%x,r%d", rs1, v, rd);
+	} else {
+		v = reg.r[rs2];
+		if(trace)
+			itrace("umul\tr%d,r%d,r%d", rs1, rs2, rd);
+	}
+	a = (u32int)reg.r[rs1];
+	b = (u32int)v;
+	r = a * b;
+	reg.r[rd] = r;
+	reg.Y = r>>32;
+}
+
+void
+umulcc(ulong ir)
+{
+	int rd, rs1, rs2;
+
+	umul(ir);
+	getrop23(ir);
+	reg.psr &= ~(PSR_z|PSR_n|PSR_c|PSR_v);
+	if(reg.r[rd] == 0)
+		reg.psr |= PSR_z;
+	if((int32)reg.r[rd] < 0)
+		reg.psr |= PSR_n;
+}
+
+void
+smul(ulong ir)
+{
+	int rd, rs1, rs2;
+	long v;
+	vlong a, b, r;
+
+	getrop23(ir);
+	if(ir&IMMBIT) {
+		ximm(v, ir);
+		if(trace)
+			itrace("smul\tr%d,#0x%x,r%d", rs1, v, rd);
+	} else {
+		v = reg.r[rs2];
+		if(trace)
+			itrace("smul\tr%d,r%d,r%d", rs1, rs2, rd);
+	}
+	a = (int32)reg.r[rs1];
+	b = (int32)v;
+	r = a * b;
+	reg.r[rd] = r;
+	reg.Y = (uvlong)r>>32;
+}
+
+void
+smulcc(ulong ir)
+{
+	int rd, rs1, rs2;
+
+	smul(ir);
+	getrop23(ir);
+	reg.psr &= ~(PSR_z|PSR_n|PSR_c|PSR_v);
+	if(reg.r[rd] == 0)
+		reg.psr |= PSR_z;
+	if((int32)reg.r[rd] < 0)
+		reg.psr |= PSR_n;
+}
+
+void
+udiv(ulong ir)
+{
+	int rd, rs1, rs2;
+	long v;
+	uvlong dividend, divisor, q;
+
+	getrop23(ir);
+	if(ir&IMMBIT) {
+		ximm(v, ir);
+		if(trace)
+			itrace("udiv\tr%d,#0x%x,r%d", rs1, v, rd);
+	} else {
+		v = reg.r[rs2];
+		if(trace)
+			itrace("udiv\tr%d,r%d,r%d", rs1, rs2, rd);
+	}
+	dividend = ((uvlong)reg.Y<<32) | (u32int)reg.r[rs1];
+	divisor = (u32int)v;
+	if(divisor == 0) {
+		Bprint(bioout, "division_by_zero\n");
+		longjmp(errjmp, 0);
+	}
+	q = dividend / divisor;
+	if(q > 0xFFFFFFFFULL)
+		q = 0xFFFFFFFFULL;
+	reg.r[rd] = q;
+}
+
+void
+udivcc(ulong ir)
+{
+	int rd, rs1, rs2;
+
+	udiv(ir);
+	getrop23(ir);
+	reg.psr &= ~(PSR_z|PSR_n|PSR_c|PSR_v);
+	if(reg.r[rd] == 0)
+		reg.psr |= PSR_z;
+	if((int32)reg.r[rd] < 0)
+		reg.psr |= PSR_n;
+}
+
+void
+sdiv(ulong ir)
+{
+	int rd, rs1, rs2;
+	long v;
+	vlong dividend, q;
+	int32 divisor;
+
+	getrop23(ir);
+	if(ir&IMMBIT) {
+		ximm(v, ir);
+		if(trace)
+			itrace("sdiv\tr%d,#0x%x,r%d", rs1, v, rd);
+	} else {
+		v = reg.r[rs2];
+		if(trace)
+			itrace("sdiv\tr%d,r%d,r%d", rs1, rs2, rd);
+	}
+	dividend = ((vlong)(int32)reg.Y<<32) | (u32int)reg.r[rs1];
+	divisor = (int32)v;
+	if(divisor == 0) {
+		Bprint(bioout, "division_by_zero\n");
+		longjmp(errjmp, 0);
+	}
+	q = dividend / divisor;
+	if(q > 0x7FFFFFFFLL)
+		q = 0x7FFFFFFFLL;
+	else if(q < -0x80000000LL)
+		q = -0x80000000LL;
+	reg.r[rd] = q;
+}
+
+void
+sdivcc(ulong ir)
+{
+	int rd, rs1, rs2;
+
+	sdiv(ir);
+	getrop23(ir);
+	reg.psr &= ~(PSR_z|PSR_n|PSR_c|PSR_v);
+	if(reg.r[rd] == 0)
+		reg.psr |= PSR_z;
+	if((int32)reg.r[rd] < 0)
+		reg.psr |= PSR_n;
 }
 
 void
@@ -1228,8 +1424,33 @@ call(ulong ir)
 {
 	Symbol s;
 	ulong npc;
+	// claude: real SPARC CALL encoding is bits 31:30 = op ("01"),
+	// bits 29:0 = disp30 (a signed WORD count). The original "(ir<<2)
+	// + reg.pc" neither masks out the two opcode bits nor sign-extends
+	// disp30 -- on the 32-bit hosts this code was written for, that
+	// "worked" two ways at once: the opcode bit (always set, since
+	// CALL's own op is nonzero) landed above bit 31 and was silently
+	// discarded by 32-bit wraparound, and a negative (backward)
+	// displacement's own sign bit, shifted into bit 31, was already
+	// the correct 32-bit-wraparound-negative representation for a
+	// 32-bit add. Neither holds on this 64-bit host: ir is ulong (64
+	// bits), so the opcode bit shifts into bit 32+ and survives
+	// instead of wrapping away -- EVERY call computed a target
+	// ~4 billion bytes past the real one, crashing immediately on the
+	// very first subroutine call (rt0.s's own "call main"). Masking to
+	// the real 30-bit displacement field, shifting in a genuinely
+	// 32-bit `int32`, then letting that convert to `ulong` for the
+	// add (which correctly sign-extends-then-adds, unlike shifting
+	// directly in ulong) fixes both problems in one step. Same class
+	// of bug as machines/qi/branch.c's bx()/bcx() (see those
+	// comments) -- found here because it's far more severe: it breaks
+	// every call, not just backward branches, and was never caught by
+	// the raw-syscall-only hello_plan9_sparc.s test (straight-line
+	// code, no CALL instruction at all).
+	int32 disp;
 
-	npc = (ir<<2) + reg.pc;
+	disp = (int32)((ir & 0x3FFFFFFF) << 2);
+	npc = reg.pc + disp;
 	if(trace)
 		itrace("call\t%lux", npc);
 

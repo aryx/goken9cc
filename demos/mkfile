@@ -93,24 +93,25 @@ demo_plan9:V:
 	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=mips' 'cputype=mips' 'GOOS=plan9' install }
 	mk 'objtype=mips' hello_unix_plan9_mips.exe
 	printf ':c\n$q\n' | vi ./hello_unix_plan9_mips.exe one two | sed -n '2,$p'
-	# claude: power (qi) and sparc (ki) don't get a hello_unix.c-based
-	# entry above like arm/vi -- lib_core/libc/syscall/os/plan9/ only
-	# has svc_arm.s/svc_mips.s (the real Plan9-trap stub + generated
-	# zsyscall_plan9_*.c wrappers); no svc_power.s/svc_sparc.s exist
-	# yet, so GOOS=plan9 cputype=power/sparc can't build libc.a at all.
-	# machines/qi and machines/ki themselves are wired up and working
-	# (tests/qi, tests/ki), so this reuses tests/s/mini's own raw-
-	# syscall hello_plan9_power.s/hello_plan9_sparc.s .s files instead
-	# of a C one -- same level the arm/mips demo entries were at before
-	# lib_core/libc grew Plan9 support for them.
 	echo ''
 	echo '################ power (plan9, qi) ################'
-	@{ cd $TOP/tests/s/mini; qa -c hello_plan9_power.s; ql -o hello_plan9_power.exe -H 2 -E _main hello_plan9_power.q }
-	printf ':c\n$q\n' | qi $TOP/tests/s/mini/hello_plan9_power.exe | sed -n '2,$p'
+	mk clean
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=power' 'cputype=power' 'GOOS=plan9' install }
+	mk 'objtype=power' hello_unix_plan9_power.exe
+	printf ':c\n$q\n' | qi ./hello_unix_plan9_power.exe one two | sed -n '2,$p'
 	echo ''
 	echo '################ sparc (plan9, ki) ################'
-	@{ cd $TOP/tests/s/mini; ka -c hello_plan9_sparc.s; kl -o hello_plan9_sparc.exe -H 2 -E _main hello_plan9_sparc.k }
-	printf ':c\n$q\n' | ki $TOP/tests/s/mini/hello_plan9_sparc.exe | sed -n '2,$p'
+	mk clean
+	# claude: RT0OFILE override, same mechanism arch/amd64/rt0_darwin.s
+	# and arch/arm64/rt0_darwin.s already use (see lib_core/libc/
+	# mkfile's own RT0OFILE comment) -- arch/sparc/rt0.s is Linux-
+	# specific (it copies the raw hardware %sp out of R14 into R1,
+	# working around a register-window save-area shift Plan9's own
+	# process-entry convention doesn't have at all), so plan9/sparc
+	# needs its own rt0_plan9.s, see that file's own header comment.
+	@{ cd $TOP/lib_core/libc; rm -f libc.a; mk -a 'objtype=sparc' 'cputype=sparc' 'GOOS=plan9' 'RT0OFILE=arch/sparc/rt0_plan9.k' install }
+	mk 'objtype=sparc' hello_unix_plan9_sparc.exe
+	printf ':c\n$q\n' | ki ./hello_unix_plan9_sparc.exe one two | sed -n '2,$p'
 
 hello_unix_plan9_arm.exe: hello_unix.c
 	5c $CFLAGS_COMMON -I$TOP/include/arch/arm -Darm -Dplan9 -o hello_unix_plan9_arm.5 -c hello_unix.c
@@ -119,3 +120,26 @@ hello_unix_plan9_arm.exe: hello_unix.c
 hello_unix_plan9_mips.exe: hello_unix.c
 	vc $CFLAGS_COMMON -I$TOP/include/arch/mips -Dmips -Dplan9 -o hello_unix_plan9_mips.v -c hello_unix.c
 	vl -L$ROOT/arch/mips/lib -H 2 -o $target -E _main hello_unix_plan9_mips.v -lc
+
+# claude: no -T/-R override for ql -H2, unlike a first draft of this
+# recipe that tried one -- see docs/claude_notes/notes_abi_plan9.txt's
+# "qi's -H2 default -T/-R matter" section: ql's own -H2 defaults
+# (INITTEXT=0x100020, INITRND=0x100000) are what lib_toolchain/libmach/
+# q.c's mpower.pgsize already expects, and overriding them reproduces
+# the same class of txtaddr mismatch vi's historical mmips.pgsize bug
+# caused.
+hello_unix_plan9_power.exe: hello_unix.c
+	qc $CFLAGS_COMMON -I$TOP/include/arch/power -Dpower -Dplan9 -o hello_unix_plan9_power.q -c hello_unix.c
+	ql -L$ROOT/arch/power/lib -H 2 -o $target -E _main hello_unix_plan9_power.q -lc
+
+# claude: kl needs -M here too, same reason mkfiles/sparc/mkfile's own
+# $LD ("kl -H7 -M") already documents -- kc emits generic AMUL/ADIV/
+# AMOD pseudo-ops that kl's noop.c rewrites into calls to _mul/_div/
+# _mod software helpers unless -M is passed, and this port has no such
+# helpers (SPARC v8's real hardware smul/sdiv covers it instead). The
+# arm/mips/power recipes above call 5l/vl/ql directly without going
+# through $LD too, but none of them have this particular kl-only
+# rewrite to disable.
+hello_unix_plan9_sparc.exe: hello_unix.c
+	kc $CFLAGS_COMMON -I$TOP/include/arch/sparc -Dsparc -Dplan9 -o hello_unix_plan9_sparc.k -c hello_unix.c
+	kl -M -L$ROOT/arch/sparc/lib -H 2 -o $target -E _main hello_unix_plan9_sparc.k -lc

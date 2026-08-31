@@ -138,7 +138,11 @@ bcx(ulong ir)
 {
 	int bo, bi, xx;
 	ulong ea;
-	long imm;
+	// claude: int32, not long -- same fix, same reason as bx()'s
+	// identical comment above ("imm |= 0xFFFF0000" needs to happen at
+	// real 32-bit width, or a negative backward-branch offset comes
+	// out positive once widened to this host's 64-bit long).
+	int32 imm;
 	static char *opc[] = {"bc", "bcl", "bca", "bcla"};
 
 	getbobi(ir);
@@ -239,7 +243,22 @@ void
 bx(ulong ir)
 {
 	ulong ea;
-	long imm;
+	// claude: int32, not long -- `imm` was a `long` (64 bits on this
+	// host), and "imm |= 0xFC000000" only sets bits 26..31, leaving
+	// bits 32..63 zero: a real *negative* (backward) branch offset
+	// came out as a huge *positive* 64-bit number instead of sign-
+	// extending, so "ea = reg.pc + imm" below landed nowhere near the
+	// real target. Declaring `imm` as int32 directly makes the OR
+	// happen at the correct 32-bit width (the compiler reinterprets
+	// the bit pattern as signed there), and the later `reg.pc + imm`
+	// then sign-extends `imm` correctly when widening it to ulong --
+	// same class of bug already fixed in machines/5i/run.c's Ib()/
+	// Ibl() (see docs/claude_notes/notes_abi_plan9.txt's "A genuine,
+	// previously-undiscovered bug in 5i itself" section). Found via a
+	// real hello_unix.c (GOOS=plan9 lib_core/libc) segfaulting with a
+	// wild PC, despite the raw-syscall-only hello_plan9_power.s test
+	// (straight-line code, no backward branches at all) running fine.
+	int32 imm;
 	static char *opc[] = {"b", "bl", "ba", "bla"};
 
 	imm = ir & 0x03FFFFFC;
