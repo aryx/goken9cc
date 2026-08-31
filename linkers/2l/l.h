@@ -1,7 +1,7 @@
 #include	<u.h>
 #include	<libc.h>
 #include	<bio.h>
-#include	"../2c/2.out.h"
+#include	<obj/2.out.h>
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -180,7 +180,7 @@ EXTERN	int	nerrors;
 EXTERN	long	nhunk;
 EXTERN	long	nsymbol;
 EXTERN	char*	noname;
-EXTERN	short*	op;
+//EXTERN	short*	op;
 EXTERN	char*	outfile;
 EXTERN	long	pc;
 EXTERN	char	simple[I_MASK];

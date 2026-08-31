@@ -1,22 +1,30 @@
-</$objtype/mkfile
+TOP=../..
+<$TOP/mkfiles/$objtype/mkfile
 
 TARG=2l
+LDLIBS=-lbio $BOOTLIBS
+
 OFILES=\
 	asm.$O\
+	list.$O\
 	obj.$O\
 	optab.$O\
 	pass.$O\
 	span.$O\
-	list.$O\
+        \
 	enam.$O\
 	compat.$O\
 
-HFILES=\
-	l.h\
-	../2c/2.out.h\
+HFILES=	l.h $TOP/include/obj/2.out.h
 
-BIN=/$objtype/bin
-</sys/src/cmd/mkone
+<$TOP/mkfiles/mkone
 
-enam.$O:	../2c/enam.c
-	$CC $CFLAGS ../2c/enam.c
+CLEANFILES=enam.c
+enam.c: $TOP/include/obj/z.out.h
+	sh mkenam
+
+%.$O:	../lk/%.c
+	$CC $CFLAGS ../lk/$stem.c
+
+#enam.$O:	../2c/enam.c
+#	$CC $CFLAGS ../2c/enam.c
