@@ -1,5 +1,5 @@
-#include	"../cc/cc.h"
-#include	"../2c/2.out.h"
+#include	"../cck/cc.h"
+#include	<obj/2.out.h>
 /*
  * 2c/68020
  * Motorola 68020
