@@ -191,28 +191,36 @@ $msg(SB), R9` then computes `msg`'s real address as `R2 + (msg's small
 offset - BIG)` via a single ADD-immediate (span.c's aclass() classifies
 this as C_SECON since msg's biased offset lands within ±BIG, exactly the
 same "small external constant" addressing scheme every other HEADTYPE-7
-arch here already uses under a different register). Worth flagging one
-wart found while confirming this by hand in span.c's aclass(): the
-D_CONST/D_EXTERN branch has a *dead* correctly-shaped range check
-(`if(instoffset >= -BIG && instoffset < BIG && instoffset != 0) return
-C_SECON;`) immediately followed by an unconditional `return C_LCON;` with
-the original Plan 9 author's own comment "/* not sure why this barfs */"
-directly above it -- so in practice EVERY D_CONST/D_EXTERN reference
-(including ordinary small ones, not just the `instoffset==0` edge case
-the range check was clearly trying to exclude) currently returns C_LCON
-regardless of the check's result. Harmless here: `$setSB(SB)` itself
-lands on exactly `instoffset==0` (`s->value=BIG`, so `BIG+0-BIG=0`),
-which C_LCON handles correctly anyway (sethi+add, an absolute 32-bit
-load, unconditionally correct for any offset including 0) -- but it
-means the dead check's intended C_SECON fast path for OTHER small
-D_CONST/D_EXTERN references (a `MOVW $othersym+off(SB), Rx` where othersym
-is itself an extern data symbol, as opposed to `$msg(SB)` which goes
-through the SEPARATE, live D_OREG branch above it and DOES correctly hit
-C_SECON) never actually fires, at least not yet exercised by anything in
-this bring-up. Not touched -- flagging for whoever next writes a kl test
-that needs that specific addressing form, since fixing a "correctly-
-shaped but dead" check is exactly the kind of change that deserves its
-own targeted test first.
+arch here already uses under a different register).
+
+claude: CORRECTION to an earlier version of this note -- while working out
+the analogous m68k addressing later, a hand-disassembly of this binary's
+actual .text bytes (sparc64-linux-gnu-objdump chokes on this ELF's
+section-header layout, see notes_test_infra.txt-worthy detail: had to `dd`
+the raw text segment out by program-header offset and decode by hand
+against SPARC v8's real instruction encoding) turned up that this section
+previously claimed span.c's aclass() C_SECON range check for D_CONST/
+D_EXTERN was dead code that "never actually fires" for ordinary small
+symbol references, always falling through to the trailing `return
+C_LCON;` regardless. That claim was WRONG -- a plain misreading of the
+control flow: the check is `if(cond) return C_SECON;` followed by
+unconditional code, which is completely ordinary early-return, not dead
+code hidden behind an unreachable condition. The disassembly proves this
+directly: `$msg(SB)`'s load into R9 decodes to a single `add %g2, -4088,
+%o1` (rs1=R2, imm13=-BIG, rd=R9) -- exactly the C_SECON path, no sethi
+involved. `$setSB(SB)`'s own load into R2, by contrast, DOES decode to a
+sethi+add pair (`sethi %hi(...), %g14` then `add %g14, ..., %g2` --
+REGTMP=R14 confirmed as the sethi target, R2 as the final destination),
+confirming it takes the C_LCON path -- but that's because setSB is a
+deliberate special case: its own value is defined as exactly `0+BIG`
+(pass.c's `xdefine("setSB", SDATA, 0L+BIG)`), so `instoffset =
+s->value+a->offset-BIG` comes out to exactly 0, which the range check's
+own `instoffset != 0` term deliberately excludes -- avoiding the
+self-referential bootstrap problem of computing R2's own load relative to
+R2 before it holds a valid value. So: no wart, no bug, nothing to fix.
+The `instoffset != 0` exclusion is intentional and correct, and ordinary
+small D_CONST/D_EXTERN references (msg included) correctly and
+demonstrably take the C_SECON fast path today.
 
 Verified: `ka -c` + `kl -H7` build a working ELF, `qemu-sparc
 ./hello_linux_sparc.exe` prints "Hello, world" byte-matching
