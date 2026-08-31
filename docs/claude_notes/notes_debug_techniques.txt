@@ -1379,3 +1379,50 @@ exist). Reach for the gdbstub first for anything beyond "does this one
 value look right at this one address" -- singlestep-log parsing is
 fine for that narrower question, but not for reconstructing a live
 control-flow decision.
+
+Never assume a hand-written delay slot is honored -- confirm with 'kl -a'
+------------------------------------------------------------------------------
+
+Found bringing up lib_core/libc/syscall/os/linux/svc_sparc.s (sparc's
+raw syscall trampoline, docs/claude_notes/notes_arch_sparc.txt has the
+fuller story). Real bare SPARC hardware guarantees that the
+instruction textually following a branch is its delay slot and always
+executes, taken or not -- so it seemed safe to write a single shared
+"MOVW R14,R1" (restoring REGSP after a syscall trap) right after a
+`BCC sysok` branch, intending it to run on both the taken and
+fall-through paths. It compiled and linked with no warning.
+
+It was wrong: kl's own instruction scheduler (linkers/kl/sched.c, fed
+from noop.c's branch-delay-slot bookkeeping) does NOT treat "next
+instruction in the .s source" as an inviolable delay slot the way raw
+hardware assembly would -- it re-schedules to fill delay slots with
+whatever it judges safe/useful, independent of what the assembly
+source literally wrote next. Confirmed by disassembling the ACTUAL
+linked binary with `kl -a` rather than trusting the source: BCC's real
+delay slot turned out to be a synthesized NOP ("ORN R0,R0"), and the
+intended R1-restore had been relegated to running ONLY on the
+fall-through path -- silently dropped from the taken path entirely.
+Symptom: a segfault at a suspiciously SMALL, non-round address (0x4,
+0x10, ...) rather than a wild pointer -- because R1 was left holding
+the raw syscall NUMBER (never restored to REGSP) rather than being
+fully uninitialized; compare notes_arch_sparc.txt's tests/c/mini
+section, where a truly-never-initialized R1 instead faults at
+0xfffffff8 (0 minus a small stack-frame constant). That address
+"fingerprint" -- a small integer-looking value vs. a stack-adjacent
+negative-offset value -- is a fast way to tell "forgot to restore a
+clobbered register on one path" from "never initialized it at all"
+without reaching for a disassembler first.
+
+Fix: don't rely on a branch's delay slot for anything you can't
+verify landed there. Either duplicate the instruction explicitly on
+every path out of the branch (what fixed svc_sparc.s -- two copies of
+"MOVW R14,R1", one right after `BCC sysok`'s fall-through, one right
+after the `sysok:` label), or disassemble the linked binary with
+`kl -a` (or the equivalent `Xl -a` for another arch) and read the real
+instruction stream before trusting a hand-placed delay slot at all.
+General lesson beyond this one arch: whenever a hand-written .s file
+in this tree uses ANY branch/call/trap instruction that has a
+architectural delay slot (SPARC's Bicc/Ticc/JMPL are the case so far,
+but the same caution applies to any other arch's own delay-slot
+instructions), verify the assembled/linked delay slot's real contents
+with `-a` rather than assuming source order survived.

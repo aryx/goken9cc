@@ -554,3 +554,136 @@ helloprintf.expected.txt (NaN, +2.000000e+000, +2.200000e+000,
 after the header fix; tests/s, tests/c/mini, tests/c/mini2, and
 tests/c/vlong's own full per-arch `mk test` all re-run afterward: no
 regressions from the k.out.h struct-layout change.
+
+lib_core/libc bring-up for sparc: tests/c/hello_libc/hello.c only
+========================================================================
+
+Follow-up session -- deliberately scoped to JUST hello.c (print()+
+exit(0) against the real, reusable libc.a), not the full
+tests/c/hello_libc suite. Needed a genuinely new layer beyond
+anything tests/c/mini*/vlong/float exercise: a real libc.a means every
+PORTOFILES/SYSCALLOFILES/OSFILES file in lib_core/libc/mkfile builds
+unconditionally for this arch, not just the couple of functions one
+test happens to call -- so this was infrastructure work (syscall
+numbers, a real syscall trampoline, process startup, a stat64 struct
+layout) more than incremental test-writing.
+
+Reference material: the user pointed at a real Plan9 distribution at
+/home/pad/xxx/plan9 (a flattened sys/src/cmd/ tree, per-command
+subdirectories like plan9/2c, plan9/kl at top level) and separately at
+/home/pad/software-src/os/plan9-others/9front/sys/src/libc/sparc/
+(argv0.s/muldivrt.s/vlop.s/vlrt.c/notejmp.c/setjmp.s/sqrt.c/...) for
+possible reuse. Neither ended up directly reused for hello.c's own
+scope -- lib_core/libc's own design (a decl-driven generic _syscall6
+trampoline, port/*.c bridging to Plan9-shaped APIs, one shared vlrt.c)
+is different enough in structure from Plan9's native libc that
+copying files wholesale wasn't the right move here, muldivrt.s
+included (see mkfiles/sparc/mkfile's own -M comment on why kc/kl never
+needed a software _mul/_div fallback at all). Kept as a reference for
+future, larger sparc libc work (setjmp.s in particular, if
+ARCHEXTRAOFILES ever needs it). This repo's own naming stays "sparc"
+throughout, never Plan9's own directory names.
+
+What had to be built, in the order the linker actually needed it:
+
+- include/arch/sparc/u.h: had the exact same gaps power's own u.h did
+  before ITS fix (see that arch's own notes) -- a `#define nil` that
+  collides with include/core/macros.h's, a `jmp_buf[2]`/JMPBUFSP/PC/DPC
+  that collides with include/core/exn.h's, and missing s8/u8/.../u64/
+  float32/float64 typedefs include/core/types.h needs. Fixed the same
+  way. `intptr`/`uintptr` were ALREADY plain `long`/`unsigned long`
+  (matching every other 32-bit arch's own u.h) -- confirmed correct,
+  not a bug: unlike alpha/arm64/riscv64's own u.h (genuine 64-bit
+  targets where this compiler's 4-byte `long` would truncate a
+  pointer), sparc's own `long` and its own pointers are both 4 bytes,
+  so there's nothing to diverge. Documented inline to save re-deriving
+  this the next time someone eyes `long` here with suspicion (the
+  user's own instinct, prompted by the k.out.h/2.out.h bug above --
+  right instinct, wrong target this time).
+- lib_core/libc/syscall/os/linux/numbers_sparc.h: sparc's own syscall
+  number table, NOT a copy of any other arch's -- confirmed field-by-
+  field against this host's installed sparc64-linux-gnu cross headers
+  (/usr/sparc64-linux-gnu/include/asm/unistd_32.h), the same reference
+  notes_arch_sparc.txt's own syscall-ABI section already used for
+  exit_linux_sparc.s. Several numbers coincide with 386's legacy table
+  by chance (write=4/exit=1/open=5/close=6/unlink=10/chdir=12/
+  access=33/kill=37/dup=41/pipe=42); several others genuinely don't
+  (mkdir=136 not 39, rmdir=137 not 40, brk=17 not 45, execve=59 not
+  11, wait4=7 not 114, rt_sigaction=102 not 174, dup2=90 not 63,
+  fstat64/fchmod/ftruncate64/openat/getdents64 all their own numbers)
+  -- verified each one individually against the real header rather
+  than assumed shared with any other arch's table.
+- lib_core/libc/syscall/os/linux/svc_sparc.s: the raw _syscall6
+  trampoline. Real correctness work here, not just register shuffling:
+  Linux SPARC32 signals syscall errors via the carry (icc.C) condition
+  bit, not a negative return value the way most archs here do (see
+  the exit_linux_sparc.s-derived comment already in
+  notes_arch_sparc.txt's ABI section) -- so this needed a real BCC
+  branch and a negate-the-errno path, and a REAL BUG surfaced writing
+  it: an R1(REGSP)-restore instruction intended to run via the
+  branch's own delay slot silently only ran on ONE path once kl's own
+  scheduler got involved. See notes_debug_techniques.txt's new
+  "Never assume a hand-written delay slot is honored" section for the
+  full mechanism and how it was diagnosed (`kl -a` on the linked
+  binary, not the source) -- worth reading before writing any other
+  hand-written sparc .s file with a conditional branch after a trap.
+- lib_core/libc/arch/sparc/rt0.s: process startup (_main), same
+  R14->R1/leaf-tail-jump shape as every hand-written _main this arch
+  has needed so far (tests/c/mini/mini2/vlong/float) -- see those
+  files' own comments, reused verbatim rather than re-derived. Real
+  argc/argv bridging into port/mainargs.c's _mainargv/_mainargc this
+  time (no prior _main here needed argv), with a deliberate,
+  documented TODO: since this TEXT must stay leaf (same reason as
+  ever), it can only tail-jump to main(), never call-and-return -- so
+  there is no exit(0) fallback for a future test whose main() doesn't
+  call exit() itself. Not needed for hello.c (calls exit(0) directly)
+  but flagged in the file for whoever adds the next hello_libc test.
+- lib_core/libc/arch/sparc/sigrestore.s: sigentry(), required
+  unconditionally by SIGRESTOREOFILES for GOOS=linux even though
+  hello.c never triggers a signal. Written by direct analogy with
+  arch/mips/sigrestore.s (move the kernel's real first-arg register,
+  R8/%o0, into kc's own REGARG, R7, then call signotify normally) --
+  UNVERIFIED, no signal test has run on this arch yet.
+- lib_core/libc/os/linux/stat_sparc.c: dirfstat/dirfwstat/dirread/
+  dirreadall, required unconditionally by STATOFILES for every Linux
+  arch except riscv, even though hello.c never calls any of them
+  (stat.exe/dirread.exe aren't even in tests/c/hello_libc/mkfile's
+  `all:V:`, deliberately excluded per that mkfile's own comment).
+  Kstat struct layout confirmed against the same sparc64-linux-gnu
+  cross headers as numbers_sparc.h, this time /usr/sparc64-linux-gnu/
+  include/asm/stat.h's own 32-bit `struct stat64` (the `#else` branch
+  under `#if defined(__sparc__) && defined(__arch64__)`) -- genuinely
+  different shape from every other 32-bit arch's own stat64 (no
+  32-bit-legacy-inode field to skip past the way 386 has; every field
+  already a fixed-width kernel type, no `long`-collision risk at all).
+  UNEXERCISED by hello.c specifically, same caveat as sigrestore.s.
+- lib_core/libc/syscall/os/linux/syscall_linux_sparc.decl +
+  syscall_linux_sparc.h: the //sys spec (byte-identical content to
+  every other arch's own decl, per scripts/mksyscall.sh's design --
+  only the header comment differs) and the thin numbers_sparc.h+
+  _syscall6-prototype glue file mksyscall.sh's generated C needs.
+- lib_core/libc/os/linux/notify.c: needed one new `#ifdef sparc
+  #include "syscall/os/linux/numbers_sparc.h" #endif` branch (this
+  file is arch-independent but pulls in Ksigaction/SA_RESTORER_VAL
+  from the right numbers_$cputype.h by explicit per-arch #ifdef --
+  see that file's own comment on why no `#if defined(...)`-style
+  guard is available). Caught immediately by kc's own "name not
+  declared: sa" error the first full-libc.a build attempt -- easy to
+  find, unlike the delay-slot bug above.
+
+Verified: `mk objtype=sparc cputype=sparc install` in lib_core/libc
+builds and installs a complete libc.a from a clean tree with no
+warnings beyond the same pre-existing "declared and not used"/
+"unreachable code" ones every other arch's own libc.a build already
+has; tests/c/hello_libc/hello.exe links against it and passes byte-
+exact under qemu-sparc (`hello from libc.a: 2 + 2 = 4`, matching
+expected.txt) after the svc_sparc.s delay-slot fix; full tests/s,
+tests/c/mini, and tests/c/mini2 re-run afterward with no regressions.
+io.exe/dir.exe/fd.exe/mem.exe/proc.exe/args.exe/ctime.exe/atexit.exe/
+utfmisc.exe/notify.exe/alarm.exe/stat.exe/dirread.exe/fork.exe --
+every OTHER binary tests/c/hello_libc/mkfile's `all:V:`/`test:V:`
+build -- remain completely unattempted, by deliberate scope choice,
+not because any is known to fail. sigrestore.s (real signals) and
+stat_sparc.c (real stat/dirread) in particular are UNEXERCISED code
+paths sitting in the now-working libc.a -- next candidates whenever
+this arch's hello_libc work continues past hello.c.
