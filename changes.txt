@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, start kenccs unification, wasm ea/ec/el, multiplatform libc, bootstrapped)
+* 0.4 (Q3 2026) ([58][alc] synced/fixed with principia, 6l/7l macOS Mach-O, 6l/8l windows PE, start kenccs unification, import alpha/sparc/powerpc/m68k, wasm ea/ec/el, multiplatform libc, bootstrapped)
 
 ** toolchain
 - import 5a/5c/5l and 8a/8c/8l from principia (and rename the 5a/5l/5c
@@ -217,12 +217,17 @@
     also runs these two through 5i/vi and cmp's the output against the
     shared hello.expected.txt -- hello_plan9_386.exe stays build-only,
     no x86 Plan9 emulator exists yet
-- fully bootstrapped, with mk bootstrap target inspired by OCaml
+- fully bootstrapped!!! with mk bootstrap target inspired by OCaml
   bootstrap fixpoint process, with lots of bugfixes and extensions
   to the multiplatform libc (big thx to Claude)
 - import alpha toolchain from old Plan 9 4th edition. Was called 7a/7c/7l
   at the time but got retired and 9front even later reused the '7'
   for arm64 hence the new character for alpha 'z' with za/zc/zl
+- import powerpc (qa/qc/ql) from Plan 9 4th edition
+- import sparc (ka/kc/kl) from Plan 9 4th edition
+- import m68k (2a/2c/2l) from older Plan 9 (was removed in 2012)
+  opted for 68020 and not 68000 because ocaml targets 68020 and
+  the qemu/user-linux test infra works only for 68020
 
 ** os
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
@@ -232,11 +237,12 @@
 - macOS Mach-O experimental support for amd64 (6l -H6) and arm64 (7l -H6)
   working on recent macOS (e.g., macOS 26 Tahoe), ported from go-era
   and adapted to latest (thx Claude)
-- better Linux ELF support for 386, amd64, arm, arm64, riscv, riscv64, mips
+- better Linux ELF support for i386, amd64, arm, arm64, riscv, riscv64, mips
   with more tests (float and vlong and basic helloprintf working, thx Claude)
 
 ** arch
-- real support for 386, amd64, arm, arm64, riscv, riscv64, mips, alpha
+- real support for i386, amd64, arm, arm64, riscv, riscv64, mips, alpha,
+  powerpc, sparc, m68k,
   with basic helloprintf.exe working on all those archs, across many OSes
 - experimental support for riscv64
 - experimental support for wasm: assembler+linker only (ea/el),
@@ -289,6 +295,8 @@
 - also remove mkfiles/arm__ and the "arm__" test variant (tests/c/mini,
   tests/c/mini2, tests/c/vlong, tests/s/mini) that exercised the
   now-deleted 5a9/5c9/5l9 lineage under its old 5a__/5c__/5l__ TARG names
+- started to rename some 386/ to i386/ but add symlink for backward
+  compatibility
 
 ** test-infra
 - tests/c/vlong, tests/c/float: cmp output against an expected.txt (like
