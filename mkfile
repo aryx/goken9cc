@@ -16,8 +16,8 @@ DIRS= BOOT/lib9 \
   assemblers/ia linkers/il compilers/ic \
   assemblers/va linkers/vl compilers/vc machines/vi \
   assemblers/za linkers/zl compilers/zc \
-  assemblers/2a linkers/2l \
-  assemblers/ka linkers/kl \
+  assemblers/2a linkers/2l compilers/2c \
+  assemblers/ka linkers/kl compilers/kc \
   assemblers/qa linkers/ql compilers/qc \
   assemblers/ea linkers/el \
   debuggers/acid \
