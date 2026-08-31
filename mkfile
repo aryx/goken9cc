@@ -13,12 +13,12 @@ DIRS= BOOT/lib9 \
   assemblers/8a linkers/8l compilers/8c \
   assemblers/6a linkers/6l compilers/6c \
   assemblers/7a linkers/7l compilers/7c \
-  assemblers/va linkers/vl compilers/vc   machines/vi \
   assemblers/ia linkers/il compilers/ic \
+  assemblers/va linkers/vl compilers/vc machines/vi \
   assemblers/za linkers/zl compilers/zc \
-  assemblers/qa linkers/ql compilers/qc \
   assemblers/2a \
-  assemblers/ka \
+  assemblers/ka linkers/kl \
+  assemblers/qa linkers/ql compilers/qc \
   assemblers/ea linkers/el \
   debuggers/acid \
   utilities typesetting \
