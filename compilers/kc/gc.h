@@ -1,5 +1,5 @@
-#include	"../cc/cc.h"
-#include	"../kc/k.out.h"
+#include	"../cck/cc.h"
+#include	<obj/k.out.h>
 
 /*
  * kc/sparc
