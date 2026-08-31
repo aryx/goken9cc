@@ -11,7 +11,7 @@
 EXITLINUXBINS=exit_linux_arm.exe exit_linux_arm64.exe \
               exit_linux_mips.exe exit_linux_power.exe \
               exit_linux_riscv.exe exit_linux_riscv64.exe \
-              exit_linux_alpha.exe
+              exit_linux_alpha.exe exit_linux_sparc.exe
 
 all:V: $EXITLINUXBINS
 
@@ -40,7 +40,7 @@ test:V: all
       }
 
 clean:V:
-	rm -f *.[5678ivjzq] *.exe
+	rm -f *.[5678ivjzqk] *.exe
 
 exit_linux_arm.exe: exit_linux_arm.s
    5a -c $prereq
@@ -63,3 +63,6 @@ exit_linux_riscv64.exe: exit_linux_riscv64.s
 exit_linux_alpha.exe: exit_linux_alpha.s
    za -c $prereq
    zl -H7 -o $target -E _start exit_linux_alpha.z
+exit_linux_sparc.exe: exit_linux_sparc.s
+   ka -c $prereq
+   kl -H7 -o $target -E _start exit_linux_sparc.k

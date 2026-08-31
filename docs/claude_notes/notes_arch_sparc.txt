@@ -71,8 +71,84 @@ verbatim into kl/mkenam.
 
 Verified: clean `mk objtype=boot-gcc` (rm *.o o.out enam.c first) builds
 kl with no errors or warnings, links a working o.out, and running it with
-no args prints the expected usage message. kc and ka already built clean
-under boot-gcc before this session; not touched.
+no args prints the expected usage message. ka already built clean under
+boot-gcc before this session; not touched. kc's own `mk objtype=boot-gcc`
+run produced no error output either, which this session initially
+misread as "already builds clean" -- see the correction below, it does
+NOT actually build kc at all.
+
+exit_linux_sparc.s: real ELF exit(42), verified under qemu-sparc
+------------------------------------------------------------------
+
+Follow-up session: wrote tests/s/exit/exit_linux_sparc.s and wired it
+into that mkfile/EXITLINUXBINS + scripts/qemu-runner (`sparc) qemu=qemu-
+sparc`), same shape as every other arch's own exit(42) test. First real
+end-to-end exercise of the HEADTYPE-7 wiring above: `ka -c` + `kl -H7`
+produce a genuine 32-bit big-endian SPARC ELF (readelf confirms EM_SPARC,
+ELFDATA2MSB, entry point set correctly), and `qemu-sparc
+./exit_linux_sparc.exe` exits 42. Full `tests/s` suite (`mk test`, every
+arch, every sub-test) re-run afterward with sparc included: no
+regressions.
+
+Syscall ABI notes, since this port's own register story is unusual:
+
+- Real Linux SPARC32 syscall convention (confirmed against this host's
+  installed sparc64-linux-gnu cross headers, /usr/sparc64-linux-gnu/
+  include/asm/unistd_32.h, and a real glibc checkout's sysdeps/unix/
+  sysv/linux/sparc/sparc32/sysdep.h found on this machine): syscall
+  number in %g1, args in %o0-%o5, trap via `ta 0x10`, errors signaled
+  through the carry (icc.C) condition bit rather than a negative return
+  value. __NR_exit is 1, same legacy/x86-style numbering SPARC Linux
+  inherited, not a SPARC-specific table.
+- This port's own registers (include/obj/k.out.h) are a flat R0-R31
+  numbering that maps DIRECTLY onto the real 32-entry SPARC register
+  file with no renaming layer: linkers/kl/asm.c's OP_IRR/OP_RRR macros
+  splice p->from.reg/p->to.reg straight into the instruction's rs1/rs2/
+  rd bit fields, and real SPARC register numbering is 0-7=%g0-%g7,
+  8-15=%o0-%o7, 16-23=%l0-%l7, 24-31=%i0-%i7 -- so R1 really is %g1,
+  R8 really is %o0, confirmed by decoding a compiled MOVW's actual
+  opcode bits, not assumed. This port's OWN naming for these registers
+  (REGSP=1, REGARG=7=%g7) has nothing to do with the real hardware ABI
+  -- it's this compiler's internal convention for ITS OWN generated
+  code (a flat, non-windowed calling convention that never emits SAVE/
+  RESTORE for ordinary calls, unlike a real SPARC ABI's register-window
+  rotation), irrelevant to hand-written asm, which just needs the right
+  PHYSICAL registers loaded before the trap.
+- kl has no immediate form of TA wired up: linkers/kl/optab.c has
+  exactly one ATA row (`{ATA, C_REG, C_NONE, C_NONE, 33, 4, 0}`), and
+  asm.c's case 33 (`o1 = opcode(ATA) | (p->from.reg<<14)`) only ever
+  fills the rs1 field, leaving the instruction's imm7 bits at 0 -- so
+  `TA Rx` assembles to real hardware `ta %rx + 0`, i.e. the trap number
+  comes from whatever value is in the given register at trap time, not
+  from a literal operand. Decoded by hand from asm.c's OPT(8) macro
+  (0x81d02000 | (8<<25) = 0x91d02000) against the real SPARC v8 Ticc
+  instruction format (op3=0x3A at bits24-19, cond=1000/"always" at
+  bits28-25, i=1 at bit13) before writing the test, not by trial and
+  error. So exit_linux_sparc.s loads 0x10 into a scratch register (R9,
+  i.e. %o1) and does `TA R9`, rather than any single-instruction `ta
+  $0x10` form.
+
+kc/mkfile: NOT actually wired up, despite producing no error
+------------------------------------------------------------------
+
+Correcting an earlier claim in this same file: `mk objtype=boot-gcc` in
+compilers/kc/ prints no error and exits 0, which this session initially
+read as "kc already builds clean." It does NOT -- compilers/kc/mkfile
+itself is a stale, never-ported Plan-9-native mkfile (`</$objtype/mkfile`
+and `</sys/src/cmd/mkone`, absolute in-tree include paths that have never
+existed in this goken layout, unlike every sibling compiler's own
+`<$TOP/mkfiles/$objtype/mkfile` / `<$TOP/mkfiles/mkone`). mk just warns
+"skipping missing include file" for both and falls through to the one
+concrete rule left in the file (`$LIB:`, which builds the shared
+compilers/cc/cc.a$O), so the recipe silently "succeeds" without ever
+compiling a single kc/*.c file or producing a kc binary -- confirmed by
+`which kc` finding nothing in ROOT/arch/boot-gcc/bin even after this
+"successful" run. Not fixed this session (out of scope: this session's
+new exit_linux_sparc.s test is hand-written assembly and never needed
+kc), but a real gap for whoever next needs a compiled-C sparc test
+(tests/c/mini-equivalent) -- porting kc/mkfile to the `<$TOP/mkfiles/...`
+style every other compiler already uses is the fix, mirroring the
+already-ported assemblers/ka/mkfile as the template.
 
 What's still unverified / out of scope for this session
 ------------------------------------------------------------
@@ -88,14 +164,20 @@ What's still unverified / out of scope for this session
   work), so `mk objtype=sparc` can't actually link a runnable binary yet
   regardless of the mkfile fix. Fixing the mkfile without that runtime
   support would just trade one broken build for a different one.
-- No actual ELF binary has been produced and run under qemu-sparc yet --
-  this session only got kl itself to compile and confirmed it starts up
-  and parses args (prints usage with no arguments). The full exit(42)-
-  style bring-up (tests/s/exit/exit_linux_sparc.s, wiring 'sparc' into
-  scripts/qemu-runner, an r0iszero-equivalent check if sparc's ISA has
-  one) is unstarted.
-- kl/asmout.c and kl/span.c (the actual instruction-selection/encoding
-  logic) were not touched or audited this session -- only the ELF
-  *header/output* plumbing (asm.c/obj.c/l.h) that every HEADTYPE-7 arch
-  shares was ported. Whether kl correctly encodes real sparc
-  instructions for a Linux target is completely unverified.
+- DONE (follow-up session): tests/s/exit/exit_linux_sparc.s now produces
+  a real ELF that exits 42 under qemu-sparc, see the section above. No
+  r0iszero-equivalent quirk was hit -- R0 reads as hardware-zero on
+  SPARC (REGZERO=0, same convention as MIPS, not PowerPC's RA-field
+  special case), so nothing analogous to power's -0 flag was needed.
+- kl only has ONE real instruction verified end-to-end so far (MOVW
+  $smallconst,Rx via the C_SCON optab row, exercised three times by
+  exit_linux_sparc.s) plus TA's register form. kl/asmout.c and
+  kl/span.c's much larger surface (loads/stores, branches, the
+  SAVE/RESTORE-based real prologue path noop.c generates for non-leaf
+  functions, floating point, MUL/DIV pseudo-op expansion) is completely
+  unaudited and unexercised -- this session deliberately picked the
+  smallest test that could validate the ELF plumbing without touching
+  any of that.
+- kc/mkfile needs the same `<$TOP/mkfiles/...` porting ka/kl's mkfiles
+  already got, see the section above -- until then there is no way to
+  compile real C for sparc, only hand assembly.
