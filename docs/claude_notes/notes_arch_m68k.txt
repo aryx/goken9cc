@@ -405,3 +405,150 @@ found empirically first and then generalized) -- NaN, +2.000000e+000,
 tests/s, tests/c/mini, tests/c/mini2, and tests/c/vlong's own full
 per-arch `mk test` all re-run afterward: no regressions from the
 2.out.h struct-layout change.
+
+lib_core/libc bring-up for m68k: tests/c/hello_libc/hello.c only
+====================================================================
+
+Follow-up session, same request already applied to sparc's kc (see
+notes_arch_sparc.txt for the general shape and reasoning -- this entry
+covers only what's m68k-specific). Reference material checked per the
+user's own suggestion: /home/pad/xxx/plan9 (a real Plan9 distribution,
+flattened sys/src/cmd/ tree) and specifically its libc/68020/ (found
+at /home/pad/software-src/os/plan9-others/9front/sys/src/libc/68020/
+-- argv0.s/main9.s/muldivrt.s/vlop.s/vlrt.c/setjmp.s/68881/...).
+main9.s confirmed the SAME `MOVL $a6base(SB), A6` bootstrap this
+project's own m68k work already uses (good cross-check, nothing new
+learned), but the rest (Plan9's own _tos/_callmain machinery) doesn't
+transfer to a Linux syscall ABI target, so nothing was reused
+directly -- same conclusion as sparc's own reference-check. This
+repo's naming stays "m68k" throughout, never Plan9's own "68020".
+
+Syscall numbers: unlike sparc (its own distinct table, no local cross-
+headers package for it either), m68k has NO sparc64-linux-gnu-style
+cross-headers package installed on this machine at all -- found a
+usable substitute instead: a real m68k-linux-any/asm/unistd_32.h
+bundled inside an unrelated toolchain checkout already present on this
+machine (zig's own bundled libc headers, see numbers_m68k.h's own
+comment for the exact path). Confirmed field-by-field: m68k's table
+matches 386's own "classic/legacy" numbering almost exactly (write=4/
+exit=1/unlink=10/chdir=12/mkdir=39/rmdir=40/access=33/dup=41/dup2=63/
+brk=45/getpid=20/getcwd=183/fstat64=197/fchmod=94/ftruncate64=194/
+getdents64=220/fork=2/execve=11/wait4=114/pipe=42/kill=37/
+rt_sigaction=174/ioctl=54/setitimer=104 -- ALL identical to 386) --
+ONLY openat (288, not 295) and renameat2 (351, not 353) differ, both
+because those two syscalls were added to each arch's table
+independently, after the shared legacy numbering was already fixed.
+
+lib_core/libc/arch/m68k/u.h had the same gaps as sparc/power's own
+u.h before their fixes (nil/jmp_buf redefinition conflicts, missing
+s8/u8/.../u64/float32/float64/intptr typedefs) PLUS one more, unique
+to this file: `typedef ushort Rune;` (2 bytes) where every other
+arch's u.h (and include/utf/utf.h's own `typedef uint Rune;`) agrees
+on 4 bytes -- a real "external redeclaration of: Rune" compile error,
+not caught until the very first full-libc.a build attempt touched a
+port/*.c file that includes both headers. Fixed to `uint`.
+
+svc_m68k.s (the raw _syscall6 trampoline): unlike svc_sparc.s (a real
+carry-bit error-convention conversion needed there), m68k uses the
+plain negative-errno convention every arch but o32-mips/sparc here
+does, so this file is a close cousin of svc_386.s's own simplicity --
+2c's calling convention puts every argument on the stack (no REGARG,
+confirmed via `2c -S` on the exact 7-argument _syscall6 signature,
+same as every OTHER m68k stub this session and prior ones already
+established), and the syscall's own d0 result is already REGRET, so
+no register-shuffling dance is needed either. One real, documented
+gap: real m68k Linux syscalls only have 5 argument registers (d1-d5),
+and this file never wires up a 6th (a5's own stack-relative extension,
+the way svc_mips.s needs for ITS OWN 5-register limit) -- deliberately
+left unverified since no syscall this tree currently declares needs a
+true 6th argument (_sysrenameat2, at 5 real args, is the widest).
+
+arch/m68k/rt0.s: the one file in this session that did NOT need
+sparc's own R14->R1/leaf-tail-jump workaround at all. 2c's calling
+convention already uses the real hardware A7/%sp directly (no fake
+REGSP the kernel never initializes), and grepping linkers/2l/ confirms
+it has NO auto-prologue-insertion pass at all (unlike kl/ql/vl's own
+noop.c) -- so a genuine BSR-then-return call to main() is safe from
+the very first instruction, same shape as arch/power/rt0.s/arch/
+mips/rt0.s, complete with the same exit(0)-if-main-returns fallback
+sparc's own rt0.s explicitly could NOT provide. argc/argv sit at
+their own natural, unshifted offset (argc at 0(A7), argv at 4(A7)) at
+the true entry point, confirmed via `2c -S` on a hand-written 2-arg
+call site showing the caller-side push convention ("MOVL x,TOS",
+right-to-left, matching xwrite_m68k.s's own established +4-per-slot
+FP-relative reads on the callee side).
+
+arch/m68k/sigrestore.s: sigentry(), required unconditionally by
+SIGRESTOREOFILES for GOOS=linux. Unlike sparc/mips's own
+sigrestore.s (both need to bridge `sig` from a hardware first-argument
+REGISTER into whatever register/stack slot their own compiler
+expects), m68k's own stack-based calling convention already matches
+the stack-based real m68k C ABI the kernel's signal-frame setup
+targets -- so this file is a pure passthrough (`BSR signotify(SB) /
+RTS`), no bridging code at all. UNVERIFIED like sparc's own (no signal
+test has run on this arch yet), but structurally the simplest of the
+three sigrestore.s files written so far in this project.
+
+os/linux/stat_m68k.c: the kernel's own m68k `struct stat64` (found via
+the same zig-bundled m68k-linux-any header used for numbers_m68k.h)
+turned out to be the SAME glibc2.1-style double-inode shape as 386's
+own Kstat (__st_ino legacy 32-bit field, real 64-bit `ino` trailing)
+but NOT byte-identical: m68k's own __pad1/__pad3 are 2-byte
+(`unsigned char[2]`) fields, not 386's 4-byte (two ushorts) ones --
+copying 386's Kstat verbatim would have misaligned every field from
+__st_ino onward by 2 bytes. Built a m68k-specific Kstat matching the
+real kernel layout field-for-field instead of assuming 386's shape
+transfers.
+
+os/linux/notify.c: same one-line `#ifdef m68k #include
+"syscall/os/linux/numbers_m68k.h" #endif` addition sparc needed.
+
+linkers/2l/obj.c: a SECOND, separate `-l`/`-L` gap from the one
+already fixed for tests/c/mini's own m68k bring-up (notes above this
+entry) -- that earlier fix was to `addlib()` (resolving a source
+file's own `#pragma lib "libname.a"` reference). This session's own
+`2l ... -lc` command-line argument (tests/c/hello_libc/mkfile's own
+`$LD ... hello.$O -lc` recipe -- neither hello.c nor libc.h use
+`#pragma lib` at all) goes through a COMPLETELY SEPARATE code path,
+`objfile()`'s own `if(file[0]=='-' && file[1]=='l')` special case,
+which had the exact same unfixed hardcoded-`/m68k/lib/lib`-prefix
+fallback `addlib()` used to have. Ported the identical `findlib()`-
+based fix (compare kl/obj.c's own `objfile()`, which already has it)
+-- same lesson as before: this older-generation linker has TWO
+independent library-name-resolution code paths (`#pragma lib` and
+`-lXXX`), and fixing one does not fix the other.
+
+compilers/2c/cgen.c/peep.c: a real, non-import-artifact compiler bug
+-- see docs/claude_notes/notes_debug_techniques.txt's own "Register-
+class-blind copy propagation" section for the full debugging account
+(bisected via `2c -R`, confirmed via a minimal isolated repro, and
+confirmed NOT an import artifact by diffing against the real Plan9
+68020 distribution's own peep.c: byte-identical). Root cause:
+compilers/2c/peep.c's subprop()/copyprop() copy-propagation/
+elimination logic used regtyp() alone (any register, of ANY kind) to
+decide a move was safe to eliminate, not accounting for m68k's three
+genuinely non-interchangeable register banks (Dn/An/Fn) -- eliminated
+a real, necessary "MOVL R0,A0" (moving fmtfmt()'s D0-class return
+value into an address register, needed because m68k's register-
+indirect addressing mode "(An)" is only encodable with an address
+register) as if it were an ordinary same-bank redundant copy. Fixed
+with a new `sameregclass()` helper, gating both functions' elimination
+decisions on same-BANK registers, not just "both are some register"
+-- see that function's own long comment in peep.c for why this has no
+equivalent in any other arch's peep.c (every other arch in this tree
+has one interchangeable general-purpose integer register bank at the
+ISA level, so regtyp() alone was always sufficient there).
+
+Verified: rebuilt 2c, 2l, and libc.a for m68k (`mk objtype=boot-gcc
+install` for the toolchain pieces, `mk objtype=m68k cputype=m68k
+install` for libc.a) from a clean tree; tests/c/hello_libc/hello.exe
+now links and passes byte-exact under qemu-m68k (`hello from libc.a: 2
++ 2 = 4`, matching expected.txt); the isolated function-pointer repro
+that found the peep.c bug re-verified separately; full tests/s and
+tests/c/mini/mini2/vlong/float's own per-arch `mk test` (every arch,
+not just m68k) re-run afterward: no regressions from the 2c/2l
+changes. The rest of tests/c/hello_libc (io/dir/fd/mem/proc/args/
+ctime/atexit/utfmisc/notify/alarm/stat/dirread/fork) remains
+unattempted by deliberate scope choice, same as sparc's own entry --
+sigrestore.s and stat_m68k.c in particular are written but
+unexercised by hello.c specifically.

@@ -565,6 +565,72 @@ regtyp(int t)
 	return 0;
 }
 
+/* claude: sameregclass() has no counterpart in any other arch's
+ * peep.c in this tree (5c/6c/7c/8c/vc/ic/kc/qc/zc all share this same
+ * subprop()/copyprop() shape, byte-for-byte in places, and NONE of
+ * them define anything like this). That is not an oversight to match
+ * -- it reflects a real difference in what "a register" means on
+ * m68k versus every other arch this compiler generation targets.
+ *
+ * On every other arch here, the general-purpose integer registers
+ * form ONE interchangeable bank at the hardware level: any value
+ * (a pointer, a loop counter, a function-pointer result) can sit in
+ * any general register, and any instruction that accepts a register
+ * operand accepts ANY of them in that slot. Given that invariant,
+ * regtyp()'s coarse "is this operand some register" check is already
+ * sufficient for copy-propagation: if `v1` and `v2` are both "some
+ * register" (of the same regtyp() bucket -- int or float, since even
+ * those archs keep float separate via D_F0), substituting one for the
+ * other in a later instruction can never change what that instruction
+ * means, because the ISA doesn't distinguish which physical register
+ * an operand slot demands.
+ *
+ * m68k breaks that invariant. It has three genuinely separate,
+ * non-interchangeable register banks -- Dn data registers, An address
+ * registers, and FPn float registers (float was already handled
+ * correctly everywhere via D_F0's own separate numeric range; the gap
+ * this function closes is specifically Dn vs An, both otherwise
+ * lumped under regtyp()'s single "integer register" answer). Several
+ * m68k addressing modes and instruction forms are hard-wired to ONE
+ * bank: register-indirect addressing ("(An)", the form an indirect
+ * BSR/JSR through a function pointer needs) is only encodable with an
+ * address register -- a data register is not a slower alternative
+ * encoding, it is not encodable there AT ALL. So a "MOVL R0,A0"
+ * followed by "BSR (A0)" is not a redundant copy the way "MOVL
+ * R0,R1" followed by a later use of R1 would be on, say, kc/sparc or
+ * 6c/amd64 -- R0 and A0 hold the identical VALUE after the move, but
+ * they are not substitutable in every context that value gets used in
+ * next, because the addressing mode itself, not just the value, is
+ * what the following instruction needs a specific register class for.
+ *
+ * Found bringing up m68k libc: fmt.c's "(*fmtfmt(r))(f)" (fmt/fmt.c)
+ * compiled to exactly this shape, "MOVL R0,A0 / BSR (A0)", correctly
+ * moving fmtfmt()'s D0-class return value into an address register
+ * for the indirect call -- but subprop() (called from peep(),
+ * confirmed by bisecting with -R, which skips only the peep() pass)
+ * used regtyp() alone, saw "both operands are some register", treated
+ * the move as an ordinary same-bank copy eligible for elimination,
+ * and excised it -- leaving A0 holding whatever it last held at the
+ * BSR. Segfaulted jumping through garbage. See docs/claude_notes/
+ * notes_arch_m68k.txt for the full debugging account, and
+ * notes_debug_techniques.txt's "Register-class-blind copy
+ * propagation" section for the general lesson (relevant to any future
+ * arch with more than one non-interchangeable general-purpose
+ * register bank -- uncommon among the RISC-y archs already in this
+ * tree, but real for anything m68k- or x86-style).
+ */
+static int
+sameregclass(int t1, int t2)
+{
+	if(t1 >= D_R0 && t1 < D_R0+8)
+		return t2 >= D_R0 && t2 < D_R0+8;
+	if(t1 >= D_A0 && t1 < D_A0+8)
+		return t2 >= D_A0 && t2 < D_A0+8;
+	if(t1 >= D_F0 && t1 < D_F0+8)
+		return t2 >= D_F0 && t2 < D_F0+8;
+	return 0;
+}
+
 int
 anyvar(Adr *a)
 {
@@ -602,6 +668,8 @@ subprop(Reg *r0)
 		return 0;
 	v2 = &p->to;
 	if(!regtyp(v2->type))
+		return 0;
+	if(!sameregclass(v1->type, v2->type))
 		return 0;
 	for(r=uniqp(r0); r!=R; r=uniqp(r)) {
 		if(uniqs(r) == R)
@@ -675,6 +743,8 @@ copyprop(Reg *r0)
 	p = r0->prog;
 	v1 = &p->from;
 	v2 = &p->to;
+	if(regtyp(v1->type) && regtyp(v2->type) && !sameregclass(v1->type, v2->type))
+		return 0;
 	if(copyas(v1, v2))
 		return 1;
 	for(r=firstr; r!=R; r=r->link)

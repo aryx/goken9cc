@@ -137,6 +137,75 @@ introduced the corruption, before you read any code:
   to misread as "this instruction looks fine" if you don't check the
   hex.
 
+claude: the `-N`/`-R`/`-g` pass-bisection technique above is written
+as "7c/7l-specific" but is really generic to every Plan9-style
+compiler in this tree sharing the same reg.c/peep.c shape (5c/6c/7c/
+8c/vc/ic/kc/qc/zc/2c/...) -- confirmed a second time bringing up
+m68k's own 2c (`if(!debug['R'] || debug['P']) peep();` in
+compilers/2c/reg.c, byte-for-byte the same gating line 7c's own reg.c
+has). `2c -R -S` (regopt() runs, peep() skipped) was exactly how a
+real 2c peephole-optimizer bug got isolated to peep.c specifically
+rather than reg.c's earlier register-allocation passes -- see this
+file's own "Register-class-blind copy propagation" section below for
+the bug itself. Try `Xc -R -S` before reading peep.c's source whenever
+final assembly looks wrong but an intermediate `-g` trace looked
+right.
+
+Register-class-blind copy propagation: a real, still-latent risk on any arch with non-uniform register banks
+-------------------------------------------------------------------------------------------------------------------
+
+Found bringing up m68k's libc: `fmt/fmt.c`'s `n = (*fmtfmt(r))(f);`
+(calling a function pointer immediately as the result of another
+call, no intermediate variable) crashed jumping through a stale
+address once compiled by 2c. Isolated to compilers/2c/peep.c's
+`subprop()`/`copyprop()` (confirmed via the `-R` bisection above):
+both call `regtyp(t)`, which answers "is this operand ANY kind of
+register" without distinguishing WHICH kind -- but m68k has two
+genuinely separate, non-interchangeable general-purpose register
+banks (Dn data registers, An address registers; a third, Fn float
+bank is also distinct). `fmtfmt()`'s return value naturally arrives in
+a D-register (this backend's REGRET convention), and gets correctly
+moved into an A-register for the indirect call ("MOVL R0,A0"), since
+only an address register is valid in m68k's register-indirect
+addressing mode ("(An)", needed for the indirect BSR/JSR) -- but
+`subprop()` treated that move as an ordinary same-class copy eligible
+for elimination, substituted the LATER use of A0 for R0 in its own
+analysis, decided the move was now dead, and excised it -- leaving A0
+holding a stale, unrelated value at the point of the indirect call
+(the ACTUAL machine code, unlike the internal analysis, was never
+rewritten to use R0 for the addressing-mode operand, since "(R0)"
+isn't valid encoding there at all -- the bug is specifically "deleted
+a necessary move," not "substituted an invalid operand").
+
+Confirmed via a minimal, isolated repro BEFORE touching the compiler
+(a two-function `Fn lookup(int){return foo;} int call(int c,int
+x){return (*lookup(c))(x);}`, checked at `2c -S` level first, then
+built+run under qemu-m68k) -- this is the same progressive-
+minimization discipline this file's own "binarytrees.c" section
+argues for, applied to a compiler bug rather than a program bug: don't
+debug the real 300-line fmt.c call site when a five-line reproduction
+shows the identical wrong assembly.
+
+Also confirmed the bug is NOT an import artifact before touching
+anything: `diff`'d this repo's compilers/2c/peep.c against a real
+historical Plan9 68020 distribution's own copy (byte-identical, zero
+diff output) BEFORE writing a fix -- worth doing whenever a bug is
+found in code that was imported/ported from a reference source, since
+"this looks wrong" and "this was introduced during porting" are
+different claims, and only the diff actually distinguishes them. Fix
+here was a NEW `sameregclass()` helper (not present in the reference,
+not copied from any other arch -- no other arch in this tree has two
+non-interchangeable integer-ish register banks to model), used to
+gate `subprop()`/`copyprop()`'s elimination decision on same-class
+registers, not just "both are some register." General lesson for any
+future arch port with more than one non-interchangeable
+general-purpose register class (uncommon among the RISC-y archs
+already here, but real for anything x86-style or m68k-style):
+audit peep.c's `regtyp()`-based copy elimination specifically, since
+this class of compiler was written assuming ONE fungible integer
+register pool per arch and never revisited for archs where that
+assumption is false.
+
 Instrumenting a recursive function with a counter + guard + exit(), when lldb won't cooperate
 ----------------------------------------------------------------------------------------------------
 
@@ -1368,6 +1437,22 @@ and `continue` past it in a loop) DOES work non-interactively via `-x
 scriptfile`, but was NOT reliable when passed as a single multi-line
 `-ex "commands 1\n...\nend"` string -- use a `-x <file>` script file
 for anything involving `commands`.
+
+claude: gotcha (1) above is NOT power-specific -- confirmed the hard
+way bringing up m68k's own libc: `gdb-multiarch -ex "set architecture
+m68k" -ex "target remote ..."` (skipping `set endian big` first, since
+this note's own power-only framing didn't stick) printed PC/register
+values byte-reversed exactly the same way (a breakpoint set at
+0x402e3e came back reporting `pc 0x3e2e4000` -- reverse the bytes and
+it's the same address). Cost real time re-deriving "is this value
+actually byte-swapped" from scratch before recognizing it as the exact
+same gotcha this note already recorded. Lesson on the lesson: `set
+endian big` before `set architecture`/`target remote` is a
+big-endian-target rule, not a PowerPC rule -- apply it for ANY
+big-endian arch's gdbstub session in this tree (sparc, mips, m68k,
+alpha's own notes may need the same check), and re-read this file
+before starting a NEW arch's gdb session, not just when something
+looks wrong.
 
 This is not just "a debugger is more accurate than a trace log" in the
 abstract -- it's specifically that hand-parsing a large singlestep
