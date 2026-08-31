@@ -19,3 +19,15 @@ CFLAGS=$CFLAGS_COMMON -I$TOP/include/arch/sparc
 # tests/c/mini2's fact()/fact_iter() (genuine variable multiply, not a
 # compile-time constant Multab strength-reduction case) started
 # linking: without it, kl fails "undefined: _mul" and friends.
+
+# ARCHEXTRAOFILES: setjmp.s (setjmp()/longjmp(), needed unconditionally
+# by os/linux/notify.c's own noted()) and vlop.s (_mulv, the 64-bit
+# multiply helper compilers/cck/com64.c emits calls to) -- same pair
+# power's own mkfile pulls in, see lib_core/libc/mkfile's own comment
+# on this variable. rtsigaction.c is sparc's own hand-written
+# _sysrtsigaction (5-arg kernel ABI, see syscall_linux_sparc.decl's
+# comment); pipe.s is sparc's own hand-written _syspipe (register-pair
+# return, not the pointer-argument shape mksyscall.sh generates, see
+# that same decl file's comment) -- neither generated like every other
+# arch's own syscall wrappers.
+ARCHEXTRAOFILES=arch/sparc/setjmp.$O arch/sparc/vlop.$O arch/sparc/rtsigaction.$O arch/sparc/pipe.$O

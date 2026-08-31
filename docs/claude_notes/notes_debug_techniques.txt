@@ -1511,3 +1511,47 @@ architectural delay slot (SPARC's Bicc/Ticc/JMPL are the case so far,
 but the same caution applies to any other arch's own delay-slot
 instructions), verify the assembled/linked delay slot's real contents
 with `-a` rather than assuming source order survived.
+
+=====================================================
+Isolating "our toolchain" vs "the emulator" for signal-return bugs
+=====================================================
+
+Context: sparc's notify.exe/alarm.exe (docs/claude_notes/
+notes_arch_sparc.txt has the full writeup) crashed every time a
+delivered signal needed to resume the interrupted code, no matter how
+many toolchain-side theories got fixed (R1/%g1 syscall-number
+collision, non-leaf auto-prologue, kernel-vs-qemu return-address
+biasing). Each fix changed the crash's exact address/signal but never
+made it go away -- a pattern worth recognizing on its own: if a
+"fix" changes the SYMPTOM without curing the crash, seriously consider
+that the bug isn't where you're looking at all.
+
+The decisive move: write the SMALLEST POSSIBLE repro with ZERO
+dependency on this project's own compiler-generated code or libc --
+just `ka`+`kl` hand-assembling a few instructions (rt_sigaction, kill,
+a trivial handler doing the bare minimum "jmp %o7+8" return, no libc,
+no notify.c, no kc). If that ALSO crashes identically, every one of
+this toolchain's own conventions (register allocation, prologues, the
+R1/REGSP scheme) is proven irrelevant to the bug in one shot -- much
+faster than continuing to patch and re-test the full compiled path.
+Conversely, if the minimal repro had worked, that would have pointed
+just as decisively back at something specific in notify.c or kc's
+codegen. Reach for this whenever a bug's suspect list includes "the
+emulator itself" as a candidate, not just "our code" -- it turns a
+vague suspicion into a yes/no answer in one test.
+
+Related gdbstub gotcha found along the way: qemu's gdbstub does not
+single-step cleanly across a syscall trap that changes the whole
+register/PC state out from under the process (sigreturn/rt_sigreturn
+specifically -- ordinary syscalls step fine). `stepi` onto the trap
+instruction itself reports an immediate SIGSEGV at the SAME PC,
+regardless of whether the syscall would actually have succeeded when
+run un-stepped. Don't trust a single-step trace across such an
+instruction as evidence of a real crash there -- verify with a plain
+`continue` (or no debugger at all, `qemu-$arch -strace`) instead. This
+is what caused an early false read during the sparc investigation
+above (two consecutive stepi-based traces both "confirmed" a crash
+exactly on the trap instruction, which read as strong evidence at the
+time but was really just this stepping artifact -- the REAL crash,
+same underlying cause, was later confirmed independently via `continue`
+and the dependency-free repro, not via the stepi trace itself).

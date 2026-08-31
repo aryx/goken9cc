@@ -105,10 +105,28 @@ struct Ksigaction {
  * about this arch's kernel ABI (confirmed 101 against unistd_32.h),
  * kept as accurate reference facts the same way numbers_386.h's
  * identical pair is (os/linux/notify.c's own `#ifdef amd64` guard is
- * the actual, deliberate gate on whether SA_RESTORER is ever used --
- * UNVERIFIED on sparc, no signal test has run here yet).
+ * the actual, deliberate gate on whether SA_RESTORER is ever used).
+ * Now used on sparc too, via a DIFFERENT gate: not SA_RESTORER, but
+ * SA_SIGINFO (0x200, confirmed against asm-sparc/signal.h) --
+ * installsig() sets it unconditionally on sparc to force the kernel's
+ * RT signal-delivery path (new_setup_rt_frame/__NR_rt_sigreturn)
+ * instead of the older, non-SA_SIGINFO one (new_setup_frame, a
+ * DIFFERENT hardcoded sigreturn number baked into the kernel's own
+ * trampoline bytes, unrelated to __NR_rt_sigreturn above). That older
+ * path is where notify.exe's alarm test actually crashed: the
+ * trampoline it builds executes correctly up to and including its own
+ * "ta 0x10", but qemu-sparc's own linux-user emulation of THAT syscall
+ * never returns/restores -- confirmed via qemu's gdbstub (breaking
+ * right on that trap instruction, `continue` produces an immediate
+ * SIGSEGV instead of resuming the interrupted code), so this looks
+ * like a real gap in qemu's non-RT sparc32 sigreturn emulation, not a
+ * bug in this file's own trampoline handling (which matches the real
+ * kernel's own hardcoded encoding byte-for-byte, confirmed against
+ * arch/sparc/kernel/signal.c). See docs/claude_notes/
+ * notes_arch_sparc.txt for the full writeup.
  */
 #define SA_RESTORER_VAL	0x04000000
+#define SA_SIGINFO_VAL	0x200
 #define __NR_rt_sigreturn	101
 
 // rc self-hosting's Isatty() (os/linux/isatty.c). Confirmed 54

@@ -16,14 +16,27 @@ typedef struct  Vlong   Vlong;
 // claude: the field order must match how the target compiler lays out a
 // native 64-bit value in memory, because the vlrt helpers reinterpret this
 // struct as the compiler's vlong (and vice versa). Little-endian arches
-// store the low word first; big-endian mips stores the high word first.
-// With the wrong order every conversion comes out word-swapped -- e.g. a
-// widened 42 became 0x2a00000000, so printf %x/%d printed "0x00" / '*' on
-// mips (and power). (This file was copied from the little-endian arm
-// vlrt.c, hence the original lo/hi order was only right for
-// little-endian targets.) No #if expression support in this project's
-// preprocessors (only plain #ifdef/#ifndef/#else, nested), hence the
-// nesting below instead of one "mips || power" condition.
+// store the low word first; big-endian mips/power/sparc/m68k store the
+// high word first. With the wrong order every conversion comes out
+// word-swapped -- e.g. a widened 42 became 0x2a00000000, so printf %x/%d
+// printed "0x00" / '*' on mips (and power). (This file was copied from
+// the little-endian arm vlrt.c, hence the original lo/hi order was only
+// right for little-endian targets.) No #if expression support in this
+// project's preprocessors (only plain #ifdef/#ifndef/#else, nested),
+// hence the nesting below instead of one "mips || power || sparc ||
+// m68k" condition.
+//
+// claude: sparc/m68k branches added after tests/c/vlong/vlrt.c's own
+// IDENTICAL bug (same struct, same missing branches) was already found
+// and fixed there -- this is the SEPARATE, real production copy
+// (port/vlrt.c, what lib_core/libc's own build actually links), missed
+// at the time since the two files were never meant to diverge but
+// nothing keeps them in sync automatically. Found via
+// tests/c/hello_libc/io.c's own seek() check: _v2sl() (this file, used
+// to narrow lseek()'s vlong offset argument down to the 32-bit long the
+// raw syscall wrapper takes) read rv.lo assuming little-endian layout,
+// so a small offset (6, entirely in the true low word) came back as 0
+// (the true HIGH word, correctly zero for a small value) on sparc.
 struct  Vlong
 {
 #ifdef mips	// big-endian
@@ -34,8 +47,18 @@ struct  Vlong
     ulong   hi;
     ulong   lo;
 #else
+#ifdef sparc	// also big-endian
+    ulong   hi;
+    ulong   lo;
+#else
+#ifdef m68k	// also big-endian
+    ulong   hi;
+    ulong   lo;
+#else
     ulong   lo;
     ulong   hi;
+#endif
+#endif
 #endif
 #endif
 };

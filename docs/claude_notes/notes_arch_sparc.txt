@@ -687,3 +687,155 @@ not because any is known to fail. sigrestore.s (real signals) and
 stat_sparc.c (real stat/dirread) in particular are UNEXERCISED code
 paths sitting in the now-working libc.a -- next candidates whenever
 this arch's hello_libc work continues past hello.c.
+
+Extending past hello.c (all of tests/c/hello_libc): every remaining
+binary in `all:V:` now builds and passes for sparc
+(io/dir/fd/mem/proc/args/env/ctime/atexit/utfmisc), plus
+stat/dirread/fork from the riscv-only-excluded set -- except
+notify.exe/alarm.exe, which are a confirmed qemu-sparc emulation gap,
+not a toolchain bug (see below). Several genuine toolchain bugs found
+and fixed along the way:
+
+- lib_core/libc/port/vlrt.c (the REAL, shared production file --
+  distinct from tests/c/vlong/vlrt.c's own test-only copy, which had
+  already been fixed earlier and lulled a first pass into assuming
+  this one was too): struct Vlong was missing #ifdef sparc/#ifdef
+  m68k big-endian branches (only had mips/power), so _v2sl() read the
+  wrong half of any Vlong -- caught by io.exe's seek() offset check.
+  Lesson: when the SAME struct-layout bug exists in two files, fixing
+  one and not noticing the other is a real, easy-to-make mistake --
+  grep for every copy before declaring a class of bug fixed.
+- lib_core/libc/syscall/os/linux/svc_sparc.s: the error path's
+  "SUB R0,R8,R7" (intended R7 = 0-errno) actually computed R7 = R8-R0
+  = R8 (unchanged, so callers saw the raw positive errno and every
+  error check inverted) -- ka's 3-operand LADDW-class grammar stores
+  operands as read left-to-right, but kl's own OP_RRR encoder swaps
+  which operand is the minuend; SUB (unlike vlop.s's MUL) is not
+  commutative, so this actually mattered. Fixed as "SUB R8,R0,R7".
+  Full derivation (hand-decoded machine word, traced through a.y's
+  outcode() and kl/asm.c's OP_RRR macro) recorded in this file's git
+  history and notes_debug_techniques.txt; caught by fd.exe/dir.exe's
+  access()-on-a-missing-file checks reading "succeeded".
+- lib_core/libc/arch/sparc/vlop.s (_mulv): rewritten twice. First a
+  missing file entirely (_mulv/_divl undefined at link time) --
+  written using SPARC v8's real UMUL+%y hardware multiply. Then a
+  correctness bug: the stack-offset labels (l0+4/h0+8/l1+12/h1+16,
+  copied uncritically from power's own vlop.s comment) had hi/lo
+  backwards -- sparc is big-endian, so an 8-byte Vlong argument's HIGH
+  word is at the LOWER offset, not the low word. Verified via a
+  hand-written debug-echo version of the file and a distinguishable
+  test value (0x1111222233334444); small values (mini2's own fact()
+  smoke test) never caught this since a small a.hi=0/b.hi=0 argument
+  is zero either way. Fixed by swapping which offset feeds which half.
+- lib_core/libc/arch/sparc/rt0.s: argc/argv were read from 0(R1)/
+  4(R1), matching every other arch here, but SPARC32 Linux reserves a
+  64-byte "minimum stack frame" (register-window save area) BELOW
+  argc on the initial process stack -- argc is really at 64(R1), argv
+  at 68(R1). Found via qemu's gdbstub (`set endian big` before `set
+  architecture`, per notes_debug_techniques.txt) dumping memory from
+  $sp: all zero for 64 bytes, then the real argc/argv/envp block.
+  Caught by args.exe/env.exe both silently seeing argc=0; every other
+  test that had passed before this fix simply never read argv/envp.
+- lib_core/libc/syscall/os/linux/syscall_linux_sparc.decl +
+  arch/sparc/rtsigaction.c (new file): sparc's real kernel
+  sys_rt_sigaction (confirmed against arch/sparc/kernel/sys_sparc.c)
+  takes FIVE arguments (sig, act, oact, restorer, sigsetsize) -- every
+  other Linux arch here takes four. mksyscall.sh's declarative 1:1 arg
+  mapping can't express an extra arg while notify.c (arch-independent)
+  keeps calling _sysrtsigaction with the usual four, so _sysrtsigaction
+  is hand-written for sparc instead, inserting restorer=0 itself.
+  Caught by notify.exe's rt_sigaction() always failing EINVAL (the
+  kernel's own sigsetsize != sizeof(sigset_t) check, misreading a
+  4-arg call's would-be 5th slot).
+- lib_core/libc/arch/sparc/sigrestore.s (sigentry): rewritten after
+  the first "byte-identical to arch/mips's own, just move %o0 to
+  REGARG" version (see this file's own history above) turned out to
+  be wrong in TWO independent ways once a real signal test existed:
+  (1) R1/REGSP is mapped onto %g1, which is ALSO the raw SPARC
+  syscall-number register (see this file's own R1/%g1 collision
+  section, way above) -- svc_sparc.s's _syscall6 briefly clobbers it
+  across each trap, and a *synchronous self-signal* (kill(getpid(),
+  sig), exactly what notify.exe's alarm test does) can be delivered
+  by the kernel inside that exact window: confirmed via qemu's gdbstub
+  breaking on sigentry's own entry and finding %g1 == 37, SYS_kill's
+  own number. Tried resyncing R1 from R14 the way rt0.s's _main does
+  (wrong: R14 isn't a live shadow of R1 outside svc_sparc.s's own
+  save/restore window) and recovering %g1 from the kernel's own saved
+  pt_regs snapshot (dead end: that snapshot is taken from the SAME
+  already-clobbered state, since we ourselves overwrote %g1 before
+  the trap). Fixed by sidestepping the problem instead: signotify()
+  and everything it calls are fully self-contained, so sigentry now
+  hands them a small dedicated static buffer as R1 (GLOBL sigstack<>)
+  rather than trying to reconstruct the interrupted code's own R1.
+  NOT reentrant (a second signal delivered mid-handler would reuse the
+  same buffer) -- untested territory, no test here nests signals.
+  (2) Needs the same leaf/JMP-tail-call trick as rt0.s's _main and for
+  the same reason: a JMPL to signotify makes this TEXT non-leaf, so
+  kl's noop.c auto-inserts its usual prologue BEFORE any hand-written
+  instruction regardless of source order, which would run using the
+  not-yet-fixed R1. A leaf JMP (computing signotify's address into a
+  register first, matching _main's own pattern) skips that entirely.
+- lib_core/libc/syscall/os/linux/syscall_linux_sparc.decl +
+  arch/sparc/pipe.s (new file): sparc's real kernel sys_pipe
+  (sparc_pipe, confirmed against arch/sparc/kernel/sys_sparc.c) does
+  NOT take a pointer argument the way mksyscall.sh's generic wrapper
+  assumes -- it returns fd[0] as the plain syscall return value and
+  writes fd[1] into regs->u_regs[UREG_I1] (our own R9/%o1), a
+  SunOS-heritage register-pair-return convention, same general class
+  as mips's own sysm_pipe (which sidesteps it via SYS_pipe2 instead --
+  not available here, this port targets a pre-pipe2 kernel tree).
+  Hand-written _syspipe instead, reading the caller's int* itself and
+  writing both fds after the trap. Caught by fork.exe's own
+  pipe+fork+wait step: the child's write() succeeded but the parent's
+  read() always got nothing, since fd[1] (what the child actually
+  inherited/used) was never really written into the caller's array.
+
+notify.exe/alarm.exe (the two tests genuinely NOT passing for sparc,
+and not expected to): both build correctly and run right up to the
+point a delivered signal needs to actually resume the interrupted
+code, then crash every time (SIGSEGV or SIGILL, landing just past the
+kernel-built sigreturn trampoline in unmapped memory) -- root-caused,
+with high confidence, to a real gap in qemu-sparc's OWN linux-user
+emulation of signal return (sigreturn/rt_sigreturn), not a bug
+anywhere in this toolchain. Evidence:
+- Confirmed with a MINIMAL, dependency-free repro (no libc, no
+  kc-generated code at all -- a hand-assembled rt_sigaction+kill+
+  trivial-handler-with-a-bare-"jmp %o7+8"-return test): SIGSEGVs
+  identically. This rules out anything specific to notify.c, kc's
+  register-allocation/prologue conventions, or the R1/%g1 collision
+  work above -- the crash happens even with none of that code present.
+  See the "Fully custom syscalls" notes_test_infra.txt entry if this
+  repro needs to be reproduced again -- the .s source lived at
+  <scratchpad>/sigtest_sparc.s during this investigation, not checked
+  into the tree.
+- Reproduced identically whether installsig() forces SA_SIGINFO (RT
+  delivery, new_setup_rt_frame/__NR_rt_sigreturn=101) or leaves it
+  unset (older delivery, new_setup_frame/a different, kernel-hardcoded
+  sigreturn number baked directly into the trampoline bytes) --
+  os/linux/notify.c now sets SA_SIGINFO_VAL unconditionally for sparc
+  anyway (numbers_sparc.h), since that's the more standard, better-
+  exercised-elsewhere path in general, even though it made no
+  difference to this specific qemu gap.
+- Via qemu's gdbstub: breaking right on the trampoline's own "ta 0x10"
+  and single-stepping past it never resumes anywhere -- gdb reports an
+  immediate SIGSEGV at the SAME instruction instead of landing back in
+  the interrupted code. The trampoline bytes themselves were checked
+  byte-for-byte against the real kernel source (arch/sparc/kernel/
+  signal.c's hardcoded "mov __NR_sigreturn,%g1"/"t 0x10" encoding) and
+  match exactly, so this isn't a case of us writing the wrong
+  trampoline -- qemu just doesn't implement whatever should happen
+  when that trap actually executes.
+- An early, now-reverted theory ("qemu delivers R15 unbiased by the
+  usual -8 kernel offset, so pre-bias it ourselves in sigentry")
+  produced the RIGHT-LOOKING landing address but did NOT fix the
+  underlying crash (confirmed: the minimal repro above needs no R15
+  bias at all and still fails identically) -- a reminder that matching
+  one symptom of a fundamentally broken mechanism doesn't mean the
+  mechanism is now working; do not resurrect that pre-bias without new
+  evidence it was actually correct and not just coincidentally
+  address-matching.
+Nothing left to try here without a different qemu build/version or a
+real SPARC host to test against -- flagged for a future session if
+either becomes available. `tests/c/hello_libc/mkfile`'s test_one:V:
+skips both for $cputype sparc specifically (with its own comment
+pointing back here) rather than leaving them to fail every run.

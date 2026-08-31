@@ -75,12 +75,31 @@
 //sys _sysfork(void) int = SYS_fork
 //sys _sysexecve(void *path, void *argv, void *envp) int = SYS_execve
 //sys _syswait4(int pid, void *status, int options, void *rusage) int = SYS_wait4
-//sys _syspipe(int *fd) int = SYS_pipe
+
+// _syspipe is NOT declared here, unlike every other arch's own decl
+// file: sparc's real kernel sys_pipe (sparc_pipe, arch/sparc/kernel/
+// sys_sparc.c) does NOT take a pointer argument at all -- it returns
+// fd[0] as the normal syscall return value and writes fd[1] into
+// regs->u_regs[UREG_I1] (our own R9/%o1), a leftover SunOS-heritage
+// calling convention mksyscall.sh's generic pointer-argument shape
+// can't express (same class of quirk as mips's own sysm_pipe, see
+// syscall_linux_mips.decl's comment, just via a different register
+// pair). Hand-written instead in arch/sparc/pipe.s, which reads the
+// caller's int* itself and writes both fds after the trap.
 
 // Tier 6 notification -- see syscall_linux_amd64.decl's identical
 // comment.
 //sys _syskill(int pid, int sig) int = SYS_kill
-//sys _sysrtsigaction(int sig, void *act, void *oact, long sigsetsize) int = SYS_rt_sigaction
+
+// _sysrtsigaction is NOT declared here, unlike every other arch's own
+// decl file: sparc's real kernel sys_rt_sigaction (arch/sparc/kernel/
+// sys_sparc.c) takes FIVE arguments (sig, act, oact, restorer,
+// sigsetsize), not the four every other Linux arch here has -- an
+// extra `restorer` slot the mksyscall.sh declarative 1:1 arg mapping
+// can't express while keeping the same 4-arg C signature notify.c
+// (arch-independent, shared by every arch) calls. Hand-written instead
+// in arch/sparc/rtsigaction.c, which inserts restorer=0 itself before
+// falling through to the shared _syscall6 trampoline.
 
 // rc self-hosting's Isatty() (os/linux/isatty.c). arg stays void*
 // like _sysrtsigaction's act/oact above -- the raw layer stays free

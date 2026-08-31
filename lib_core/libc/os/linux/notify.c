@@ -268,6 +268,10 @@ installsig(int sig, int on)
 		sa.restorer = sigrestorer;
 	}
 #endif
+#ifdef sparc
+	if(on)
+		sa.flags = SA_SIGINFO_VAL;
+#endif
 	_sysrtsigaction(sig, &sa, nil, sizeof sa.mask);
 }
 

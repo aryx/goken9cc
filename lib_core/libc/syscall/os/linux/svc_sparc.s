@@ -68,7 +68,26 @@ TEXT _syscall6+0(SB), $0
 	TA	R7
 	BCC	sysok
 	MOVW	R14, R1			// fall-through (error) path: restore REGSP
-	SUB	R0, R8, R7		// error: R7 = 0 - errno (o0 has the raw positive errno)
+	// claude: "SUB Ra,Rb,Rc" is NOT "Rc = Ra - Rb" -- ka's LADDW-class
+	// 3-operand grammar (assemblers/ka/a.y's `outcode($1,&$2,$4,&$6)`)
+	// stores the operands as from=Ra/reg=Rb/to=Rc, but kl's own
+	// encoder (linkers/kl/asm.c case 21, shared by every LADDW opcode
+	// including SUB) builds the real instruction as
+	// OP_RRR(op,from,reg,to), and OP_RRR's own parameter order (that
+	// file's #define) puts its FIRST arg in the rs2 field and its
+	// SECOND in rs1 -- so the real computed result is "Rc = Rb - Ra"
+	// (rs1=reg=Rb minus rs2=from=Ra), operands effectively swapped
+	// from how they read left-to-right. Confirmed by hand-decoding
+	// the actual encoded word ("SUB R0,R8,R7" assembled to 0x8e220000
+	// = rs1=R8,rs2=R0,rd=R7, i.e. R7=R8-R0=R8, not 0-R8) after this
+	// exact line silently returned the raw POSITIVE errno instead of
+	// -errno -- confirmed via tests/c/hello_libc/fd.c's own
+	// access()-on-a-missing-file check reading "succeeded". Only
+	// matters here because subtraction isn't commutative; vlop.s's
+	// own MUL never hit this, since a*b==b*a either way. Write the
+	// MINUEND second, the SUBTRAHEND first, to get the intended
+	// result third.
+	SUB	R8, R0, R7		// error: R7 = 0 - errno (o0 has the raw positive errno)
 	RETURN
 sysok:
 	MOVW	R14, R1			// taken (success) path: restore REGSP
