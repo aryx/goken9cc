@@ -7,6 +7,7 @@ LINUXBINS=hello_linux_386.exe hello_linux_amd64.exe \
           hello_linux_arm.exe hello_linux_arm64.exe \
           hello_linux_riscv.exe hello_linux_riscv64.exe \
           hello_linux_mips.exe hello_linux_alpha.exe hello_linux_power.exe \
+          hello_linux_sparc.exe \
           hello_linux_386_.exe hello_linux_arm_.exe hello_linux_amd64_.exe
 MACOSBINS=hello_macos_amd64.exe hello_macos_arm64.exe \
           hello_macos_libc_amd64.exe
@@ -96,7 +97,7 @@ test_windows:V: $WINDOWSBINS
 	}
 
 clean:V:
-	rm -f *.[5678ivjzq] *.e *.exe *.wasm
+	rm -f *.[5678ivjzqk] *.e *.exe *.wasm
 
 #Linux
 # old: -X to avoid the golang specific stuff and -d to disable dynamic linking
@@ -127,6 +128,9 @@ hello_linux_alpha.exe: hello_linux_alpha.s
 hello_linux_power.exe: hello_linux_power.s
    qa -c $prereq
    ql -0 -H7 -o $target -E _start hello_linux_power.q
+hello_linux_sparc.exe: hello_linux_sparc.s
+   ka -c $prereq
+   kl -H7 -o $target -E _start hello_linux_sparc.k
 
 
 # go-era toolchain testing

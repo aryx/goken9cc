@@ -169,15 +169,65 @@ What's still unverified / out of scope for this session
   r0iszero-equivalent quirk was hit -- R0 reads as hardware-zero on
   SPARC (REGZERO=0, same convention as MIPS, not PowerPC's RA-field
   special case), so nothing analogous to power's -0 flag was needed.
-- kl only has ONE real instruction verified end-to-end so far (MOVW
-  $smallconst,Rx via the C_SCON optab row, exercised three times by
-  exit_linux_sparc.s) plus TA's register form. kl/asmout.c and
-  kl/span.c's much larger surface (loads/stores, branches, the
-  SAVE/RESTORE-based real prologue path noop.c generates for non-leaf
-  functions, floating point, MUL/DIV pseudo-op expansion) is completely
-  unaudited and unexercised -- this session deliberately picked the
-  smallest test that could validate the ELF plumbing without touching
-  any of that.
 - kc/mkfile needs the same `<$TOP/mkfiles/...` porting ka/kl's mkfiles
   already got, see the section above -- until then there is no way to
   compile real C for sparc, only hand assembly.
+
+tests/s/mini/hello_linux_sparc.s: .data segment + SB addressing, first try
+------------------------------------------------------------------------------
+
+Second follow-up session: wrote tests/s/mini/hello_linux_sparc.s (write()
++ exit(), the standard hello-world shape every other arch's own
+tests/s/mini/hello_linux_*.s already follows) and wired it into that
+mkfile's LINUXBINS, same recipe shape as tests/s/exit's own (`ka -c` +
+`kl -H7 -o ... -E _start`). Passed on the FIRST assembly/link/run attempt
+-- no new kl bugs found, unlike some other arches' own mini bring-ups.
+
+This exercises real .data addressing for the first time (exit_linux_sparc.s
+has no .data segment at all): `MOVW $setSB(SB), R2` loads kl's "static
+pointer" register (REGSB=2, i.e. real hardware %g2) with the runtime data-
+segment base biased by `BIG` (4088, `l.h`'s `BIG = 4096-8`), and `MOVW
+$msg(SB), R9` then computes `msg`'s real address as `R2 + (msg's small
+offset - BIG)` via a single ADD-immediate (span.c's aclass() classifies
+this as C_SECON since msg's biased offset lands within ±BIG, exactly the
+same "small external constant" addressing scheme every other HEADTYPE-7
+arch here already uses under a different register). Worth flagging one
+wart found while confirming this by hand in span.c's aclass(): the
+D_CONST/D_EXTERN branch has a *dead* correctly-shaped range check
+(`if(instoffset >= -BIG && instoffset < BIG && instoffset != 0) return
+C_SECON;`) immediately followed by an unconditional `return C_LCON;` with
+the original Plan 9 author's own comment "/* not sure why this barfs */"
+directly above it -- so in practice EVERY D_CONST/D_EXTERN reference
+(including ordinary small ones, not just the `instoffset==0` edge case
+the range check was clearly trying to exclude) currently returns C_LCON
+regardless of the check's result. Harmless here: `$setSB(SB)` itself
+lands on exactly `instoffset==0` (`s->value=BIG`, so `BIG+0-BIG=0`),
+which C_LCON handles correctly anyway (sethi+add, an absolute 32-bit
+load, unconditionally correct for any offset including 0) -- but it
+means the dead check's intended C_SECON fast path for OTHER small
+D_CONST/D_EXTERN references (a `MOVW $othersym+off(SB), Rx` where othersym
+is itself an extern data symbol, as opposed to `$msg(SB)` which goes
+through the SEPARATE, live D_OREG branch above it and DOES correctly hit
+C_SECON) never actually fires, at least not yet exercised by anything in
+this bring-up. Not touched -- flagging for whoever next writes a kl test
+that needs that specific addressing form, since fixing a "correctly-
+shaped but dead" check is exactly the kind of change that deserves its
+own targeted test first.
+
+Verified: `ka -c` + `kl -H7` build a working ELF, `qemu-sparc
+./hello_linux_sparc.exe` prints "Hello, world" byte-matching
+hello.expected.txt, full tests/s suite and top-level `mk test` re-run
+afterward with sparc included in tests/s/mini's LINUXBINS: no regressions.
+
+What's STILL unverified after both exit and mini
+------------------------------------------------------------
+
+kl now has real instructions verified end-to-end: MOVW with small/large
+constants (C_SCON, C_LCON, and now C_SECON via $msg(SB)), TA's register
+form. kl/asmout.c and kl/span.c's much larger surface (branches, the
+SAVE/RESTORE-based real prologue path noop.c generates for non-leaf
+functions, floating point, MUL/DIV pseudo-op expansion, C_LECON/C_LEXT
+large-offset addressing) is still completely unaudited and unexercised --
+both bring-ups so far deliberately picked the smallest test that could
+validate one more layer of the ELF/addressing plumbing without touching
+any of that.
