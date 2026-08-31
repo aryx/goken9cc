@@ -516,8 +516,15 @@ enum
 typedef	struct	ieee	Ieee;
 struct	ieee
 {
-	long	l;	/* contains ls-man	0xffffffff */
-	long	h;	/* contains sign	0x80000000
+	/* claude: int32, not long -- see k.out.h's own comment on this
+	 * exact struct (found there first): a `long` field here is 8
+	 * bytes on a 64-bit host, and the byte-copy/byte-shift code in
+	 * this arch's own linker treats &ieee as a tightly-packed 8-byte
+	 * blob, so the wider type corrupts any FCONST double whose low
+	 * mantissa byte has bit 7 set. See q.out.h/v.out.h/i.out.h/
+	 * 6.out.h, which already use int32 here. */
+	int32	l;	/* contains ls-man	0xffffffff */
+	int32	h;	/* contains sign	0x80000000
 				    exp		0x7ff00000
 				    ms-man	0x000fffff */
 };

@@ -256,8 +256,20 @@ enum
 typedef	struct	ieee	Ieee;
 struct	ieee
 {
-	long	l;	/* contains ls-man	0xffffffff */
-	long	h;	/* contains sign	0x80000000
+	/* claude: int32, not long -- kl/asm.c's data writer treats
+	 * &p->to.ieee as a tightly-packed 8-byte blob (two 4-byte
+	 * halves), and kl/obj.c's reader assigns each half from a
+	 * byte-shifted 32-bit expression that can be negative (e.g. a
+	 * mantissa byte with the top bit set). A `long` field here is
+	 * 8 bytes on a 64-bit host, so that negative 32-bit value
+	 * sign-extends into the upper 4 bytes instead of being
+	 * confined to them -- corrupting every FCONST double whose low
+	 * mantissa byte has bit 7 set (found via 2.2's %f coming out as
+	 * NaN: the read side produced ieee.l=0xffffffff9999999a instead
+	 * of 0x9999999a). See q.out.h/v.out.h/i.out.h/6.out.h, which
+	 * already use int32 here. */
+	int32	l;	/* contains ls-man	0xffffffff */
+	int32	h;	/* contains sign	0x80000000
 				    exp		0x7ff00000
 				    ms-man	0x000fffff */
 };

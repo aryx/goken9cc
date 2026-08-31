@@ -36,8 +36,18 @@ struct  Vlong
     ulong   hi;
     ulong   lo;
 #else
+#ifdef sparc	// also big-endian
+    ulong   hi;
+    ulong   lo;
+#else
+#ifdef m68k	// also big-endian
+    ulong   hi;
+    ulong   lo;
+#else
     ulong   lo;
     ulong   hi;
+#endif
+#endif
 #endif
 #endif
 };

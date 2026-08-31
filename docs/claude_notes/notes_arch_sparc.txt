@@ -457,3 +457,100 @@ multiply -- any future sparc test that GENUINELY wants the software-
 call path (there is currently no reason to, but if one ever needs to
 force it for comparison/debugging) would need to override LD= locally
 rather than relying on the default.
+
+kc/kl: tests/c/vlong and tests/c/float -- a real 64-bit-host struct-size bug (int32 vs long)
+-------------------------------------------------------------------------------------------------
+
+Follow-up session (reference material this time: a real Plan9
+distribution at /home/pad/software-src/os/plan9-others/9front/sys/src/
+libc/{sparc,68020}/ -- checked for reusable code, per the user's own
+suggestion; ended up not needed for vlong/float specifically, kc/kl
+already carry everything required, but this tree remains a good
+reference if a future arch bring-up needs real Plan9 sparc/68020 libc
+sources, e.g. muldivrt.s/vlop.s/vlrt.c -- see mkfiles/sparc/mkfile's
+own -M comment for why kc/kl never needed muldivrt.s's _mul/_div/etc
+here). This repo's own goken naming stays "sparc"/"m68k" throughout,
+never the Plan9-original "68020".
+
+tests/c/vlong (64-bit arithmetic via a portable vlrt.c) passed with a
+one-line fix: vlrt.c's `struct Vlong` field order is byte-order-
+dependent (its own comment already explains why, added when mips/power
+were brought up) and only had `#ifdef mips`/`#ifdef power` branches for
+big-endian -- sparc (also big-endian) fell through to the little-endian
+default, word-swapping every 64-bit value. Added `#ifdef sparc` (nested
+the same way as the existing mips/power branches, since this project's
+preprocessors have no `#if X || Y` support). linux_sparc.s modeled
+directly on tests/c/mini2/linux_sparc.s plus one extra stub, abort()
+(referenced by vlrt.c on an internal consistency error, same as every
+other arch's own linux_$objtype.s here). Passed on the very next build
+after the vlrt.c fix -- no further sparc-specific issues.
+
+tests/c/float (double literals, NaN/Inf, printfloat) surfaced a REAL,
+independent kc/kl bug -- not a hand-written-stub issue, and not
+byte-order-related despite SPARC being big-endian. Symptom: kc reuses
+F24/F26/F28/F30 as hardwired FREGZERO/HALF/ONE/TWO constant registers
+(k.out.h, same convention as qc/PowerPC's own -- see this dir's
+linux_power.s), needing linux_sparc.s to initialize them the same way
+linux_power.s does (load 0.5 from memory via FMOVD, since ka has no
+C_FCON row for AFMOVD -- same gap as qa/za -- then derive 0/1/2 via
+FSUBD/FADDD; no FREGCVI-equivalent bias register needed, since kc has
+real hardware FITOD/FITOS int->float conversion, unlike qc's software
+bias trick). But even with that done correctly, `2.0`/`3.0` (which
+route through FREGTWO/FREGONE, i.e. THROUGH those same registers) came
+out as `0.0`, and `2.2` (which doesn't match any hardwired-constant
+fast path in kc's gmove(), so falls through to a plain `FMOVD
+$2.2,Freg` with kl synthesizing a backing DATA symbol at link time)
+came out as NaN.
+
+Root cause, confirmed via `kl -a`: kl's synthesized DATA symbol for
+2.2 was literally named `$ffffffff9999999a.40019999` -- the low half
+(`ieee.l`) had grown an extra 4 bytes of `0xffffffff` it should never
+have had; `ieee.h` (2.2's real high word, 0x40019999) never made it
+into the actual byte-copy at all. Traced to `include/obj/k.out.h`'s
+own `struct ieee { long l; long h; ... }` -- unlike q.out.h/v.out.h/
+i.out.h/6.out.h (`int32 l; int32 h;`), k.out.h used `long`, which is
+8 bytes on this 64-bit host, not 4. Two places this bit:
+- linkers/kl/obj.c's D_FCONST reader assigns each half from a
+  byte-shifted 32-bit expression (`p[4] | (p[5]<<8) | (p[6]<<16) |
+  (p[7]<<24)`) that can be NEGATIVE as a 32-bit int (2.2's own low
+  mantissa byte, 0x9a, has bit 7 set) -- assigning a negative int into
+  an 8-byte `long` field sign-extends it, corrupting the upper 4 bytes
+  that should have held `ieee.h`'s own data.
+- linkers/kl/asm.c's actual .data-section writer treats `&p->to.ieee`
+  as a tightly-packed 8-byte blob (`cast = (char*)&p->to.ieee`, then a
+  `fnuxi8[]`-permuted byte copy) -- with `long`-typed fields the real
+  struct is 16 bytes, so that assumption silently reads/writes the
+  wrong bytes.
+This affects EVERY FCONST double kc ever emits through the general
+path, not just 2.2 -- it only stayed hidden this long because 0/0.5/1/
+1.5/2/2.5/3/-0.5/-1/-2 all bypass it entirely via the FREGZERO/HALF/
+ONE/TWO fast path in gmove() (see above), and this session's own
+FREGHALF init (0.5, loaded via the SAME broken D_FCONST path once
+compiled by kc into the AFMOVD instruction inside linux_sparc.s's
+_main) was itself corrupted the same way -- explaining why FREGONE/
+FREGTWO (derived from FREGHALF via FADDD) came out as 0.0 rather than
+1.0/2.0: FREGHALF's own load silently produced 0.0 instead of 0.5,
+0.0+0.0=0.0, 0.0+0.0=0.0. Fixed by changing k.out.h's `Ieee` struct to
+`int32 l; int32 h;`, matching every other working arch. NOT a byte-
+order/endianness bug despite SPARC being big-endian -- confirmed by
+first checking the *.out.h field TYPES across every arch (the working
+ones all agree on int32; z.out.h/alpha is the one other `long`
+holdout, but alpha wasn't touched or re-verified this session, out of
+scope for the sparc/m68k task at hand -- flagging as a plausible
+latent alpha bug worth checking if alpha's own tests/c/float behavior
+is ever revisited).
+
+The same exact bug (same field types, same two code sites) was
+independently confirmed in 2.out.h/2l for m68k -- see
+notes_arch_m68k.txt for that side.
+
+Verified: rebuilt kc AND kl (`mk objtype=boot-gcc install` in both --
+the struct is shared by the compiler's own `zaddr()`/`ieeedtod()` in
+swt.c and the linker's reader/writer in obj.c/asm.c, so both had to be
+relinked even though only the shared header changed) from a clean
+tree; tests/c/float's sparc target now passes byte-exact against
+helloprintf.expected.txt (NaN, +2.000000e+000, +2.200000e+000,
++0.000000e+000, +3.000000e+000 all correct) on the very next build
+after the header fix; tests/s, tests/c/mini, tests/c/mini2, and
+tests/c/vlong's own full per-arch `mk test` all re-run afterward: no
+regressions from the k.out.h struct-layout change.

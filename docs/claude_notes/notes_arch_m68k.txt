@@ -355,3 +355,53 @@ What's STILL unverified after 2c's mini2 bring-up
 
 Same as kc's own mini2 note: structs/unions and switch statements
 (neither helloprintf.c nor test.c use either) remain the main gap.
+
+2c/2l: tests/c/vlong and tests/c/float -- same int32-vs-long struct bug as sparc
+-------------------------------------------------------------------------------------
+
+Follow-up session, same request already applied to sparc's kc/kl (see
+notes_arch_sparc.txt for the full root-cause account -- this entry
+covers only what's m68k-specific). Reference material checked for
+reuse: a real Plan9 distribution at /home/pad/software-src/os/
+plan9-others/9front/sys/src/libc/68020/ (muldivrt.s, vlop.s, vlrt.c,
+68881/) -- not needed for vlong/float, 2c/2l already had everything
+required, but note this repo keeps the goken name "m68k" throughout
+even though Plan9's own tree (and this project's underlying arch
+letter '2') calls it "68020".
+
+tests/c/vlong: same vlrt.c big-endian struct-field-order bug as sparc,
+same fix -- added `#ifdef m68k` (nested alongside the sparc branch just
+added, mips, and power) to `struct Vlong`. linux_m68k.s modeled on
+tests/c/mini2/linux_m68k.s plus abort(). Passed immediately, no m68k-
+specific issues -- consistent with 2c's mini2 bring-up needing nothing
+extra either.
+
+tests/c/float: checked FIRST (before assuming m68k would need the same
+fix as sparc) whether 2c has any FREGZERO/HALF/ONE/TWO-style hardwired
+float constant registers the way kc/qc do -- grepped compilers/2c/*.c
+and include/obj/2.out.h for FREGZERO/FREGHALF/FREGONE/FREGTWO/FREGCVI:
+no hits, so linux_m68k.s needs no FPU register setup at all (noted
+already in tests/c/mini2's own linux_m68k.s comment).
+
+But the SAME `struct ieee { long l; long h; }` bug found in k.out.h
+(see notes_arch_sparc.txt for the full mechanism -- an 8-byte `long` on
+this 64-bit host where every reader/writer assumes a tightly-packed
+4-byte field, corrupting any FCONST double via sign-extension when a
+mantissa byte has bit 7 set) turned out to exist verbatim in
+include/obj/2.out.h too, with the identical two call sites (linkers/
+2l/obj.c's D_FCONST reader, `p[c]|(p[c+1]<<8)|...`; 2l/asm.c's `char*`
+byte-copy of `&ieee`). Found by checking 2.out.h's struct BEFORE even
+attempting the m68k float build (given sparc's bug had just been found
+minutes earlier) rather than rediscovering it independently -- fixed
+the same way, `int32 l; int32 h;`, matching every other working arch's
+own *.out.h.
+
+Verified: rebuilt 2c AND 2l (`mk objtype=boot-gcc install` in both)
+from a clean tree; tests/c/float's m68k target passed byte-exact
+against helloprintf.expected.txt on the FIRST attempt after the header
+fix (no separate debugging needed, unlike sparc where the bug was
+found empirically first and then generalized) -- NaN, +2.000000e+000,
++2.200000e+000, +0.000000e+000, +3.000000e+000 all correct;
+tests/s, tests/c/mini, tests/c/mini2, and tests/c/vlong's own full
+per-arch `mk test` all re-run afterward: no regressions from the
+2.out.h struct-layout change.
