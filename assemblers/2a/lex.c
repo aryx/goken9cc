@@ -646,8 +646,8 @@ cinit(void)
 	Sym *s;
 	int i;
 
-	nullgen.sym = S;
-	nullgen.offset = 0;
+	nullgen.x.sym = S;
+	nullgen.x.offset = 0;
 	nullgen.type = D_NONE;
 	if(FPCHIP)
 		nullgen.dval = 0;
@@ -727,7 +727,7 @@ zaddr(Gen *a, int s)
 		t |= T_FIELD;
 	if(a->index != D_NONE || a->displace != 0)
 		t |= T_INDEX;
-	if(a->offset != 0)
+	if(a->x.offset != 0)
 		t |= T_OFFSET;
 	if(s != 0)
 		t |= T_SYM;
@@ -759,7 +759,7 @@ zaddr(Gen *a, int s)
 		Bputc(&obuf, l>>24);
 	}
 	if(t & T_OFFSET) {	/* implies offset */
-		l = a->offset;
+		l = a->x.offset;
 		Bputc(&obuf, l);
 		Bputc(&obuf, l>>8);
 		Bputc(&obuf, l>>16);
@@ -806,7 +806,7 @@ outcode(int a, Gen2 *g2)
 
 jackpot:
 	sf = 0;
-	s = g2->from.sym;
+	s = g2->from.x.sym;
 	while(s != S) {
 		sf = s->sym;
 		if(sf < 0 || sf >= NSYM)
@@ -826,7 +826,7 @@ jackpot:
 		break;
 	}
 	st = 0;
-	s = g2->to.sym;
+	s = g2->to.x.sym;
 	while(s != S) {
 		st = s->sym;
 		if(st < 0 || st >= NSYM)
@@ -918,7 +918,7 @@ outhist(void)
 				op = 0;
 			}
 		}
-		g.offset = h->offset;
+		g.x.offset = h->offset;
 
 		Bputc(&obuf, AHISTORY);
 		Bputc(&obuf, AHISTORY>>8);
@@ -931,6 +931,6 @@ outhist(void)
 	}
 }
 
-#include "../cc/lexbody"
-#include "../cc/macbody"
-#include "../cc/compat"
+#include "../../compilers/cck/lexbody"
+#include "../../compilers/cck/macbody"
+#include "../../compilers/cck/compat"

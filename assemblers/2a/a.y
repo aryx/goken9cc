@@ -166,7 +166,7 @@ rel:
 	{
 		$$ = nullgen;
 		$$.type = D_BRANCH;
-		$$.offset = $1 + pc;
+		$$.x.offset = $1 + pc;
 	}
 |	LNAME offset
 	{
@@ -174,15 +174,15 @@ rel:
 		if(pass == 2)
 			yyerror("undefined label: %s", $1->name);
 		$$.type = D_BRANCH;
-		$$.sym = $1;
-		$$.offset = $2;
+		$$.x.sym = $1;
+		$$.x.offset = $2;
 	}
 |	LLAB offset
 	{
 		$$ = nullgen;
 		$$.type = D_BRANCH;
-		$$.sym = $1;
-		$$.offset = $1->value + $2;
+		$$.x.sym = $1;
+		$$.x.offset = $1->value + $2;
 	}
 
 gen:
@@ -195,14 +195,14 @@ gen:
 	{
 		$$ = nullgen;
 		$$.type = D_CONST;
-		$$.offset = $2;
+		$$.x.offset = $2;
 	}
 |	'$' name
 	{
 		$$ = nullgen;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $2;
 		}
 		if($2.type == D_AUTO || $2.type == D_PARAM)
@@ -232,19 +232,19 @@ gen:
 	{
 		$$ = nullgen;
 		$$.type = D_STACK;
-		$$.offset = $3;
+		$$.x.offset = $3;
 	}
 |	LTOS '-' con
 	{
 		$$ = nullgen;
 		$$.type = D_STACK;
-		$$.offset = -$3;
+		$$.x.offset = -$3;
 	}
 |	con
 	{
 		$$ = nullgen;
 		$$.type = D_CONST | I_INDIR;
-		$$.offset = $1;
+		$$.x.offset = $1;
 	}
 |	'-' '(' LAREG ')'
 	{
@@ -262,7 +262,7 @@ gen:
 		$$.type = $1.type;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $1;
 		}
 		if(($$.type & D_MASK) == D_NONE) {
@@ -277,7 +277,7 @@ gen:
 		$$.type = $1.type;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $1;
 		}
 		$$.index = $2.type | I_INDEX1;
@@ -289,7 +289,7 @@ gen:
 		$$.type = $2.type;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $2;
 		}
 		$$.index = $4.type | I_INDEX2;
@@ -302,7 +302,7 @@ gen:
 		$$.type = $3.type;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $3;
 		}
 		$$.index = $5.type | I_INDEX2;
@@ -315,7 +315,7 @@ gen:
 		$$.type = $2.type;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $2;
 		}
 		$$.index = D_NONE | I_INDEX3;
@@ -328,7 +328,7 @@ gen:
 		$$.type = $3.type;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $3;
 		}
 		$$.index = D_NONE | I_INDEX3;
@@ -341,7 +341,7 @@ gen:
 		$$.type = $2.type;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $2;
 		}
 		$$.index = $3.type | I_INDEX3;
@@ -354,7 +354,7 @@ gen:
 		$$.type = $3.type;
 		{
 			Addr *a;
-			a = &$$;
+			a = &$$.x;
 			*a = $3;
 		}
 		$$.index = $4.type | I_INDEX3;

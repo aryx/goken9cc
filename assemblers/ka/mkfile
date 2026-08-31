@@ -10,7 +10,7 @@ OFILES=\
 
 HFILES= $TOP/include/obj/k.out.h y.tab.h a.h
 
-YFILES=a.y\
+YFILES=a.y
 
 YFLAGS=-D1 -d
 

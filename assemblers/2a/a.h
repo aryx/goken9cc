@@ -1,7 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
-#include "../2c/2.out.h"
+#include <obj/2.out.h>
 
 #ifndef	EXTERN
 #define	EXTERN	extern
@@ -76,7 +76,7 @@ struct	Addr
 };
 struct	Gen
 {
-	Addr;
+	Addr x; // was Addr; but kenccext: do not work with boot-gcc
 	double	dval;
 	char	sval[8];
 	long	displace;
@@ -145,7 +145,7 @@ void	newfile(char*, int);
 Sym*	slookup(char*);
 Sym*	lookup(void);
 void	syminit(Sym*);
-long	yylex(void);
+int	yylex(void);
 int	getc(void);
 int	getnsc(void);
 void	unget(int);
