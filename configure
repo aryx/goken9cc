@@ -143,4 +143,3 @@ echo '   $ mk'
 echo '   $ mk install'
 echo
 echo 'at which point 5c/5a/5l, 8c/8a/8l, mk/rc, ... should be in your $PATH'
-
