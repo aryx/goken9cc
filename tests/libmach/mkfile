@@ -15,3 +15,13 @@ test:V:
 	@{cd ../s/exit; mk exit_linux_arm.exe}
 	@{cd ../s/mini; mk hello_plan9_arm.exe hello_plan9_mips.exe}
 	IAR=$TOP/linkers/ar/o.out ACID=$TOP/debuggers/acid/o.out FIVEI=$TOP/machines/5i/o.out VI=$TOP/machines/vi/o.out bash smoke.sh
+
+# claude: `true`, not a truly empty recipe -- mk treats a target with
+# zero recipe lines as undefined rather than a no-op rule. Nothing to
+# clean here: this dir has no build artifacts of its own, only builds
+# consumers under $TOP/ that the top-level clean already covers via
+# $DIRS. Needed anyway: tests/mkfile's DIRS includes `libmach`, and
+# mkfiles/mkdirs' generic clean:QV: loop errors out on any DIRS entry
+# with no clean target.
+clean:V:
+	true

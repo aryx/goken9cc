@@ -46,6 +46,22 @@ test:
 	# this top-level context, not test_goken's own default behavior.
 	@{cd benchs/compcert; mk 'SKIPQEMU=1' test_goken}
 
+# claude: override mkdirs' generic clean:V: (which only walks $DIRS,
+# never `tests` or `benchs/compcert` -- neither is in $DIRS since
+# `install`/`uninstall`/`nuke` don't make sense for them, see $DIRS's
+# own comment). Without this, stale objects/archives left in tests/c/
+# mini and friends by an interrupted `mk test`/`test_macos*` run survive
+# a top-level `mk clean` and can wedge the next run (e.g. iar refusing
+# to add an arm64 .7 into a libmini.a a prior 386 run left behind).
+clean:V:
+	for (i in $DIRS) @{
+		echo $i
+		cd $i
+		mk $MKFLAGS clean
+	}
+	@{cd tests; mk clean}
+	@{cd benchs/compcert; mk clean}
+
 # macOS-native regression tests (no qemu). 'test_macos' auto-detects the
 # host: Apple Silicon (arm64) runs the arm64 tests, Intel (x86_64) runs the
 # amd64 ones. Use test_macos_arm64 / test_macos_amd64 to force one.

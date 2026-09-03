@@ -4,3 +4,8 @@ test:V:
 	@{cd $TOP/machines/ki; mk}
 	@{cd ../s/mini; mk hello_plan9_sparc.exe}
 	KI=$TOP/machines/ki/o.out bash smoke.sh
+
+# claude: no-op, see tests/libmach/mkfile's own clean:V: comment for why
+# a real (if trivial) command is required here.
+clean:V:
+	true

@@ -6,3 +6,13 @@ test:V:
 	bash backquote.sh
 	bash if_no_else_status.sh
 	bash env_export.sh
+
+# claude: `true`, not a truly empty recipe -- these scripts stage their
+# fixtures under mktemp -d (outside the repo), so there is nothing here
+# for `mk clean` to remove, but mk treats a target with zero recipe
+# lines as undefined rather than as a no-op rule ("don't know how to
+# make 'clean'"), so a real (if trivial) command is required. Needed
+# anyway: tests/mkfile's DIRS includes `rc`, and mkfiles/mkdirs' generic
+# clean:QV: loop errors out on any DIRS entry with no clean target.
+clean:V:
+	true
