@@ -86,6 +86,19 @@ sparcexcep(Map *map, Rgetter rget)
 
 	/* Sparc disassembler and related functions */
 
+/* claude: without this forward declaration, "struct instr" as first
+ * mentioned below inside f's parameter list gets C's function-prototype
+ * scope, making it a *different*, invisible-outside-this-line tag from
+ * the real file-scope "struct instr" defined further down (via the
+ * Instr typedef). gcc silently accepted the resulting mismatch between
+ * "struct instr*" and "Instr*" in the sparcop2[] initializers below,
+ * but clang (Apple clang 16 / Xcode 15+) correctly flags it as
+ * -Wincompatible-function-pointer-types and errors out. Declaring the
+ * tag here first makes every later "struct instr" (including via
+ * Instr) refer to the same file-scope type.
+ */
+struct instr;
+
 struct opcode {
 	char	*mnemonic;
 	void	(*f)(struct instr*, char*);
