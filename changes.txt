@@ -228,6 +228,7 @@
 - import m68k (2a/2c/2l) from older Plan 9 (was removed in 2012)
   opted for 68020 and not 68000 because ocaml targets 68020 and
   the qemu/user-linux test infra works only for 68020
+- fix lex segfault (int vs intptr on 64 bits arch) and use #9/etc/ncform
 
 ** os
 - build on Windows with either Windows Subsystem Linux (WSL) or Cygwin
@@ -284,6 +285,8 @@
 - libc complete enough so it can be used to compile and 
   link goken using goken.
 
+** utilities
+- resume compilation of typesetting/
 
 ** internals
 - split include/ like in principia (and GO/pkg) with include/{core,obj,exec,...}

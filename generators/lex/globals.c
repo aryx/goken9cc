@@ -29,8 +29,16 @@ uchar	*pushptr = pushc;
 uchar	*slptr = slist;
 /*e: global slptr */
 
+/* claude: was the hardcoded absolute Plan9 path "/sys/lib/lex/ncform",
+ * which doesn't exist on a Linux/macOS host. Following the same
+ * "#9/..." + unsharp() convention already used for yacc's PARSER
+ * (generators/yacc/yacc.c) and rc's Rcmain (rc/unix.c), so it resolves
+ * under goken's own root instead. See lmain.c's main() for the
+ * unsharp(cname) call that actually translates it; the real driver
+ * file lives at etc/ncform (goken's ROOT/etc is a symlink to it).
+ */
 /*s: global cname */
-char	*cname = "/sys/lib/lex/ncform";
+char	*cname = "#9/etc/ncform";
 /*e: global cname */
 
 /*s: global nine */

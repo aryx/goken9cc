@@ -49,6 +49,13 @@ main(int argc, char **argv)
         default:
             warning("Unknown option %c", ARGC());
     } ARGEND
+    /* claude: translate cname's "#9/etc/ncform" into a real path, same
+     * as generators/yacc/yacc.c's `parser = unsharp(PARSER);` and
+     * rc/unix.c's `Rcmain = unsharp(Rcmain);` -- done once here up
+     * front since cname is only actually used much later, at the
+     * Bopen(cname,OREAD) call below.
+     */
+    cname = unsharp(cname);
     sargc = argc;
     sargv = argv;
     if (argc > 0){
