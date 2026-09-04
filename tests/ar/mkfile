@@ -1,0 +1,66 @@
+# Minimal(ish) repro for a confirmed, still-UNFIXED bug: a symbol
+# defined in a multi-TEXT-symbol assembly (.s) file can fail to
+# resolve when pulled from a .a archive, even though it's right there
+# in the archive's index and linking the same .o/.5 file in directly
+# (bypassing the archive) works fine.
+#
+# Found building principia-softwarica's typesetting/pic for arm: pic
+# calls ANSI signal(), which (APE/lib/ap/plan9/signal.c's _notehandler)
+# pulls in APE/lib/ap/arm/notetramp.c (for _notetramp) from libap.a.
+# notetramp.c's own siglongjmp() calls longjmp(), which should resolve
+# from the SAME archive's setjmp.s member (setjmp.s there defines
+# THREE TEXT symbols together: setjmp, sigsetjmp, longjmp -- longjmp
+# is third). Instead 5l reports "longjmp: undefined" at link time.
+#
+# Confirmed NOT the cause: plain archive/duplicate-symbol handling in
+# linkers/ar/ar.c's objsym() (reads generically via objtraverse(),
+# skips only the specific duplicate symbol found, doesn't special-case
+# TEXT vs DATA order); no "duplicate text symbol" warning is ever
+# printed while building libap.a. Also not the type-signature check in
+# 5l/obj.c's ldobj() (that's a real, separate, working mechanism --
+# briefly suspected because forcing a WRONG extern prototype on
+# purpose surfaces a "incompatible type signatures" diag through it,
+# but that was this test's own mistake, not the real bug: the actual
+# failure path never prints that diag, just "undefined").
+#
+# Confirmed IS the trigger: setjmp.s having more than one TEXT symbol.
+# Splitting it into one file per symbol (longjmp.s on its own) makes
+# archive resolution work correctly -- applied as the actual fix in
+# principia-softwarica (APE/lib/ap/arm/{setjmp,longjmp}.s). 386's own
+# setjmp.s has the same three-symbols-in-one-file shape and was NOT
+# split, and doesn't hit this -- so whatever's wrong is specific to
+# arm (5a/5l/libmach's 5obj.c), not a general iar limitation. Not
+# investigated further than pinning the trigger down to this file
+# shape plus the archive-indirection (see comment above); a good next
+# step would be comparing 5obj.c's _read5() against 8obj.c's _read8()
+# symbol-table walk instruction by instruction for what differs on a
+# multi-TEXT-symbol object specifically.
+#
+# Not wired into `mk test` (see ../mkfile's own comment on
+# hexfloat_literal.c etc. for the convention): still an open bug, and
+# this one additionally needs a principia-softwarica checkout (for the
+# real APE headers -- signal.h/setjmp.h/errno.h/string.h -- and its
+# prebuilt arm libc.a), which the rest of this repo's tests don't
+# assume. Run `mk repro` by hand once picking this up again; it should
+# print "longjmp: undefined" (or similar) on the still-broken setjmp.s
+# from git history, and link cleanly against the current (split) one.
+
+PRINCIPIA=../../../principia-softwarica
+APEINC=-I$PRINCIPIA/APE/include -I$PRINCIPIA/APE/include/arm
+LIBC=$PRINCIPIA/ROOT/arch/arm/lib
+
+repro:V:
+	rm -f *.5 *.a *.out
+	objtype=arm pcc -FTVw -c -D_POSIX_SOURCE -D_PLAN9_SOURCE $APEINC notetramp_orig.c
+	objtype=arm pcc -FTVw -c -D_POSIX_SOURCE -D_PLAN9_SOURCE $APEINC signal_orig.c
+	objtype=arm 5a setjmp_orig.s
+	objtype=arm iar vuD fakelibap.a notetramp_orig.5 signal_orig.5 setjmp_orig.5
+	mkdir -p fakelib
+	cp fakelibap.a fakelib/libap.a
+	objtype=arm pcc -FTVw -c -D_POSIX_SOURCE -D_PLAN9_SOURCE $APEINC main.c
+	objtype=arm pcc -L$LIBC -Lfakelib -o repro.out main.5
+	echo 'repro.out linked -- bug is fixed (or setjmp_orig.s is already the split version)'
+
+clean nuke:V:
+	rm -f *.5 *.a *.out
+	rm -rf fakelib
