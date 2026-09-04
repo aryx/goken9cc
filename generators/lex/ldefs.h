@@ -178,8 +178,9 @@ extern int prev;	/* previous input character */
 extern int pres;	/* present input character */
 extern int peek;	/* next input character */
 extern int *name;
-extern int *left;
-extern int *right;
+/* claude: uintptr, not int -- see globals.c's comment on left/right */
+extern uintptr *left;
+extern uintptr *right;
 extern int *parent;
 extern uchar **ptr;
 extern uchar *nullstr;

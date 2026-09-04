@@ -1,0 +1,4 @@
+TOP=../..
+
+test:V:
+	bash start_condition_segfault.sh

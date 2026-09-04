@@ -318,6 +318,23 @@ gch(void){
 }
 /*e: function gch */
 
+/* claude: this is why lex used to segfault on any rule restricted to a
+ * %Start condition (parser.y's "SCON r" -> "<cond>pattern" syntax).
+ * That grammar action calls mn2(RSCON, ..., (uintptr)$1.cp), stashing a
+ * real pointer (to the list of applicable start-condition numbers) in
+ * `c` below. `right[tptr] = c;` then stores it -- but left[]/right[]
+ * used to be declared as plain `int *` (globals.c/ldefs.h). On the
+ * original 32-bit Plan 9 host, int and a pointer are both 4 bytes, so
+ * this round-tripped fine. On this 64-bit host, storing an 8-byte
+ * pointer into a 4-byte int[] slot silently truncated it. first()
+ * (sub2.c) later does `p = (uchar *)right[v];` to read that same slot
+ * back as a pointer and dereferences it -- on the truncated/garbage
+ * address, which crashed deep inside first()'s NFA-construction
+ * recursion, always exactly when it reached a node carrying a %Start
+ * condition. Fixed by widening left[]/right[] to uintptr* so the
+ * pointer survives the round trip intact; see
+ * tests/lex/start_condition_segfault.sh for the minimal repro.
+ */
 /*s: function mn2 */
 int
 mn2(int a, int d, uintptr c)
@@ -589,8 +606,8 @@ treedump(void)
                 allprint(name[t]);
         else switch(name[t]){
             case RSTR:
-                print("%d ",left[t]);
-                allprint(right[t]);
+                print("%d ",(int)left[t]);
+                allprint((int)right[t]);
                 break;
             case RCCL:
                 print("ccl ");
@@ -601,50 +618,50 @@ treedump(void)
                 allprint((int)ptr[t]); // pad added cast, correct?
                 break;
             case DIV:
-                print("/ %d %d",left[t],right[t]);
+                print("/ %d %d",(int)left[t],(int)right[t]);
                 break;
             case BAR:
-                print("| %d %d",left[t],right[t]);
+                print("| %d %d",(int)left[t],(int)right[t]);
                 break;
             case RCAT:
-                print("cat %d %d",left[t],right[t]);
+                print("cat %d %d",(int)left[t],(int)right[t]);
                 break;
             case PLUS:
-                print("+ %d",left[t]);
+                print("+ %d",(int)left[t]);
                 break;
             case STAR:
-                print("* %d",left[t]);
+                print("* %d",(int)left[t]);
                 break;
             case CARAT:
-                print("^ %d",left[t]);
+                print("^ %d",(int)left[t]);
                 break;
             case QUEST:
-                print("? %d",left[t]);
+                print("? %d",(int)left[t]);
                 break;
             case RNULLS:
                 print("nullstring");
                 break;
             case FINAL:
-                print("final %d",left[t]);
+                print("final %d",(int)left[t]);
                 break;
             case S1FINAL:
-                print("s1final %d",left[t]);	
+                print("s1final %d",(int)left[t]);
                 break;
             case S2FINAL:
-                print("s2final %d",left[t]);
+                print("s2final %d",(int)left[t]);
                 break;
             case RNEWE:
-                print("new %d %d",left[t],right[t]);
+                print("new %d %d",(int)left[t],(int)right[t]);
                 break;
             case RSCON:
                 p = (uchar *)right[t];
                 print("start %s",sname[*p++-1]);
                 while(*p)
                     print(", %s",sname[*p++-1]);
-                print(" %d",left[t]);
+                print(" %d",(int)left[t]);
                 break;
             default:
-                print("unknown %d %d %d",name[t],left[t],right[t]);
+                print("unknown %d %d %d",name[t],(int)left[t],(int)right[t]);
                 break;
         }
         if(nullstr[t])print("\t(null poss.)");

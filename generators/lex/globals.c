@@ -105,11 +105,15 @@ int fptr;
 /*s: global name */
 int *name;
 /*e: global name */
+/* claude: was `int *`; widened to uintptr since right[] must also hold
+ * a real pointer for RSCON nodes -- see the comment above mn2() in
+ * sub1.c for the segfault this used to cause.
+ */
 /*s: global left */
-int *left;
+uintptr *left;
 /*e: global left */
 /*s: global right */
-int *right;
+uintptr *right;
 /*e: global right */
 /*s: global parent */
 int *parent;

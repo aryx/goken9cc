@@ -1,6 +1,6 @@
 TOP=..
 
-DIRS=s c rc libmach 5i vi qi ki
+DIRS=s c rc lex libmach 5i vi qi ki
 
 # Dirs holding macOS-native run tests, by host arch (coverage differs:
 # c/vlong and c/float only have arm64 stubs). Paths are relative to here;
