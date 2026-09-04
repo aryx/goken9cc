@@ -21,8 +21,9 @@ test:
 demo:
 	cd demos; mk demo
 
-hellotest:
-	echo TODO
+###############################################################################
+# Docker targets
+###############################################################################
 
 # works for both amd64 and arm64
 build-docker:

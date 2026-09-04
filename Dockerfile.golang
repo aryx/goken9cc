@@ -12,7 +12,7 @@
 # Actually we only really exercised 6a/6c/6l in CI, but we
 # could have also exercised 8a/8c/8l and on arm machines 5a/5c/5l (or use qemu).
 # But later on we replaced the go-era toolchain from fork of the original
-# Plan 9 toolchains, is isolated the go-era toolchain under GO/C and it now
+# Plan 9 toolchains, and isolated the go-era toolchain under GO/C so it now
 # differs from the one under assemblers/ compilers/ linkers/ so
 # we could get rid of this Dockerfile really.
 # BUT, it's also nice to have in the repo the original code that added
