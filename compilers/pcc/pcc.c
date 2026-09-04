@@ -67,6 +67,17 @@ main(int argc, char *argv[])
 
 	append(&cc, ot->cc);
 	append(&ld, ot->ld);
+    /* claude: 8l defaults its output header to ELF on a Linux host
+     * (via getgoos()) instead of Plan9 a.out, unlike 5l/vl -- see
+     * mkfiles/386/mkfile's own `LD=8l -H2` and its comment for the
+     * exact same issue on the native (non-pcc) build path. Without
+     * this, pcc-linked binaries (troff, pic, eqn, grap) silently come
+     * out as ELF: `file` on them shows it, but they're not something
+     * the Plan9 kernel's exec() can run, so a shell just reports them
+     * as "not found" even though `ls` sees them fine in the directory.
+     */
+    if(strcmp(ot->name, "386") == 0)
+        append(&ld, "-H2");
 	while(argc > 0) {
 		ARGBEGIN {
 		case '+':
