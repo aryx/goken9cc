@@ -28,6 +28,22 @@
 # wrong architecture's binary under qemu/binfmt without any indication.
 **/*.goken
 
+# claude: same stale-artifact trap as *.exe above, but for ROOT/ itself
+# (the 'mk install' output tree): unlike *.exe/*.o/*.a/*.goken, these
+# per-arch bin/ binaries (e.g. ROOT/arch/boot-gcc/bin/qi) have no
+# extension so none of the globs above catch them. .gitignore excludes
+# this path from git, but .dockerignore is a separate mechanism -- a
+# locally-built binary sitting here (from before it was wired into the
+# top-level mkfile's DIRS, or from running 'mk install' by hand inside
+# its own subdir) gets COPY'd into the image and PATH-resolves, masking
+# a genuinely missing install step that a clean CI checkout would catch.
+# claude: exclude contents, not the bin/ dir itself -- the dir must
+# still exist in the build context (build-mk.sh's first 'cp o.out
+# .../bin/mk' fails on a missing directory), and .keep is what git
+# uses to keep it tracked, so both are re-included.
+/ROOT/arch/*/bin/*
+!/ROOT/arch/*/bin/.keep
+
 # claude: golden/reference binaries checked into git for byte-for-byte
 # `cmp` comparisons (variants tests) and GO's elf testdata -- must
 # survive the blanket excludes above now that they actually apply
