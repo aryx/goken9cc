@@ -1,0 +1,81 @@
+Plan: which OS targets goken should support, and why
+===========================================================================
+
+Unlike most files in docs/claude_notes/ (which record done, verified
+work -- see CLAUDE.md), this one is forward looking: it records the
+discussion behind the choice of OS targets, so a future session doesn't
+have to re-derive the reasoning before adding (or declining to add) a
+new one. todo.org remains the authority for what's actually scheduled;
+this file only orders/weighs the OS-target question itself.
+
+Current target set and rationale
+------------------------------------------------------------------------
+
+- Linux, macOS, Windows: user-base reach -- the three OSes most people
+  actually run goken-compiled binaries on.
+- Plan 9: heritage -- goken *is* Plan 9's toolchain (forked from Go,
+  which forked from Plan 9). See notes_os_plan9.txt.
+- xv6: educational value -- a small, readable teaching kernel (MIT
+  6.828 lineage), distinct purpose from the other four. See
+  notes_os_xv6.txt (currently a placeholder).
+
+This is a deliberately mixed portfolio: three targets picked for reach,
+one for lineage, one for pedagogy. Considered and set aside:
+
+- BSD family (FreeBSD/OpenBSD/NetBSD): Go already treats these as
+  siblings of linux/darwin, and this tree's existing
+  lib_core/libc/{port,os/$GOOS}/ file-splitting convention (see
+  CLAUDE.md's "Avoid #ifdef" section) makes the syscall/ABI porting
+  work itself cheap -- mostly copy-and-adjust from os/linux or
+  os/darwin, not new design. Initially looked attractive for exactly
+  that reason. See "Testability changes the calculus" below for why
+  this was set aside for now regardless.
+- Solaris/illumos, Haiku, Redox, MINIX, DOS: no specific goal these
+  serve that the current five don't already cover; not pursued.
+  (MINIX in particular would duplicate xv6's teaching-OS role without
+  adding anything -- xv6 is smaller, more actively used in current
+  courses, and already the pick.)
+
+Testability changes the calculus
+------------------------------------------------------------------------
+
+The reach/lineage/pedagogy framing above is necessary but not
+sufficient -- the real gating question for *adding* a target is
+whether it can be tested cheaply on this Linux dev host, and the five
+current targets split cleanly into two buckets:
+
+Cheap: user-mode emulation, no full VM boot
+  - Linux (cross-arch): qemu-user. Translates syscalls for a *foreign
+    CPU, same kernel* -- i.e. it lets a Linux/arm64 binary run under a
+    Linux/amd64 host by emulating instructions and passing Linux
+    syscalls straight through. This is why the whole Linux/multi-arch
+    matrix is cheap to test.
+  - Windows: wine. Mature PE/Win32 translation layer; well-trodden.
+  - macOS: darling. A similar idea to wine but for Mach-O/macOS
+    syscalls -- "best-effort, expect gaps" rather than wine's
+    maturity. Still usable for smoke-testing.
+  - Plan 9: the in-tree 5i/vi emulators (see notes_abi_plan9.txt) --
+    not a generic translation layer, but goken already ships its own,
+    so this is effectively free.
+
+Expensive: needs a full qemu-system VM boot
+  - xv6: not a binary-compat layer at all -- it's its own kernel, so
+    testing goken-built xv6 userspace programs means booting the xv6
+    kernel under qemu-system and running the binary inside it. See
+    notes_test_infra.txt for the qemu-runner-vs-binfmt_misc framing
+    this generalizes.
+  - BSD (if ever added): there is no wine/darling-equivalent for
+    running FreeBSD binaries on a Linux host -- FreeBSD's compat layer
+    goes the other direction (Linux binaries on FreeBSD). Testing a
+    goken/freebsd target would mean full qemu-system VM boots, the
+    same heavier tier as xv6, not the cheap qemu-user tier the
+    reach-motivated OSes get. This is the concrete reason BSD was set
+    aside above despite the porting work itself being cheap: the
+    *testing* cost, not the *porting* cost, is what changed the
+    tradeoff.
+
+Takeaway for evaluating a future 6th target: ask which bucket it lands
+in before weighing user base or educational value. A target with no
+cheap user-mode emulation path effectively costs as much in ongoing
+CI/test maintenance as xv6 does, regardless of how little new codegen
+work it needs.
