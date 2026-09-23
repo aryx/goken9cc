@@ -97,6 +97,8 @@ Pconv(Fmt *fp)
         snprint(str, sizeof(str), "	%A%s	%D,R%d,%D", a, sc, &p->from, p->reg, &p->to);
     else
         snprint(str, sizeof(str), "	%A%s	%D,F%d,%D", a, sc, &p->from, p->reg, &p->to);
+
+    pconvtrim(str);
     return fmtstrcpy(fp, str);
 }
 /*e: function [[Pconv]](arm) */

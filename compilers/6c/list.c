@@ -55,6 +55,8 @@ Pconv(Fmt *fp)
 	else
 		sprint(str, "	%A	%D,%D",
 			p->as, &p->from, &p->to);
+
+	pconvtrim(str);
 	return fmtstrcpy(fp, str);
 }
 

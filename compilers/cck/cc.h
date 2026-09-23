@@ -692,6 +692,7 @@ int	deadheads(Node*);
 Type*	dotsearch(Sym*, Type*, Node*, long*);
 long	dotoffset(Type*, Type*, Node*);
 void	gethunk(void);
+void	pconvtrim(char*);	/* claude: ../libcc/pconvtrim.c */
 Node*	invert(Node*);
 int	bitno(long);
 void	makedot(Node*, Type*, long);

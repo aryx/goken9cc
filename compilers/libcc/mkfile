@@ -21,6 +21,7 @@ OFILES=\
 	compat.$O\
 	dpchk.$O\
 	omachcap.$O\
+	pconvtrim.$O\
 
 
 HFILES=cc.h	y.tab.h

@@ -28,12 +28,17 @@ OFILES=\
 	omachcap.$O\
         \
 	mpatof.$O\
+	pconvtrim.$O\
 
 HFILES=cc.h y.tab.h
 
 YFILES=cc.y
 
 <$TOP/mkfiles/mklib
+
+# claude: shared with compilers/libcc (see the comment at its top).
+pconvtrim.$O: ../libcc/pconvtrim.c
+	$CC $CFLAGS $CFLAGS_EXTRA -o $target ../libcc/pconvtrim.c
 
 #mac.$O: macbody
 #lex.$O:	lex.c

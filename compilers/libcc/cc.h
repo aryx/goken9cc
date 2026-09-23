@@ -940,6 +940,9 @@ void*	alloc(long);
 void	errorexit(void);
 void	yyerror(char*, ...);
 
+// pconvtrim.c
+void	pconvtrim(char*);
+
 /*
  *	parser
  */

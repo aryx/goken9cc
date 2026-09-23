@@ -53,6 +53,18 @@ Pconv(Fmt *fp)
 	if(p->as == ATEXT)
 		sprint(str, "	%A	%D,%d,%D", a, &p->from, p->reg, &p->to);
 	else
+	if(p->reg == NREG && p->as == AJAL)
+		/* claude: a compiled JAL's own p->reg is legitimately NREG at
+		 * the object-file level (linkers/il/asm.c's own AJAL case
+		 * substitutes REGLINK for it at encode time) -- but the real
+		 * ia grammar has no bare, register-less "JAL target" form at
+		 * all (confirmed: every real hand-written .s in this tree
+		 * spells it "JAL R1,target"), so printing it without a
+		 * register (the general reg==NREG branch below) produces
+		 * genuinely non-reassembleable -S output. Print the same
+		 * REGLINK substitution ia's own linker already performs. */
+		sprint(str, "	%A	R%d,%D", a, REGLINK, &p->to);
+	else
 	if(p->reg == NREG)
 		sprint(str, "	%A	%D,%D", a, &p->from, &p->to);
 	else
@@ -60,6 +72,8 @@ Pconv(Fmt *fp)
 		sprint(str, "	%A	%D,R%d,%D", a, &p->from, p->reg, &p->to);
 	else
 		sprint(str, "	%A	%D,F%d,%D", a, &p->from, p->reg, &p->to);
+
+	pconvtrim(str);
 	return fmtstrcpy(fp, str);
 }
 

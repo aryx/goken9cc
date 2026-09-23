@@ -60,6 +60,8 @@ Pconv(Fmt *fp)
 		sprint(str, "	%A	%D,R%d,%D", a, &p->from, p->reg, &p->to);
 	else
 		sprint(str, "	%A	%D,F%d,%D", a, &p->from, p->reg, &p->to);
+
+	pconvtrim(str);
 	return fmtstrcpy(fp, str);
 }
 
