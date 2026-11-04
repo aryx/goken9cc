@@ -1,6 +1,9 @@
 * Big plan
 
 ** TODO changes.txt
+#CLAUDE: support xv6, fix benchs on all archs, finish wasm, get bootstrap on all archs
+# integrate portable libdraw 
+
 - lib_graphics/
 
 ** Overview
@@ -77,6 +80,209 @@ ack amsterdam toolkit has support for pdp11
 also gcc. and can use simh to run unix v1 etc for real apparently.
 
 that would be a 16 bits archi :)
+
+* Last
+
+** Last3
+
+*** goken9cc: try Dockerfile.old with Ubuntu 20.04 and check if it compiles there too 
+or Dockerfile.alt
+
+*** demos/hello_ape.c, hello_posix.c, and maybe rename hello_unix.c confusing
+and maybe clarify for robbins on github issue things in the README
+or maybe hello_linux.c ? ask claude.
+
+maybe in README add goals and non-goals, so clearer what to expect!
+
+*** try compile gnu awk with goken in the PATH and get configure to work,
+and MAKE CC=9gcc or gcc9 or something or simply pcc!
+interesting exercise.
+
+*** WAITING goken9cc: support xv6!!!!
+but wait for the factorization to be done
+
+*** FUN extend goken to tests/c/hello_draw! and portable libdraw from
+drawterm and plan9port!
+so not only console program but also graphical program! could even
+port libpanel to goken!
+but need libthread then?
+
+can maybe get sokoban, life.c, etc working on goken too!
+
+*** -----------------------------------------------------
+
+*** fix the ar issue longjmp.s goken/tests/ar/ in 5l/ar
+
+*** goken/principia: use ar9 and yacc9 instead of iar and iyacc?
+but need to update principia too, to use ar9
+
+and restore ar_ instead of arg
+
+will need to make and push fresh docker images for goken
+
+*** goken: better configure? detect boot-clang instead of boot-gcc?
+and detect also gcc/clang presence; right now just assumed
+
+unless detect also goken in path and uses that if use configure -bootstrapped_goken ?
+-self? -bootstrap?
+
+*** sync goken <-> principia
+
+**** goken: start mk sync for lib_core/, follow the plan of claude in claude_notes/
+gradually add files in lib_core/mkfile SRC_VIEWS synced with principia
+and make sure no regressions
+
+**** start to add/sync/merge libcore in goken and principia?
+#so can start Libcore.nw and get some of it working under Linux/macOS/Windows! cool!
+
+libregexp lpized for instance and synced from principia
+libbio
+libstring
+libflate
+
+maybe not the include for libc, but at least the portable C code
+and maybe not arch/ because lpized arm/ mostly but I want first
+to experiment on arm64/ instead
+
+**** goken: sync generators, error right now
+
+*** fix sed, diff, cmp, so can work in other context like ocaml-light
+so don't have to constantly delete them
+
+*** libmach
+
+**** include/exec/a.out.h not used? and include/exec/elf.h used barely
+conflict with linkers/lk/elf.h ?
+
+and libmach/elf.h ?
+
+**** libmach/elf.h ? reduce? redundant with other elf.h?
+
+**** use diff.rc to merge libmach in different repos too
+
+**** riscv libmach support, and mini2/ that requires library and
+ar support for riscv
+mach.h has a few TODOs for riscv
+
+*** use -O0 to cross compile principia without the opti!
+still works?
+need push new docker image, build also on thinkstation
+
+*** -------------------------------------------------------------
+
+*** implement __LOC__ __FILE__ __LINE__ in goken so can
+fix rc.h in goken
+
+*** FUN LATER logs library with ERROR WARN INFO DEBUG
+and generalize the warn() in compilers/cck and other stuff
+include/logging/log.h
+
+*** try $cputype and goken and HOSTCC ?
+so can generate 6.maketab and run it to generate proctab.c for awk
+
+*** adjust libc/mkfile for use os/xxx/yyy.c instead of port/yyy.c if
+exist file? so generalize a bit the many XXX vars in libc mkfile?
+
+*** test infra, factorize code under tests/c/
+seems lots of duplicates and fixing one file require fixing many more after
+maybe have a test/c/minilib/ first?
+
+*** header cleanup, lib_boot and more
+
+**** RELAX factorize some x.out.h using common.out.h
+but need little vs big endian issue for ieee float struct?
+
+but include common.out.h directly in the x.out.h? simpler at
+include site
+
+*** still? restore goken nix job?
+
+*** ----------------------------------------------------------------
+
+*** switch 7c/vc/ic to use compilers/cc/ instead of compilers/cck
+bigger refactoring than the src/cmd/cc -> compilers/cck
+
+*** improve 5a/5c/5l with diff.rc, incorporating improvements in other
+derived kencc, but take care no syncweb comment markers modif
+
+*** improve 8a/8c/8l with diff.rc, incorporating improvements in other
+derived kencc, but take care no syncweb comment markers modif
+
+*** ------------------------------------
+
+*** multi-arch bugfixing
+
+**** CLAUDE bench correctness multi arch, Linux
+41 timeout, 4 runefail, 18 mismatch
+
+**** CLAUDE try mk bootstrap on all archs?
+(many benchs/compcert are failing though in many archs)
+
+**** fix bug still nukleotide, hard to find bug apparently around printf.
+
+**** sanity check can still build principia arm, 386, and physical pi1
+maybe even update the docker images of goken?
+
+**** regression on windows, error GENERIC_READ in winio_amd64.s
+
+**** CLAUDE see ~/longrun.c bug, still buggy?
+
+*** ASAN party bugfixing
+
+**** goken comm segfault: see toplevel files to repro
+try ASAN again?
+
+**** Bugfix party
+from principia/ (but for goken), resume ASAN session to fix iar, 8c
+claude --resume 5c48efd9-6c31-4baa-9015-792e49a35783
+
+**** use ASAN and fix iar, 8c, bugs! found when compiling principia
+can even mention that in goken slides at iwp9!
+
+*** fix DWARF output so can use gdb on binaries produced by goken toolchains
+at least Linux arm64 and amd64
+
+
+** Last2
+
+*** pcc: improve -lxxx to look for libxxx.a in -L given path
+so then I can use more -lunix in xix mkconfig
+
+*** why order of -I matters?
+this does not work:
+  8c -c test_bind_c.c -I/home/pad/principia/include/ALL/ -I/home/pad/principia/include/arch/386/
+but this does:
+  8c -I/home/pad/principia/include/ALL/ -I/home/pad/principia/include/arch/386/ test_bind_c.c
+
+*** improve configure to run build-mk.sh
+see comment in configure:
+
+# TODO: 
+#  - check for gcc/clang
+#  - detect if bin/ contains mk, rc, and ed
+#    and maybe run scripts/build-mk.sh and promote-mk.sh automatically
+
+at the same time nice to see explicitely the build-mk.sh in Dockerfile
+for iwp9 goken paper
+
+** Last1
+
+*** bug: why mk pdf in principia/linkers does not do the full
+recipe and does not mv to generate Linker-7.pdf?
+
+because mv of goken does not work :)
+fix it!
+
+#see the benefit of dogfooding and of goken easier to dogfood
+#than principia!
+
+*** RELAX look for sizeof(long) and fixed all of them!
+
+*** RELAX remove sprint()! switch to sprint_DANGEROUS, then
+maybe macro using sizeof() ? SPRINT() ? or use snprint and
+pass length each time, safer
+
+*** FUN try to use 6prof and 6cov
 
 * Big Unify
 
@@ -830,49 +1036,6 @@ snprint() unbounded-buffer cleanup, and especially the nodrat
 global-temp pattern as every other backend (5c/5ck/7c/8c/8ck/ic/vc),
 so this bug is genuinely tree-wide, not mips-specific as originally
 scoped; worth raising its priority given how universal it is
-
-* Last
-
-** Last2
-
-*** pcc: improve -lxxx to look for libxxx.a in -L given path
-so then I can use more -lunix in xix mkconfig
-
-*** why order of -I matters?
-this does not work:
-  8c -c test_bind_c.c -I/home/pad/principia/include/ALL/ -I/home/pad/principia/include/arch/386/
-but this does:
-  8c -I/home/pad/principia/include/ALL/ -I/home/pad/principia/include/arch/386/ test_bind_c.c
-
-*** improve configure to run build-mk.sh
-see comment in configure:
-
-# TODO: 
-#  - check for gcc/clang
-#  - detect if bin/ contains mk, rc, and ed
-#    and maybe run scripts/build-mk.sh and promote-mk.sh automatically
-
-at the same time nice to see explicitely the build-mk.sh in Dockerfile
-for iwp9 goken paper
-
-** Last1
-
-*** bug: why mk pdf in principia/linkers does not do the full
-recipe and does not mv to generate Linker-7.pdf?
-
-because mv of goken does not work :)
-fix it!
-
-#see the benefit of dogfooding and of goken easier to dogfood
-#than principia!
-
-*** RELAX look for sizeof(long) and fixed all of them!
-
-*** RELAX remove sprint()! switch to sprint_DANGEROUS, then
-maybe macro using sizeof() ? SPRINT() ? or use snprint and
-pass length each time, safer
-
-*** FUN try to use 6prof and 6cov
 
 * Components
 
